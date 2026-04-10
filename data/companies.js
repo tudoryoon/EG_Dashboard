@@ -157,6 +157,42 @@ window.dashboardCompanies = [
     },
   },
   {
+    name: "Unimicron",
+    country: "Taiwan",
+    sector: "PCB/기판",
+    currency: { USD: 0.409, NTD: 13.079, KRW: 600 },
+    mom: 12.7,
+    yoy: 23.3,
+    month: "26/03",
+    bars: [12.867, 11.6, 13.079],
+    yoyLine: [35.5, 16.2, 23.3],
+    momLine: [null, -9.8, 12.7],
+    yearly: {
+      labels: ["01M", "02M", "03M", "04M", "05M", "06M", "07M", "08M", "09M", "10M", "11M", "12M"],
+      series: [
+        { year: "26", values: [35.5, 16.2, 23.3, null, null, null, null, null, null, null, null, null] },
+      ],
+    },
+  },
+  {
+    name: "Nanya PCB",
+    country: "Taiwan",
+    sector: "PCB/기판",
+    currency: { USD: 0.134, NTD: 4.291, KRW: 195 },
+    mom: 35.5,
+    yoy: 39.0,
+    month: "26/03",
+    bars: [3.72, 3.166, 4.291],
+    yoyLine: [45.0, 12.8, 39.0],
+    momLine: [null, -14.9, 35.5],
+    yearly: {
+      labels: ["01M", "02M", "03M", "04M", "05M", "06M", "07M", "08M", "09M", "10M", "11M", "12M"],
+      series: [
+        { year: "26", values: [45.0, 12.8, 39.0, null, null, null, null, null, null, null, null, null] },
+      ],
+    },
+  },
+  {
     name: "AMD",
     country: "US",
     sector: "Compute/GPU",
