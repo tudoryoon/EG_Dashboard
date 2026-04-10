@@ -88,6 +88,10 @@ h1 {
   margin-bottom: 10px;
 }
 
+.toolbar-row-country {
+  margin-bottom: 14px;
+}
+
 .searchbox {
   flex: 1 1 320px;
 }
@@ -112,14 +116,35 @@ h1 {
   gap: 8px;
 }
 
+.country-switch {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .currency-button,
-.chip {
+.chip,
+.country-button {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: white;
   color: #43433f;
   cursor: pointer;
   transition: 160ms ease;
+}
+
+.country-button {
+  min-width: 92px;
+  padding: 11px 16px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.country-button.active {
+  border-color: #242421;
+  background: #242421;
+  color: white;
 }
 
 .currency-button {

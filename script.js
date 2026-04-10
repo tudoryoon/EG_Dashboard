@@ -1,6 +1,13 @@
 const companies = window.dashboardCompanies ?? [];
 
+const countryMeta = {
+  US: { label: "미국", currencies: ["USD"], defaultCurrency: "USD" },
+  Taiwan: { label: "대만", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
+  Korea: { label: "한국", currencies: ["KRW"], defaultCurrency: "KRW" },
+};
+
 const state = {
+  country: "Taiwan",
   currency: "NTD",
   sector: "All",
   query: "",
@@ -14,8 +21,11 @@ const currencyMeta = {
 };
 const currencyOrder = ["NTD", "USD", "KRW"];
 const yearColors = ["#2563eb", "#7c3aed", "#f59e0b", "#14b8a6", "#d93025"];
+const SERIES_START_YEAR = 2021;
+const SERIES_START_MONTH = 1;
 
 const searchInput = document.querySelector("#search-input");
+const countrySwitch = document.querySelector("#country-switch");
 const currencySwitch = document.querySelector("#currency-switch");
 const sectorChips = document.querySelector("#sector-chips");
 const companyGrid = document.querySelector("#company-grid");
@@ -23,11 +33,12 @@ const summaryText = document.querySelector("#summary-text");
 const summaryStats = document.querySelector("#summary-stats");
 const cardTemplate = document.querySelector("#company-card-template");
 
-const sectors = ["All", ...new Set(companies.map((company) => company.sector))];
-
 function formatRevenue(company) {
   const meta = currencyMeta[state.currency];
-  const value = company.currency[state.currency];
+  const value = company.currency?.[state.currency];
+  if (value === undefined || value === null) {
+    return "-";
+  }
   return `${meta.label}${value.toFixed(meta.decimals)}${meta.suffix}`;
 }
 
@@ -44,12 +55,84 @@ function revenueTickLabel(value) {
   return `${meta.label}${Number(value).toFixed(0)}${meta.suffix}`;
 }
 
+function companiesByCountry(country) {
+  return companies.filter((company) => company.country === country);
+}
+
+function availableSectors() {
+  return [
+    "All",
+    ...new Set(companiesByCountry(state.country).map((company) => company.sector)),
+  ];
+}
+
+function ensureValidSelection() {
+  const country = countryMeta[state.country];
+  if (!country.currencies.includes(state.currency)) {
+    state.currency = country.defaultCurrency;
+  }
+
+  const sectors = availableSectors();
+  if (!sectors.includes(state.sector)) {
+    state.sector = "All";
+  }
+}
+
 function destroyCharts() {
   charts.splice(0).forEach((chart) => chart.destroy());
 }
 
+function parseCompanyMonth(monthText) {
+  const [yy, mm] = monthText.split("/").map((value) => Number(value));
+  return { year: 2000 + yy, month: mm };
+}
+
+function buildMonthlyAxis() {
+  const labels = [];
+  let year = SERIES_START_YEAR;
+  let month = SERIES_START_MONTH;
+  const endYear = 2026;
+  const endMonth = 4;
+
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    labels.push(`${String(year).slice(2)}/${String(month).padStart(2, "0")}`);
+    month += 1;
+    if (month === 13) {
+      month = 1;
+      year += 1;
+    }
+  }
+
+  return labels;
+}
+
+function buildSeriesForAxis(values, companyMonthText) {
+  const labels = buildMonthlyAxis();
+  const aligned = new Array(labels.length).fill(null);
+  const { year, month } = parseCompanyMonth(companyMonthText);
+  const endIndex =
+    (year - SERIES_START_YEAR) * 12 + (month - SERIES_START_MONTH);
+  const startIndex = Math.max(0, endIndex - values.length + 1);
+
+  values.forEach((value, index) => {
+    const targetIndex = startIndex + index;
+    if (targetIndex >= 0 && targetIndex < aligned.length) {
+      aligned[targetIndex] = value;
+    }
+  });
+
+  return { labels, aligned };
+}
+
 function createRevenueChart(canvas, company) {
-  const grayBars = company.bars.map((_, index) => {
+  const axisSeries = buildSeriesForAxis(company.bars, company.month);
+  const yoySeries = buildSeriesForAxis(company.yoyLine, company.month);
+  const momSeries = buildSeriesForAxis(company.momLine, company.month);
+
+  const grayBars = axisSeries.aligned.map((value, index) => {
+    if (value === null) {
+      return "rgba(0,0,0,0)";
+    }
     const lightness = 26 + index * 2;
     return `hsl(0, 0%, ${Math.min(lightness, 48)}%)`;
   });
@@ -57,34 +140,36 @@ function createRevenueChart(canvas, company) {
   const chart = new Chart(canvas, {
     type: "bar",
     data: {
-      labels: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
+      labels: axisSeries.labels,
       datasets: [
         {
           type: "line",
           label: "YoY%",
-          data: company.yoyLine,
+          data: yoySeries.aligned,
           borderColor: "#d93025",
           backgroundColor: "#d93025",
           borderWidth: 2,
           tension: 0.32,
           pointRadius: 0,
+          spanGaps: false,
           yAxisID: "yPercent",
         },
         {
           type: "line",
           label: "MoM%",
-          data: company.momLine,
+          data: momSeries.aligned,
           borderColor: "#7b7b75",
           backgroundColor: "#7b7b75",
           borderWidth: 2,
           tension: 0.32,
           pointRadius: 0,
+          spanGaps: false,
           yAxisID: "yPercent",
         },
         {
           type: "bar",
           label: "Revenue",
-          data: company.bars,
+          data: axisSeries.aligned,
           backgroundColor: grayBars,
           borderWidth: 0,
           borderRadius: 3,
@@ -122,9 +207,25 @@ function createRevenueChart(canvas, company) {
           },
           ticks: {
             color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: 8,
+            maxRotation: 0,
+            callback: (value, index) => {
+              const label = axisSeries.labels[index];
+              if (!label) {
+                return "";
+              }
+              const [, month] = label.split("/");
+              return month === "01" ? label : "";
+            },
           },
           border: {
             color: "#d8d8d2",
+          },
+          title: {
+            display: true,
+            text: "Monthly timeline from 2021/01",
+            color: "#8d8d86",
           },
         },
         yRevenue: {
@@ -205,6 +306,11 @@ function createYearlyChart(canvas, company) {
           border: {
             color: "#d8d8d2",
           },
+          title: {
+            display: true,
+            text: "Yearly comparison checkpoints",
+            color: "#8d8d86",
+          },
         },
         y: {
           suggestedMin: -20,
@@ -234,18 +340,37 @@ function createYearlyChart(canvas, company) {
 
 function filteredCompanies() {
   return companies.filter((company) => {
+    const matchesCountry = company.country === state.country;
     const matchesSector =
       state.sector === "All" ? true : company.sector === state.sector;
     const matchesQuery = company.name
       .toLowerCase()
       .includes(state.query.toLowerCase().trim());
-    return matchesSector && matchesQuery;
+    return matchesCountry && matchesSector && matchesQuery;
+  });
+}
+
+function renderCountries() {
+  countrySwitch.innerHTML = "";
+  Object.entries(countryMeta).forEach(([countryKey, meta]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `country-button${state.country === countryKey ? " active" : ""}`;
+    button.textContent = meta.label;
+    button.addEventListener("click", () => {
+      state.country = countryKey;
+      state.currency = meta.defaultCurrency;
+      state.sector = "All";
+      render();
+    });
+    countrySwitch.appendChild(button);
   });
 }
 
 function renderCurrencies() {
   currencySwitch.innerHTML = "";
-  currencyOrder.forEach((currency) => {
+  const availableCurrencies = countryMeta[state.country].currencies;
+  availableCurrencies.forEach((currency) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `currency-button${state.currency === currency ? " active" : ""}`;
@@ -260,7 +385,7 @@ function renderCurrencies() {
 
 function renderSectors() {
   sectorChips.innerHTML = "";
-  sectors.forEach((sector) => {
+  availableSectors().forEach((sector) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `chip${state.sector === sector ? " active" : ""}`;
@@ -274,7 +399,8 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
-  summaryText.textContent = `${list.length} companies`;
+  const countryLabel = countryMeta[state.country].label;
+  summaryText.textContent = `${countryLabel} ${list.length} companies`;
   const avgYoY =
     list.length > 0
       ? (list.reduce((sum, company) => sum + company.yoy, 0) / list.length).toFixed(1)
@@ -288,6 +414,7 @@ function renderSummary(list) {
     <span class="summary-stat">Avg YoY ${avgYoY}%</span>
     <span class="summary-stat">Avg MoM ${avgMoM}%</span>
     <span class="summary-stat">Currency ${currencyMeta[state.currency].label}</span>
+    <span class="summary-stat">Sector ${state.sector}</span>
   `;
 }
 
@@ -296,7 +423,7 @@ function renderCards(list) {
   companyGrid.innerHTML = "";
 
   if (list.length === 0) {
-    companyGrid.innerHTML = `<div class="empty-state">조건에 맞는 기업이 없습니다.</div>`;
+    companyGrid.innerHTML = `<div class="empty-state">${countryMeta[state.country].label} 데이터가 아직 없거나 조건에 맞는 기업이 없습니다.</div>`;
     return;
   }
 
@@ -328,6 +455,8 @@ function renderCards(list) {
 }
 
 function render() {
+  ensureValidSelection();
+  renderCountries();
   renderCurrencies();
   renderSectors();
   const list = filteredCompanies();
