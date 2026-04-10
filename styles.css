@@ -1,0 +1,365 @@
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --panel-2: #f2f2ee;
+  --border: #d8d8d2;
+  --text: #1c1c1a;
+  --muted: #767670;
+  --red: #d93025;
+  --gray-strong: #4a4a46;
+  --gray-mid: #7f7f79;
+  --gray-soft: #a9a9a1;
+  --shadow: 0 18px 40px rgba(20, 20, 18, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Noto Sans KR", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(0, 0, 0, 0.025), transparent 28%),
+    linear-gradient(180deg, #fbfbf9 0%, #f1f1ed 100%);
+}
+
+.page-shell {
+  width: min(2048px, calc(100% - 44px));
+  margin: 0 auto;
+  padding: 18px 0 56px;
+}
+
+.topbar {
+  padding: 6px 0 18px;
+  border-bottom: 1px solid #ddddD6;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-badge {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4d4d49, #242421);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: white;
+}
+
+h1,
+h2,
+.chip,
+.currency-button,
+.sector-pill,
+.trend-title {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 2vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.brand-meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.toolbar {
+  padding: 26px 0 10px;
+}
+
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.searchbox {
+  flex: 1 1 320px;
+}
+
+.searchbox input {
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fcfcfa;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.searchbox input::placeholder {
+  color: #9a9a92;
+}
+
+.currency-switch {
+  display: flex;
+  gap: 8px;
+}
+
+.currency-button,
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  color: #43433f;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.currency-button {
+  min-width: 58px;
+  padding: 0 16px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.currency-button.active {
+  background: #242421;
+  color: white;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 10px 16px;
+  color: #5a5a56;
+}
+
+.chip.active {
+  border-color: #242421;
+  background: #242421;
+  color: white;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0 16px;
+  color: var(--muted);
+}
+
+.summary-text {
+  margin: 0;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.summary-stat {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.company-card {
+  padding: 18px 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 247, 243, 0.98));
+  box-shadow: var(--shadow);
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.company-name {
+  margin: 0 0 6px;
+  font-size: 1.12rem;
+}
+
+.metric-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.revenue-value {
+  font-size: 1.85rem;
+  line-height: 1;
+}
+
+.delta {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.delta.negative {
+  color: var(--red);
+}
+
+.mom-value {
+  color: var(--gray-mid);
+}
+
+.yoy-value {
+  color: var(--red);
+}
+
+.metric-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.sector-pill {
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #efefea;
+  color: #5f5f59;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.chart-panel,
+.trend-panel {
+  position: relative;
+}
+
+.chart-wrap {
+  width: 100%;
+}
+
+.chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 240px;
+}
+
+.trend-panel .chart-wrap canvas {
+  height: 180px;
+}
+
+.axis-caption {
+  margin: 6px 0 0;
+  text-align: right;
+  color: #8c8c85;
+  font-size: 0.76rem;
+}
+
+.divider {
+  height: 1px;
+  margin: 14px 0 12px;
+  background: #e2e2dc;
+}
+
+.trend-title {
+  margin: 0 0 8px;
+  color: #72726b;
+  font-size: 0.88rem;
+}
+
+.year-legend {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  color: #7a7a73;
+  font-size: 0.78rem;
+}
+
+.year-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.year-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.year-legend .line-year-0 {
+  background: #2563eb;
+}
+
+.year-legend .line-year-1 {
+  background: #7c3aed;
+}
+
+.year-legend .line-year-2 {
+  background: #f59e0b;
+}
+
+.year-legend .line-year-3 {
+  background: #14b8a6;
+}
+
+.year-legend .line-year-4 {
+  background: var(--red);
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 40px 22px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 1440px) {
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .page-shell {
+    width: min(100%, calc(100% - 22px));
+  }
+
+  .summary-row {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
