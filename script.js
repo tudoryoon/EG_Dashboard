@@ -20,7 +20,7 @@ const currencyMeta = {
   KRW: { label: "KRW", decimals: 0, suffix: "억" },
 };
 const currencyOrder = ["NTD", "USD", "KRW"];
-const yearColors = ["#2563eb", "#7c3aed", "#f59e0b", "#14b8a6", "#d93025"];
+const yearColors = ["#2563eb", "#7c3aed", "#f59e0b", "#14b8a6", "#d93025", "#0f172a"];
 const SERIES_START_YEAR = 2021;
 const SERIES_START_MONTH = 1;
 
@@ -125,6 +125,10 @@ function buildSeriesForAxis(values, companyMonthText) {
 }
 
 function createRevenueChart(canvas, company) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
   const axisSeries = buildSeriesForAxis(company.bars, company.month);
   const yoySeries = buildSeriesForAxis(company.yoyLine, company.month);
   const momSeries = buildSeriesForAxis(company.momLine, company.month);
@@ -265,6 +269,10 @@ function createRevenueChart(canvas, company) {
 }
 
 function createYearlyChart(canvas, company) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
@@ -272,8 +280,8 @@ function createYearlyChart(canvas, company) {
       datasets: company.yearly.series.map((series, index) => ({
         label: series.year,
         data: series.values,
-        borderColor: yearColors[index],
-        backgroundColor: yearColors[index],
+        borderColor: yearColors[index % yearColors.length],
+        backgroundColor: yearColors[index % yearColors.length],
         borderWidth: index === company.yearly.series.length - 1 ? 2.4 : 2,
         tension: 0.28,
         pointRadius: 0,
@@ -449,8 +457,20 @@ function renderCards(list) {
 
     companyGrid.appendChild(fragment);
     const card = companyGrid.lastElementChild;
-    createRevenueChart(card.querySelector(".revenue-chart"), company);
-    createYearlyChart(card.querySelector(".yearly-chart"), company);
+    try {
+      createRevenueChart(card.querySelector(".revenue-chart"), company);
+      createYearlyChart(card.querySelector(".yearly-chart"), company);
+    } catch (error) {
+      card.querySelector(".chart-panel").insertAdjacentHTML(
+        "beforeend",
+        `<p class="axis-caption">Chart render error</p>`,
+      );
+      card.querySelector(".trend-panel").insertAdjacentHTML(
+        "beforeend",
+        `<p class="axis-caption">Chart render error</p>`,
+      );
+      console.error("Chart render failed:", company.name, error);
+    }
   });
 }
 
