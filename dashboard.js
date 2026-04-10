@@ -99,6 +99,15 @@ function formatRevenue(company) {
   return `${meta.label}${value.toFixed(meta.decimals)}${meta.suffix}`;
 }
 
+function formatMarketCap(company) {
+  const meta = currencyMeta[state.currency];
+  const value = company.marketCap?.[state.currency];
+  if (value === undefined || value === null) {
+    return "-";
+  }
+  return `${meta.label}${value.toFixed(meta.decimals)}${meta.suffix}`;
+}
+
 function formatDelta(value) {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
@@ -155,30 +164,6 @@ function createRevenueChart(canvas, company) {
       labels: axisSeries.labels,
       datasets: [
         {
-          type: "line",
-          label: "YoY%",
-          data: yoySeries.aligned,
-          borderColor: "#d93025",
-          backgroundColor: "#d93025",
-          borderWidth: 2,
-          tension: 0.32,
-          pointRadius: 0,
-          spanGaps: false,
-          yAxisID: "yPercent",
-        },
-        {
-          type: "line",
-          label: "MoM%",
-          data: momSeries.aligned,
-          borderColor: "#6b7280",
-          backgroundColor: "#6b7280",
-          borderWidth: 2,
-          tension: 0.32,
-          pointRadius: 0,
-          spanGaps: false,
-          yAxisID: "yPercent",
-        },
-        {
           type: "bar",
           label: "Revenue",
           data: axisSeries.aligned,
@@ -186,6 +171,34 @@ function createRevenueChart(canvas, company) {
           borderWidth: 0,
           borderRadius: 3,
           yAxisID: "yRevenue",
+          order: 3,
+        },
+        {
+          type: "line",
+          label: "YoY%",
+          data: yoySeries.aligned,
+          borderColor: "#d93025",
+          backgroundColor: "#d93025",
+          borderWidth: 2.4,
+          tension: 0.32,
+          pointRadius: 0,
+          spanGaps: false,
+          yAxisID: "yPercent",
+          order: 1,
+        },
+        {
+          type: "line",
+          label: "MoM%",
+          data: momSeries.aligned,
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          borderWidth: 2.4,
+          borderDash: [6, 4],
+          tension: 0.32,
+          pointRadius: 0,
+          spanGaps: false,
+          yAxisID: "yPercent",
+          order: 2,
         },
       ],
     },
@@ -263,6 +276,14 @@ function createYearlyChart(canvas, company) {
     return;
   }
 
+  const yearlyValues = company.yearly.series.flatMap((series) =>
+    series.values.filter((value) => value !== null && value !== undefined),
+  );
+  const minValue = yearlyValues.length ? Math.min(...yearlyValues) : -20;
+  const maxValue = yearlyValues.length ? Math.max(...yearlyValues) : 100;
+  const yMin = Math.min(-50, Math.floor(minValue / 50) * 50);
+  const yMax = Math.max(100, Math.ceil(maxValue / 50) * 50);
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
@@ -296,7 +317,13 @@ function createYearlyChart(canvas, company) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#8d8d86" },
+          ticks: {
+            color: "#8d8d86",
+            callback: (value, index) => {
+              const label = company.yearly.labels[index];
+              return label ? `${Number.parseInt(label, 10)}M` : "";
+            },
+          },
           border: { color: "#d8d8d2" },
           title: {
             display: true,
@@ -305,20 +332,14 @@ function createYearlyChart(canvas, company) {
           },
         },
         y: {
-          suggestedMin: -20,
-          suggestedMax: 60,
+          min: yMin,
+          max: yMax,
           ticks: {
             color: "#8d8d86",
             callback: (value) => `${value}%`,
             maxTicksLimit: 5,
           },
-          grid: {
-            color: (context) =>
-              context.tick.value === 0
-                ? "rgba(217, 48, 37, 0.55)"
-                : "rgba(70, 70, 66, 0.10)",
-            lineWidth: (context) => (context.tick.value === 0 ? 2.4 : 1),
-          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
         },
       },
@@ -416,7 +437,7 @@ function renderCards(list) {
   list.forEach((company) => {
     const fragment = cardTemplate.content.cloneNode(true);
     fragment.querySelector(".company-name").textContent = company.name;
-    fragment.querySelector(".revenue-value").textContent = formatRevenue(company);
+    fragment.querySelector(".revenue-value").textContent = formatMarketCap(company);
 
     const momNode = fragment.querySelector(".mom-value");
     momNode.textContent = formatDelta(company.mom);
@@ -431,6 +452,12 @@ function renderCards(list) {
     }
 
     fragment.querySelector(".reporting-month").textContent = company.month;
+    const metricCaptions = fragment.querySelectorAll(".metric-caption span");
+    if (metricCaptions.length >= 4) {
+      metricCaptions[1].textContent = "Market Cap";
+      metricCaptions[2].textContent = "MoM";
+      metricCaptions[3].textContent = "YoY";
+    }
     fragment.querySelector(".sector-pill").textContent = company.sector;
     fragment.querySelector(".chart-panel .axis-caption").textContent = "Monthly revenue and growth trend";
     fragment.querySelector(".trend-panel .axis-caption").textContent = "Compare the same months across years";

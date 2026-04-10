@@ -240,6 +240,8 @@ h1 {
 .revenue-value {
   font-size: 1.85rem;
   line-height: 1;
+  color: #111111;
+  font-weight: 700;
 }
 
 .delta {
@@ -252,7 +254,7 @@ h1 {
 }
 
 .mom-value {
-  color: var(--gray-mid);
+  color: #2563eb;
 }
 
 .yoy-value {
