@@ -193,7 +193,6 @@ function createRevenueChart(canvas, company) {
           borderColor: "#2563eb",
           backgroundColor: "#2563eb",
           borderWidth: 2.4,
-          borderDash: [6, 4],
           tension: 0.32,
           pointRadius: 0,
           spanGaps: false,
