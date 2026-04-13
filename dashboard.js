@@ -21,11 +21,13 @@ const state = {
   currency: "NTD",
   sector: "All",
   query: "",
+  sort: "marketCapDesc",
 };
 
 const charts = [];
 
 const searchInput = document.querySelector("#search-input");
+const sortSelect = document.querySelector("#sort-select");
 const countrySwitch = document.querySelector("#country-switch");
 const currencySwitch = document.querySelector("#currency-switch");
 const sectorChips = document.querySelector("#sector-chips");
@@ -295,12 +297,15 @@ function createYearlyChart(canvas, company) {
         borderWidth: index === company.yearly.series.length - 1 ? 2.4 : 2,
         tension: 0.28,
         pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
       })),
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
+      interaction: { mode: "nearest", intersect: false },
       plugins: {
         legend: {
           position: "top",
@@ -310,6 +315,12 @@ function createYearlyChart(canvas, company) {
             usePointStyle: true,
             boxWidth: 8,
             boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${context.parsed.y}%`,
           },
         },
       },
@@ -349,12 +360,23 @@ function createYearlyChart(canvas, company) {
 }
 
 function filteredCompanies() {
-  return companies.filter((company) => {
+  const filtered = companies.filter((company) => {
     const matchesCountry = company.country === state.country;
     const matchesSector = state.sector === "All" ? true : company.sector === state.sector;
     const matchesQuery = company.name.toLowerCase().includes(state.query.toLowerCase().trim());
     return matchesCountry && matchesSector && matchesQuery;
   });
+
+  const sorted = [...filtered];
+  if (state.sort === "marketCapDesc") {
+    sorted.sort((a, b) => (b.marketCap?.[state.currency] ?? -Infinity) - (a.marketCap?.[state.currency] ?? -Infinity));
+  } else if (state.sort === "marketCapAsc") {
+    sorted.sort((a, b) => (a.marketCap?.[state.currency] ?? Infinity) - (b.marketCap?.[state.currency] ?? Infinity));
+  } else if (state.sort === "nameAsc") {
+    sorted.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return sorted;
 }
 
 function renderCountries() {
@@ -493,6 +515,11 @@ function render() {
 
 searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
+  render();
+});
+
+sortSelect.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   render();
 });
 
