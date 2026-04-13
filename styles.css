@@ -282,6 +282,42 @@ h1 {
   height: 220px;
 }
 
+.us-mini-chart-wrap-secondary canvas {
+  height: 150px;
+}
+
+.us-segment-block {
+  margin-top: 14px;
+  border-top: 1px solid #e2e2dc;
+  padding-top: 12px;
+}
+
+.us-segment-head,
+.us-segment-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.9fr 0.9fr 0.7fr 0.7fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.us-segment-head {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.us-segment-row {
+  padding: 8px 0;
+  border-top: 1px solid rgba(216, 216, 210, 0.7);
+  font-size: 0.8rem;
+}
+
+.us-segment-row span:first-child {
+  font-weight: 700;
+  color: #20201d;
+}
+
 .company-card {
   padding: 18px 18px 16px;
   border: 1px solid var(--border);

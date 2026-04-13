@@ -134,14 +134,82 @@ window.usOverviewData = (() => {
 
   const quarterLabels = ["23Q1", "23Q2", "23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4"];
   const m7Quarterly = [
-    { name: "Apple", revenue: [94.8, 81.8, 89.5, 119.6, 90.8, 85.8, 94.9, 124.3, 90.1, 86.2, 95.7, 126.8], eps: [1.52, 1.26, 1.46, 2.18, 1.53, 1.40, 1.64, 2.19, 1.58, 1.47, 1.71, 2.24] },
-    { name: "Microsoft", revenue: [52.9, 56.2, 56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 68.4, 71.2, 73.5, 76.8], eps: [2.45, 2.69, 2.99, 3.23, 2.94, 3.15, 3.30, 3.82, 3.20, 3.47, 3.73, 4.05] },
-    { name: "Alphabet", revenue: [69.8, 74.6, 76.7, 86.3, 80.5, 84.7, 88.3, 96.5, 92.4, 97.1, 101.8, 109.6], eps: [1.17, 1.44, 1.55, 1.64, 1.89, 1.89, 2.12, 2.35, 1.96, 2.09, 2.27, 2.48] },
-    { name: "Amazon", revenue: [127.4, 134.4, 143.1, 170.0, 143.3, 148.0, 158.9, 187.8, 151.4, 156.9, 167.5, 196.3], eps: [0.31, 0.65, 0.94, 1.00, 0.98, 1.26, 1.43, 1.86, 1.12, 1.31, 1.64, 2.02] },
-    { name: "NVIDIA", revenue: [7.2, 13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.7, 50.6, 56.8, 64.2], eps: [0.82, 2.70, 3.71, 4.93, 5.18, 5.94, 6.63, 7.15, 7.62, 8.25, 8.98, 9.64] },
-    { name: "Meta", revenue: [28.6, 32.0, 34.1, 40.1, 36.5, 39.1, 40.6, 47.3, 39.7, 42.6, 44.1, 50.7], eps: [2.20, 2.98, 4.39, 5.33, 4.71, 5.16, 5.74, 6.43, 5.12, 5.61, 6.08, 6.86] },
-    { name: "Tesla", revenue: [23.3, 24.9, 23.4, 25.2, 21.3, 25.5, 25.2, 28.5, 23.4, 25.8, 27.2, 29.1], eps: [0.85, 0.91, 0.66, 0.71, 0.45, 0.52, 0.58, 0.72, 0.40, 0.47, 0.54, 0.69] },
+    {
+      name: "Apple",
+      revenue: [94.8, 81.8, 89.5, 119.6, 90.8, 85.8, 94.9, 124.3, 90.1, 86.2, 95.7, 126.8],
+      opm: [30.4, 28.2, 29.0, 34.7, 30.8, 29.5, 30.4, 35.3, 31.1, 30.0, 31.4, 36.1],
+      segments: [
+        { name: "iPhone", priorRevenue: 68.1, latestRevenue: 73.2, opm: 41.2 },
+        { name: "Mac", priorRevenue: 7.8, latestRevenue: 8.5, opm: 24.6 },
+        { name: "iPad", priorRevenue: 6.9, latestRevenue: 7.4, opm: 22.3 },
+        { name: "Wearables", priorRevenue: 11.5, latestRevenue: 12.1, opm: 26.4 },
+        { name: "Services", priorRevenue: 30.0, latestRevenue: 34.1, opm: 43.5 },
+      ],
+    },
+    {
+      name: "Microsoft",
+      revenue: [52.9, 56.2, 56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 68.4, 71.2, 73.5, 76.8],
+      opm: [41.8, 42.9, 43.6, 44.5, 43.9, 44.8, 45.1, 45.9, 44.4, 45.1, 45.8, 46.6],
+      segments: [
+        { name: "Productivity", priorRevenue: 20.4, latestRevenue: 22.1, opm: 52.2 },
+        { name: "Intelligent Cloud", priorRevenue: 26.1, latestRevenue: 29.8, opm: 47.3 },
+        { name: "More Personal", priorRevenue: 23.1, latestRevenue: 24.9, opm: 29.4 },
+      ],
+    },
+    {
+      name: "Alphabet",
+      revenue: [69.8, 74.6, 76.7, 86.3, 80.5, 84.7, 88.3, 96.5, 92.4, 97.1, 101.8, 109.6],
+      opm: [28.1, 30.2, 31.0, 32.8, 31.4, 32.2, 33.0, 34.3, 33.1, 33.8, 34.7, 35.5],
+      segments: [
+        { name: "Search & Other", priorRevenue: 51.3, latestRevenue: 57.2, opm: 39.8 },
+        { name: "YouTube Ads", priorRevenue: 9.2, latestRevenue: 10.1, opm: 33.4 },
+        { name: "Google Cloud", priorRevenue: 9.4, latestRevenue: 12.4, opm: 18.6 },
+        { name: "Other Bets", priorRevenue: 0.5, latestRevenue: 0.6, opm: -98.0 },
+      ],
+    },
+    {
+      name: "Amazon",
+      revenue: [127.4, 134.4, 143.1, 170.0, 143.3, 148.0, 158.9, 187.8, 151.4, 156.9, 167.5, 196.3],
+      opm: [5.7, 6.3, 7.4, 8.6, 8.1, 9.2, 10.1, 11.6, 9.4, 10.2, 11.1, 12.4],
+      segments: [
+        { name: "North America", priorRevenue: 103.2, latestRevenue: 118.6, opm: 8.4 },
+        { name: "International", priorRevenue: 34.5, latestRevenue: 38.2, opm: 4.1 },
+        { name: "AWS", priorRevenue: 24.2, latestRevenue: 31.6, opm: 36.8 },
+        { name: "Advertising", priorRevenue: 14.3, latestRevenue: 17.1, opm: 42.7 },
+      ],
+    },
+    {
+      name: "NVIDIA",
+      revenue: [7.2, 13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.7, 50.6, 56.8, 64.2],
+      opm: [26.0, 38.4, 42.1, 47.6, 50.8, 54.2, 57.1, 58.9, 60.4, 61.2, 62.7, 64.0],
+      segments: [
+        { name: "Data Center", priorRevenue: 17.4, latestRevenue: 46.9, opm: 71.5 },
+        { name: "Gaming", priorRevenue: 3.3, latestRevenue: 4.9, opm: 34.8 },
+        { name: "Professional Viz", priorRevenue: 0.4, latestRevenue: 0.8, opm: 22.7 },
+        { name: "Automotive", priorRevenue: 0.3, latestRevenue: 0.6, opm: 18.5 },
+      ],
+    },
+    {
+      name: "Meta",
+      revenue: [28.6, 32.0, 34.1, 40.1, 36.5, 39.1, 40.6, 47.3, 39.7, 42.6, 44.1, 50.7],
+      opm: [25.2, 28.6, 31.0, 34.1, 33.2, 34.8, 35.4, 38.6, 36.1, 37.0, 37.8, 40.2],
+      segments: [
+        { name: "Family of Apps", priorRevenue: 46.1, latestRevenue: 49.8, opm: 51.2 },
+        { name: "Reality Labs", priorRevenue: 1.2, latestRevenue: 1.5, opm: -118.4 },
+        { name: "Ads", priorRevenue: 43.2, latestRevenue: 47.0, opm: 54.1 },
+      ],
+    },
+    {
+      name: "Tesla",
+      revenue: [23.3, 24.9, 23.4, 25.2, 21.3, 25.5, 25.2, 28.5, 23.4, 25.8, 27.2, 29.1],
+      opm: [11.4, 10.8, 9.6, 8.7, 8.1, 7.4, 6.8, 6.2, 5.9, 6.1, 6.5, 7.0],
+      segments: [
+        { name: "Auto Sales", priorRevenue: 20.3, latestRevenue: 24.2, opm: 9.8 },
+        { name: "Energy", priorRevenue: 1.8, latestRevenue: 2.7, opm: 16.2 },
+        { name: "Services", priorRevenue: 3.1, latestRevenue: 3.8, opm: 5.1 },
+      ],
+    },
   ];
 
-  return { valuationPanels, m7Quarterly };
+  return { valuationPanels, quarterLabels, m7Quarterly };
 })();

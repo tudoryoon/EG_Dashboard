@@ -240,6 +240,13 @@ function createUsQuarterlyChart(canvas, company) {
     return;
   }
 
+  const revenueYoy = company.revenue.map((value, index) => {
+    if (index < 4) {
+      return null;
+    }
+    return Number((((value - company.revenue[index - 4]) / company.revenue[index - 4]) * 100).toFixed(1));
+  });
+
   const chart = new Chart(canvas, {
     type: "bar",
     data: {
@@ -256,14 +263,14 @@ function createUsQuarterlyChart(canvas, company) {
         },
         {
           type: "line",
-          label: "EPS",
-          data: company.eps,
+          label: "Revenue YoY%",
+          data: revenueYoy,
           borderColor: "#d93025",
           backgroundColor: "#d93025",
           borderWidth: 2.2,
           tension: 0.25,
           pointRadius: 0,
-          yAxisID: "yEps",
+          yAxisID: "yGrowth",
         },
       ],
     },
@@ -300,13 +307,73 @@ function createUsQuarterlyChart(canvas, company) {
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
         },
-        yEps: {
+        yGrowth: {
           position: "right",
           ticks: {
             color: "#8d8d86",
-            callback: (value) => `$${value}`,
+            callback: (value) => `${value}%`,
           },
           grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createUsMarginChart(canvas, company) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: company.labels,
+      datasets: [
+        {
+          label: "OPM",
+          data: company.opm,
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          borderWidth: 2.2,
+          tension: 0.25,
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: { enabled: true },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86" },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${value}%`,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
         },
       },
@@ -345,11 +412,36 @@ function renderUSOverview() {
           <div class="us-panel-head">
             <div>
               <h3>${company.name}</h3>
-              <p>Quarterly revenue and EPS</p>
+              <p>Quarterly revenue, revenue YoY, and OPM</p>
             </div>
           </div>
           <div class="us-mini-chart-wrap">
             <canvas data-us-quarterly="${company.name}"></canvas>
+          </div>
+          <div class="us-mini-chart-wrap us-mini-chart-wrap-secondary">
+            <canvas data-us-margin="${company.name}"></canvas>
+          </div>
+          <div class="us-segment-block">
+            <div class="us-segment-head">
+              <span>Segment</span>
+              <span>24Q4 Rev</span>
+              <span>25Q4 Rev</span>
+              <span>YoY</span>
+              <span>OPM</span>
+            </div>
+            ${company.segments
+              .map((segment) => {
+                const yoy = (((segment.latestRevenue - segment.priorRevenue) / segment.priorRevenue) * 100).toFixed(1);
+                return `
+                  <div class="us-segment-row">
+                    <span>${segment.name}</span>
+                    <span>$${segment.priorRevenue.toFixed(1)}B</span>
+                    <span>$${segment.latestRevenue.toFixed(1)}B</span>
+                    <span>${yoy}%</span>
+                    <span>${segment.opm.toFixed(1)}%</span>
+                  </div>`;
+              })
+              .join("")}
           </div>
         </article>`,
     )
@@ -376,7 +468,11 @@ function renderUSOverview() {
   usOverviewData.m7Quarterly.forEach((company) => {
     const canvas = usOverviewRoot.querySelector(`[data-us-quarterly="${company.name}"]`);
     if (canvas) {
-      createUsQuarterlyChart(canvas, { ...company, labels: ["23Q1", "23Q2", "23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4"] });
+      createUsQuarterlyChart(canvas, { ...company, labels: usOverviewData.quarterLabels });
+    }
+    const marginCanvas = usOverviewRoot.querySelector(`[data-us-margin="${company.name}"]`);
+    if (marginCanvas) {
+      createUsMarginChart(marginCanvas, { ...company, labels: usOverviewData.quarterLabels });
     }
   });
 }
