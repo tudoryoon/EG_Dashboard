@@ -136,18 +136,20 @@ window.usOverviewData = (() => {
   const m7Quarterly = [
     {
       name: "Apple",
-      revenue: [94.8, 81.8, 89.5, 119.6, 90.8, 85.8, 94.9, 124.3, 90.1, 86.2, 95.7, 126.8],
-      opm: [30.4, 28.2, 29.0, 34.7, 30.8, 29.5, 30.4, 35.3, 31.1, 30.0, 31.4, 36.1],
+      labels: quarterLabels,
+      revenue: [117.2, 94.8, 81.8, 89.5, 119.6, 90.8, 85.8, 94.9, 124.3, 95.4, 94.0, 102.5],
+      opm: [30.7, 29.9, 28.1, 30.1, 33.8, 30.7, 29.6, 31.2, 34.5, 31.0, 30.0, 31.6],
       segments: [
-        { name: "iPhone", priorRevenue: 68.1, latestRevenue: 73.2, opm: 41.2 },
-        { name: "Mac", priorRevenue: 7.8, latestRevenue: 8.5, opm: 24.6 },
-        { name: "iPad", priorRevenue: 6.9, latestRevenue: 7.4, opm: 22.3 },
-        { name: "Wearables", priorRevenue: 11.5, latestRevenue: 12.1, opm: 26.4 },
-        { name: "Services", priorRevenue: 30.0, latestRevenue: 34.1, opm: 43.5 },
+        { name: "iPhone", priorRevenue: 46.2, latestRevenue: 49.0, opm: null },
+        { name: "Mac", priorRevenue: 7.7, latestRevenue: 8.7, opm: null },
+        { name: "iPad", priorRevenue: 7.0, latestRevenue: 7.0, opm: null },
+        { name: "Wearables", priorRevenue: 9.0, latestRevenue: 9.0, opm: null },
+        { name: "Services", priorRevenue: 25.0, latestRevenue: 28.8, opm: null },
       ],
     },
     {
       name: "Microsoft",
+      labels: quarterLabels,
       revenue: [52.9, 56.2, 56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 68.4, 71.2, 73.5, 76.8],
       opm: [41.8, 42.9, 43.6, 44.5, 43.9, 44.8, 45.1, 45.9, 44.4, 45.1, 45.8, 46.6],
       segments: [
@@ -158,6 +160,7 @@ window.usOverviewData = (() => {
     },
     {
       name: "Alphabet",
+      labels: quarterLabels,
       revenue: [69.8, 74.6, 76.7, 86.3, 80.5, 84.7, 88.3, 96.5, 92.4, 97.1, 101.8, 109.6],
       opm: [28.1, 30.2, 31.0, 32.8, 31.4, 32.2, 33.0, 34.3, 33.1, 33.8, 34.7, 35.5],
       segments: [
@@ -169,6 +172,7 @@ window.usOverviewData = (() => {
     },
     {
       name: "Amazon",
+      labels: quarterLabels,
       revenue: [127.4, 134.4, 143.1, 170.0, 143.3, 148.0, 158.9, 187.8, 151.4, 156.9, 167.5, 196.3],
       opm: [5.7, 6.3, 7.4, 8.6, 8.1, 9.2, 10.1, 11.6, 9.4, 10.2, 11.1, 12.4],
       segments: [
@@ -180,6 +184,7 @@ window.usOverviewData = (() => {
     },
     {
       name: "NVIDIA",
+      labels: quarterLabels,
       revenue: [7.2, 13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.7, 50.6, 56.8, 64.2],
       opm: [26.0, 38.4, 42.1, 47.6, 50.8, 54.2, 57.1, 58.9, 60.4, 61.2, 62.7, 64.0],
       segments: [
@@ -191,6 +196,7 @@ window.usOverviewData = (() => {
     },
     {
       name: "Meta",
+      labels: quarterLabels,
       revenue: [28.6, 32.0, 34.1, 40.1, 36.5, 39.1, 40.6, 47.3, 39.7, 42.6, 44.1, 50.7],
       opm: [25.2, 28.6, 31.0, 34.1, 33.2, 34.8, 35.4, 38.6, 36.1, 37.0, 37.8, 40.2],
       segments: [
@@ -201,6 +207,7 @@ window.usOverviewData = (() => {
     },
     {
       name: "Tesla",
+      labels: quarterLabels,
       revenue: [23.3, 24.9, 23.4, 25.2, 21.3, 25.5, 25.2, 28.5, 23.4, 25.8, 27.2, 29.1],
       opm: [11.4, 10.8, 9.6, 8.7, 8.1, 7.4, 6.8, 6.2, 5.9, 6.1, 6.5, 7.0],
       segments: [

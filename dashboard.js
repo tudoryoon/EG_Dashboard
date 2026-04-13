@@ -432,13 +432,14 @@ function renderUSOverview() {
             ${company.segments
               .map((segment) => {
                 const yoy = (((segment.latestRevenue - segment.priorRevenue) / segment.priorRevenue) * 100).toFixed(1);
+                const opmLabel = Number.isFinite(segment.opm) ? `${segment.opm.toFixed(1)}%` : "-";
                 return `
                   <div class="us-segment-row">
                     <span>${segment.name}</span>
                     <span>$${segment.priorRevenue.toFixed(1)}B</span>
                     <span>$${segment.latestRevenue.toFixed(1)}B</span>
                     <span>${yoy}%</span>
-                    <span>${segment.opm.toFixed(1)}%</span>
+                    <span>${opmLabel}</span>
                   </div>`;
               })
               .join("")}
