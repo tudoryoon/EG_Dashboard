@@ -1,4 +1,5 @@
 const companies = window.dashboardCompanies ?? [];
+const usOverviewData = window.usOverviewData ?? { valuationPanels: [], m7Quarterly: [] };
 
 const countryMeta = {
   US: { label: "US", currencies: ["USD"], defaultCurrency: "USD" },
@@ -35,6 +36,7 @@ const companyGrid = document.querySelector("#company-grid");
 const summaryText = document.querySelector("#summary-text");
 const summaryStats = document.querySelector("#summary-stats");
 const cardTemplate = document.querySelector("#company-card-template");
+const usOverviewRoot = document.querySelector("#us-overview");
 
 function parseCompanyMonth(monthText) {
   const [yy, mm] = monthText.split("/").map((value) => Number(value));
@@ -141,6 +143,242 @@ function ensureValidSelection() {
 
 function destroyCharts() {
   charts.splice(0).forEach((chart) => chart.destroy());
+}
+
+function createUsValuationChart(canvas, panel) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: panel.labels,
+      datasets: [
+        {
+          label: "Fwd P/E",
+          data: panel.pe,
+          borderColor: "#d93025",
+          backgroundColor: "#d93025",
+          borderWidth: 2.4,
+          tension: 0.24,
+          pointRadius: 0,
+          yAxisID: "yPe",
+        },
+        {
+          label: "Fwd EPS",
+          data: panel.eps,
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          borderWidth: 2.4,
+          tension: 0.24,
+          pointRadius: 0,
+          yAxisID: "yEps",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: { enabled: true },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: 10,
+            maxRotation: 0,
+            callback: (value, index) => {
+              const label = panel.labels[index];
+              return label && label.endsWith("/01") ? label : "";
+            },
+          },
+          border: { color: "#d8d8d2" },
+        },
+        yPe: {
+          position: "left",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${value}x`,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yEps: {
+          position: "right",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${value}`,
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createUsQuarterlyChart(canvas, company) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: company.labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "Revenue",
+          data: company.revenue,
+          backgroundColor: "rgba(74, 74, 70, 0.82)",
+          borderRadius: 4,
+          borderWidth: 0,
+          yAxisID: "yRevenue",
+        },
+        {
+          type: "line",
+          label: "EPS",
+          data: company.eps,
+          borderColor: "#d93025",
+          backgroundColor: "#d93025",
+          borderWidth: 2.2,
+          tension: 0.25,
+          pointRadius: 0,
+          yAxisID: "yEps",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: { enabled: true },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86" },
+          border: { color: "#d8d8d2" },
+        },
+        yRevenue: {
+          position: "left",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `$${value}B`,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yEps: {
+          position: "right",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `$${value}`,
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function renderUSOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  const valuationMarkup = usOverviewData.valuationPanels
+    .map(
+      (panel) => `
+        <article class="us-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${panel.title}</h3>
+              <p>${panel.subtitle}</p>
+            </div>
+          </div>
+          <div class="us-chart-wrap">
+            <canvas data-us-valuation="${panel.id}"></canvas>
+          </div>
+        </article>`,
+    )
+    .join("");
+
+  const m7Markup = usOverviewData.m7Quarterly
+    .map(
+      (company) => `
+        <article class="us-mini-card">
+          <div class="us-panel-head">
+            <div>
+              <h3>${company.name}</h3>
+              <p>Quarterly revenue and EPS</p>
+            </div>
+          </div>
+          <div class="us-mini-chart-wrap">
+            <canvas data-us-quarterly="${company.name}"></canvas>
+          </div>
+        </article>`,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="us-panel-grid">${valuationMarkup}</section>
+    <section class="us-m7-section">
+      <div class="us-section-head">
+        <h2>M7 Quarterly Earnings</h2>
+        <p>Revenue bars with EPS line by quarter</p>
+      </div>
+      <div class="us-mini-grid">${m7Markup}</div>
+    </section>
+  `;
+
+  usOverviewData.valuationPanels.forEach((panel) => {
+    const canvas = usOverviewRoot.querySelector(`[data-us-valuation="${panel.id}"]`);
+    if (canvas) {
+      createUsValuationChart(canvas, panel);
+    }
+  });
+
+  usOverviewData.m7Quarterly.forEach((company) => {
+    const canvas = usOverviewRoot.querySelector(`[data-us-quarterly="${company.name}"]`);
+    if (canvas) {
+      createUsQuarterlyChart(canvas, { ...company, labels: ["23Q1", "23Q2", "23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4"] });
+    }
+  });
 }
 
 function createRevenueChart(canvas, company) {
@@ -427,6 +665,16 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
+  if (state.country === "US") {
+    summaryText.textContent = "US valuation dashboard and Magnificent 7 quarterly earnings";
+    summaryStats.innerHTML = `
+      <span class="summary-stat">Valuation Panels 3</span>
+      <span class="summary-stat">M7 Quarterly Cards 7</span>
+      <span class="summary-stat">Frequency Daily → Weekly → Monthly fallback</span>
+    `;
+    return;
+  }
+
   summaryText.textContent = `${countryMeta[state.country].label} ${list.length} companies`;
 
   const avgYoY =
@@ -504,10 +752,20 @@ function renderCards(list) {
 }
 
 function render() {
+  destroyCharts();
   ensureValidSelection();
   renderCountries();
   renderCurrencies();
   renderSectors();
+  if (state.country === "US") {
+    renderSummary([]);
+    renderUSOverview();
+    return;
+  }
+
+  usOverviewRoot.classList.add("hidden");
+  usOverviewRoot.innerHTML = "";
+  companyGrid.classList.remove("hidden");
   const list = filteredCompanies();
   renderSummary(list);
   renderCards(list);
