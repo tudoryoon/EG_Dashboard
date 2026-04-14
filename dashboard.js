@@ -18,8 +18,8 @@ const SERIES_START_YEAR = 2021;
 const SERIES_START_MONTH = 1;
 
 const state = {
-  country: "Taiwan",
-  currency: "NTD",
+  country: "US",
+  currency: "USD",
   sector: "All",
   query: "",
   sort: "marketCapDesc",
