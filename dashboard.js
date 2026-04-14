@@ -424,6 +424,85 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
   charts.push(chart);
 }
 
+function createCloudRevenueBarChart(canvas, panel) {
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const datasets = panel.series.map((series) => ({
+    label: series.name,
+    data: series.values,
+    backgroundColor: cloudDashboardData.colors[series.key],
+    borderColor: cloudDashboardData.colors[series.key],
+    borderWidth: 0,
+    borderRadius: 4,
+    barPercentage: 0.78,
+    categoryPercentage: 0.72,
+  }));
+
+  const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMax = Math.ceil((maxValue * 1.1) / 5000) * 5000;
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: cloudDashboardData.labels,
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatCompactDollarMillions(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: false,
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: 9,
+            maxRotation: 0,
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatCompactDollarMillions(Number(value)),
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function renderCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -484,7 +563,7 @@ function renderCloudOverview() {
     createCloudLineChart(marginCanvas, cloudDashboardData.margin, (value) => `${Number(value).toFixed(1)}%`, -20);
   }
   if (revenueCanvas) {
-    createCloudLineChart(revenueCanvas, cloudDashboardData.revenue, (value) => formatCompactDollarMillions(Number(value)), 0);
+    createCloudRevenueBarChart(revenueCanvas, cloudDashboardData.revenue);
   }
 }
 
