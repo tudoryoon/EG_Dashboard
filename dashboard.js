@@ -641,6 +641,170 @@ function createCapexBarChart(canvas, labels, panel, formatter) {
   charts.push(chart);
 }
 
+function sumTrailingWindow(values, endIndex, windowSize) {
+  let total = 0;
+  for (let offset = 0; offset < windowSize; offset += 1) {
+    const value = values[endIndex - offset];
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    total += value;
+  }
+  return total;
+}
+
+function buildAnnualBig5CapexPanel() {
+  const labels = capexDashboardData.annualLabels ?? [];
+  const series = capexDashboardData.annualCapex?.series ?? [];
+  const totals = labels.map((_, index) =>
+    Number(
+      series.reduce((sum, companySeries) => {
+        const value = companySeries.values[index];
+        return sum + (Number.isFinite(value) ? value : 0);
+      }, 0).toFixed(1),
+    ),
+  );
+  const yoy = totals.map((value, index) => {
+    if (index === 0 || !Number.isFinite(value) || !Number.isFinite(totals[index - 1]) || totals[index - 1] === 0) {
+      return null;
+    }
+    return Number((((value - totals[index - 1]) / totals[index - 1]) * 100).toFixed(1));
+  });
+
+  return {
+    labels,
+    totals,
+    yoy,
+  };
+}
+
+function buildTtmCapexToOcfPanel() {
+  const labels = capexDashboardData.quarterLabels ?? [];
+  const capexSeries = capexDashboardData.quarterlyCapex?.series ?? [];
+  const ocfSeries = capexDashboardData.quarterlyOcf?.series ?? [];
+
+  const series = capexSeries
+    .map((capexCompanySeries) => {
+      const ocfCompanySeries = ocfSeries.find((item) => item.key === capexCompanySeries.key);
+      if (!ocfCompanySeries) {
+        return null;
+      }
+
+      const values = labels.map((_, index) => {
+        if (index < 3) {
+          return null;
+        }
+        const capexTtm = sumTrailingWindow(capexCompanySeries.values, index, 4);
+        const ocfTtm = sumTrailingWindow(ocfCompanySeries.values, index, 4);
+        if (!Number.isFinite(capexTtm) || !Number.isFinite(ocfTtm) || ocfTtm === 0) {
+          return null;
+        }
+        return Number(((capexTtm / ocfTtm) * 100).toFixed(1));
+      });
+
+      return {
+        key: capexCompanySeries.key,
+        name: `${capexCompanySeries.name} TTM`,
+        values,
+      };
+    })
+    .filter(Boolean);
+
+  return { labels, series };
+}
+
+function createCapexAggregateComboChart(canvas, panel) {
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const maxBarValue = Math.max(...panel.totals.filter((value) => Number.isFinite(value)), 0);
+  const yoyValues = panel.yoy.filter((value) => Number.isFinite(value));
+  const minYoyValue = yoyValues.length ? Math.min(...yoyValues) : 0;
+  const maxYoyValue = yoyValues.length ? Math.max(...yoyValues) : 100;
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: panel.labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "BIG5 Capex",
+          data: panel.totals,
+          backgroundColor: "rgba(74, 74, 70, 0.84)",
+          borderColor: "rgba(74, 74, 70, 1)",
+          borderWidth: 0,
+          borderRadius: 4,
+          yAxisID: "yCapex",
+        },
+        {
+          type: "line",
+          label: "YoY Growth",
+          data: panel.yoy,
+          borderColor: "#d93025",
+          backgroundColor: "#d93025",
+          borderWidth: 2.4,
+          tension: 0.22,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          yAxisID: "yYoy",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => {
+              if (context.dataset.yAxisID === "yCapex") {
+                return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(1)}B`;
+              }
+              return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 10, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        yCapex: {
+          position: "left",
+          beginAtZero: true,
+          max: Math.ceil((maxBarValue * 1.1) / 25) * 25,
+          ticks: { color: "#8d8d86", callback: (value) => `$${Number(value).toFixed(0)}B`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yYoy: {
+          position: "right",
+          min: Math.floor((minYoyValue - 10) / 10) * 10,
+          max: Math.ceil((maxYoyValue + 10) / 10) * 10,
+          ticks: { color: "#8d8d86", callback: (value) => `${Number(value).toFixed(0)}%`, maxTicksLimit: 6 },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function renderCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -709,6 +873,8 @@ function renderCapexOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
+  const annualBig5Panel = buildAnnualBig5CapexPanel();
+  const ttmCapexToOcfPanel = buildTtmCapexToOcfPanel();
 
   usOverviewRoot.innerHTML = `
     <section class="cloud-overview">
@@ -717,6 +883,28 @@ function renderCapexOverview() {
         <p>Quarterly capex and operating cash flow trends from the raw Excel sheet</p>
       </div>
       <div class="cloud-panel-grid">
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>Annual BIG5 Capex Total</h3>
+              <p>Annual big tech capex sum with YoY growth rate</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+            <canvas data-capex-chart="annual-big5-capex"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>TTM Capex / OCF</h3>
+              <p>Trailing 4-quarter capex over trailing 4-quarter operating cash flow</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+            <canvas data-capex-chart="ttm-capex-to-ocf"></canvas>
+          </div>
+        </article>
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
             <div>
@@ -787,6 +975,8 @@ function renderCapexOverview() {
     </section>
   `;
 
+  const annualBig5CapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-big5-capex"]');
+  const ttmCapexToOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="ttm-capex-to-ocf"]');
   const quarterlyCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-capex"]');
   const quarterlyYoyCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-yoy"]');
   const annualCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-capex"]');
@@ -794,6 +984,12 @@ function renderCapexOverview() {
   const capexToOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="capex-to-ocf"]');
   const cashHistoryCanvas = usOverviewRoot.querySelector('[data-capex-chart="cash-history"]');
 
+  if (annualBig5CapexCanvas) {
+    createCapexAggregateComboChart(annualBig5CapexCanvas, annualBig5Panel);
+  }
+  if (ttmCapexToOcfCanvas) {
+    createCapexLineChart(ttmCapexToOcfCanvas, ttmCapexToOcfPanel.labels, ttmCapexToOcfPanel, (value) => `${Number(value).toFixed(0)}%`);
+  }
   if (quarterlyCapexCanvas) {
     createCapexBarChart(quarterlyCapexCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapex, (value) => `$${Number(value).toFixed(1)}B`);
   }
