@@ -21,13 +21,11 @@ const countryMeta = {
   Cloud: { label: "Cloud", currencies: ["USD"], defaultCurrency: "USD" },
   Capex: { label: "Capex & 현금흐름", currencies: ["USD"], defaultCurrency: "USD" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
-  Korea: { label: "Korea", currencies: ["KRW"], defaultCurrency: "KRW" },
 };
 
 const currencyMeta = {
   NTD: { label: "NT$", decimals: 1, suffix: "B" },
   USD: { label: "$", decimals: 1, suffix: "B" },
-  KRW: { label: "KRW ", decimals: 0, suffix: "B" },
 };
 
 const yearColors = ["#2563eb", "#7c3aed", "#f59e0b", "#14b8a6", "#d93025", "#0f172a"];
