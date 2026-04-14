@@ -1,8 +1,10 @@
 const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { valuationPanels: [], m7Quarterly: [] };
+const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 
 const countryMeta = {
   US: { label: "US", currencies: ["USD"], defaultCurrency: "USD" },
+  Cloud: { label: "Cloud", currencies: ["USD"], defaultCurrency: "USD" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Korea: { label: "Korea", currencies: ["KRW"], defaultCurrency: "KRW" },
 };
@@ -37,6 +39,17 @@ const summaryText = document.querySelector("#summary-text");
 const summaryStats = document.querySelector("#summary-stats");
 const cardTemplate = document.querySelector("#company-card-template");
 const usOverviewRoot = document.querySelector("#us-overview");
+const toolbarRow = document.querySelector(".toolbar .toolbar-row:not(.toolbar-row-country)");
+
+function formatCompactDollarMillions(value) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  if (Math.abs(value) >= 1000) {
+    return `$${(value / 1000).toFixed(1)}B`;
+  }
+  return `$${value.toFixed(0)}M`;
+}
 
 function parseCompanyMonth(monthText) {
   const [yy, mm] = monthText.split("/").map((value) => Number(value));
@@ -127,6 +140,9 @@ function companiesByCountry(country) {
 }
 
 function availableSectors() {
+  if (state.country === "Cloud") {
+    return ["All"];
+  }
   return ["All", ...new Set(companiesByCountry(state.country).map((company) => company.sector))];
 }
 
@@ -324,6 +340,152 @@ function createUsQuarterlyChart(canvas, company) {
   });
 
   charts.push(chart);
+}
+
+function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const datasets = panel.series.map((series) => ({
+    label: series.name,
+    data: series.values,
+    borderColor: cloudDashboardData.colors[series.key],
+    backgroundColor: cloudDashboardData.colors[series.key],
+    borderWidth: 2.8,
+    tension: 0.24,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    pointHitRadius: 10,
+    spanGaps: false,
+  }));
+
+  const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMin = minOverride ?? Math.floor((minValue - 5) / 5) * 5;
+  const yMax = Math.ceil((maxValue + 5) / 5) * 5;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: cloudDashboardData.labels,
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: 9,
+            maxRotation: 0,
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatter(value),
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function renderCloudOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  usOverviewRoot.innerHTML = `
+    <section class="cloud-overview">
+      <div class="us-section-head cloud-section-head">
+        <h2>Cloud Dashboard</h2>
+        <p>AWS, Microsoft cloud, and Google Cloud trends from the raw Excel sheets</p>
+      </div>
+      <div class="cloud-panel-grid">
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${cloudDashboardData.yoyGrowth.title}</h3>
+              <p>${cloudDashboardData.yoyGrowth.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-cloud-chart="growth"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${cloudDashboardData.margin.title}</h3>
+              <p>${cloudDashboardData.margin.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-cloud-chart="margin"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>${cloudDashboardData.revenue.title}</h3>
+              <p>${cloudDashboardData.revenue.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+            <canvas data-cloud-chart="revenue"></canvas>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+
+  const growthCanvas = usOverviewRoot.querySelector('[data-cloud-chart="growth"]');
+  const marginCanvas = usOverviewRoot.querySelector('[data-cloud-chart="margin"]');
+  const revenueCanvas = usOverviewRoot.querySelector('[data-cloud-chart="revenue"]');
+
+  if (growthCanvas) {
+    createCloudLineChart(growthCanvas, cloudDashboardData.yoyGrowth, (value) => `${Number(value).toFixed(1)}%`, 0);
+  }
+  if (marginCanvas) {
+    createCloudLineChart(marginCanvas, cloudDashboardData.margin, (value) => `${Number(value).toFixed(1)}%`, -20);
+  }
+  if (revenueCanvas) {
+    createCloudLineChart(revenueCanvas, cloudDashboardData.revenue, (value) => formatCompactDollarMillions(Number(value)), 0);
+  }
 }
 
 function createUsMarginChart(canvas, company) {
@@ -851,6 +1013,9 @@ function renderCountries() {
 
 function renderCurrencies() {
   currencySwitch.innerHTML = "";
+  if (state.country === "Cloud") {
+    return;
+  }
   countryMeta[state.country].currencies.forEach((currency) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -866,6 +1031,11 @@ function renderCurrencies() {
 
 function renderSectors() {
   sectorChips.innerHTML = "";
+  if (state.country === "Cloud") {
+    sectorChips.classList.add("hidden");
+    return;
+  }
+  sectorChips.classList.remove("hidden");
   availableSectors().forEach((sector) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -886,6 +1056,17 @@ function renderSummary(list) {
       <span class="summary-stat">Valuation Panels 3</span>
       <span class="summary-stat">M7 Quarterly Cards 7</span>
       <span class="summary-stat">Frequency Daily → Weekly → Monthly fallback</span>
+    `;
+    return;
+  }
+
+  if (state.country === "Cloud") {
+    summaryText.textContent = "Cloud raw data dashboard";
+    summaryStats.innerHTML = `
+      <span class="summary-stat">Charts 3</span>
+      <span class="summary-stat">Series AWS / Microsoft / Google</span>
+      <span class="summary-stat">MS revenue & margin use Intelligent Cloud</span>
+      <span class="summary-stat">Coverage 2021 Q4 → 2025 Q4</span>
     `;
     return;
   }
@@ -969,12 +1150,21 @@ function renderCards(list) {
 function render() {
   destroyCharts();
   ensureValidSelection();
+  if (toolbarRow) {
+    toolbarRow.classList.toggle("hidden", state.country === "Cloud");
+  }
   renderCountries();
   renderCurrencies();
   renderSectors();
   if (state.country === "US") {
     renderSummary([]);
     renderUSOverview();
+    return;
+  }
+
+  if (state.country === "Cloud") {
+    renderSummary([]);
+    renderCloudOverview();
     return;
   }
 
