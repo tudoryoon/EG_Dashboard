@@ -402,6 +402,24 @@ function buildUsSegmentHistoryMap(segment, company, quarterLabels) {
         opm: Number.isFinite(entry.opm) ? entry.opm : null,
       });
     });
+
+    const allQuarterLabels = usOverviewData.quarterLabels ?? quarterLabels;
+    quarterLabels.forEach((label) => {
+      if (!historyMap.has(label)) {
+        historyMap.set(label, { revenue: null, yoy: null, opm: null });
+      }
+      const point = historyMap.get(label);
+      if (!Number.isFinite(point?.yoy)) {
+        const labelIndex = allQuarterLabels.indexOf(label);
+        if (labelIndex >= 4) {
+          const priorLabel = allQuarterLabels[labelIndex - 4];
+          const priorPoint = historyMap.get(priorLabel);
+          if (Number.isFinite(point?.revenue) && Number.isFinite(priorPoint?.revenue) && priorPoint.revenue !== 0) {
+            point.yoy = Number((((point.revenue - priorPoint.revenue) / priorPoint.revenue) * 100).toFixed(1));
+          }
+        }
+      }
+    });
     return historyMap;
   }
 
