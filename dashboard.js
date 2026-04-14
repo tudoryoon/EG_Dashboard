@@ -487,7 +487,7 @@ function buildUsSegmentTable(company) {
           return `
             <span>${formatUsBillions(point.revenue)}</span>
             <span class="${yoyClass}">${formatUsPercent(point.yoy)}</span>
-            <span class="${opmClass}">${formatUsPercent(point.opm)}</span>`;
+            <span class="us-opm-value">${formatUsPercent(point.opm)}</span>`;
         })
         .join("");
 
