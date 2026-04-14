@@ -1,10 +1,12 @@
 const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { valuationPanels: [], m7Quarterly: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
+const capexDashboardData = window.capexDashboardData ?? { quarterLabels: [], annualLabels: [], colors: {}, quarterlyCapex: null, quarterlyYoy: null, annualCapex: null };
 
 const countryMeta = {
   US: { label: "M7", currencies: ["USD"], defaultCurrency: "USD" },
   Cloud: { label: "Cloud", currencies: ["USD"], defaultCurrency: "USD" },
+  Capex: { label: "Capex", currencies: ["USD"], defaultCurrency: "USD" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Korea: { label: "Korea", currencies: ["KRW"], defaultCurrency: "KRW" },
 };
@@ -139,7 +141,7 @@ function companiesByCountry(country) {
 }
 
 function availableSectors() {
-  if (state.country === "Cloud") {
+  if (state.country === "Cloud" || state.country === "Capex") {
     return ["All"];
   }
   return ["All", ...new Set(companiesByCountry(state.country).map((company) => company.sector))];
@@ -502,6 +504,128 @@ function createCloudRevenueBarChart(canvas, panel) {
   charts.push(chart);
 }
 
+function createCapexLineChart(canvas, labels, panel, formatter, minOverride = null) {
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const datasets = panel.series.map((series) => ({
+    label: series.name,
+    data: series.values,
+    borderColor: capexDashboardData.colors[series.key],
+    backgroundColor: capexDashboardData.colors[series.key],
+    borderWidth: 2.6,
+    tension: 0.22,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    pointHitRadius: 10,
+    spanGaps: false,
+  }));
+
+  const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMin = minOverride ?? Math.floor((minValue - 5) / 5) * 5;
+  const yMax = Math.ceil((maxValue + 5) / 5) * 5;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: { label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}` },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 10, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createCapexBarChart(canvas, labels, panel, formatter) {
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const datasets = panel.series.map((series) => ({
+    label: series.name,
+    data: series.values,
+    backgroundColor: capexDashboardData.colors[series.key],
+    borderColor: capexDashboardData.colors[series.key],
+    borderWidth: 0,
+    borderRadius: 4,
+    barPercentage: 0.78,
+    categoryPercentage: 0.72,
+  }));
+
+  const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMax = Math.ceil((maxValue * 1.1) / 10) * 10;
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: { label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}` },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 10, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function renderCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -563,6 +687,70 @@ function renderCloudOverview() {
   }
   if (revenueCanvas) {
     createCloudRevenueBarChart(revenueCanvas, cloudDashboardData.revenue);
+  }
+}
+
+function renderCapexOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  usOverviewRoot.innerHTML = `
+    <section class="cloud-overview">
+      <div class="us-section-head cloud-section-head">
+        <h2>Big Tech Capex Dashboard</h2>
+        <p>Quarterly and annual capex trends from the raw Excel sheet</p>
+      </div>
+      <div class="cloud-panel-grid">
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.quarterlyCapex.title}</h3>
+              <p>${capexDashboardData.quarterlyCapex.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+            <canvas data-capex-chart="quarterly-capex"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.quarterlyYoy.title}</h3>
+              <p>${capexDashboardData.quarterlyYoy.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-capex-chart="quarterly-yoy"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.annualCapex.title}</h3>
+              <p>${capexDashboardData.annualCapex.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-capex-chart="annual-capex"></canvas>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+
+  const quarterlyCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-capex"]');
+  const quarterlyYoyCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-yoy"]');
+  const annualCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-capex"]');
+
+  if (quarterlyCapexCanvas) {
+    createCapexBarChart(quarterlyCapexCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapex, (value) => `$${Number(value).toFixed(1)}B`);
+  }
+  if (quarterlyYoyCanvas) {
+    createCapexLineChart(quarterlyYoyCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyYoy, (value) => `${Number(value).toFixed(0)}%`, -60);
+  }
+  if (annualCapexCanvas) {
+    createCapexBarChart(annualCapexCanvas, capexDashboardData.annualLabels, capexDashboardData.annualCapex, (value) => `$${Number(value).toFixed(1)}B`);
   }
 }
 
@@ -1091,7 +1279,7 @@ function renderCountries() {
 
 function renderCurrencies() {
   currencySwitch.innerHTML = "";
-  if (state.country === "Cloud" || state.country === "US") {
+  if (state.country === "Cloud" || state.country === "Capex" || state.country === "US") {
     return;
   }
   countryMeta[state.country].currencies.forEach((currency) => {
@@ -1109,7 +1297,7 @@ function renderCurrencies() {
 
 function renderSectors() {
   sectorChips.innerHTML = "";
-  if (state.country === "Cloud" || state.country === "US") {
+  if (state.country === "Cloud" || state.country === "Capex" || state.country === "US") {
     sectorChips.classList.add("hidden");
     return;
   }
@@ -1135,6 +1323,11 @@ function renderSummary(list) {
 
   if (state.country === "Cloud") {
     summaryText.textContent = "Cloud raw data dashboard";
+    return;
+  }
+
+  if (state.country === "Capex") {
+    summaryText.textContent = "Big tech capex dashboard";
     return;
   }
 
@@ -1212,7 +1405,7 @@ function render() {
   destroyCharts();
   ensureValidSelection();
   if (toolbarRow) {
-    toolbarRow.classList.toggle("hidden", state.country === "Cloud" || state.country === "US");
+    toolbarRow.classList.toggle("hidden", state.country === "Cloud" || state.country === "Capex" || state.country === "US");
   }
   renderCountries();
   renderCurrencies();
@@ -1226,6 +1419,12 @@ function render() {
   if (state.country === "Cloud") {
     renderSummary([]);
     renderCloudOverview();
+    return;
+  }
+
+  if (state.country === "Capex") {
+    renderSummary([]);
+    renderCapexOverview();
     return;
   }
 
