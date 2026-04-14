@@ -150,12 +150,12 @@ window.usOverviewData = (() => {
     {
       name: "Microsoft",
       labels: quarterLabels,
-      revenue: [52.9, 56.2, 56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 68.4, 71.2, 73.5, 76.8],
-      opm: [41.8, 42.9, 43.6, 44.5, 43.9, 44.8, 45.1, 45.9, 44.4, 45.1, 45.8, 46.6],
+      revenue: [50.1, 52.7, 52.9, 56.2, 56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 70.1, 76.4],
+      opm: [42.9, 38.7, 42.3, 43.2, 47.6, 43.6, 44.6, 43.1, 46.6, 45.5, 45.7, 44.9],
       segments: [
-        { name: "Productivity", priorRevenue: 20.4, latestRevenue: 22.1, opm: 52.2 },
-        { name: "Intelligent Cloud", priorRevenue: 26.1, latestRevenue: 29.8, opm: 47.3 },
-        { name: "More Personal", priorRevenue: 23.1, latestRevenue: 24.9, opm: 29.4 },
+        { name: "Productivity & Business Processes", priorRevenue: 20.3, latestRevenue: 33.1, opm: 57.4 },
+        { name: "Intelligent Cloud", priorRevenue: 28.5, latestRevenue: 29.9, opm: 40.6 },
+        { name: "More Personal Computing", priorRevenue: 15.9, latestRevenue: 13.5, opm: 23.7 },
       ],
     },
     {
