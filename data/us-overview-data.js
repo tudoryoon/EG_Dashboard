@@ -197,12 +197,13 @@ window.usOverviewData = (() => {
     {
       name: "Meta",
       labels: quarterLabels,
-      revenue: [28.6, 32.0, 34.1, 40.1, 36.5, 39.1, 40.6, 47.3, 39.7, 42.6, 44.1, 50.7],
-      opm: [25.2, 28.6, 31.0, 34.1, 33.2, 34.8, 35.4, 38.6, 36.1, 37.0, 37.8, 40.2],
+      revenue: [28.6, 32.0, 34.1, 40.1, 36.5, 39.1, 40.6, 48.4, 42.3, 47.5, 51.2, 59.9],
+      opm: [25.2, 29.4, 40.3, 40.8, 37.9, 38.0, 42.7, 48.3, 41.5, 43.0, 40.1, 41.3],
       segments: [
-        { name: "Family of Apps", priorRevenue: 46.1, latestRevenue: 49.8, opm: 51.2 },
-        { name: "Reality Labs", priorRevenue: 1.2, latestRevenue: 1.5, opm: -118.4 },
-        { name: "Ads", priorRevenue: 43.2, latestRevenue: 47.0, opm: 54.1 },
+        { name: "Family of Apps", priorRevenue: 47.3, latestRevenue: 58.9, opm: 52.2 },
+        { name: "Reality Labs", priorRevenue: 1.1, latestRevenue: 1.0, opm: -630.5 },
+        { name: "Advertising", priorRevenue: 46.8, latestRevenue: 58.1, opm: null },
+        { name: "Other revenue", priorRevenue: 0.5, latestRevenue: 0.8, opm: null },
       ],
     },
     {
