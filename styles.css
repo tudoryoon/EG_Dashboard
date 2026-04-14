@@ -331,6 +331,11 @@ h1 {
   text-align: center;
   padding: 0 4px;
   color: #4a4a45;
+  border-right: 1px solid rgba(216, 216, 210, 0.9);
+}
+
+.us-quarter-group:last-child {
+  border-right: none;
 }
 
 .us-segment-head {
@@ -343,6 +348,18 @@ h1 {
   padding: 8px 0;
   border-top: 1px solid rgba(216, 216, 210, 0.7);
   font-size: 0.8rem;
+}
+
+.us-segment-grid > :nth-child(4),
+.us-segment-grid > :nth-child(7),
+.us-segment-grid > :nth-child(10),
+.us-segment-grid > :nth-child(13),
+.us-segment-grid > :nth-child(16),
+.us-segment-grid > :nth-child(19),
+.us-segment-grid > :nth-child(22),
+.us-segment-grid > :nth-child(25) {
+  padding-right: 10px;
+  border-right: 1px solid rgba(216, 216, 210, 0.85);
 }
 
 .us-sticky-cell,
