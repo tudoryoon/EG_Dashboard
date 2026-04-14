@@ -185,13 +185,13 @@ window.usOverviewData = (() => {
     {
       name: "NVIDIA",
       labels: quarterLabels,
-      revenue: [7.2, 13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.7, 50.6, 56.8, 64.2],
-      opm: [26.0, 38.4, 42.1, 47.6, 50.8, 54.2, 57.1, 58.9, 60.4, 61.2, 62.7, 64.0],
+      revenue: [7.2, 13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.1, 46.7, 57.0, 68.1],
+      opm: [29.8, 50.3, 57.5, 61.6, 64.9, 62.1, 62.3, 61.1, 49.1, 60.8, 63.2, 65.0],
       segments: [
-        { name: "Data Center", priorRevenue: 17.4, latestRevenue: 46.9, opm: 71.5 },
-        { name: "Gaming", priorRevenue: 3.3, latestRevenue: 4.9, opm: 34.8 },
-        { name: "Professional Viz", priorRevenue: 0.4, latestRevenue: 0.8, opm: 22.7 },
-        { name: "Automotive", priorRevenue: 0.3, latestRevenue: 0.6, opm: 18.5 },
+        { name: "Data Center", priorRevenue: 35.6, latestRevenue: 62.3, opm: null },
+        { name: "Gaming", priorRevenue: 2.5, latestRevenue: 3.7, opm: null },
+        { name: "Professional Visualization", priorRevenue: 0.5, latestRevenue: 1.3, opm: null },
+        { name: "Automotive and Robotics", priorRevenue: 0.6, latestRevenue: 0.6, opm: null },
       ],
     },
     {
