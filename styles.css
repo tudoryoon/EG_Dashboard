@@ -292,19 +292,51 @@ h1 {
   padding-top: 12px;
 }
 
-.us-segment-head,
-.us-segment-row {
+.us-segment-title {
+  margin-bottom: 10px;
+  color: #20201d;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.us-segment-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.us-segment-table {
+  min-width: 2360px;
+}
+
+.us-segment-grid {
   display: grid;
-  grid-template-columns: 1.4fr 0.9fr 0.9fr 0.7fr 0.7fr;
+  grid-template-columns: 220px repeat(24, 86px);
   gap: 10px;
   align-items: center;
 }
 
+.us-segment-superhead,
 .us-segment-head {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.us-segment-superhead {
+  margin-bottom: 6px;
+}
+
+.us-quarter-group {
+  grid-column: span 3;
+  text-align: center;
+  padding: 0 4px;
+  color: #4a4a45;
+}
+
+.us-segment-head {
   margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(216, 216, 210, 0.8);
 }
 
 .us-segment-row {
@@ -313,9 +345,32 @@ h1 {
   font-size: 0.8rem;
 }
 
-.us-segment-row span:first-child {
+.us-sticky-cell,
+.us-segment-name {
   font-weight: 700;
   color: #20201d;
+  position: sticky;
+  left: 0;
+  background: rgba(250, 250, 247, 0.98);
+  z-index: 1;
+}
+
+.us-sticky-cell {
+  color: var(--muted);
+}
+
+.us-segment-row span {
+  white-space: nowrap;
+}
+
+.us-segment-row .is-positive {
+  color: #0f9f6e;
+  font-weight: 700;
+}
+
+.us-segment-row .is-negative {
+  color: #d93025;
+  font-weight: 700;
 }
 
 .company-card {

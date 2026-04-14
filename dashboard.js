@@ -383,6 +383,124 @@ function createUsMarginChart(canvas, company) {
   charts.push(chart);
 }
 
+function formatUsBillions(value) {
+  return Number.isFinite(value) ? `$${value.toFixed(1)}B` : "-";
+}
+
+function formatUsPercent(value) {
+  return Number.isFinite(value) ? `${value.toFixed(1)}%` : "-";
+}
+
+function buildUsSegmentHistoryMap(segment, company, quarterLabels) {
+  const historyMap = new Map();
+
+  if (Array.isArray(segment.history)) {
+    segment.history.forEach((entry) => {
+      historyMap.set(entry.quarter, {
+        revenue: Number.isFinite(entry.revenue) ? entry.revenue : null,
+        yoy: Number.isFinite(entry.yoy) ? entry.yoy : null,
+        opm: Number.isFinite(entry.opm) ? entry.opm : null,
+      });
+    });
+    return historyMap;
+  }
+
+  quarterLabels.forEach((label) => {
+    historyMap.set(label, { revenue: null, yoy: null, opm: null });
+  });
+
+  const latestLabel = quarterLabels[quarterLabels.length - 1];
+  const priorYearLabel = quarterLabels[quarterLabels.length - 5];
+  const latestYoy = Number.isFinite(segment.latestRevenue) && Number.isFinite(segment.priorRevenue) && segment.priorRevenue !== 0
+    ? Number((((segment.latestRevenue - segment.priorRevenue) / segment.priorRevenue) * 100).toFixed(1))
+    : null;
+
+  if (priorYearLabel && historyMap.has(priorYearLabel)) {
+    historyMap.set(priorYearLabel, {
+      revenue: Number.isFinite(segment.priorRevenue) ? segment.priorRevenue : null,
+      yoy: null,
+      opm: null,
+    });
+  }
+
+  if (latestLabel && historyMap.has(latestLabel)) {
+    historyMap.set(latestLabel, {
+      revenue: Number.isFinite(segment.latestRevenue) ? segment.latestRevenue : null,
+      yoy: latestYoy,
+      opm: Number.isFinite(segment.opm) ? segment.opm : null,
+    });
+  }
+
+  return historyMap;
+}
+
+function buildUsSegmentTable(company) {
+  const recentQuarterLabels = usOverviewData.quarterLabels.slice(-8);
+
+  const superHead = recentQuarterLabels
+    .map((label) => `<span class="us-quarter-group">${label}</span>`)
+    .join("");
+
+  const subHead = recentQuarterLabels
+    .map(() => '<span>Rev</span><span>YoY</span><span>OPM</span>')
+    .join("");
+
+  const rows = company.segments
+    .map((segment) => {
+      const historyMap = buildUsSegmentHistoryMap(segment, company, recentQuarterLabels);
+      const metrics = recentQuarterLabels
+        .map((label) => {
+          const point = historyMap.get(label) ?? { revenue: null, yoy: null, opm: null };
+          const yoyClass = Number.isFinite(point.yoy)
+            ? point.yoy > 0
+              ? "is-positive"
+              : point.yoy < 0
+                ? "is-negative"
+                : ""
+            : "";
+          const opmClass = Number.isFinite(point.opm)
+            ? point.opm > 0
+              ? "is-positive"
+              : point.opm < 0
+                ? "is-negative"
+                : ""
+            : "";
+
+          return `
+            <span>${formatUsBillions(point.revenue)}</span>
+            <span class="${yoyClass}">${formatUsPercent(point.yoy)}</span>
+            <span class="${opmClass}">${formatUsPercent(point.opm)}</span>`;
+        })
+        .join("");
+
+      return `
+        <div class="us-segment-row us-segment-grid">
+          <span class="us-segment-name">${segment.name}</span>
+          ${metrics}
+        </div>`;
+    })
+    .join("");
+
+  return `
+    <div class="us-segment-block">
+      <div class="us-segment-title">Segment 8Q Snapshot</div>
+      <div class="us-segment-scroll">
+        <div class="us-segment-table">
+          <div class="us-segment-superhead us-segment-grid">
+            <span class="us-sticky-cell">Segment</span>
+            ${superHead}
+          </div>
+          <div class="us-segment-head us-segment-grid">
+            <span class="us-sticky-cell">Metric</span>
+            ${subHead}
+          </div>
+          ${rows}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderUSOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -421,29 +539,7 @@ function renderUSOverview() {
           <div class="us-mini-chart-wrap us-mini-chart-wrap-secondary">
             <canvas data-us-margin="${company.name}"></canvas>
           </div>
-          <div class="us-segment-block">
-            <div class="us-segment-head">
-              <span>Segment</span>
-              <span>24Q4 Rev</span>
-              <span>25Q4 Rev</span>
-              <span>YoY</span>
-              <span>OPM</span>
-            </div>
-            ${company.segments
-              .map((segment) => {
-                const yoy = (((segment.latestRevenue - segment.priorRevenue) / segment.priorRevenue) * 100).toFixed(1);
-                const opmLabel = Number.isFinite(segment.opm) ? `${segment.opm.toFixed(1)}%` : "-";
-                return `
-                  <div class="us-segment-row">
-                    <span>${segment.name}</span>
-                    <span>$${segment.priorRevenue.toFixed(1)}B</span>
-                    <span>$${segment.latestRevenue.toFixed(1)}B</span>
-                    <span>${yoy}%</span>
-                    <span>${opmLabel}</span>
-                  </div>`;
-              })
-              .join("")}
-          </div>
+          ${buildUsSegmentTable(company)}
         </article>`,
     )
     .join("");
