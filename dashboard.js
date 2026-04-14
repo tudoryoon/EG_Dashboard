@@ -518,6 +518,7 @@ function buildUsSegmentTable(company) {
           ${rows}
         </div>
       </div>
+      <p class="us-segment-note">OPM is shown only when a company officially discloses segment operating profit or operating income. If not disclosed, it remains N/A.</p>
     </div>
   `;
 }
