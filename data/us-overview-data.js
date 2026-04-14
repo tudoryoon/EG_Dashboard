@@ -173,13 +173,13 @@ window.usOverviewData = (() => {
     {
       name: "Amazon",
       labels: quarterLabels,
-      revenue: [127.4, 134.4, 143.1, 170.0, 143.3, 148.0, 158.9, 187.8, 151.4, 156.9, 167.5, 196.3],
-      opm: [5.7, 6.3, 7.4, 8.6, 8.1, 9.2, 10.1, 11.6, 9.4, 10.2, 11.1, 12.4],
+      revenue: [127.4, 134.4, 143.1, 170.0, 143.3, 148.0, 158.9, 187.8, 155.7, 167.7, 180.2, 213.4],
+      opm: [3.8, 5.7, 7.8, 7.8, 10.7, 9.9, 11.0, 11.3, 11.8, 11.5, 9.7, 11.7],
       segments: [
-        { name: "North America", priorRevenue: 103.2, latestRevenue: 118.6, opm: 8.4 },
-        { name: "International", priorRevenue: 34.5, latestRevenue: 38.2, opm: 4.1 },
-        { name: "AWS", priorRevenue: 24.2, latestRevenue: 31.6, opm: 36.8 },
-        { name: "Advertising", priorRevenue: 14.3, latestRevenue: 17.1, opm: 42.7 },
+        { name: "North America", priorRevenue: 115.6, latestRevenue: 127.1, opm: 9.0 },
+        { name: "International", priorRevenue: 43.4, latestRevenue: 50.7, opm: 2.0 },
+        { name: "AWS", priorRevenue: 28.8, latestRevenue: 35.6, opm: 35.1 },
+        { name: "Advertising services", priorRevenue: 17.3, latestRevenue: 21.3, opm: null },
       ],
     },
     {
