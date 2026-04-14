@@ -36,7 +36,6 @@ const currencySwitch = document.querySelector("#currency-switch");
 const sectorChips = document.querySelector("#sector-chips");
 const companyGrid = document.querySelector("#company-grid");
 const summaryText = document.querySelector("#summary-text");
-const summaryStats = document.querySelector("#summary-stats");
 const cardTemplate = document.querySelector("#company-card-template");
 const usOverviewRoot = document.querySelector("#us-overview");
 const toolbarRow = document.querySelector(".toolbar .toolbar-row:not(.toolbar-row-country)");
@@ -1131,22 +1130,11 @@ function renderSectors() {
 function renderSummary(list) {
   if (state.country === "US") {
     summaryText.textContent = "US valuation dashboard and Magnificent 7 quarterly earnings";
-    summaryStats.innerHTML = `
-      <span class="summary-stat">Valuation Panels 3</span>
-      <span class="summary-stat">M7 Quarterly Cards 7</span>
-      <span class="summary-stat">Frequency Daily → Weekly → Monthly fallback</span>
-    `;
     return;
   }
 
   if (state.country === "Cloud") {
     summaryText.textContent = "Cloud raw data dashboard";
-    summaryStats.innerHTML = `
-      <span class="summary-stat">Charts 3</span>
-      <span class="summary-stat">Series AWS / Microsoft / Google</span>
-      <span class="summary-stat">MS revenue & margin use Intelligent Cloud</span>
-      <span class="summary-stat">Coverage 2021 Q4 → 2025 Q4</span>
-    `;
     return;
   }
 
@@ -1160,13 +1148,7 @@ function renderSummary(list) {
     list.length > 0
       ? (list.reduce((sum, company) => sum + company.mom, 0) / list.length).toFixed(1)
       : "0.0";
-
-  summaryStats.innerHTML = `
-    <span class="summary-stat">Avg YoY ${avgYoY}%</span>
-    <span class="summary-stat">Avg MoM ${avgMoM}%</span>
-    <span class="summary-stat">Currency ${currencyMeta[state.currency].label.trim()}</span>
-    <span class="summary-stat">Sector ${state.sector}</span>
-  `;
+  summaryText.textContent = `${countryMeta[state.country].label} ${list.length} companies · Avg YoY ${avgYoY}% · Avg MoM ${avgMoM}% · ${currencyMeta[state.currency].label.trim()} · ${state.sector}`;
 }
 
 function renderCards(list) {

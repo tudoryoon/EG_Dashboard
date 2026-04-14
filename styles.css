@@ -194,29 +194,13 @@ h1 {
 }
 
 .summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
   padding: 12px 0 16px;
   color: var(--muted);
 }
 
 .summary-text {
   margin: 0;
-}
-
-.summary-stats {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.summary-stat {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
+  font-size: 0.98rem;
 }
 
 .card-grid {
@@ -622,11 +606,6 @@ h1 {
 @media (max-width: 920px) {
   .page-shell {
     width: min(100%, calc(100% - 22px));
-  }
-
-  .summary-row {
-    align-items: start;
-    flex-direction: column;
   }
 
   .card-grid {
