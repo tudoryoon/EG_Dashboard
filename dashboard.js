@@ -1,7 +1,20 @@
 const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { valuationPanels: [], m7Quarterly: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
-const capexDashboardData = window.capexDashboardData ?? { quarterLabels: [], annualLabels: [], colors: {}, quarterlyCapex: null, quarterlyYoy: null, annualCapex: null };
+const capexDashboardData = window.capexDashboardData ?? {
+  quarterLabels: [],
+  cashLabels: [],
+  annualLabels: [],
+  colors: {},
+  quarterlyCapex: null,
+  quarterlyYoy: null,
+  annualCapex: null,
+  quarterlyOcf: null,
+  quarterlyCapexToOcf: null,
+  cashHistory: null,
+  debtHistory: null,
+  debtToCash: null,
+};
 
 const countryMeta = {
   US: { label: "M7", currencies: ["USD"], defaultCurrency: "USD" },
@@ -584,7 +597,9 @@ function createCapexBarChart(canvas, labels, panel, formatter) {
   }));
 
   const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMin = minValue < 0 ? Math.floor((minValue * 1.1) / 10) * 10 : 0;
   const yMax = Math.ceil((maxValue * 1.1) / 10) * 10;
 
   const chart = new Chart(canvas, {
@@ -613,7 +628,7 @@ function createCapexBarChart(canvas, labels, panel, formatter) {
           border: { color: "#d8d8d2" },
         },
         y: {
-          beginAtZero: true,
+          min: yMin,
           max: yMax,
           ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
@@ -699,7 +714,7 @@ function renderCapexOverview() {
     <section class="cloud-overview">
       <div class="us-section-head cloud-section-head">
         <h2>Big Tech Capex Dashboard</h2>
-        <p>Quarterly and annual capex trends from the raw Excel sheet</p>
+        <p>Quarterly capex, cash flow, and balance sheet trends from the raw Excel sheet</p>
       </div>
       <div class="cloud-panel-grid">
         <article class="cloud-panel cloud-panel-wide">
@@ -735,6 +750,61 @@ function renderCapexOverview() {
             <canvas data-capex-chart="annual-capex"></canvas>
           </div>
         </article>
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.quarterlyOcf.title}</h3>
+              <p>${capexDashboardData.quarterlyOcf.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+            <canvas data-capex-chart="quarterly-ocf"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.quarterlyCapexToOcf.title}</h3>
+              <p>${capexDashboardData.quarterlyCapexToOcf.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-capex-chart="capex-to-ocf"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.debtToCash.title}</h3>
+              <p>${capexDashboardData.debtToCash.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-capex-chart="debt-to-cash"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.cashHistory.title}</h3>
+              <p>${capexDashboardData.cashHistory.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-capex-chart="cash-history"></canvas>
+          </div>
+        </article>
+        <article class="cloud-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${capexDashboardData.debtHistory.title}</h3>
+              <p>${capexDashboardData.debtHistory.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-chart-wrap">
+            <canvas data-capex-chart="debt-history"></canvas>
+          </div>
+        </article>
       </div>
     </section>
   `;
@@ -742,6 +812,11 @@ function renderCapexOverview() {
   const quarterlyCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-capex"]');
   const quarterlyYoyCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-yoy"]');
   const annualCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-capex"]');
+  const quarterlyOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-ocf"]');
+  const capexToOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="capex-to-ocf"]');
+  const debtToCashCanvas = usOverviewRoot.querySelector('[data-capex-chart="debt-to-cash"]');
+  const cashHistoryCanvas = usOverviewRoot.querySelector('[data-capex-chart="cash-history"]');
+  const debtHistoryCanvas = usOverviewRoot.querySelector('[data-capex-chart="debt-history"]');
 
   if (quarterlyCapexCanvas) {
     createCapexBarChart(quarterlyCapexCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapex, (value) => `$${Number(value).toFixed(1)}B`);
@@ -751,6 +826,21 @@ function renderCapexOverview() {
   }
   if (annualCapexCanvas) {
     createCapexBarChart(annualCapexCanvas, capexDashboardData.annualLabels, capexDashboardData.annualCapex, (value) => `$${Number(value).toFixed(1)}B`);
+  }
+  if (quarterlyOcfCanvas) {
+    createCapexBarChart(quarterlyOcfCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyOcf, (value) => `$${Number(value).toFixed(1)}B`);
+  }
+  if (capexToOcfCanvas) {
+    createCapexLineChart(capexToOcfCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapexToOcf, (value) => `${Number(value).toFixed(0)}%`, -100);
+  }
+  if (debtToCashCanvas) {
+    createCapexLineChart(debtToCashCanvas, capexDashboardData.cashLabels, capexDashboardData.debtToCash, (value) => `${Number(value).toFixed(0)}%`, 0);
+  }
+  if (cashHistoryCanvas) {
+    createCapexLineChart(cashHistoryCanvas, capexDashboardData.cashLabels, capexDashboardData.cashHistory, (value) => `$${Number(value).toFixed(0)}B`, 0);
+  }
+  if (debtHistoryCanvas) {
+    createCapexLineChart(debtHistoryCanvas, capexDashboardData.cashLabels, capexDashboardData.debtHistory, (value) => `$${Number(value).toFixed(0)}B`, 0);
   }
 }
 
