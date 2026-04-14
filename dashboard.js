@@ -19,7 +19,7 @@ const capexDashboardData = window.capexDashboardData ?? {
 const countryMeta = {
   US: { label: "M7", currencies: ["USD"], defaultCurrency: "USD" },
   Cloud: { label: "Cloud", currencies: ["USD"], defaultCurrency: "USD" },
-  Capex: { label: "Capex", currencies: ["USD"], defaultCurrency: "USD" },
+  Capex: { label: "Capex & 현금흐름", currencies: ["USD"], defaultCurrency: "USD" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Korea: { label: "Korea", currencies: ["KRW"], defaultCurrency: "KRW" },
 };
@@ -713,8 +713,8 @@ function renderCapexOverview() {
   usOverviewRoot.innerHTML = `
     <section class="cloud-overview">
       <div class="us-section-head cloud-section-head">
-        <h2>Big Tech Capex Dashboard</h2>
-        <p>Quarterly capex, cash flow, and balance sheet trends from the raw Excel sheet</p>
+        <h2>Big Tech Capex & Cash Flow Dashboard</h2>
+        <p>Quarterly capex and operating cash flow trends from the raw Excel sheet</p>
       </div>
       <div class="cloud-panel-grid">
         <article class="cloud-panel cloud-panel-wide">
@@ -775,34 +775,12 @@ function renderCapexOverview() {
         <article class="cloud-panel">
           <div class="us-panel-head">
             <div>
-              <h3>${capexDashboardData.debtToCash.title}</h3>
-              <p>${capexDashboardData.debtToCash.subtitle}</p>
-            </div>
-          </div>
-          <div class="cloud-chart-wrap">
-            <canvas data-capex-chart="debt-to-cash"></canvas>
-          </div>
-        </article>
-        <article class="cloud-panel">
-          <div class="us-panel-head">
-            <div>
               <h3>${capexDashboardData.cashHistory.title}</h3>
               <p>${capexDashboardData.cashHistory.subtitle}</p>
             </div>
           </div>
           <div class="cloud-chart-wrap">
             <canvas data-capex-chart="cash-history"></canvas>
-          </div>
-        </article>
-        <article class="cloud-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${capexDashboardData.debtHistory.title}</h3>
-              <p>${capexDashboardData.debtHistory.subtitle}</p>
-            </div>
-          </div>
-          <div class="cloud-chart-wrap">
-            <canvas data-capex-chart="debt-history"></canvas>
           </div>
         </article>
       </div>
@@ -814,9 +792,7 @@ function renderCapexOverview() {
   const annualCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-capex"]');
   const quarterlyOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-ocf"]');
   const capexToOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="capex-to-ocf"]');
-  const debtToCashCanvas = usOverviewRoot.querySelector('[data-capex-chart="debt-to-cash"]');
   const cashHistoryCanvas = usOverviewRoot.querySelector('[data-capex-chart="cash-history"]');
-  const debtHistoryCanvas = usOverviewRoot.querySelector('[data-capex-chart="debt-history"]');
 
   if (quarterlyCapexCanvas) {
     createCapexBarChart(quarterlyCapexCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapex, (value) => `$${Number(value).toFixed(1)}B`);
@@ -833,14 +809,8 @@ function renderCapexOverview() {
   if (capexToOcfCanvas) {
     createCapexLineChart(capexToOcfCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapexToOcf, (value) => `${Number(value).toFixed(0)}%`, -100);
   }
-  if (debtToCashCanvas) {
-    createCapexLineChart(debtToCashCanvas, capexDashboardData.cashLabels, capexDashboardData.debtToCash, (value) => `${Number(value).toFixed(0)}%`, 0);
-  }
   if (cashHistoryCanvas) {
     createCapexLineChart(cashHistoryCanvas, capexDashboardData.cashLabels, capexDashboardData.cashHistory, (value) => `$${Number(value).toFixed(0)}B`, 0);
-  }
-  if (debtHistoryCanvas) {
-    createCapexLineChart(debtHistoryCanvas, capexDashboardData.cashLabels, capexDashboardData.debtHistory, (value) => `$${Number(value).toFixed(0)}B`, 0);
   }
 }
 
@@ -1417,7 +1387,7 @@ function renderSummary(list) {
   }
 
   if (state.country === "Capex") {
-    summaryText.textContent = "Big tech capex dashboard";
+    summaryText.textContent = "Big tech capex & cash flow dashboard";
     return;
   }
 
