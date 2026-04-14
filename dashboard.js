@@ -1091,7 +1091,7 @@ function renderCountries() {
 
 function renderCurrencies() {
   currencySwitch.innerHTML = "";
-  if (state.country === "Cloud") {
+  if (state.country === "Cloud" || state.country === "US") {
     return;
   }
   countryMeta[state.country].currencies.forEach((currency) => {
@@ -1109,7 +1109,7 @@ function renderCurrencies() {
 
 function renderSectors() {
   sectorChips.innerHTML = "";
-  if (state.country === "Cloud") {
+  if (state.country === "Cloud" || state.country === "US") {
     sectorChips.classList.add("hidden");
     return;
   }
@@ -1212,7 +1212,7 @@ function render() {
   destroyCharts();
   ensureValidSelection();
   if (toolbarRow) {
-    toolbarRow.classList.toggle("hidden", state.country === "Cloud");
+    toolbarRow.classList.toggle("hidden", state.country === "Cloud" || state.country === "US");
   }
   renderCountries();
   renderCurrencies();
