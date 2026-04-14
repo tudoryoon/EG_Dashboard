@@ -3,7 +3,7 @@ const usOverviewData = window.usOverviewData ?? { valuationPanels: [], m7Quarter
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 
 const countryMeta = {
-  US: { label: "US", currencies: ["USD"], defaultCurrency: "USD" },
+  US: { label: "M7", currencies: ["USD"], defaultCurrency: "USD" },
   Cloud: { label: "Cloud", currencies: ["USD"], defaultCurrency: "USD" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Korea: { label: "Korea", currencies: ["KRW"], defaultCurrency: "KRW" },
@@ -1129,7 +1129,7 @@ function renderSectors() {
 
 function renderSummary(list) {
   if (state.country === "US") {
-    summaryText.textContent = "US valuation dashboard and Magnificent 7 quarterly earnings";
+    summaryText.textContent = "M7 valuation dashboard and quarterly earnings";
     return;
   }
 
