@@ -161,13 +161,13 @@ window.usOverviewData = (() => {
     {
       name: "Alphabet",
       labels: quarterLabels,
-      revenue: [69.8, 74.6, 76.7, 86.3, 80.5, 84.7, 88.3, 96.5, 92.4, 97.1, 101.8, 109.6],
-      opm: [28.1, 30.2, 31.0, 32.8, 31.4, 32.2, 33.0, 34.3, 33.1, 33.8, 34.7, 35.5],
+      revenue: [69.8, 74.6, 76.7, 86.3, 80.5, 84.7, 88.3, 96.5, 90.2, 96.4, 102.3, 113.8],
+      opm: [25.0, 29.3, 27.8, 27.5, 31.6, 32.4, 32.3, 32.1, 33.9, 32.4, 30.5, 31.6],
       segments: [
-        { name: "Search & Other", priorRevenue: 51.3, latestRevenue: 57.2, opm: 39.8 },
-        { name: "YouTube Ads", priorRevenue: 9.2, latestRevenue: 10.1, opm: 33.4 },
-        { name: "Google Cloud", priorRevenue: 9.4, latestRevenue: 12.4, opm: 18.6 },
-        { name: "Other Bets", priorRevenue: 0.5, latestRevenue: 0.6, opm: -98.0 },
+        { name: "Search & Other", priorRevenue: 54.0, latestRevenue: 63.1, opm: null },
+        { name: "YouTube Ads", priorRevenue: 10.5, latestRevenue: 11.4, opm: null },
+        { name: "Google Cloud", priorRevenue: 12.0, latestRevenue: 17.7, opm: 30.1 },
+        { name: "Other Bets", priorRevenue: 0.4, latestRevenue: 0.4, opm: -973.0 },
       ],
     },
     {
