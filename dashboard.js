@@ -886,7 +886,7 @@ function renderCapexOverview() {
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
             <div>
-              <h3>Annual BIG5 Capex Total</h3>
+              <h3>Annual BIG5 Capex Total (리스 포함)</h3>
               <p>Annual big tech capex sum with YoY growth rate</p>
             </div>
           </div>
