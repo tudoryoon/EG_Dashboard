@@ -241,6 +241,9 @@ function createUsQuarterlyChart(canvas, company) {
   }
 
   const revenueYoy = company.revenue.map((value, index) => {
+    if (Array.isArray(company.revenueYoy) && Number.isFinite(company.revenueYoy[index])) {
+      return company.revenueYoy[index];
+    }
     if (index < 4) {
       return null;
     }
