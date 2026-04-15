@@ -16,11 +16,17 @@ const capexDashboardData = window.capexDashboardData ?? {
   debtToCash: null,
 };
 
-const countryMeta = {
-  US: { label: "M7", currencies: ["USD"], defaultCurrency: "USD" },
-  Cloud: { label: "Cloud", currencies: ["USD"], defaultCurrency: "USD" },
-  Capex: { label: "Capex & 현금흐름", currencies: ["USD"], defaultCurrency: "USD" },
+const primaryTabMeta = {
+  BigTech: { label: "Big Tech" },
+  Semis: { label: "Semis" },
+  Infra: { label: "Infra" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
+};
+
+const bigTechSubtabMeta = {
+  M7: { label: "M7" },
+  Cloud: { label: "Cloud" },
+  Capex: { label: "Capex & 현금흐름" },
 };
 
 const currencyMeta = {
@@ -33,7 +39,8 @@ const SERIES_START_YEAR = 2021;
 const SERIES_START_MONTH = 1;
 
 const state = {
-  country: "US",
+  tab: "BigTech",
+  bigTechView: "M7",
   currency: "USD",
   sector: "All",
   query: "",
@@ -45,6 +52,7 @@ const charts = [];
 const searchInput = document.querySelector("#search-input");
 const sortSelect = document.querySelector("#sort-select");
 const countrySwitch = document.querySelector("#country-switch");
+const subtabSwitch = document.querySelector("#subtab-switch");
 const currencySwitch = document.querySelector("#currency-switch");
 const sectorChips = document.querySelector("#sector-chips");
 const companyGrid = document.querySelector("#company-grid");
@@ -151,17 +159,31 @@ function companiesByCountry(country) {
   return companies.filter((company) => company.country === country);
 }
 
+function activeDashboardKey() {
+  if (state.tab === "BigTech") {
+    return state.bigTechView;
+  }
+  if (state.tab === "Taiwan") {
+    return "Taiwan";
+  }
+  return state.tab;
+}
+
 function availableSectors() {
-  if (state.country === "Cloud" || state.country === "Capex") {
+  if (state.tab !== "Taiwan") {
     return ["All"];
   }
-  return ["All", ...new Set(companiesByCountry(state.country).map((company) => company.sector))];
+  return ["All", ...new Set(companiesByCountry("Taiwan").map((company) => company.sector))];
 }
 
 function ensureValidSelection() {
-  const country = countryMeta[state.country];
-  if (!country.currencies.includes(state.currency)) {
-    state.currency = country.defaultCurrency;
+  if (state.tab === "Taiwan") {
+    const country = primaryTabMeta.Taiwan;
+    if (!country.currencies.includes(state.currency)) {
+      state.currency = country.defaultCurrency;
+    }
+  } else {
+    state.currency = "USD";
   }
   const sectors = availableSectors();
   if (!sectors.includes(state.sector)) {
@@ -867,6 +889,20 @@ function renderCloudOverview() {
   }
 }
 
+function renderPlaceholderOverview(title, description) {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+  usOverviewRoot.innerHTML = `
+    <section class="placeholder-overview">
+      <article class="placeholder-panel">
+        <h2>${title}</h2>
+        <p>${description}</p>
+      </article>
+    </section>
+  `;
+}
+
 function renderCapexOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -1496,7 +1532,7 @@ function createYearlyChart(canvas, company) {
 
 function filteredCompanies() {
   const filtered = companies.filter((company) => {
-    const matchesCountry = company.country === state.country;
+    const matchesCountry = company.country === "Taiwan";
     const matchesSector = state.sector === "All" ? true : company.sector === state.sector;
     const matchesQuery = company.name.toLowerCase().includes(state.query.toLowerCase().trim());
     return matchesCountry && matchesSector && matchesQuery;
@@ -1516,14 +1552,18 @@ function filteredCompanies() {
 
 function renderCountries() {
   countrySwitch.innerHTML = "";
-  Object.entries(countryMeta).forEach(([countryKey, meta]) => {
+  Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.country === countryKey ? " active" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
-      state.country = countryKey;
-      state.currency = meta.defaultCurrency;
+      state.tab = tabKey;
+      if (tabKey === "Taiwan") {
+        state.currency = meta.defaultCurrency;
+      } else {
+        state.currency = "USD";
+      }
       state.sector = "All";
       render();
     });
@@ -1531,12 +1571,33 @@ function renderCountries() {
   });
 }
 
-function renderCurrencies() {
-  currencySwitch.innerHTML = "";
-  if (state.country === "Cloud" || state.country === "Capex" || state.country === "US") {
+function renderSubtabs() {
+  subtabSwitch.innerHTML = "";
+  if (state.tab !== "BigTech") {
+    subtabSwitch.classList.add("hidden");
     return;
   }
-  countryMeta[state.country].currencies.forEach((currency) => {
+  subtabSwitch.classList.remove("hidden");
+  subtabSwitch.classList.add("subtab-switch");
+  Object.entries(bigTechSubtabMeta).forEach(([viewKey, meta]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `subtab-chip${state.bigTechView === viewKey ? " active" : ""}`;
+    button.textContent = meta.label;
+    button.addEventListener("click", () => {
+      state.bigTechView = viewKey;
+      render();
+    });
+    subtabSwitch.appendChild(button);
+  });
+}
+
+function renderCurrencies() {
+  currencySwitch.innerHTML = "";
+  if (state.tab !== "Taiwan") {
+    return;
+  }
+  primaryTabMeta.Taiwan.currencies.forEach((currency) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `currency-button${state.currency === currency ? " active" : ""}`;
@@ -1551,7 +1612,7 @@ function renderCurrencies() {
 
 function renderSectors() {
   sectorChips.innerHTML = "";
-  if (state.country === "Cloud" || state.country === "Capex" || state.country === "US") {
+  if (state.tab !== "Taiwan") {
     sectorChips.classList.add("hidden");
     return;
   }
@@ -1570,22 +1631,32 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
-  if (state.country === "US") {
+  if (state.tab === "BigTech" && state.bigTechView === "M7") {
     summaryText.textContent = "M7 valuation dashboard and quarterly earnings";
     return;
   }
 
-  if (state.country === "Cloud") {
+  if (state.tab === "BigTech" && state.bigTechView === "Cloud") {
     summaryText.textContent = "Cloud raw data dashboard";
     return;
   }
 
-  if (state.country === "Capex") {
+  if (state.tab === "BigTech" && state.bigTechView === "Capex") {
     summaryText.textContent = "Big tech capex & cash flow dashboard";
     return;
   }
 
-  summaryText.textContent = `${countryMeta[state.country].label} ${list.length} companies`;
+  if (state.tab === "Semis") {
+    summaryText.textContent = "Semis dashboard workspace";
+    return;
+  }
+
+  if (state.tab === "Infra") {
+    summaryText.textContent = "Infra dashboard workspace";
+    return;
+  }
+
+  summaryText.textContent = `${primaryTabMeta.Taiwan.label} ${list.length} companies`;
 
   const avgYoY =
     list.length > 0
@@ -1595,7 +1666,7 @@ function renderSummary(list) {
     list.length > 0
       ? (list.reduce((sum, company) => sum + company.mom, 0) / list.length).toFixed(1)
       : "0.0";
-  summaryText.textContent = `${countryMeta[state.country].label} ${list.length} companies · Avg YoY ${avgYoY}% · Avg MoM ${avgMoM}% · ${currencyMeta[state.currency].label.trim()} · ${state.sector}`;
+  summaryText.textContent = `${primaryTabMeta.Taiwan.label} ${list.length} companies · Avg YoY ${avgYoY}% · Avg MoM ${avgMoM}% · ${currencyMeta[state.currency].label.trim()} · ${state.sector}`;
 }
 
 function renderCards(list) {
@@ -1659,26 +1730,40 @@ function render() {
   destroyCharts();
   ensureValidSelection();
   if (toolbarRow) {
-    toolbarRow.classList.toggle("hidden", state.country === "Cloud" || state.country === "Capex" || state.country === "US");
+    toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan");
   }
   renderCountries();
+  renderSubtabs();
   renderCurrencies();
   renderSectors();
-  if (state.country === "US") {
+
+  if (state.tab === "BigTech" && state.bigTechView === "M7") {
     renderSummary([]);
     renderUSOverview();
     return;
   }
 
-  if (state.country === "Cloud") {
+  if (state.tab === "BigTech" && state.bigTechView === "Cloud") {
     renderSummary([]);
     renderCloudOverview();
     return;
   }
 
-  if (state.country === "Capex") {
+  if (state.tab === "BigTech" && state.bigTechView === "Capex") {
     renderSummary([]);
     renderCapexOverview();
+    return;
+  }
+
+  if (state.tab === "Semis") {
+    renderSummary([]);
+    renderPlaceholderOverview("Semis Dashboard", "CPU, ASIC, 광통신 같은 주제를 여기에 모아두면 확장성이 좋아집니다. 다음 데이터가 들어오면 이 영역부터 붙이면 됩니다.");
+    return;
+  }
+
+  if (state.tab === "Infra") {
+    renderSummary([]);
+    renderPlaceholderOverview("Infra Dashboard", "전력기기와 인프라 관련 기업/지표를 여기에 모아두는 구조입니다. 이후 전력기기 탭을 이 안에서 세부 주제로 확장하면 됩니다.");
     return;
   }
 

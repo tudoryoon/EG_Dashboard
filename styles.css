@@ -92,6 +92,10 @@ h1 {
   margin-bottom: 14px;
 }
 
+.toolbar-row-subtab {
+  margin-bottom: 14px;
+}
+
 .searchbox {
   flex: 1 1 320px;
 }
@@ -164,6 +168,19 @@ h1 {
   color: white;
 }
 
+.country-button.is-taiwan {
+  border-color: #efc9c9;
+  background: linear-gradient(180deg, #fff4f4, #fdeaea);
+  color: #8f1d1d;
+}
+
+.country-button.is-taiwan.active {
+  border-color: #a61f1f;
+  background: linear-gradient(135deg, #d93025, #8f1d1d);
+  color: #fff8f8;
+  box-shadow: 0 14px 28px rgba(217, 48, 37, 0.18);
+}
+
 .currency-button {
   min-width: 58px;
   padding: 0 16px;
@@ -193,6 +210,30 @@ h1 {
   color: white;
 }
 
+.subtab-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.subtab-chip {
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #5a5a56;
+  cursor: pointer;
+  transition: 160ms ease;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+}
+
+.subtab-chip.active {
+  border-color: #242421;
+  background: #242421;
+  color: white;
+}
+
 .summary-row {
   padding: 12px 0 16px;
   color: var(--muted);
@@ -211,6 +252,29 @@ h1 {
 
 .hidden {
   display: none !important;
+}
+
+.placeholder-overview {
+  display: grid;
+  gap: 14px;
+}
+
+.placeholder-panel {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 247, 243, 0.98));
+  box-shadow: var(--shadow);
+}
+
+.placeholder-panel h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.placeholder-panel p {
+  margin: 8px 0 0;
+  color: var(--muted);
 }
 
 .us-overview {
