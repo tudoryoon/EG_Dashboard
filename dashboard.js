@@ -999,6 +999,15 @@ function formatDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function formatMemoryPeriodLabel(dateKey) {
+  if (!dateKey) {
+    return "-";
+  }
+
+  const [year, month] = dateKey.split("-");
+  return `${year}.${month}`;
+}
+
 async function loadMemorySpotHistory() {
   if (memorySpotRuntime.loading || memorySpotRuntime.loaded) {
     return;
@@ -1107,6 +1116,10 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
         tooltip: {
           enabled: true,
           callbacks: {
+            title: (tooltipItems) => {
+              const pointLabel = tooltipItems?.[0]?.label;
+              return pointLabel ? pointLabel : "";
+            },
             label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
           },
         },
@@ -1117,14 +1130,22 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
           ticks: {
             color: "#8d8d86",
             autoSkip: true,
-            maxTicksLimit: 10,
+            maxTicksLimit: 12,
             maxRotation: 0,
             callback: (value, index) => {
               const label = labels[index];
-              return label && label.endsWith("-01-01") ? label.slice(0, 4) : "";
+              if (!label) {
+                return "";
+              }
+              return label.endsWith("-01-01") || label.endsWith("-07-01") ? formatMemoryPeriodLabel(label) : "";
             },
           },
           border: { color: "#d8d8d2" },
+          title: {
+            display: true,
+            text: "Daily timeline from 2016.01",
+            color: "#8d8d86",
+          },
         },
         y: {
           min: yMin,
@@ -1164,6 +1185,12 @@ function renderMemorySpotOverview() {
         : null;
     })
     .filter(Boolean);
+  const availableDates = Object.values(memorySpotRuntime.items)
+    .flatMap((item) => (item?.latestDate ? [item.latestDate] : []))
+    .sort();
+  const periodStart = memorySpotRuntime.labels[0] || "2016-01-01";
+  const periodEnd = memorySpotRuntime.labels[memorySpotRuntime.labels.length - 1] || memorySpotRuntime.updatedAt || periodStart;
+  const firstObservedDate = availableDates[0] || null;
 
   const featuredMarkup = featuredItems
     .map(
@@ -1299,6 +1326,14 @@ function renderMemorySpotOverview() {
         <div>
           <strong>Coverage</strong>
           <span>${featuredItems.length} featured spot benchmarks</span>
+        </div>
+        <div>
+          <strong>Period</strong>
+          <span>${periodStart} -> ${periodEnd}</span>
+        </div>
+        <div>
+          <strong>First Data</strong>
+          <span>${firstObservedDate || (memorySpotRuntime.loading ? "Loading..." : "No data")}</span>
         </div>
       </section>
       ${memorySpotRuntime.error ? `<section class="memory-error">${memorySpotRuntime.error}</section>` : ""}
