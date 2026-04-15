@@ -16,8 +16,8 @@ TARGET_MAP = {
     "ddr4_16gb": "DDR4 16Gb (2Gx8)",
     "ddr4_8gb": "DDR4 8Gb (1Gx8)",
     "gddr6_8gb": "GDDR6 8Gb",
-    "mlc_64gb": "MLC 64Gb",
     "wafer_512gb_tlc": "TLC 512Gb",
+    "wafer_256gb_tlc": "TLC 256Gb",
 }
 
 
