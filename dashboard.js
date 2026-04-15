@@ -16,6 +16,7 @@ const capexDashboardData = window.capexDashboardData ?? {
   debtToCash: null,
 };
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
+const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const memorySpotRuntime = {
   loading: false,
   loaded: false,
@@ -1008,6 +1009,20 @@ function formatMemoryPeriodLabel(dateKey) {
   return `${year}.${month}`;
 }
 
+function hydrateMemorySpotRuntimeFromLocal() {
+  if (!memorySpotHistoryData || !Array.isArray(memorySpotHistoryData.labels) || typeof memorySpotHistoryData.items !== "object") {
+    return false;
+  }
+
+  memorySpotRuntime.labels = memorySpotHistoryData.labels;
+  memorySpotRuntime.items = memorySpotHistoryData.items ?? {};
+  memorySpotRuntime.updatedAt = memorySpotHistoryData.updatedAt ?? memorySpotHistoryData.generatedAt ?? "";
+  memorySpotRuntime.loaded = true;
+  memorySpotRuntime.loading = false;
+  memorySpotRuntime.error = "";
+  return true;
+}
+
 async function loadMemorySpotHistory() {
   if (memorySpotRuntime.loading || memorySpotRuntime.loaded) {
     return;
@@ -1165,6 +1180,10 @@ function renderMemorySpotOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
+
+  if (!memorySpotRuntime.loaded) {
+    hydrateMemorySpotRuntimeFromLocal();
+  }
 
   if (!memorySpotRuntime.loaded && !memorySpotRuntime.loading && !memorySpotRuntime.error) {
     loadMemorySpotHistory();
