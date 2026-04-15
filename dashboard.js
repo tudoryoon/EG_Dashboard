@@ -59,7 +59,7 @@ const companyGrid = document.querySelector("#company-grid");
 const summaryText = document.querySelector("#summary-text");
 const cardTemplate = document.querySelector("#company-card-template");
 const usOverviewRoot = document.querySelector("#us-overview");
-const toolbarRow = document.querySelector(".toolbar .toolbar-row:not(.toolbar-row-country)");
+const toolbarRow = document.querySelector(".toolbar .toolbar-row-filters");
 
 function formatCompactDollarMillions(value) {
   if (!Number.isFinite(value)) {
