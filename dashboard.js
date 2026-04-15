@@ -15,6 +15,7 @@ const capexDashboardData = window.capexDashboardData ?? {
   debtHistory: null,
   debtToCash: null,
 };
+const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 
 const primaryTabMeta = {
   BigTech: { label: "Big Tech" },
@@ -29,6 +30,10 @@ const bigTechSubtabMeta = {
   Capex: { label: "Capex & 현금흐름" },
 };
 
+const semisSubtabMeta = {
+  MemorySpot: { label: "Memory Spot" },
+};
+
 const currencyMeta = {
   NTD: { label: "NT$", decimals: 1, suffix: "B" },
   USD: { label: "$", decimals: 1, suffix: "B" },
@@ -41,6 +46,7 @@ const SERIES_START_MONTH = 1;
 const state = {
   tab: "BigTech",
   bigTechView: "M7",
+  semisView: "MemorySpot",
   currency: "USD",
   sector: "All",
   query: "",
@@ -903,6 +909,153 @@ function renderPlaceholderOverview(title, description) {
   `;
 }
 
+function getMemorySpotItems() {
+  return (memorySpotData.groups ?? []).flatMap((group) => group.items ?? []);
+}
+
+function getMemorySpotItemByKey(key) {
+  return getMemorySpotItems().find((item) => item.key === key) ?? null;
+}
+
+function formatMemorySpotValue(value) {
+  return Number.isFinite(value) ? `$${Number(value).toFixed(3)}` : "N/A";
+}
+
+function formatMemorySpotChange(value) {
+  if (!Number.isFinite(value)) {
+    return "N/A";
+  }
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${Number(value).toFixed(2)}%`;
+}
+
+function renderMemorySpotOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  const featuredItems = (memorySpotData.dashboards?.featuredKeys ?? [])
+    .map((key) => getMemorySpotItemByKey(key))
+    .filter(Boolean);
+
+  const featuredMarkup = featuredItems
+    .map(
+      (item) => `
+        <article class="memory-card">
+          <div class="memory-card-head">
+            <span class="memory-dot" style="background:${item.color}"></span>
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.benchmarkName}</p>
+            </div>
+          </div>
+          <div class="memory-card-value">${formatMemorySpotValue(item.latestValue)}</div>
+          <div class="memory-card-meta">
+            <span>${item.category}</span>
+            <span>${item.cadence}</span>
+            <span>${formatMemorySpotChange(item.latestChangePct)}</span>
+          </div>
+        </article>`,
+    )
+    .join("");
+
+  const basketMarkup = (memorySpotData.dashboards?.basketPanels ?? [])
+    .map((panel) => {
+      const panelItems = (panel.itemKeys ?? []).map((key) => getMemorySpotItemByKey(key)).filter(Boolean);
+      const lines = panelItems
+        .map(
+          (item) => `
+            <div class="memory-list-row">
+              <span><span class="memory-dot" style="background:${item.color}"></span>${item.label}</span>
+              <span>${formatMemorySpotValue(item.latestValue)}</span>
+              <span>${formatMemorySpotChange(item.latestChangePct)}</span>
+            </div>`,
+        )
+        .join("");
+
+      return `
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${panel.title}</h3>
+              <p>${panel.description}</p>
+            </div>
+          </div>
+          <div class="memory-list">
+            <div class="memory-list-head">
+              <span>Series</span>
+              <span>Last</span>
+              <span>Change</span>
+            </div>
+            ${lines}
+          </div>
+          <div class="memory-empty-chart">Stored history will appear here once the first scrape is accumulated.</div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const detailMarkup = getMemorySpotItems()
+    .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999))
+    .map(
+      (item) => `
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.benchmarkName}</p>
+            </div>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Latest</span>
+            <span class="memory-stat-value">${formatMemorySpotValue(item.latestValue)}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Session Change</span>
+            <span class="memory-stat-value">${formatMemorySpotChange(item.latestChangePct)}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Cadence</span>
+            <span class="memory-stat-value">${item.cadence}</span>
+          </div>
+          <div class="memory-empty-chart">No local history saved yet. Once the first collection runs, the time series will render here.</div>
+        </article>`,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="memory-overview">
+      <div class="us-section-head cloud-section-head">
+        <h2>Memory Spot Dashboard</h2>
+        <p>Representative DRAM and NAND spot benchmarks based on public TrendForce pages</p>
+      </div>
+      <section class="memory-banner">
+        <div>
+          <strong>Source</strong>
+          <span>${memorySpotData.source?.name ?? "TrendForce"}</span>
+        </div>
+        <div>
+          <strong>Updated</strong>
+          <span>${memorySpotData.updatedAt || "Awaiting first scrape"}</span>
+        </div>
+        <div>
+          <strong>Coverage</strong>
+          <span>${featuredItems.length} featured spot benchmarks</span>
+        </div>
+      </section>
+      <section class="memory-card-grid">
+        ${featuredMarkup}
+      </section>
+      <section class="memory-panel-grid memory-panel-grid-wide">
+        ${basketMarkup}
+      </section>
+      <section class="memory-panel-grid">
+        ${detailMarkup}
+      </section>
+    </section>
+  `;
+}
+
 function renderCapexOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -1573,19 +1726,33 @@ function renderCountries() {
 
 function renderSubtabs() {
   subtabSwitch.innerHTML = "";
-  if (state.tab !== "BigTech") {
+  let entries = [];
+  let activeKey = "";
+
+  if (state.tab === "BigTech") {
+    entries = Object.entries(bigTechSubtabMeta);
+    activeKey = state.bigTechView;
+  } else if (state.tab === "Semis") {
+    entries = Object.entries(semisSubtabMeta);
+    activeKey = state.semisView;
+  } else {
     subtabSwitch.classList.add("hidden");
     return;
   }
+
   subtabSwitch.classList.remove("hidden");
   subtabSwitch.classList.add("subtab-switch");
-  Object.entries(bigTechSubtabMeta).forEach(([viewKey, meta]) => {
+  entries.forEach(([viewKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `subtab-chip${state.bigTechView === viewKey ? " active" : ""}`;
+    button.className = `subtab-chip${activeKey === viewKey ? " active" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
-      state.bigTechView = viewKey;
+      if (state.tab === "BigTech") {
+        state.bigTechView = viewKey;
+      } else if (state.tab === "Semis") {
+        state.semisView = viewKey;
+      }
       render();
     });
     subtabSwitch.appendChild(button);
@@ -1647,7 +1814,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Semis") {
-    summaryText.textContent = "Semis dashboard workspace";
+    summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "Semis dashboard workspace";
     return;
   }
 
@@ -1757,6 +1924,10 @@ function render() {
 
   if (state.tab === "Semis") {
     renderSummary([]);
+    if (state.semisView === "MemorySpot") {
+      renderMemorySpotOverview();
+      return;
+    }
     renderPlaceholderOverview("Semis Dashboard", "CPU, ASIC, 광통신 같은 주제를 여기에 모아두면 확장성이 좋아집니다. 다음 데이터가 들어오면 이 영역부터 붙이면 됩니다.");
     return;
   }
