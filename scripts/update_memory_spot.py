@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 
 DRAM_SHEET_ID = "1BsfqsQ3fXN1JGXJlR8mbs2r-lXWt0S3Dcl5OVw1kPXs"
 NAND_SHEET_ID = "1fPRlsHibMUg8ZwRXWkeQ3hAZHoGMK2O4J98KfliMT4s"
-START_DATE = date(2016, 1, 1)
+START_DATE = date(2022, 1, 1)
 
 TARGET_MAP = {
     "ddr5_16gb": "DDR5 16Gb (2Gx8)",

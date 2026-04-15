@@ -926,16 +926,8 @@ function getMemorySpotItemByKey(key) {
   return getMemorySpotItems().find((item) => item.key === key) ?? null;
 }
 
-function getMemoryContractPanels() {
-  return memorySpotData.contractPanels ?? [];
-}
-
 function formatMemorySpotValue(value) {
   return Number.isFinite(value) ? `$${Number(value).toFixed(3)}` : "N/A";
-}
-
-function formatMemoryContractValue(value) {
-  return Number.isFinite(value) ? `$${Number(value).toFixed(2)}` : "N/A";
 }
 
 function formatMemorySpotChange(value) {
@@ -1013,8 +1005,8 @@ function formatMemoryPeriodLabel(dateKey) {
     return "-";
   }
 
-  const [year, month] = dateKey.split("-");
-  return `${year}.${month}`;
+  const [year] = dateKey.split("-");
+  return year.slice(2);
 }
 
 function hydrateMemorySpotRuntimeFromLocal() {
@@ -1067,7 +1059,7 @@ async function loadMemorySpotHistory() {
         wafer_256gb_tlc: "TLC 256Gb",
       };
 
-    const labels = createDateLabels("2016-01-01", formatDateKey(new Date()));
+    const labels = createDateLabels("2022-01-01", formatDateKey(new Date()));
     const labelIndex = Object.fromEntries(labels.map((label, index) => [label, index]));
     const itemStore = Object.fromEntries(
       Object.keys(targetMap).map((key) => [
@@ -1160,13 +1152,13 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
               if (!label) {
                 return "";
               }
-              return label.endsWith("-01-01") || label.endsWith("-07-01") ? formatMemoryPeriodLabel(label) : "";
+              return label.endsWith("-01-01") ? formatMemoryPeriodLabel(label) : "";
             },
           },
           border: { color: "#d8d8d2" },
           title: {
             display: true,
-            text: "Daily timeline from 2016.01",
+            text: "Daily timeline from 2022.01",
             color: "#8d8d86",
           },
         },
@@ -1174,65 +1166,6 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
           min: yMin,
           max: yMax,
           ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
-          grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-      },
-    },
-  });
-
-  charts.push(chart);
-}
-
-function createMemoryContractBarChart(canvas, panel) {
-  if (typeof Chart === "undefined") {
-    return;
-  }
-
-  const chart = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels: panel.items.map((item) => item.label),
-      datasets: [
-        {
-          label: "Average",
-          data: panel.items.map((item) => item.average),
-          backgroundColor: panel.items.map((item) => item.color),
-          borderRadius: 10,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const item = panel.items[context.dataIndex];
-              const changes = [];
-              if (Number.isFinite(item.averageChangePct)) {
-                changes.push(`Avg chg ${formatMemorySpotChange(item.averageChangePct)}`);
-              }
-              if (Number.isFinite(item.lowChangePct)) {
-                changes.push(`Low chg ${formatMemorySpotChange(item.lowChangePct)}`);
-              }
-              return [`Average: ${formatMemoryContractValue(context.parsed.y)}`, ...changes];
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          ticks: { color: "#8d8d86", maxRotation: 0, autoSkip: false },
-          grid: { display: false },
-          border: { color: "#d8d8d2" },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { color: "#8d8d86", callback: (value) => `$${Number(value).toFixed(0)}` },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
         },
@@ -1274,7 +1207,7 @@ function renderMemorySpotOverview() {
   const availableDates = Object.values(memorySpotRuntime.items)
     .flatMap((item) => (item?.latestDate ? [item.latestDate] : []))
     .sort();
-  const periodStart = memorySpotRuntime.labels[0] || "2016-01-01";
+  const periodStart = memorySpotRuntime.labels[0] || "2022-01-01";
   const periodEnd = memorySpotRuntime.labels[memorySpotRuntime.labels.length - 1] || memorySpotRuntime.updatedAt || periodStart;
   const firstObservedDate = availableDates[0] || null;
 
@@ -1346,47 +1279,6 @@ function renderMemorySpotOverview() {
           </div>
           <div class="memory-chart-wrap">
             <canvas data-memory-basket="${panel.key}"></canvas>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  const contractMarkup = getMemoryContractPanels()
-    .map((panel) => {
-      const lines = panel.items
-        .map(
-          (item) => `
-            <div class="memory-list-row memory-list-row-contract">
-              <span><span class="memory-dot" style="background:${item.color}"></span>${item.label}</span>
-              <span>${formatMemoryContractValue(item.average)}</span>
-              <span>${Number.isFinite(item.averageChangePct) ? formatMemorySpotChange(item.averageChangePct) : "-"}</span>
-            </div>`,
-        )
-        .join("");
-
-      return `
-        <article class="memory-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${panel.title}</h3>
-              <p>${panel.description}</p>
-            </div>
-          </div>
-          <div class="memory-contract-meta">
-            <span>${panel.sourceLabel}</span>
-            <span>Updated ${panel.updatedAt}</span>
-          </div>
-          <div class="memory-list">
-            <div class="memory-list-head">
-              <span>Series</span>
-              <span>Average</span>
-              <span>Avg Chg</span>
-            </div>
-            ${lines}
-          </div>
-          <div class="memory-chart-wrap">
-            <canvas data-memory-contract="${panel.key}"></canvas>
           </div>
         </article>
       `;
@@ -1470,9 +1362,6 @@ function renderMemorySpotOverview() {
       <section class="memory-panel-grid memory-panel-grid-wide">
         ${basketMarkup}
       </section>
-      <section class="memory-panel-grid memory-panel-grid-wide">
-        ${contractMarkup}
-      </section>
       <section class="memory-panel-grid">
         ${detailMarkup}
       </section>
@@ -1512,14 +1401,6 @@ function renderMemorySpotOverview() {
       .filter(Boolean);
 
     createMemoryLineChart(canvas, memorySpotRuntime.labels, datasets, (value) => `$${Number(value).toFixed(2)}`);
-  });
-
-  getMemoryContractPanels().forEach((panel) => {
-    const canvas = usOverviewRoot.querySelector(`[data-memory-contract="${panel.key}"]`);
-    if (!canvas) {
-      return;
-    }
-    createMemoryContractBarChart(canvas, panel);
   });
 
   getMemorySpotItems().forEach((item) => {
