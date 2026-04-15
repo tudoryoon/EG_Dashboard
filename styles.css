@@ -455,6 +455,24 @@ h1 {
   padding: 16px;
 }
 
+.memory-chart-wrap {
+  margin-top: 14px;
+}
+
+.memory-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 240px;
+}
+
+.memory-error {
+  padding: 14px 16px;
+  border: 1px solid #efc9c9;
+  border-radius: 16px;
+  background: #fff1f1;
+  color: #9f1f1f;
+}
+
 .cloud-section-head {
   padding: 4px 0 2px;
 }

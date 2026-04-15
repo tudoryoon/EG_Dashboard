@@ -16,6 +16,14 @@ const capexDashboardData = window.capexDashboardData ?? {
   debtToCash: null,
 };
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
+const memorySpotRuntime = {
+  loading: false,
+  loaded: false,
+  error: "",
+  labels: [],
+  updatedAt: "",
+  items: {},
+};
 
 const primaryTabMeta = {
   BigTech: { label: "Big Tech" },
@@ -929,13 +937,232 @@ function formatMemorySpotChange(value) {
   return `${sign}${Number(value).toFixed(2)}%`;
 }
 
+function parseCsvLine(line) {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      values.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current);
+  return values.map((value) => value.trim());
+}
+
+function parseCsvText(csvText) {
+  const lines = csvText.split(/\r?\n/).filter((line) => line.trim());
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const headers = parseCsvLine(lines[0]);
+  return lines.slice(1).map((line) => {
+    const cells = parseCsvLine(line);
+    return headers.reduce((record, header, index) => {
+      record[header] = cells[index] ?? "";
+      return record;
+    }, {});
+  });
+}
+
+function createDateLabels(startDate, endDate) {
+  const labels = [];
+  const cursor = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (cursor <= end) {
+    labels.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return labels;
+}
+
+function formatDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function loadMemorySpotHistory() {
+  if (memorySpotRuntime.loading || memorySpotRuntime.loaded) {
+    return;
+  }
+
+  memorySpotRuntime.loading = true;
+  memorySpotRuntime.error = "";
+
+  try {
+    const dramSheetId = "1BsfqsQ3fXN1JGXJlR8mbs2r-lXWt0S3Dcl5OVw1kPXs";
+    const nandSheetId = "1fPRlsHibMUg8ZwRXWkeQ3hAZHoGMK2O4J98KfliMT4s";
+    const urls = [
+      `https://docs.google.com/spreadsheets/d/${dramSheetId}/gviz/tq?tqx=out:csv&sheet=Historical`,
+      `https://docs.google.com/spreadsheets/d/${nandSheetId}/gviz/tq?tqx=out:csv&sheet=Historical`,
+    ];
+
+    const [dramCsv, nandCsv] = await Promise.all(
+      urls.map(async (url) => {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Memory spot fetch failed: ${response.status}`);
+        }
+        return response.text();
+      }),
+    );
+
+    const allRows = [...parseCsvText(dramCsv), ...parseCsvText(nandCsv)];
+    const targetMap = {
+      ddr5_16gb: "DDR5 16Gb (2Gx8)",
+      ddr4_16gb: "DDR4 16Gb (2Gx8)",
+      ddr4_8gb: "DDR4 8Gb (1Gx8)",
+      gddr6_8gb: "GDDR6 8Gb",
+      mlc_64gb: "MLC 64Gb",
+      wafer_512gb_tlc: "TLC 512Gb",
+    };
+
+    const labels = createDateLabels("2016-01-01", formatDateKey(new Date()));
+    const labelIndex = Object.fromEntries(labels.map((label, index) => [label, index]));
+    const itemStore = Object.fromEntries(
+      Object.keys(targetMap).map((key) => [
+        key,
+        {
+          history: new Array(labels.length).fill(null),
+          latestValue: null,
+          latestChangePct: null,
+          latestDate: null,
+        },
+      ]),
+    );
+
+    allRows.forEach((row) => {
+      const key = Object.keys(targetMap).find((candidate) => targetMap[candidate] === row.Canonical_Product);
+      if (!key || !(row.Date in labelIndex)) {
+        return;
+      }
+
+      const value = row.Price_Average ? Number(row.Price_Average) : null;
+      const change = row.Change_Pct ? Number(row.Change_Pct) : null;
+      const target = itemStore[key];
+      target.history[labelIndex[row.Date]] = Number.isFinite(value) ? Number(value.toFixed(3)) : null;
+
+      if (!target.latestDate || row.Date > target.latestDate) {
+        target.latestDate = row.Date;
+        target.latestValue = Number.isFinite(value) ? Number(value.toFixed(3)) : null;
+        target.latestChangePct = Number.isFinite(change) ? Number(change.toFixed(2)) : null;
+      }
+    });
+
+    memorySpotRuntime.labels = labels;
+    memorySpotRuntime.items = itemStore;
+    memorySpotRuntime.updatedAt = allRows.reduce((latest, row) => (row.Date > latest ? row.Date : latest), "");
+    memorySpotRuntime.loaded = true;
+  } catch (error) {
+    memorySpotRuntime.error = error instanceof Error ? error.message : String(error);
+  } finally {
+    memorySpotRuntime.loading = false;
+    render();
+  }
+}
+
+function createMemoryLineChart(canvas, labels, datasets, formatter) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const allValues = datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMin = minValue > 0 ? Math.floor(minValue * 0.9) : Math.floor(minValue * 1.1);
+  const yMax = Math.ceil(maxValue * 1.1);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: 10,
+            maxRotation: 0,
+            callback: (value, index) => {
+              const label = labels[index];
+              return label && label.endsWith("-01-01") ? label.slice(0, 4) : "";
+            },
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function renderMemorySpotOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
 
+  if (!memorySpotRuntime.loaded && !memorySpotRuntime.loading && !memorySpotRuntime.error) {
+    loadMemorySpotHistory();
+  }
+
   const featuredItems = (memorySpotData.dashboards?.featuredKeys ?? [])
-    .map((key) => getMemorySpotItemByKey(key))
+    .map((key) => {
+      const item = getMemorySpotItemByKey(key);
+      const runtime = memorySpotRuntime.items[key] ?? {};
+      return item
+        ? {
+            ...item,
+            latestValue: runtime.latestValue ?? item.latestValue,
+            latestChangePct: runtime.latestChangePct ?? item.latestChangePct,
+            latestDate: runtime.latestDate ?? null,
+            history: runtime.history ?? item.history ?? [],
+          }
+        : null;
+    })
     .filter(Boolean);
 
   const featuredMarkup = featuredItems
@@ -954,6 +1181,7 @@ function renderMemorySpotOverview() {
             <span>${item.category}</span>
             <span>${item.cadence}</span>
             <span>${formatMemorySpotChange(item.latestChangePct)}</span>
+            <span>${item.latestDate || "No data"}</span>
           </div>
         </article>`,
     )
@@ -961,7 +1189,21 @@ function renderMemorySpotOverview() {
 
   const basketMarkup = (memorySpotData.dashboards?.basketPanels ?? [])
     .map((panel) => {
-      const panelItems = (panel.itemKeys ?? []).map((key) => getMemorySpotItemByKey(key)).filter(Boolean);
+      const panelItems = (panel.itemKeys ?? [])
+        .map((key) => {
+          const item = getMemorySpotItemByKey(key);
+          const runtime = memorySpotRuntime.items[key] ?? {};
+          return item
+            ? {
+                ...item,
+                latestValue: runtime.latestValue ?? item.latestValue,
+                latestChangePct: runtime.latestChangePct ?? item.latestChangePct,
+                latestDate: runtime.latestDate ?? null,
+                history: runtime.history ?? item.history ?? [],
+              }
+            : null;
+        })
+        .filter(Boolean);
       const lines = panelItems
         .map(
           (item) => `
@@ -989,7 +1231,9 @@ function renderMemorySpotOverview() {
             </div>
             ${lines}
           </div>
-          <div class="memory-empty-chart">Stored history will appear here once the first scrape is accumulated.</div>
+          <div class="memory-chart-wrap">
+            <canvas data-memory-basket="${panel.key}"></canvas>
+          </div>
         </article>
       `;
     })
@@ -997,8 +1241,16 @@ function renderMemorySpotOverview() {
 
   const detailMarkup = getMemorySpotItems()
     .sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999))
-    .map(
-      (item) => `
+    .map((rawItem) => {
+      const runtime = memorySpotRuntime.items[rawItem.key] ?? {};
+      const item = {
+        ...rawItem,
+        latestValue: runtime.latestValue ?? rawItem.latestValue,
+        latestChangePct: runtime.latestChangePct ?? rawItem.latestChangePct,
+        latestDate: runtime.latestDate ?? null,
+        history: runtime.history ?? rawItem.history ?? [],
+      };
+      return `
         <article class="memory-panel">
           <div class="us-panel-head">
             <div>
@@ -1018,9 +1270,15 @@ function renderMemorySpotOverview() {
             <span class="memory-stat-label">Cadence</span>
             <span class="memory-stat-value">${item.cadence}</span>
           </div>
-          <div class="memory-empty-chart">No local history saved yet. Once the first collection runs, the time series will render here.</div>
-        </article>`,
-    )
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Last Date</span>
+            <span class="memory-stat-value">${item.latestDate || "No data"}</span>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-memory-series="${item.key}"></canvas>
+          </div>
+        </article>`;
+    })
     .join("");
 
   usOverviewRoot.innerHTML = `
@@ -1036,13 +1294,14 @@ function renderMemorySpotOverview() {
         </div>
         <div>
           <strong>Updated</strong>
-          <span>${memorySpotData.updatedAt || "Awaiting first scrape"}</span>
+          <span>${memorySpotRuntime.updatedAt || memorySpotData.updatedAt || (memorySpotRuntime.loading ? "Loading..." : "Awaiting first scrape")}</span>
         </div>
         <div>
           <strong>Coverage</strong>
           <span>${featuredItems.length} featured spot benchmarks</span>
         </div>
       </section>
+      ${memorySpotRuntime.error ? `<section class="memory-error">${memorySpotRuntime.error}</section>` : ""}
       <section class="memory-card-grid">
         ${featuredMarkup}
       </section>
@@ -1054,6 +1313,69 @@ function renderMemorySpotOverview() {
       </section>
     </section>
   `;
+
+  if (!memorySpotRuntime.loaded) {
+    return;
+  }
+
+  (memorySpotData.dashboards?.basketPanels ?? []).forEach((panel) => {
+    const canvas = usOverviewRoot.querySelector(`[data-memory-basket="${panel.key}"]`);
+    if (!canvas) {
+      return;
+    }
+
+    const datasets = (panel.itemKeys ?? [])
+      .map((key) => {
+        const item = getMemorySpotItemByKey(key);
+        const runtime = memorySpotRuntime.items[key];
+        if (!item || !runtime) {
+          return null;
+        }
+        return {
+          label: item.label,
+          data: runtime.history,
+          borderColor: item.color,
+          backgroundColor: item.color,
+          borderWidth: 2.2,
+          tension: 0.2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          spanGaps: true,
+        };
+      })
+      .filter(Boolean);
+
+    createMemoryLineChart(canvas, memorySpotRuntime.labels, datasets, (value) => `$${Number(value).toFixed(2)}`);
+  });
+
+  getMemorySpotItems().forEach((item) => {
+    const canvas = usOverviewRoot.querySelector(`[data-memory-series="${item.key}"]`);
+    const runtime = memorySpotRuntime.items[item.key];
+    if (!canvas || !runtime) {
+      return;
+    }
+
+    createMemoryLineChart(
+      canvas,
+      memorySpotRuntime.labels,
+      [
+        {
+          label: item.label,
+          data: runtime.history,
+          borderColor: item.color,
+          backgroundColor: item.color,
+          borderWidth: 2.2,
+          tension: 0.2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          spanGaps: true,
+        },
+      ],
+      (value) => `$${Number(value).toFixed(2)}`,
+    );
+  });
 }
 
 function renderCapexOverview() {
