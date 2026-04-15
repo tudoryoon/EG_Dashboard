@@ -1142,25 +1142,25 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
       scales: {
         x: {
           grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = axis.ticks.filter((tick) => {
+              const label = labels[tick.value];
+              return label && label.endsWith("-01-01");
+            });
+          },
           ticks: {
             color: "#8d8d86",
-            autoSkip: true,
-            maxTicksLimit: 12,
+            autoSkip: false,
             maxRotation: 0,
-            callback: (value, index) => {
-              const label = labels[index];
+            callback: (value) => {
+              const label = labels[value];
               if (!label) {
                 return "";
               }
-              return label.endsWith("-01-01") ? formatMemoryPeriodLabel(label) : "";
+              return formatMemoryPeriodLabel(label);
             },
           },
           border: { color: "#d8d8d2" },
-          title: {
-            display: true,
-            text: "Daily timeline from 2022.01",
-            color: "#8d8d86",
-          },
         },
         y: {
           min: yMin,
