@@ -1813,12 +1813,57 @@ function renderUSOverview() {
     )
     .join("");
 
+  const quarterMappingMarkup = `
+    <details class="quarter-mapping">
+      <summary class="quarter-mapping-toggle" aria-label="Open quarter mapping">
+        <span class="quarter-mapping-icon">i</span>
+        <span>Quarter Mapping</span>
+      </summary>
+      <div class="quarter-mapping-card">
+        <p class="quarter-mapping-lead">All M7 quarterly labels are displayed on a CY basis.</p>
+        <p class="quarter-mapping-copy">Apple, Microsoft, and NVIDIA are remapped from reported fiscal quarters. Alphabet, Amazon, Meta, and Tesla use reported calendar quarters.</p>
+        <div class="quarter-mapping-grid">
+          <div class="quarter-mapping-item">
+            <h3>Apple</h3>
+            <p>25Q1 = FY25 Q2</p>
+            <p>25Q2 = FY25 Q3</p>
+            <p>25Q3 = FY25 Q4</p>
+            <p>25Q4 = FY26 Q1</p>
+          </div>
+          <div class="quarter-mapping-item">
+            <h3>Microsoft</h3>
+            <p>25Q1 = FY25 Q3</p>
+            <p>25Q2 = FY25 Q4</p>
+            <p>25Q3 = FY26 Q1</p>
+            <p>25Q4 = FY26 Q2</p>
+          </div>
+          <div class="quarter-mapping-item">
+            <h3>NVIDIA</h3>
+            <p>25Q1 = FY25 Q4</p>
+            <p>25Q2 = FY26 Q1</p>
+            <p>25Q3 = FY26 Q2</p>
+            <p>25Q4 = FY26 Q3</p>
+          </div>
+          <div class="quarter-mapping-item">
+            <h3>Calendar-quarter reporters</h3>
+            <p>Alphabet = CY quarter</p>
+            <p>Amazon = CY quarter</p>
+            <p>Meta = CY quarter</p>
+            <p>Tesla = CY quarter</p>
+          </div>
+        </div>
+      </div>
+    </details>`;
+
   usOverviewRoot.innerHTML = `
     <section class="us-panel-grid">${valuationMarkup}</section>
     <section class="us-m7-section">
       <div class="us-section-head">
-        <h2>M7 Quarterly Earnings</h2>
-        <p>Revenue bars with EPS line by quarter</p>
+        <div>
+          <h2>M7 Quarterly Earnings</h2>
+          <p>Revenue bars with EPS line by quarter</p>
+        </div>
+        ${quarterMappingMarkup}
       </div>
       <div class="us-mini-grid">${m7Markup}</div>
     </section>

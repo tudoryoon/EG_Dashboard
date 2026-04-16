@@ -529,6 +529,13 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.us-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
 .us-panel-head h3,
 .us-section-head h2 {
   margin: 0;
@@ -541,6 +548,101 @@ h1 {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.84rem;
+}
+
+.quarter-mapping {
+  position: relative;
+  min-width: 0;
+}
+
+.quarter-mapping[open] {
+  z-index: 4;
+}
+
+.quarter-mapping-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  color: #43433f;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  list-style: none;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(34, 34, 31, 0.06);
+}
+
+.quarter-mapping-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.quarter-mapping-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #242421;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.quarter-mapping-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(680px, 92vw);
+  padding: 16px;
+  border: 1px solid #deded7;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 40px rgba(34, 34, 31, 0.12);
+}
+
+.quarter-mapping-lead,
+.quarter-mapping-copy {
+  margin: 0;
+  color: #4c4c47;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.quarter-mapping-copy {
+  margin-top: 6px;
+}
+
+.quarter-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.quarter-mapping-item {
+  padding: 12px 14px;
+  border: 1px solid #e5e5de;
+  border-radius: 14px;
+  background: #fafaf8;
+}
+
+.quarter-mapping-item h3 {
+  margin: 0 0 8px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.88rem;
+}
+
+.quarter-mapping-item p {
+  margin: 0;
+  color: #5a5a54;
+  font-size: 0.78rem;
+  line-height: 1.6;
 }
 
 .us-chart-wrap canvas {
@@ -868,6 +970,21 @@ h1 {
   }
 
   .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .us-section-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quarter-mapping-card {
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .quarter-mapping-grid {
     grid-template-columns: 1fr;
   }
 
