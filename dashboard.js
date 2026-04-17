@@ -17,7 +17,17 @@ const capexDashboardData = window.capexDashboardData ?? {
 };
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
+const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
+const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const memorySpotRuntime = {
+  loading: false,
+  loaded: false,
+  error: "",
+  labels: [],
+  updatedAt: "",
+  items: {},
+};
+const gpuCloudRuntime = {
   loading: false,
   loaded: false,
   error: "",
@@ -41,6 +51,7 @@ const bigTechSubtabMeta = {
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
+  GPUCloud: { label: "GPU Cloud" },
 };
 
 const currencyMeta = {
@@ -1009,6 +1020,14 @@ function formatMemoryPeriodLabel(dateKey) {
   return year.slice(2);
 }
 
+function formatYearMonthPeriodLabel(dateKey) {
+  if (!dateKey) {
+    return "-";
+  }
+  const [year, month] = dateKey.split("-");
+  return `${year.slice(2)}/${month}`;
+}
+
 function hydrateMemorySpotRuntimeFromLocal() {
   if (!memorySpotHistoryData || !Array.isArray(memorySpotHistoryData.labels) || typeof memorySpotHistoryData.items !== "object") {
     return false;
@@ -1020,6 +1039,20 @@ function hydrateMemorySpotRuntimeFromLocal() {
   memorySpotRuntime.loaded = true;
   memorySpotRuntime.loading = false;
   memorySpotRuntime.error = "";
+  return true;
+}
+
+function hydrateGpuCloudRuntimeFromLocal() {
+  if (!gpuCloudHistoryData || !Array.isArray(gpuCloudHistoryData.labels) || typeof gpuCloudHistoryData.items !== "object") {
+    return false;
+  }
+
+  gpuCloudRuntime.labels = gpuCloudHistoryData.labels;
+  gpuCloudRuntime.items = gpuCloudHistoryData.items ?? {};
+  gpuCloudRuntime.updatedAt = gpuCloudHistoryData.updatedAt ?? gpuCloudHistoryData.generatedAt ?? "";
+  gpuCloudRuntime.loaded = true;
+  gpuCloudRuntime.loading = false;
+  gpuCloudRuntime.error = "";
   return true;
 }
 
@@ -1174,6 +1207,311 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
   });
 
   charts.push(chart);
+}
+
+function createGpuLineChart(canvas, labels, datasets, formatter) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const allValues = datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 5;
+  const yMin = Math.max(0, Math.floor(minValue * 0.85 * 10) / 10);
+  const yMax = Math.ceil(maxValue * 1.15 * 10) / 10;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = axis.ticks.filter((tick) => {
+              const label = labels[tick.value];
+              if (!label || !label.endsWith("-01")) {
+                return false;
+              }
+              const [, month] = label.split("-");
+              return Number(month) % 2 === 1;
+            });
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => {
+              const label = labels[value];
+              if (!label) {
+                return "";
+              }
+              return formatYearMonthPeriodLabel(label);
+            },
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function getGpuCloudItems() {
+  return gpuCloudData.items ?? [];
+}
+
+function getGpuCloudItemByKey(key) {
+  return getGpuCloudItems().find((item) => item.key === key) ?? null;
+}
+
+function formatGpuCloudValue(value) {
+  return Number.isFinite(value) ? `$${Number(value).toFixed(2)}/hr` : "N/A";
+}
+
+function formatGpuCloudChange(value) {
+  if (!Number.isFinite(value)) {
+    return "N/A";
+  }
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${Number(value).toFixed(2)}%`;
+}
+
+function renderGpuCloudOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  if (!gpuCloudRuntime.loaded) {
+    hydrateGpuCloudRuntimeFromLocal();
+  }
+
+  const featuredItems = (gpuCloudData.dashboard?.featuredKeys ?? [])
+    .map((key) => {
+      const item = getGpuCloudItemByKey(key);
+      const runtime = gpuCloudRuntime.items[key] ?? {};
+      return item
+        ? {
+            ...item,
+            latestValue: runtime.latestValue ?? item.latestValue,
+            latestChangePct: runtime.latestChangePct ?? item.latestChangePct,
+            latestDate: runtime.latestDate ?? null,
+            history: runtime.history ?? item.history ?? [],
+            events: runtime.events ?? [],
+          }
+        : null;
+    })
+    .filter(Boolean);
+
+  const availableDates = Object.values(gpuCloudRuntime.items)
+    .flatMap((item) => (item?.latestDate ? [item.latestDate] : []))
+    .sort();
+  const periodStart = gpuCloudRuntime.labels[0] || "2024-07-11";
+  const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
+  const firstObservedDate = availableDates[0] || null;
+
+  const featuredMarkup = featuredItems
+    .map(
+      (item) => `
+        <article class="memory-card">
+          <div class="memory-card-head">
+            <span class="memory-dot" style="background:${item.color}"></span>
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.benchmarkName}</p>
+            </div>
+          </div>
+          <div class="memory-card-value">${formatGpuCloudValue(item.latestValue)}</div>
+          <div class="memory-card-meta">
+            <span>${item.category}</span>
+            <span>${item.cadence}</span>
+            <span>${formatGpuCloudChange(item.latestChangePct)}</span>
+            <span>${item.latestDate || "No data"}</span>
+          </div>
+        </article>`,
+    )
+    .join("");
+
+  const detailMarkup = getGpuCloudItems()
+    .map((rawItem) => {
+      const runtime = gpuCloudRuntime.items[rawItem.key] ?? {};
+      const item = {
+        ...rawItem,
+        latestValue: runtime.latestValue ?? rawItem.latestValue,
+        latestChangePct: runtime.latestChangePct ?? rawItem.latestChangePct,
+        latestDate: runtime.latestDate ?? null,
+        history: runtime.history ?? rawItem.history ?? [],
+        events: runtime.events ?? [],
+      };
+      const eventsMarkup = item.events
+        .map(
+          (event) => `
+            <div class="memory-list-row">
+              <span>${event.date}</span>
+              <span>$${Number(event.value).toFixed(2)}/hr</span>
+              <span>${event.note ?? ""}</span>
+            </div>`,
+        )
+        .join("");
+      return `
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.benchmarkName}</p>
+            </div>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Latest</span>
+            <span class="memory-stat-value">${formatGpuCloudValue(item.latestValue)}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Since Last Event</span>
+            <span class="memory-stat-value">${formatGpuCloudChange(item.latestChangePct)}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Trackable Since</span>
+            <span class="memory-stat-value">${item.firstTrackableDate}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Last Date</span>
+            <span class="memory-stat-value">${item.latestDate || "No data"}</span>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-gpu-series="${item.key}"></canvas>
+          </div>
+          <div class="memory-list">
+            <div class="memory-list-head">
+              <span>Observed date</span>
+              <span>Price</span>
+              <span>Source note</span>
+            </div>
+            ${eventsMarkup}
+          </div>
+        </article>`;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="memory-overview">
+      <div class="us-section-head cloud-section-head">
+        <h2>${gpuCloudData.dashboard?.title ?? "GPU Cloud Rental Dashboard"}</h2>
+        <p>${gpuCloudData.dashboard?.subtitle ?? "Daily benchmark series with monthly timeline labels"}</p>
+      </div>
+      <section class="memory-banner">
+        <div>
+          <strong>Source</strong>
+          <span>${gpuCloudData.source?.name ?? "Runpod public pricing benchmark"}</span>
+        </div>
+        <div>
+          <strong>Updated</strong>
+          <span>${gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt || "Awaiting first scrape"}</span>
+        </div>
+        <div>
+          <strong>Coverage</strong>
+          <span>${featuredItems.length} GPU benchmarks</span>
+        </div>
+        <div>
+          <strong>Period</strong>
+          <span>${periodStart} -> ${periodEnd}</span>
+        </div>
+        <div>
+          <strong>First Data</strong>
+          <span>${firstObservedDate || "No data"}</span>
+        </div>
+      </section>
+      <section class="memory-card-grid">
+        ${featuredMarkup}
+      </section>
+      <section class="memory-panel-grid memory-panel-grid-wide">
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${gpuCloudData.dashboard?.panelTitle ?? "Runpod Benchmark History"}</h3>
+              <p>${gpuCloudData.dashboard?.panelDescription ?? ""}</p>
+            </div>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-gpu-basket="runpod-benchmark"></canvas>
+          </div>
+        </article>
+      </section>
+      <section class="memory-panel-grid">
+        ${detailMarkup}
+      </section>
+    </section>
+  `;
+
+  const basketCanvas = usOverviewRoot.querySelector('[data-gpu-basket="runpod-benchmark"]');
+  if (basketCanvas) {
+    const datasets = featuredItems.map((item) => ({
+      label: item.label,
+      data: item.history,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: 2.4,
+      tension: 0,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+    }));
+    createGpuLineChart(basketCanvas, gpuCloudRuntime.labels, datasets, (value) => `$${Number(value).toFixed(2)}`);
+  }
+
+  getGpuCloudItems().forEach((item) => {
+    const canvas = usOverviewRoot.querySelector(`[data-gpu-series="${item.key}"]`);
+    const runtime = gpuCloudRuntime.items[item.key];
+    if (!canvas || !runtime) {
+      return;
+    }
+
+    createGpuLineChart(
+      canvas,
+      gpuCloudRuntime.labels,
+      [
+        {
+          label: item.label,
+          data: runtime.history,
+          borderColor: item.color,
+          backgroundColor: item.color,
+          borderWidth: 2.4,
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          spanGaps: true,
+        },
+      ],
+      (value) => `$${Number(value).toFixed(2)}`,
+    );
+  });
 }
 
 function renderMemorySpotOverview() {
@@ -2235,7 +2573,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Semis") {
-    summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "Semis dashboard workspace";
+    summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "GPU cloud rental dashboard workspace";
     return;
   }
 
@@ -2347,6 +2685,10 @@ function render() {
     renderSummary([]);
     if (state.semisView === "MemorySpot") {
       renderMemorySpotOverview();
+      return;
+    }
+    if (state.semisView === "GPUCloud") {
+      renderGpuCloudOverview();
       return;
     }
     renderPlaceholderOverview("Semis Dashboard", "CPU, ASIC, 광통신 같은 주제를 여기에 모아두면 확장성이 좋아집니다. 다음 데이터가 들어오면 이 영역부터 붙이면 됩니다.");
