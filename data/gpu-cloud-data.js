@@ -1,13 +1,18 @@
 window.gpuCloudData = {
-  updatedAt: "",
+  updatedAt: "2026-04-17",
   source: {
-    name: "Runpod public pricing benchmark",
-    note: "Daily series is built as a step-function from publicly observed Runpod pricing events and the current pricing page.",
-    benchmark: "On-demand public cloud rental benchmark",
+    reservedName: "Crusoe reserved pricing",
+    reservedNote:
+      "1Y and 6M benchmarks use Crusoe's official reserved GPU pricing page. These are public reserved-capacity offers rather than private negotiated market clears.",
+    publicName: "Runpod public pricing benchmark",
+    publicNote:
+      "Public-offer history is modeled as a daily step series from publicly observed Runpod pricing events and the current pricing page.",
     links: {
-      pricingPage: "https://www.runpod.io/gpu-pricing",
-      july2024PriceCut: "https://www.runpod.io/blog/runpod-slashes-gpu-prices-more-power-less-cost-for-ai-builders",
-      h200Launch: "https://blog.runpod.io/h200s-tensor-now-available-on-runpod/",
+      crusoePricing: "https://www.crusoe.ai/cloud/pricing",
+      runpodPricing: "https://www.runpod.io/gpu-pricing",
+      runpodJuly2024PriceCut:
+        "https://www.runpod.io/blog/runpod-slashes-gpu-prices-more-power-less-cost-for-ai-builders",
+      runpodH200Launch: "https://blog.runpod.io/h200s-tensor-now-available-on-runpod/",
     },
   },
   cadence: "daily",
@@ -15,6 +20,110 @@ window.gpuCloudData = {
     display: "monthly",
     unitLabel: "USD per GPU-hour",
   },
+  termBenchmarks: [
+    {
+      key: "term_1y",
+      label: "1Y",
+      description: "Crusoe reserved capacity public rates",
+      sourceLabel: "Crusoe official pricing",
+      color: "#111827",
+      snapshotDate: "2026-04-17",
+      items: [
+        {
+          key: "a100_1y",
+          gpu: "A100",
+          benchmarkName: "A100 80GB SXM",
+          value: 1.46,
+          unit: "USD/hr",
+          note: "1-year reserved",
+        },
+        {
+          key: "h100_1y",
+          gpu: "H100",
+          benchmarkName: "H100 80GB HGX",
+          value: 2.93,
+          unit: "USD/hr",
+          note: "1-year reserved",
+        },
+        {
+          key: "h200_1y",
+          gpu: "H200",
+          benchmarkName: "H200 141GB HGX",
+          value: 3.22,
+          unit: "USD/hr",
+          note: "1-year reserved",
+        },
+      ],
+    },
+    {
+      key: "term_6m",
+      label: "6M",
+      description: "Crusoe reserved capacity public rates",
+      sourceLabel: "Crusoe official pricing",
+      color: "#374151",
+      snapshotDate: "2026-04-17",
+      items: [
+        {
+          key: "a100_6m",
+          gpu: "A100",
+          benchmarkName: "A100 80GB SXM",
+          value: 1.56,
+          unit: "USD/hr",
+          note: "6-month reserved",
+        },
+        {
+          key: "h100_6m",
+          gpu: "H100",
+          benchmarkName: "H100 80GB HGX",
+          value: 3.12,
+          unit: "USD/hr",
+          note: "6-month reserved",
+        },
+        {
+          key: "h200_6m",
+          gpu: "H200",
+          benchmarkName: "H200 141GB HGX",
+          value: 3.43,
+          unit: "USD/hr",
+          note: "6-month reserved",
+        },
+      ],
+    },
+    {
+      key: "term_public",
+      label: "Public offer",
+      description: "Runpod posted on-demand prices",
+      sourceLabel: "Runpod official pricing",
+      color: "#d93025",
+      snapshotDate: "2026-04-17",
+      items: [
+        {
+          key: "a100_public",
+          runtimeKey: "a100_pcie_80gb",
+          gpu: "A100",
+          benchmarkName: "A100 PCIe 80GB",
+          unit: "USD/hr",
+          note: "public on-demand offer",
+        },
+        {
+          key: "h100_public",
+          runtimeKey: "h100_pcie_80gb",
+          gpu: "H100",
+          benchmarkName: "H100 PCIe 80GB",
+          unit: "USD/hr",
+          note: "public on-demand offer",
+        },
+        {
+          key: "h200_public",
+          runtimeKey: "h200_sxm_141gb",
+          gpu: "H200",
+          benchmarkName: "H200 SXM 141GB",
+          unit: "USD/hr",
+          note: "public on-demand offer",
+        },
+      ],
+    },
+  ],
   items: [
     {
       key: "a100_pcie_80gb",
@@ -58,9 +167,10 @@ window.gpuCloudData = {
   ],
   dashboard: {
     title: "GPU Cloud Rental Dashboard",
-    subtitle: "Daily benchmark series with monthly timeline labels",
+    subtitle: "A100, H100, and H200 across 1Y, 6M, and public-offer benchmarks",
     featuredKeys: ["a100_pcie_80gb", "h100_pcie_80gb", "h200_sxm_141gb"],
-    panelTitle: "Runpod Benchmark History",
-    panelDescription: "Benchmark tracks publicly observable on-demand cloud rental prices. Each GPU starts when a public benchmark price becomes trackable.",
+    panelTitle: "Public Offer Daily History",
+    panelDescription:
+      "Daily chart tracks public posted pricing only. Reserved 1Y and 6M benchmarks are shown as current reference cards from official provider pricing.",
   },
 };

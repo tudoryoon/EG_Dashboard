@@ -1303,6 +1303,10 @@ function formatGpuCloudChange(value) {
   return `${sign}${Number(value).toFixed(2)}%`;
 }
 
+function getGpuTermBenchmarks() {
+  return gpuCloudData.termBenchmarks ?? [];
+}
+
 function renderGpuCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -1336,26 +1340,53 @@ function renderGpuCloudOverview() {
   const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
   const firstObservedDate = availableDates[0] || null;
 
-  const featuredMarkup = featuredItems
-    .map(
-      (item) => `
-        <article class="memory-card">
-          <div class="memory-card-head">
-            <span class="memory-dot" style="background:${item.color}"></span>
+  const termMarkup = getGpuTermBenchmarks()
+    .map((term) => {
+      const rows = (term.items ?? [])
+        .map((entry) => {
+          const runtime = entry.runtimeKey ? gpuCloudRuntime.items[entry.runtimeKey] ?? {} : {};
+          const value = Number.isFinite(entry.value) ? entry.value : runtime.latestValue;
+          const date = runtime.latestDate || term.snapshotDate || gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt;
+          const change = entry.runtimeKey ? formatGpuCloudChange(runtime.latestChangePct) : entry.note;
+          return `
+            <div class="gpu-term-row">
+              <div class="gpu-term-row-main">
+                <span class="memory-dot" style="background:${entry.runtimeKey ? (getGpuCloudItemByKey(entry.runtimeKey)?.color ?? term.color) : term.color}"></span>
+                <div>
+                  <strong>${entry.gpu}</strong>
+                  <span>${entry.benchmarkName}</span>
+                </div>
+              </div>
+              <span class="gpu-term-value">${formatGpuCloudValue(value)}</span>
+              <span>${change}</span>
+              <span>${date || "-"}</span>
+            </div>`;
+        })
+        .join("");
+
+      return `
+        <article class="memory-panel gpu-term-panel">
+          <div class="us-panel-head">
             <div>
-              <h3>${item.label}</h3>
-              <p>${item.benchmarkName}</p>
+              <h3>${term.label}</h3>
+              <p>${term.description}</p>
             </div>
           </div>
-          <div class="memory-card-value">${formatGpuCloudValue(item.latestValue)}</div>
-          <div class="memory-card-meta">
-            <span>${item.category}</span>
-            <span>${item.cadence}</span>
-            <span>${formatGpuCloudChange(item.latestChangePct)}</span>
-            <span>${item.latestDate || "No data"}</span>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${term.sourceLabel}</span>
+            <span>${term.snapshotDate || gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt}</span>
           </div>
-        </article>`,
-    )
+          <div class="gpu-term-table">
+            <div class="gpu-term-head">
+              <span>Benchmark</span>
+              <span>Price</span>
+              <span>${term.key === "term_public" ? "Last move" : "Structure"}</span>
+              <span>Date</span>
+            </div>
+            ${rows}
+          </div>
+        </article>`;
+    })
     .join("");
 
   const detailMarkup = getGpuCloudItems()
@@ -1426,28 +1457,28 @@ function renderGpuCloudOverview() {
       </div>
       <section class="memory-banner">
         <div>
-          <strong>Source</strong>
-          <span>${gpuCloudData.source?.name ?? "Runpod public pricing benchmark"}</span>
+          <strong>Reserved source</strong>
+          <span>${gpuCloudData.source?.reservedName ?? "Crusoe reserved pricing"}</span>
         </div>
         <div>
           <strong>Updated</strong>
           <span>${gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt || "Awaiting first scrape"}</span>
         </div>
         <div>
-          <strong>Coverage</strong>
-          <span>${featuredItems.length} GPU benchmarks</span>
+          <strong>Public-offer source</strong>
+          <span>${gpuCloudData.source?.publicName ?? "Runpod public pricing benchmark"}</span>
         </div>
         <div>
           <strong>Period</strong>
           <span>${periodStart} -> ${periodEnd}</span>
         </div>
         <div>
-          <strong>First Data</strong>
-          <span>${firstObservedDate || "No data"}</span>
+          <strong>Coverage</strong>
+          <span>A100 / H100 / H200</span>
         </div>
       </section>
-      <section class="memory-card-grid">
-        ${featuredMarkup}
+      <section class="memory-card-grid gpu-term-grid">
+        ${termMarkup}
       </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
         <article class="memory-panel">
@@ -1456,6 +1487,10 @@ function renderGpuCloudOverview() {
               <h3>${gpuCloudData.dashboard?.panelTitle ?? "Runpod Benchmark History"}</h3>
               <p>${gpuCloudData.dashboard?.panelDescription ?? ""}</p>
             </div>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${firstObservedDate ? `First public data ${firstObservedDate}` : "No public history yet"}</span>
+            <span>${gpuCloudData.axis?.unitLabel ?? "USD per GPU-hour"}</span>
           </div>
           <div class="memory-chart-wrap">
             <canvas data-gpu-basket="runpod-benchmark"></canvas>
