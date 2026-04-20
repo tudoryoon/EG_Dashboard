@@ -598,6 +598,57 @@ h1 {
   box-shadow: var(--shadow);
 }
 
+.us-price-panel {
+  margin-bottom: 14px;
+}
+
+.us-price-head {
+  align-items: center;
+}
+
+.us-price-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.m7-range-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.m7-range-chip {
+  padding: 8px 12px;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  color: #5a5a54;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.m7-range-chip.active {
+  background: #20201d;
+  border-color: #20201d;
+  color: #fff;
+}
+
+.us-price-updated {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.us-price-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 340px;
+}
+
 .us-section-head {
   display: flex;
   align-items: flex-start;
@@ -1045,6 +1096,14 @@ h1 {
   .us-section-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .us-price-controls {
+    align-items: flex-start;
+  }
+
+  .m7-range-row {
+    justify-content: flex-start;
   }
 
   .quarter-mapping-card {

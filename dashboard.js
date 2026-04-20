@@ -15,6 +15,7 @@ const capexDashboardData = window.capexDashboardData ?? {
   debtHistory: null,
   debtToCash: null,
 };
+const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
@@ -71,6 +72,7 @@ const state = {
   sector: "All",
   query: "",
   sort: "marketCapDesc",
+  m7PriceRange: m7PriceData.defaultRange ?? "max",
 };
 
 const charts = [];
@@ -95,6 +97,174 @@ function formatCompactDollarMillions(value) {
     return `$${(value / 1000).toFixed(1)}B`;
   }
   return `$${value.toFixed(0)}M`;
+}
+
+function formatShortIsoDate(dateText) {
+  if (!dateText) {
+    return "-";
+  }
+  const [year, month] = dateText.split("-");
+  return `${year.slice(2)}/${month}`;
+}
+
+function shiftDateByRange(dateText, rangeKey) {
+  if (!dateText || rangeKey === "max") {
+    return m7PriceData.startDate ?? "2017-01-01";
+  }
+  const date = new Date(`${dateText}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return m7PriceData.startDate ?? "2017-01-01";
+  }
+
+  const rangeMap = {
+    "1m": { unit: "month", value: 1 },
+    "3m": { unit: "month", value: 3 },
+    "6m": { unit: "month", value: 6 },
+    "1y": { unit: "year", value: 1 },
+    "3y": { unit: "year", value: 3 },
+    "5y": { unit: "year", value: 5 },
+  };
+  const config = rangeMap[rangeKey];
+  if (!config) {
+    return m7PriceData.startDate ?? "2017-01-01";
+  }
+
+  if (config.unit === "month") {
+    date.setUTCMonth(date.getUTCMonth() - config.value);
+  } else {
+    date.setUTCFullYear(date.getUTCFullYear() - config.value);
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function buildM7PriceChartPayload(rangeKey) {
+  const items = Object.entries(m7PriceData.items ?? {});
+  const allDates = [...new Set(items.flatMap(([, item]) => item.dates ?? []))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey);
+  const selectedLabels = allDates.filter((label) => label >= startDate);
+
+  const datasets = items.map(([key, item]) => {
+    const dateIndex = new Map();
+    (item.dates ?? []).forEach((date, index) => {
+      dateIndex.set(date, index);
+    });
+    const baseDate = selectedLabels.find((label) => dateIndex.has(label));
+    const baseIndex = baseDate ? dateIndex.get(baseDate) : null;
+    const baseValue = baseIndex !== null && baseIndex !== undefined ? item.values?.[baseIndex] : null;
+
+    const values = selectedLabels.map((label) => {
+      if (!Number.isFinite(baseValue)) {
+        return null;
+      }
+      const pointIndex = dateIndex.get(label);
+      if (pointIndex === undefined) {
+        return null;
+      }
+      const pointValue = item.values?.[pointIndex];
+      if (!Number.isFinite(pointValue)) {
+        return null;
+      }
+      return Number(((pointValue / baseValue) * 100).toFixed(2));
+    });
+
+    return {
+      key,
+      label: item.label,
+      data: values,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: item.isIndex ? 3 : 2.2,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+    };
+  });
+
+  return { labels: selectedLabels, datasets };
+}
+
+function createM7RelativeChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildM7PriceChartPayload(rangeKey);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 80;
+  const maxValue = allValues.length ? Math.max(...allValues) : 180;
+  const yMin = Math.floor((minValue - 5) / 10) * 10;
+  const yMax = Math.ceil((maxValue + 5) / 10) * 10;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: rangeKey === "max" ? 12 : 10,
+            maxRotation: 0,
+            callback: (value, index) => formatShortIsoDate(payload.labels[index]),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${value}`,
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "Start = 100",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function parseCompanyMonth(monthText) {
@@ -2121,7 +2291,35 @@ function renderUSOverview() {
       </div>
     </details>`;
 
+  const rangeMarkup = (m7PriceData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.m7PriceRange === range.key ? " active" : ""}"
+          data-m7-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+
   usOverviewRoot.innerHTML = `
+    <section class="us-panel us-price-panel">
+      <div class="us-section-head us-price-head">
+        <div>
+          <h2>M7 Relative Performance</h2>
+          <p>Daily close normalized to 100 at the selected start date. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.</p>
+        </div>
+        <div class="us-price-controls">
+          <div class="m7-range-row">${rangeMarkup}</div>
+          <div class="us-price-updated">Updated ${m7PriceData.updatedAt || "-"}</div>
+        </div>
+      </div>
+      <div class="us-price-chart-wrap">
+        <canvas data-m7-relative="performance"></canvas>
+      </div>
+    </section>
     <section class="us-m7-section">
       <div class="us-section-head">
         <div>
@@ -2133,6 +2331,18 @@ function renderUSOverview() {
       <div class="us-mini-grid">${m7Markup}</div>
     </section>
   `;
+
+  usOverviewRoot.querySelectorAll("[data-m7-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.m7PriceRange = button.dataset.m7Range || m7PriceData.defaultRange || "max";
+      render();
+    });
+  });
+
+  const relativeCanvas = usOverviewRoot.querySelector('[data-m7-relative="performance"]');
+  if (relativeCanvas) {
+    createM7RelativeChart(relativeCanvas, state.m7PriceRange);
+  }
 
   usOverviewData.m7Quarterly.forEach((company) => {
     const canvas = usOverviewRoot.querySelector(`[data-us-quarterly="${company.name}"]`);
@@ -2478,7 +2688,7 @@ function renderSectors() {
 
 function renderSummary(list) {
   if (state.tab === "BigTech" && state.bigTechView === "M7") {
-    summaryText.textContent = "M7 valuation dashboard and quarterly earnings";
+    summaryText.textContent = "";
     return;
   }
 
