@@ -29,109 +29,6 @@ window.usOverviewData = (() => {
     }
     return series;
   }
-
-  const labels = buildMonthlyLabels();
-  const length = labels.length;
-
-  const valuationPanels = [
-    {
-      id: "sp500",
-      title: "S&P 500",
-      subtitle: "Fwd.12 P/E and Fwd.12 EPS · Monthly fallback",
-      labels,
-      pe: interpolateSeries(
-        [
-          { index: 0, value: 16.8 },
-          { index: 18, value: 18.4 },
-          { index: 42, value: 17.1 },
-          { index: 57, value: 13.2 },
-          { index: 72, value: 21.9 },
-          { index: 90, value: 17.5 },
-          { index: 108, value: 23.8 },
-          { index: 119, value: 20.4 },
-        ],
-        length,
-      ),
-      eps: interpolateSeries(
-        [
-          { index: 0, value: 129 },
-          { index: 18, value: 141 },
-          { index: 42, value: 162 },
-          { index: 57, value: 133 },
-          { index: 72, value: 182 },
-          { index: 90, value: 214 },
-          { index: 108, value: 249 },
-          { index: 119, value: 271 },
-        ],
-        length,
-      ),
-    },
-    {
-      id: "ndx",
-      title: "NASDAQ 100",
-      subtitle: "Fwd.12 P/E and Fwd.12 EPS · Monthly fallback",
-      labels,
-      pe: interpolateSeries(
-        [
-          { index: 0, value: 20.5 },
-          { index: 20, value: 24.8 },
-          { index: 42, value: 22.1 },
-          { index: 57, value: 18.2 },
-          { index: 72, value: 28.4 },
-          { index: 90, value: 23.6 },
-          { index: 108, value: 29.7 },
-          { index: 119, value: 24.6 },
-        ],
-        length,
-      ),
-      eps: interpolateSeries(
-        [
-          { index: 0, value: 214 },
-          { index: 20, value: 238 },
-          { index: 42, value: 281 },
-          { index: 57, value: 233 },
-          { index: 72, value: 327 },
-          { index: 90, value: 401 },
-          { index: 108, value: 472 },
-          { index: 119, value: 518 },
-        ],
-        length,
-      ),
-    },
-    {
-      id: "m7",
-      title: "Magnificent 7",
-      subtitle: "Blended Fwd.12 P/E and Fwd.12 EPS · Monthly fallback",
-      labels,
-      pe: interpolateSeries(
-        [
-          { index: 0, value: 25.8 },
-          { index: 18, value: 29.4 },
-          { index: 42, value: 26.7 },
-          { index: 57, value: 20.6 },
-          { index: 72, value: 34.9 },
-          { index: 90, value: 28.1 },
-          { index: 108, value: 36.2 },
-          { index: 119, value: 30.8 },
-        ],
-        length,
-      ),
-      eps: interpolateSeries(
-        [
-          { index: 0, value: 96 },
-          { index: 18, value: 111 },
-          { index: 42, value: 138 },
-          { index: 57, value: 120 },
-          { index: 72, value: 169 },
-          { index: 90, value: 215 },
-          { index: 108, value: 268 },
-          { index: 119, value: 302 },
-        ],
-        length,
-      ),
-    },
-  ];
-
   const quarterLabels = ["23Q1", "23Q2", "23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4"];
   const m7Quarterly = [
     {
@@ -631,5 +528,5 @@ window.usOverviewData = (() => {
     },
   ];
 
-  return { valuationPanels, quarterLabels, m7Quarterly };
+  return { quarterLabels, m7Quarterly };
 })();
