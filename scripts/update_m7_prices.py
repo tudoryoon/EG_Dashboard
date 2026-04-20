@@ -86,6 +86,7 @@ def main() -> None:
     output_path.write_text(
         "window.m7PriceData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
