@@ -38,6 +38,7 @@ const gpuCloudRuntime = {
 };
 
 const primaryTabMeta = {
+  Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
   Infra: { label: "Infra" },
@@ -54,6 +55,51 @@ const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
   GPUCloud: { label: "GPU Cloud" },
 };
+
+const marketReferenceItems = [
+  {
+    name: "S&P 500",
+    bucket: "US Large Cap",
+    benchmarkTicker: "^GSPC",
+    etfTicker: "SPY",
+    description: "Broad US large-cap benchmark with the deepest liquidity and options ecosystem.",
+  },
+  {
+    name: "NASDAQ 100",
+    bucket: "US Growth / Tech",
+    benchmarkTicker: "^NDX",
+    etfTicker: "QQQ",
+    description: "Mega-cap growth and platform-tech heavy benchmark widely used for AI and software exposure.",
+  },
+  {
+    name: "Dow Jones",
+    bucket: "US Blue Chip",
+    benchmarkTicker: "^DJI",
+    etfTicker: "DIA",
+    description: "Price-weighted blue-chip benchmark representing mature US leaders.",
+  },
+  {
+    name: "Russell 2000",
+    bucket: "US Small Cap",
+    benchmarkTicker: "^RUT",
+    etfTicker: "IWM",
+    description: "Small-cap breadth gauge often used for domestic cyclical and risk-on tracking.",
+  },
+  {
+    name: "M7 Index ETF",
+    bucket: "US Mega-cap Theme",
+    benchmarkTicker: "MAGS Basket",
+    etfTicker: "MAGS",
+    description: "Concentrated Magnificent 7 ETF for pure mega-cap platform exposure.",
+  },
+  {
+    name: "VanEck Semiconductor ETF",
+    bucket: "Semiconductor",
+    benchmarkTicker: "MVSMHTR",
+    etfTicker: "SMH",
+    description: "Flagship semi ETF covering leading fabless, foundry, memory, and equipment names.",
+  },
+];
 
 const currencyMeta = {
   NTD: { label: "NT$", decimals: 1, suffix: "B" },
@@ -2026,6 +2072,64 @@ function renderCapexOverview() {
   }
 }
 
+function renderMarketOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const rows = marketReferenceItems
+    .map(
+      (item) => `
+        <tr>
+          <td>
+            <div class="market-name-cell">
+              <strong>${item.name}</strong>
+              <span>${item.description}</span>
+            </div>
+          </td>
+          <td><span class="market-bucket-pill">${item.bucket}</span></td>
+          <td><code>${item.benchmarkTicker}</code></td>
+          <td><code>${item.etfTicker}</code></td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <div class="us-section-head cloud-section-head">
+        <div>
+          <h2>Market Reference Dashboard</h2>
+          <p>Core US index and ETF reference set for benchmark tracking and relative-performance work.</p>
+        </div>
+      </div>
+      <div class="market-panel-grid">
+        <article class="cloud-panel market-panel-wide">
+          <div class="us-panel-head">
+            <h3>Market Index / ETF Map</h3>
+            <p>Primary benchmark ticker and most-watched tradable ETF for each major market sleeve.</p>
+          </div>
+          <div class="market-table-wrap">
+            <table class="market-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Bucket</th>
+                  <th>Benchmark</th>
+                  <th>ETF</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
 function createUsMarginChart(canvas, company) {
   if (typeof Chart === "undefined") {
     return;
@@ -2687,6 +2791,11 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
+  if (state.tab === "Market") {
+    summaryText.textContent = "Core market benchmark and ETF reference dashboard";
+    return;
+  }
+
   if (state.tab === "BigTech" && state.bigTechView === "M7") {
     summaryText.textContent = "";
     return;
@@ -2828,6 +2937,12 @@ function render() {
   if (state.tab === "Infra") {
     renderSummary([]);
     renderPlaceholderOverview("Infra Dashboard", "전력기기와 인프라 관련 기업/지표를 여기에 모아두는 구조입니다. 이후 전력기기 탭을 이 안에서 세부 주제로 확장하면 됩니다.");
+    return;
+  }
+
+  if (state.tab === "Market") {
+    renderSummary([]);
+    renderMarketOverview();
     return;
   }
 

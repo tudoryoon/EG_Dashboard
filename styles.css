@@ -575,6 +575,85 @@ h1 {
   height: 360px;
 }
 
+.market-panel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.market-panel-wide {
+  grid-column: 1 / -1;
+}
+
+.market-table-wrap {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.market-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.market-table th,
+.market-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #e3e3dc;
+  text-align: left;
+  vertical-align: top;
+}
+
+.market-table th {
+  color: #6a6a63;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.market-table td code {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f3f3ef;
+  color: #252522;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.market-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.market-name-cell strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.98rem;
+}
+
+.market-name-cell span {
+  color: #676760;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.market-bucket-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #d7d7cf;
+  border-radius: 999px;
+  background: #fff;
+  color: #4a4a45;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .us-panel-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
