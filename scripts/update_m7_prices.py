@@ -16,8 +16,6 @@ SYMBOLS = [
     {"key": "meta", "symbol": "META", "label": "META", "color": "#0ea5e9", "isIndex": False},
     {"key": "nvda", "symbol": "NVDA", "label": "NVDA", "color": "#16a34a", "isIndex": False},
     {"key": "tsla", "symbol": "TSLA", "label": "TSLA", "color": "#dc2626", "isIndex": False},
-    {"key": "sp500", "symbol": "^GSPC", "label": "S&P 500", "color": "#4b5563", "isIndex": True},
-    {"key": "nasdaq100", "symbol": "^NDX", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
 ]
 
 
