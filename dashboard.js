@@ -505,6 +505,51 @@ function destroyCharts() {
   charts.splice(0).forEach((chart) => chart.destroy());
 }
 
+function parseQuarterLabel(label) {
+  const match = /^(\d{2})Q([1-4])$/.exec(label ?? "");
+  if (!match) {
+    return null;
+  }
+  return { year: Number(match[1]), quarter: Number(match[2]) };
+}
+
+function formatQuarterLabel(year, quarter, prefix = "") {
+  return `${prefix}${String(year).padStart(2, "0")}Q${quarter}`;
+}
+
+function shiftQuarterLabel(label, quarterOffset, prefix = "") {
+  const parsed = parseQuarterLabel(label);
+  if (!parsed) {
+    return label;
+  }
+
+  const absoluteQuarter = parsed.year * 4 + (parsed.quarter - 1) + quarterOffset;
+  const year = Math.floor(absoluteQuarter / 4);
+  const quarter = (absoluteQuarter % 4) + 1;
+  return formatQuarterLabel(year, quarter, prefix);
+}
+
+function getCompanyQuarterOffset(companyName) {
+  if (companyName === "Apple") {
+    return 1;
+  }
+  if (companyName === "Microsoft") {
+    return 2;
+  }
+  if (companyName === "NVIDIA") {
+    return 3;
+  }
+  return 0;
+}
+
+function getCompanyDisplayQuarterLabels(company, limit = null) {
+  const sourceLabels = Array.isArray(company?.labels) ? company.labels : [];
+  const selectedLabels = limit ? sourceLabels.slice(-limit) : sourceLabels;
+  const quarterOffset = getCompanyQuarterOffset(company?.name);
+  const prefix = "FY";
+  return selectedLabels.map((label) => shiftQuarterLabel(label, quarterOffset, prefix));
+}
+
 function createUsQuarterlyChart(canvas, company) {
   if (typeof Chart === "undefined") {
     return;
@@ -523,7 +568,7 @@ function createUsQuarterlyChart(canvas, company) {
   const chart = new Chart(canvas, {
     type: "bar",
     data: {
-      labels: company.labels,
+      labels: company.displayLabels ?? company.labels,
       datasets: [
         {
           type: "bar",
@@ -2248,7 +2293,7 @@ function createUsMarginChart(canvas, company) {
   const chart = new Chart(canvas, {
     type: "line",
     data: {
-      labels: company.labels,
+      labels: company.displayLabels ?? company.labels,
       datasets: [
         {
           label: "OPM",
@@ -2318,9 +2363,9 @@ function buildUsSegmentHistoryMap(segment, company, quarterLabels) {
         yoy: Number.isFinite(entry.yoy) ? entry.yoy : null,
         opm: Number.isFinite(entry.opm) ? entry.opm : null,
       });
-    });
+      });
 
-    const allQuarterLabels = usOverviewData.quarterLabels ?? quarterLabels;
+    const allQuarterLabels = Array.isArray(company?.labels) ? company.labels : quarterLabels;
     quarterLabels.forEach((label) => {
       if (!historyMap.has(label)) {
         historyMap.set(label, { revenue: null, yoy: null, opm: null });
@@ -2370,9 +2415,10 @@ function buildUsSegmentHistoryMap(segment, company, quarterLabels) {
 }
 
 function buildUsSegmentTable(company) {
-  const recentQuarterLabels = usOverviewData.quarterLabels.slice(-8);
+  const recentQuarterLabels = (company.labels ?? []).slice(-8).reverse();
+  const displayQuarterLabels = getCompanyDisplayQuarterLabels(company, 8).reverse();
 
-  const superHead = recentQuarterLabels
+  const superHead = displayQuarterLabels
     .map((label) => `<span class="us-quarter-group">${label}</span>`)
     .join("");
 
@@ -2449,7 +2495,7 @@ function renderUSOverview() {
           <div class="us-panel-head">
             <div>
               <h3>${company.name}</h3>
-              <p>Quarterly revenue, revenue YoY, and OPM</p>
+              <p>Last 12 reported fiscal quarters with revenue, revenue YoY, and OPM</p>
             </div>
           </div>
           <div class="us-mini-chart-wrap">
@@ -2462,48 +2508,6 @@ function renderUSOverview() {
         </article>`,
     )
     .join("");
-
-  const quarterMappingMarkup = `
-    <details class="quarter-mapping">
-      <summary class="quarter-mapping-toggle" aria-label="Open quarter mapping">
-        <span class="quarter-mapping-icon">i</span>
-        <span>Quarter Mapping</span>
-      </summary>
-      <div class="quarter-mapping-card">
-        <p class="quarter-mapping-lead">All M7 quarterly labels are displayed on a CY basis.</p>
-        <p class="quarter-mapping-copy">Apple, Microsoft, and NVIDIA are remapped from reported fiscal quarters. Alphabet, Amazon, Meta, and Tesla use reported calendar quarters.</p>
-        <div class="quarter-mapping-grid">
-          <div class="quarter-mapping-item">
-            <h3>Apple</h3>
-            <p>25Q1 = FY25 Q2</p>
-            <p>25Q2 = FY25 Q3</p>
-            <p>25Q3 = FY25 Q4</p>
-            <p>25Q4 = FY26 Q1</p>
-          </div>
-          <div class="quarter-mapping-item">
-            <h3>Microsoft</h3>
-            <p>25Q1 = FY25 Q3</p>
-            <p>25Q2 = FY25 Q4</p>
-            <p>25Q3 = FY26 Q1</p>
-            <p>25Q4 = FY26 Q2</p>
-          </div>
-          <div class="quarter-mapping-item">
-            <h3>NVIDIA</h3>
-            <p>25Q1 = FY25 Q4</p>
-            <p>25Q2 = FY26 Q1</p>
-            <p>25Q3 = FY26 Q2</p>
-            <p>25Q4 = FY26 Q3</p>
-          </div>
-          <div class="quarter-mapping-item">
-            <h3>Calendar-quarter reporters</h3>
-            <p>Alphabet = CY quarter</p>
-            <p>Amazon = CY quarter</p>
-            <p>Meta = CY quarter</p>
-            <p>Tesla = CY quarter</p>
-          </div>
-        </div>
-      </div>
-    </details>`;
 
   const rangeMarkup = (m7PriceData.ranges ?? [])
     .map(
@@ -2538,9 +2542,8 @@ function renderUSOverview() {
       <div class="us-section-head">
         <div>
           <h2>M7 Quarterly Earnings</h2>
-          <p>Revenue bars with EPS line by quarter</p>
+          <p>Company-reported fiscal quarter view. Charts show the latest 12 quarters, and segment tables show the latest 8 quarters.</p>
         </div>
-        ${quarterMappingMarkup}
       </div>
       <div class="us-mini-grid">${m7Markup}</div>
     </section>
@@ -2560,12 +2563,22 @@ function renderUSOverview() {
 
   usOverviewData.m7Quarterly.forEach((company) => {
     const canvas = usOverviewRoot.querySelector(`[data-us-quarterly="${company.name}"]`);
+    const latestTwelveLabels = (company.labels ?? []).slice(-12);
+    const displayLabels = getCompanyDisplayQuarterLabels(company, 12);
+    const chartCompany = {
+      ...company,
+      labels: latestTwelveLabels,
+      displayLabels,
+      revenue: (company.revenue ?? []).slice(-12),
+      revenueYoy: (company.revenueYoy ?? []).slice(-12),
+      opm: (company.opm ?? []).slice(-12),
+    };
     if (canvas) {
-      createUsQuarterlyChart(canvas, { ...company, labels: usOverviewData.quarterLabels });
+      createUsQuarterlyChart(canvas, chartCompany);
     }
     const marginCanvas = usOverviewRoot.querySelector(`[data-us-margin="${company.name}"]`);
     if (marginCanvas) {
-      createUsMarginChart(marginCanvas, { ...company, labels: usOverviewData.quarterLabels });
+      createUsMarginChart(marginCanvas, chartCompany);
     }
   });
 }
