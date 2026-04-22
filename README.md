@@ -1,34 +1,68 @@
-# US & Taiwan Revenue Dashboard
+# EG Dashboard
 
-미국/대만 기업 월간 대시보드를 위한 GitHub Pages 스타터입니다.
+GitHub Pages dashboard for market, M7, Taiwan revenue, memory spot, cloud, and capex tracking.
 
-## 포함 내용
+## Current Tabs
 
-- 상단 검색창
-- 통화 토글 `NT$ / USD / KRW`
-- 섹터 필터 칩
-- 기업별 카드 그리드
-- 카드 내부 월별 매출 막대 + YoY/MoM 차트
-- 연도별 YoY 비교 차트
-- `data/companies.js` 기반 데이터 분리
+- `Market`: daily normalized price chart for `S&P 500`, `NASDAQ 100`, `Dow Jones`, `Russell 2000`, `M7 Index ETF`, and `SMH`
+- `Big Tech > M7`: M7 relative price chart and quarterly earnings cards
+- `Big Tech > Cloud`: cloud revenue / growth / margin dashboard
+- `Big Tech > Capex`: big tech capex and cash flow dashboard
+- `Semis > Memory Spot`: DRAM and NAND spot dashboard
+- `Semis > GPU Cloud`: GPU rental dashboard
+- `Taiwan`: monthly revenue company cards
 
-## 파일 구조
+## Automated In GitHub
 
-- `index.html`: 대시보드 레이아웃
-- `styles.css`: 라이트 UI 스타일
-- `script.js`: 필터링 및 Chart.js 렌더링
-- `data/companies.js`: 회사별 데이터 입력 파일
+- `/.github/workflows/update-m7-prices.yml`
+  - runs daily
+  - updates both `data/m7-price-data.js` and `data/market-price-data.js`
+  - source: Yahoo Finance daily adjusted close
 
-## 데이터 넣는 방법
+- `/.github/workflows/update-memory-spot.yml`
+  - runs daily
+  - updates `data/memory-spot-history.js`
+  - source: public Google Sheets / TrendForce-linked history pipeline
 
-1. `data/companies.js`를 엽니다.
-2. 회사 한 개는 객체 한 개입니다.
-3. `currency`, `mom`, `yoy`, `bars`, `yoyLine`, `momLine`, `yearly.series` 값을 실제 숫자로 바꾸면 됩니다.
-4. 같은 형식으로 회사를 추가하면 카드가 자동으로 늘어납니다.
+## Manual Or Semi-Manual
 
-## 다음 단계 추천
+- `Taiwan` company revenue data
+  - main source file: `data/companies.js`
+  - company monthly revenue values are maintained manually
 
-1. 기업 데이터를 `data/companies.json`으로 분리
-2. 미국 기업과 대만 기업의 실제 월별 매출 데이터 매핑
-3. GitHub Actions로 데이터 수집 및 정적 배포 자동화
-4. 카드 클릭 시 상세 페이지 또는 모달 확장
+- `M7 quarterly earnings`
+  - main source file: `data/us-overview-data.js`
+  - segment revenue / YoY / OPM are maintained manually from IR and SEC data
+
+- `Cloud` dashboard
+  - main source file: `data/cloud-data.js`
+  - maintained manually from raw Excel data
+
+- `Capex & 현금흐름`
+  - main source file: `data/capex-data.js`
+  - maintained manually from raw Excel data
+
+- `GPU Cloud`
+  - main source files: `data/gpu-cloud-data.js`, `data/gpu-cloud-history.js`
+  - scripts exist, but the dashboard is not currently on a scheduled GitHub Action
+
+- `/.github/workflows/update-market-prices.yml`
+  - manual run only
+  - left as a fallback workflow
+  - scheduled market updates are already handled by `update-m7-prices.yml`
+
+## Main Files
+
+- `index.html`: page shell
+- `styles.css`: dashboard styles
+- `dashboard.js`: main rendering logic
+- `data/*.js`: dashboard datasets
+- `scripts/update_m7_prices.py`: daily M7 price updater
+- `scripts/update_market_prices.py`: market price updater
+- `scripts/update_memory_spot.py`: memory spot updater
+
+## Deployment
+
+- `main` branch push -> GitHub Pages deploy
+- header `Updated ... KST` is fetched from the latest `main` commit time
+- default landing tab is `Market`
