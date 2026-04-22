@@ -1,4 +1,4 @@
-name: Update M7 Prices
+name: Update M7 And Market Prices
 
 on:
   workflow_dispatch:
@@ -23,14 +23,17 @@ jobs:
       - name: Refresh M7 price history
         run: python scripts/update_m7_prices.py
 
-      - name: Commit updated M7 price history
+      - name: Refresh market price history
+        run: python scripts/update_market_prices.py
+
+      - name: Commit updated price history
         run: |
-          if git diff --quiet -- data/m7-price-data.js; then
-            echo "No M7 price changes detected."
+          if git diff --quiet -- data/m7-price-data.js data/market-price-data.js; then
+            echo "No M7 or market price changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/m7-price-data.js
-          git commit -m "Update M7 price history"
+          git add data/m7-price-data.js data/market-price-data.js
+          git commit -m "Update M7 and market price history"
           git push

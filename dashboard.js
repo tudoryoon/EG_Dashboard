@@ -29,6 +29,8 @@ const memorySpotRuntime = {
   updatedAt: "",
   items: {},
 };
+const GITHUB_REPO_OWNER = "tudoryoon";
+const GITHUB_REPO_NAME = "EG_Dashboard";
 const gpuCloudRuntime = {
   loading: false,
   loaded: false,
@@ -118,7 +120,7 @@ const SERIES_START_YEAR = 2021;
 const SERIES_START_MONTH = 1;
 
 const state = {
-  tab: "BigTech",
+  tab: "Market",
   bigTechView: "M7",
   semisView: "MemorySpot",
   currency: "USD",
@@ -142,6 +144,56 @@ const summaryText = document.querySelector("#summary-text");
 const cardTemplate = document.querySelector("#company-card-template");
 const usOverviewRoot = document.querySelector("#us-overview");
 const toolbarRow = document.querySelector(".toolbar .toolbar-row-filters");
+const brandMeta = document.querySelector(".brand-meta");
+
+function formatKstDateTime(dateText) {
+  if (!dateText) {
+    return "";
+  }
+
+  const date = new Date(dateText);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+async function refreshBrandMeta() {
+  if (!brandMeta) {
+    return;
+  }
+
+  const fallbackDate = [marketPriceData.updatedAt, m7PriceData.updatedAt].filter(Boolean).sort().slice(-1)[0];
+  if (fallbackDate) {
+    brandMeta.textContent = `Updated ${fallbackDate} KST`;
+  }
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/commits/main`, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    const committedAt = payload?.commit?.committer?.date;
+    const formatted = formatKstDateTime(committedAt);
+    if (formatted) {
+      brandMeta.textContent = `Updated ${formatted} KST`;
+    }
+  } catch (error) {
+    console.warn("Failed to refresh brand meta", error);
+  }
+}
 
 function formatCompactDollarMillions(value) {
   if (!Number.isFinite(value)) {
@@ -3023,3 +3075,4 @@ sortSelect.addEventListener("change", (event) => {
 });
 
 render();
+refreshBrandMeta();
