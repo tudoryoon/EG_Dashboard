@@ -166,7 +166,7 @@ window.gpuCloudData = {
     },
   ],
   dashboard: {
-    title: "GPU Cloud Rental Dashboard",
+    title: "GPU Rental Price Dashboard",
     subtitle: "A100, H100, and H200 across 1Y, 6M, and public-offer benchmarks",
     featuredKeys: ["a100_pcie_80gb", "h100_pcie_80gb", "h200_sxm_141gb"],
     panelTitle: "Public Offer Daily History",

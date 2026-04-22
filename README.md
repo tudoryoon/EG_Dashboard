@@ -9,7 +9,7 @@ GitHub Pages dashboard for market, M7, Taiwan revenue, memory spot, cloud, and c
 - `Big Tech > Cloud`: cloud revenue / growth / margin dashboard
 - `Big Tech > Capex`: big tech capex and cash flow dashboard
 - `Semis > Memory Spot`: DRAM and NAND spot dashboard
-- `Semis > GPU Cloud`: GPU rental dashboard
+- `Semis > GPU Rental Price`: GPU rental dashboard
 - `Taiwan`: monthly revenue company cards
 
 ## Automated In GitHub
@@ -42,7 +42,7 @@ GitHub Pages dashboard for market, M7, Taiwan revenue, memory spot, cloud, and c
   - main source file: `data/capex-data.js`
   - maintained manually from raw Excel data
 
-- `GPU Cloud`
+- `GPU Rental Price`
   - main source files: `data/gpu-cloud-data.js`, `data/gpu-cloud-history.js`
   - scripts exist, but the dashboard is not currently on a scheduled GitHub Action
 

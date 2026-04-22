@@ -56,7 +56,7 @@ const bigTechSubtabMeta = {
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
-  GPUCloud: { label: "GPU Cloud" },
+  GPUCloud: { label: "GPU Rental Price" },
 };
 
 const marketReferenceItems = [
@@ -2922,7 +2922,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Semis") {
-    summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "GPU cloud rental dashboard workspace";
+    summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "GPU rental price dashboard workspace";
     return;
   }
 
