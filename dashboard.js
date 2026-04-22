@@ -16,6 +16,7 @@ const capexDashboardData = window.capexDashboardData ?? {
   debtToCash: null,
 };
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
+const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
@@ -62,6 +63,7 @@ const marketReferenceItems = [
     bucket: "US Large Cap",
     benchmarkTicker: "^GSPC",
     etfTicker: "SPY",
+    chartTicker: "SPY",
     description: "Broad US large-cap benchmark with the deepest liquidity and options ecosystem.",
   },
   {
@@ -69,6 +71,7 @@ const marketReferenceItems = [
     bucket: "US Growth / Tech",
     benchmarkTicker: "^NDX",
     etfTicker: "QQQ",
+    chartTicker: "QQQ",
     description: "Mega-cap growth and platform-tech heavy benchmark widely used for AI and software exposure.",
   },
   {
@@ -76,6 +79,7 @@ const marketReferenceItems = [
     bucket: "US Blue Chip",
     benchmarkTicker: "^DJI",
     etfTicker: "DIA",
+    chartTicker: "DIA",
     description: "Price-weighted blue-chip benchmark representing mature US leaders.",
   },
   {
@@ -83,6 +87,7 @@ const marketReferenceItems = [
     bucket: "US Small Cap",
     benchmarkTicker: "^RUT",
     etfTicker: "IWM",
+    chartTicker: "IWM",
     description: "Small-cap breadth gauge often used for domestic cyclical and risk-on tracking.",
   },
   {
@@ -90,6 +95,7 @@ const marketReferenceItems = [
     bucket: "US Mega-cap Theme",
     benchmarkTicker: "MAGS Basket",
     etfTicker: "MAGS",
+    chartTicker: "MAGS",
     description: "Concentrated Magnificent 7 ETF for pure mega-cap platform exposure.",
   },
   {
@@ -97,6 +103,7 @@ const marketReferenceItems = [
     bucket: "Semiconductor",
     benchmarkTicker: "MVSMHTR",
     etfTicker: "SMH",
+    chartTicker: "SMH",
     description: "Flagship semi ETF covering leading fabless, foundry, memory, and equipment names.",
   },
 ];
@@ -119,6 +126,7 @@ const state = {
   query: "",
   sort: "marketCapDesc",
   m7PriceRange: m7PriceData.defaultRange ?? "max",
+  marketPriceRange: marketPriceData.defaultRange ?? "max",
 };
 
 const charts = [];
@@ -183,8 +191,8 @@ function shiftDateByRange(dateText, rangeKey) {
   return date.toISOString().slice(0, 10);
 }
 
-function buildM7PriceChartPayload(rangeKey) {
-  const items = Object.entries(m7PriceData.items ?? {});
+function buildRelativePriceChartPayload(priceData, rangeKey) {
+  const items = Object.entries(priceData?.items ?? {});
   const allDates = [...new Set(items.flatMap(([, item]) => item.dates ?? []))].sort();
   if (!allDates.length) {
     return { labels: [], datasets: [] };
@@ -236,12 +244,12 @@ function buildM7PriceChartPayload(rangeKey) {
   return { labels: selectedLabels, datasets };
 }
 
-function createM7RelativeChart(canvas, rangeKey) {
+function createRelativePriceChart(canvas, priceData, rangeKey) {
   if (typeof Chart === "undefined") {
     return;
   }
 
-  const payload = buildM7PriceChartPayload(rangeKey);
+  const payload = buildRelativePriceChartPayload(priceData, rangeKey);
   const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 80;
   const maxValue = allValues.length ? Math.max(...allValues) : 180;
@@ -311,6 +319,14 @@ function createM7RelativeChart(canvas, rangeKey) {
   });
 
   charts.push(chart);
+}
+
+function createM7RelativeChart(canvas, rangeKey) {
+  createRelativePriceChart(canvas, m7PriceData, rangeKey);
+}
+
+function createMarketRelativeChart(canvas, rangeKey) {
+  createRelativePriceChart(canvas, marketPriceData, rangeKey);
 }
 
 function parseCompanyMonth(monthText) {
@@ -2077,6 +2093,19 @@ function renderMarketOverview() {
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
+  const rangeMarkup = (marketPriceData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketPriceRange === range.key ? " active" : ""}"
+          data-market-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+
   const rows = marketReferenceItems
     .map(
       (item) => `
@@ -2090,6 +2119,7 @@ function renderMarketOverview() {
           <td><span class="market-bucket-pill">${item.bucket}</span></td>
           <td><code>${item.benchmarkTicker}</code></td>
           <td><code>${item.etfTicker}</code></td>
+          <td><code>${item.chartTicker}</code></td>
         </tr>
       `,
     )
@@ -2097,17 +2127,32 @@ function renderMarketOverview() {
 
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Market Relative Performance</h2>
+            <p>Daily close normalized to 100 at the selected start date. Max begins ${marketPriceData.startDate ?? "2017-01-01"}.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">Updated ${marketPriceData.updatedAt || "-"}</div>
+          </div>
+        </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-relative="performance"></canvas>
+        </div>
+      </section>
       <div class="us-section-head cloud-section-head">
         <div>
           <h2>Market Reference Dashboard</h2>
-          <p>Core US index and ETF reference set for benchmark tracking and relative-performance work.</p>
+          <p>Representative ETF mapping for major US benchmark sleeves and semiconductor exposure.</p>
         </div>
       </div>
       <div class="market-panel-grid">
         <article class="cloud-panel market-panel-wide">
           <div class="us-panel-head">
             <h3>Market Index / ETF Map</h3>
-            <p>Primary benchmark ticker and most-watched tradable ETF for each major market sleeve.</p>
+            <p>Primary benchmark ticker, representative ETF, and the exact ticker used in the normalized chart above.</p>
           </div>
           <div class="market-table-wrap">
             <table class="market-table">
@@ -2117,6 +2162,7 @@ function renderMarketOverview() {
                   <th>Bucket</th>
                   <th>Benchmark</th>
                   <th>ETF</th>
+                  <th>Chart</th>
                 </tr>
               </thead>
               <tbody>
@@ -2128,6 +2174,18 @@ function renderMarketOverview() {
       </div>
     </section>
   `;
+
+  usOverviewRoot.querySelectorAll("[data-market-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketPriceRange = button.dataset.marketRange || marketPriceData.defaultRange || "max";
+      render();
+    });
+  });
+
+  const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
+  if (relativeCanvas) {
+    createMarketRelativeChart(relativeCanvas, state.marketPriceRange);
+  }
 }
 
 function createUsMarginChart(canvas, company) {
@@ -2792,7 +2850,7 @@ function renderSectors() {
 
 function renderSummary(list) {
   if (state.tab === "Market") {
-    summaryText.textContent = "Core market benchmark and ETF reference dashboard";
+    summaryText.textContent = "Daily normalized market relative-performance dashboard";
     return;
   }
 
