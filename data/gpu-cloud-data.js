@@ -1,6 +1,9 @@
 window.gpuCloudData = {
   updatedAt: "2026-04-17",
   source: {
+    semiAnalysisName: "SemiAnalysis H100 1Y contract index",
+    semiAnalysisNote:
+      "Public H100 1Y midpoint series is approximated from the freely published SemiAnalysis chart image. Raw transaction-level index data is not publicly downloadable.",
     reservedName: "Crusoe reserved pricing",
     reservedNote:
       "1Y and 6M benchmarks use Crusoe's official reserved GPU pricing page. These are public reserved-capacity offers rather than private negotiated market clears.",
@@ -8,6 +11,7 @@ window.gpuCloudData = {
     publicNote:
       "Public-offer history is modeled as a daily step series from publicly observed Runpod pricing events and the current pricing page.",
     links: {
+      semiAnalysisArticle: "https://newsletter.semianalysis.com/p/the-great-gpu-shortage-rental-capacity",
       crusoePricing: "https://www.crusoe.ai/cloud/pricing",
       runpodPricing: "https://www.runpod.io/gpu-pricing",
       runpodJuly2024PriceCut:
@@ -19,6 +23,22 @@ window.gpuCloudData = {
   axis: {
     display: "monthly",
     unitLabel: "USD per GPU-hour",
+  },
+  semiAnalysisH100: {
+    title: "SemiAnalysis H100 1Y Contract Index",
+    subtitle: "Public monthly midpoint approximation from the freely released SemiAnalysis chart",
+    sourceLabel: "SemiAnalysis / ClusterMAX research",
+    cadence: "monthly",
+    unit: "USD/hr",
+    updatedAt: "2026-03",
+    labels: ["H1 2023", "H2 2023", "1Q 2024", "2Q 2024", "3Q 2024", "4Q 2024", "1Q 2025", "2Q 2025", "Jul 2025", "Aug 2025", "Sep 2025", "Oct 2025", "Nov 2025", "Dec 2025", "Jan 2026", "Feb 2026", "Mar 2026"],
+    values: [3.03, 2.97, 2.82, 2.38, 2.28, 1.98, 1.94, 1.94, 1.84, 1.75, 1.75, 1.70, 1.73, 1.73, 1.78, 2.08, 2.35],
+    floor: 1.70,
+    floorLabel: "Oct 2025 low",
+    latestValue: 2.35,
+    latestLabel: "Mar 2026",
+    method:
+      "Midpoint values are visually digitized approximations from the public chart. Use this as a directional contract-market benchmark rather than a raw downloadable dataset.",
   },
   termBenchmarks: [
     {
@@ -167,10 +187,10 @@ window.gpuCloudData = {
   ],
   dashboard: {
     title: "GPU Rental Price Dashboard",
-    subtitle: "A100, H100, and H200 across 1Y, 6M, and public-offer benchmarks",
+    subtitle: "SemiAnalysis H100 contract benchmark plus public reserved and public-offer comparables",
     featuredKeys: ["a100_pcie_80gb", "h100_pcie_80gb", "h200_sxm_141gb"],
     panelTitle: "Public Offer Daily History",
     panelDescription:
-      "Daily chart tracks public posted pricing only. Reserved 1Y and 6M benchmarks are shown as current reference cards from official provider pricing.",
+      "Daily chart tracks public posted pricing only. Contract-market benchmark is shown separately through the SemiAnalysis H100 1Y series.",
   },
 };

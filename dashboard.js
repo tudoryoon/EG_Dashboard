@@ -1546,6 +1546,10 @@ function getGpuTermBenchmarks() {
   return gpuCloudData.termBenchmarks ?? [];
 }
 
+function getGpuSemiAnalysisSeries() {
+  return gpuCloudData.semiAnalysisH100 ?? null;
+}
+
 function renderGpuCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -1578,6 +1582,7 @@ function renderGpuCloudOverview() {
   const periodStart = gpuCloudRuntime.labels[0] || "2024-07-11";
   const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
   const firstObservedDate = availableDates[0] || null;
+  const semiSeries = getGpuSemiAnalysisSeries();
 
   const termMarkup = getGpuTermBenchmarks()
     .map((term) => {
@@ -1696,25 +1701,54 @@ function renderGpuCloudOverview() {
       </div>
       <section class="memory-banner">
         <div>
+          <strong>Contract benchmark</strong>
+          <span>${gpuCloudData.source?.semiAnalysisName ?? "SemiAnalysis H100 1Y contract index"}</span>
+        </div>
+        <div>
           <strong>Reserved source</strong>
           <span>${gpuCloudData.source?.reservedName ?? "Crusoe reserved pricing"}</span>
         </div>
         <div>
-          <strong>Updated</strong>
-          <span>${gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt || "Awaiting first scrape"}</span>
+          <strong>Contract update</strong>
+          <span>${semiSeries?.updatedAt ?? "-"}</span>
         </div>
         <div>
           <strong>Public-offer source</strong>
           <span>${gpuCloudData.source?.publicName ?? "Runpod public pricing benchmark"}</span>
         </div>
         <div>
-          <strong>Period</strong>
+          <strong>Public daily period</strong>
           <span>${periodStart} -> ${periodEnd}</span>
         </div>
         <div>
           <strong>Coverage</strong>
-          <span>A100 / H100 / H200</span>
+          <span>H100 contract / A100-H100-H200 public offer</span>
         </div>
+      </section>
+      <section class="memory-panel-grid memory-panel-grid-wide">
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${semiSeries?.title ?? "SemiAnalysis H100 1Y Contract Index"}</h3>
+              <p>${semiSeries?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"}</span>
+            <span>${semiSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSeries?.latestValue) ? `· ${formatGpuCloudValue(semiSeries.latestValue)}` : ""}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Cycle low</span>
+            <span class="memory-stat-value">${Number.isFinite(semiSeries?.floor) ? `${formatGpuCloudValue(semiSeries.floor)} · ${semiSeries.floorLabel}` : "N/A"}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Method</span>
+            <span class="memory-stat-value">${semiSeries?.method ?? ""}</span>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-gpu-basket="semi-h100-1y"></canvas>
+          </div>
+        </article>
       </section>
       <section class="memory-card-grid gpu-term-grid">
         ${termMarkup}
@@ -1741,6 +1775,29 @@ function renderGpuCloudOverview() {
       </section>
     </section>
   `;
+
+  const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-1y"]');
+  if (semiCanvas && semiSeries) {
+    createGpuLineChart(
+      semiCanvas,
+      semiSeries.labels ?? [],
+      [
+        {
+          label: "H100 1Y",
+          data: semiSeries.values ?? [],
+          borderColor: "#111827",
+          backgroundColor: "#111827",
+          borderWidth: 2.6,
+          tension: 0.22,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointHitRadius: 10,
+          spanGaps: false,
+        },
+      ],
+      (value) => `$${Number(value).toFixed(2)}`,
+    );
+  }
 
   const basketCanvas = usOverviewRoot.querySelector('[data-gpu-basket="runpod-benchmark"]');
   if (basketCanvas) {
