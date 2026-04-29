@@ -1526,6 +1526,38 @@ function getGpuCloudItems() {
   return gpuCloudData.items ?? [];
 }
 
+function isGpuStepChange(data, index) {
+  const current = data[index];
+  if (!Number.isFinite(current)) {
+    return false;
+  }
+  const prev = index > 0 ? data[index - 1] : null;
+  const next = index < data.length - 1 ? data[index + 1] : null;
+  if (!Number.isFinite(prev) || prev !== current) {
+    return true;
+  }
+  if (!Number.isFinite(next) || next !== current) {
+    return true;
+  }
+  return false;
+}
+
+function buildGpuStepDataset(label, data, color) {
+  return {
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: color,
+    borderWidth: 2.4,
+    tension: 0,
+    stepped: true,
+    pointRadius: (context) => (isGpuStepChange(context.dataset.data, context.dataIndex) ? 3 : 0),
+    pointHoverRadius: 5,
+    pointHitRadius: 10,
+    spanGaps: true,
+  };
+}
+
 function getGpuCloudItemByKey(key) {
   return getGpuCloudItems().find((item) => item.key === key) ?? null;
 }
@@ -1801,18 +1833,7 @@ function renderGpuCloudOverview() {
 
   const basketCanvas = usOverviewRoot.querySelector('[data-gpu-basket="runpod-benchmark"]');
   if (basketCanvas) {
-    const datasets = featuredItems.map((item) => ({
-      label: item.label,
-      data: item.history,
-      borderColor: item.color,
-      backgroundColor: item.color,
-      borderWidth: 2.4,
-      tension: 0,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      pointHitRadius: 10,
-      spanGaps: true,
-    }));
+    const datasets = featuredItems.map((item) => buildGpuStepDataset(item.label, item.history, item.color));
     createGpuLineChart(basketCanvas, gpuCloudRuntime.labels, datasets, (value) => `$${Number(value).toFixed(2)}`);
   }
 
@@ -1826,20 +1847,7 @@ function renderGpuCloudOverview() {
     createGpuLineChart(
       canvas,
       gpuCloudRuntime.labels,
-      [
-        {
-          label: item.label,
-          data: runtime.history,
-          borderColor: item.color,
-          backgroundColor: item.color,
-          borderWidth: 2.4,
-          tension: 0,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          pointHitRadius: 10,
-          spanGaps: true,
-        },
-      ],
+      [buildGpuStepDataset(item.label, runtime.history, item.color)],
       (value) => `$${Number(value).toFixed(2)}`,
     );
   });

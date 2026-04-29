@@ -189,8 +189,8 @@ window.gpuCloudData = {
     title: "GPU Rental Price Dashboard",
     subtitle: "SemiAnalysis H100 contract benchmark plus public reserved and public-offer comparables",
     featuredKeys: ["a100_pcie_80gb", "h100_pcie_80gb", "h200_sxm_141gb"],
-    panelTitle: "Public Offer Daily History",
+    panelTitle: "Public Offer Step History",
     panelDescription:
-      "Daily chart tracks public posted pricing only. Contract-market benchmark is shown separately through the SemiAnalysis H100 1Y series.",
+      "Public-offer series is modeled as a step history between observed posted-price changes, not as a true daily transaction tape. Contract-market benchmark is shown separately through the SemiAnalysis H100 1Y series.",
   },
 };
