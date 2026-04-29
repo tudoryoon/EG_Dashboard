@@ -699,9 +699,15 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
           grid: { display: false },
           ticks: {
             color: "#8d8d86",
-            autoSkip: true,
-            maxTicksLimit: 9,
+            autoSkip: false,
             maxRotation: 0,
+            callback: (_, index) => {
+              const labels = cloudDashboardData.labels ?? [];
+              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+                return labels[index] ?? "";
+              }
+              return "";
+            },
           },
           border: { color: "#d8d8d2" },
         },
@@ -778,9 +784,15 @@ function createCloudRevenueBarChart(canvas, panel) {
           grid: { display: false },
           ticks: {
             color: "#8d8d86",
-            autoSkip: true,
-            maxTicksLimit: 9,
+            autoSkip: false,
             maxRotation: 0,
+            callback: (_, index) => {
+              const labels = cloudDashboardData.labels ?? [];
+              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+                return labels[index] ?? "";
+              }
+              return "";
+            },
           },
           border: { color: "#d8d8d2" },
         },
