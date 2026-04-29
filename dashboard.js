@@ -1613,117 +1613,7 @@ function renderGpuCloudOverview() {
     .sort();
   const periodStart = gpuCloudRuntime.labels[0] || "2024-07-11";
   const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
-  const firstObservedDate = availableDates[0] || null;
   const semiSeries = getGpuSemiAnalysisSeries();
-
-  const termMarkup = getGpuTermBenchmarks()
-    .map((term) => {
-      const rows = (term.items ?? [])
-        .map((entry) => {
-          const runtime = entry.runtimeKey ? gpuCloudRuntime.items[entry.runtimeKey] ?? {} : {};
-          const value = Number.isFinite(entry.value) ? entry.value : runtime.latestValue;
-          const date = runtime.latestDate || term.snapshotDate || gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt;
-          const change = entry.runtimeKey ? formatGpuCloudChange(runtime.latestChangePct) : entry.note;
-          return `
-            <div class="gpu-term-row">
-              <div class="gpu-term-row-main">
-                <span class="memory-dot" style="background:${entry.runtimeKey ? (getGpuCloudItemByKey(entry.runtimeKey)?.color ?? term.color) : term.color}"></span>
-                <div>
-                  <strong>${entry.gpu}</strong>
-                  <span>${entry.benchmarkName}</span>
-                </div>
-              </div>
-              <span class="gpu-term-value">${formatGpuCloudValue(value)}</span>
-              <span>${change}</span>
-              <span>${date || "-"}</span>
-            </div>`;
-        })
-        .join("");
-
-      return `
-        <article class="memory-panel gpu-term-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${term.label}</h3>
-              <p>${term.description}</p>
-            </div>
-          </div>
-          <div class="memory-card-meta gpu-term-meta">
-            <span>${term.sourceLabel}</span>
-            <span>${term.snapshotDate || gpuCloudRuntime.updatedAt || gpuCloudData.updatedAt}</span>
-          </div>
-          <div class="gpu-term-table">
-            <div class="gpu-term-head">
-              <span>Benchmark</span>
-              <span>Price</span>
-              <span>${term.key === "term_public" ? "Last move" : "Structure"}</span>
-              <span>Date</span>
-            </div>
-            ${rows}
-          </div>
-        </article>`;
-    })
-    .join("");
-
-  const detailMarkup = getGpuCloudItems()
-    .map((rawItem) => {
-      const runtime = gpuCloudRuntime.items[rawItem.key] ?? {};
-      const item = {
-        ...rawItem,
-        latestValue: runtime.latestValue ?? rawItem.latestValue,
-        latestChangePct: runtime.latestChangePct ?? rawItem.latestChangePct,
-        latestDate: runtime.latestDate ?? null,
-        history: runtime.history ?? rawItem.history ?? [],
-        events: runtime.events ?? [],
-      };
-      const eventsMarkup = item.events
-        .map(
-          (event) => `
-            <div class="memory-list-row">
-              <span>${event.date}</span>
-              <span>$${Number(event.value).toFixed(2)}/hr</span>
-              <span>${event.note ?? ""}</span>
-            </div>`,
-        )
-        .join("");
-      return `
-        <article class="memory-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${item.label}</h3>
-              <p>${item.benchmarkName}</p>
-            </div>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Latest</span>
-            <span class="memory-stat-value">${formatGpuCloudValue(item.latestValue)}</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Since Last Event</span>
-            <span class="memory-stat-value">${formatGpuCloudChange(item.latestChangePct)}</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Trackable Since</span>
-            <span class="memory-stat-value">${item.firstTrackableDate}</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Last Date</span>
-            <span class="memory-stat-value">${item.latestDate || "No data"}</span>
-          </div>
-          <div class="memory-chart-wrap">
-            <canvas data-gpu-series="${item.key}"></canvas>
-          </div>
-          <div class="memory-list">
-            <div class="memory-list-head">
-              <span>Observed date</span>
-              <span>Price</span>
-              <span>Source note</span>
-            </div>
-            ${eventsMarkup}
-          </div>
-        </article>`;
-    })
-    .join("");
 
   usOverviewRoot.innerHTML = `
     <section class="memory-overview">
@@ -1737,24 +1627,20 @@ function renderGpuCloudOverview() {
           <span>${gpuCloudData.source?.semiAnalysisName ?? "SemiAnalysis H100 1Y contract index"}</span>
         </div>
         <div>
-          <strong>Reserved source</strong>
-          <span>${gpuCloudData.source?.reservedName ?? "Crusoe reserved pricing"}</span>
-        </div>
-        <div>
-          <strong>Contract update</strong>
+          <strong>Update</strong>
           <span>${semiSeries?.updatedAt ?? "-"}</span>
         </div>
         <div>
-          <strong>Public-offer source</strong>
-          <span>${gpuCloudData.source?.publicName ?? "Runpod public pricing benchmark"}</span>
+          <strong>Series</strong>
+          <span>H100 1Y midpoint</span>
         </div>
         <div>
-          <strong>Public daily period</strong>
-          <span>${periodStart} -> ${periodEnd}</span>
+          <strong>Source</strong>
+          <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"}</span>
         </div>
         <div>
-          <strong>Coverage</strong>
-          <span>H100 contract / A100-H100-H200 public offer</span>
+          <strong>Method</strong>
+          <span>Public chart approximation</span>
         </div>
       </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
@@ -1782,29 +1668,6 @@ function renderGpuCloudOverview() {
           </div>
         </article>
       </section>
-      <section class="memory-card-grid gpu-term-grid">
-        ${termMarkup}
-      </section>
-      <section class="memory-panel-grid memory-panel-grid-wide">
-        <article class="memory-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${gpuCloudData.dashboard?.panelTitle ?? "Runpod Benchmark History"}</h3>
-              <p>${gpuCloudData.dashboard?.panelDescription ?? ""}</p>
-            </div>
-          </div>
-          <div class="memory-card-meta gpu-term-meta">
-            <span>${firstObservedDate ? `First public data ${firstObservedDate}` : "No public history yet"}</span>
-            <span>${gpuCloudData.axis?.unitLabel ?? "USD per GPU-hour"}</span>
-          </div>
-          <div class="memory-chart-wrap">
-            <canvas data-gpu-basket="runpod-benchmark"></canvas>
-          </div>
-        </article>
-      </section>
-      <section class="memory-panel-grid">
-        ${detailMarkup}
-      </section>
     </section>
   `;
 
@@ -1831,26 +1694,6 @@ function renderGpuCloudOverview() {
     );
   }
 
-  const basketCanvas = usOverviewRoot.querySelector('[data-gpu-basket="runpod-benchmark"]');
-  if (basketCanvas) {
-    const datasets = featuredItems.map((item) => buildGpuStepDataset(item.label, item.history, item.color));
-    createGpuLineChart(basketCanvas, gpuCloudRuntime.labels, datasets, (value) => `$${Number(value).toFixed(2)}`);
-  }
-
-  getGpuCloudItems().forEach((item) => {
-    const canvas = usOverviewRoot.querySelector(`[data-gpu-series="${item.key}"]`);
-    const runtime = gpuCloudRuntime.items[item.key];
-    if (!canvas || !runtime) {
-      return;
-    }
-
-    createGpuLineChart(
-      canvas,
-      gpuCloudRuntime.labels,
-      [buildGpuStepDataset(item.label, runtime.history, item.color)],
-      (value) => `$${Number(value).toFixed(2)}`,
-    );
-  });
 }
 
 function renderMemorySpotOverview() {
