@@ -58,7 +58,7 @@ window.capexDashboardData = {
     subtitle: "Annual capex overview with 2026E included where available",
     unit: "$B",
     series: [
-      { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 179.0] },
+      { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 190.0] },
       { key: "googl", name: "GOOGL", values: [13.2, 25.1, 23.5, 22.3, 24.6, 31.5, 32.3, 52.5, 91.4, 185.0] },
       { key: "meta", name: "META", values: [6.7, 14.0, 15.7, 15.7, 19.2, 32.0, 28.1, 39.2, 72.2, 135.0] },
       { key: "amzn", name: "AMZN", values: [12.0, 13.4, 16.9, 40.1, 61.1, 63.6, 52.7, 83.0, 130.7, 200.0] },
