@@ -9,10 +9,10 @@ from urllib.request import Request, urlopen
 
 START_DATE = "1997-01-01"
 SYMBOLS = [
-    {"key": "sp500", "symbol": "SPY", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
-    {"key": "nasdaq100", "symbol": "QQQ", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
-    {"key": "dowjones", "symbol": "DIA", "label": "Dow Jones", "color": "#4b5563", "isIndex": True},
-    {"key": "russell2000", "symbol": "IWM", "label": "Russell 2000", "color": "#9ca3af", "isIndex": True},
+    {"key": "sp500", "symbol": "^GSPC", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
+    {"key": "nasdaq100", "symbol": "^NDX", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
+    {"key": "dowjones", "symbol": "^DJI", "label": "Dow Jones", "color": "#4b5563", "isIndex": True},
+    {"key": "russell2000", "symbol": "^RUT", "label": "Russell 2000", "color": "#9ca3af", "isIndex": True},
     {"key": "smh", "symbol": "SMH", "label": "SMH", "color": "#dc2626", "isIndex": False},
 ]
 
