@@ -13,7 +13,6 @@ SYMBOLS = [
     {"key": "nasdaq100", "symbol": "QQQ", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
     {"key": "dowjones", "symbol": "DIA", "label": "Dow Jones", "color": "#4b5563", "isIndex": True},
     {"key": "russell2000", "symbol": "IWM", "label": "Russell 2000", "color": "#9ca3af", "isIndex": True},
-    {"key": "m7etf", "symbol": "MAGS", "label": "M7 Index ETF", "color": "#2563eb", "isIndex": False},
     {"key": "smh", "symbol": "SMH", "label": "SMH", "color": "#dc2626", "isIndex": False},
 ]
 

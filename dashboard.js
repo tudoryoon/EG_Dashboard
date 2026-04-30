@@ -217,13 +217,13 @@ function formatShortIsoDate(dateText) {
   return `${year.slice(2)}/${month}`;
 }
 
-function shiftDateByRange(dateText, rangeKey) {
+function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
   if (!dateText || rangeKey === "max") {
-    return m7PriceData.startDate ?? "2017-01-01";
+    return minStartDate;
   }
   const date = new Date(`${dateText}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) {
-    return m7PriceData.startDate ?? "2017-01-01";
+    return minStartDate;
   }
 
   const rangeMap = {
@@ -236,7 +236,7 @@ function shiftDateByRange(dateText, rangeKey) {
   };
   const config = rangeMap[rangeKey];
   if (!config) {
-    return m7PriceData.startDate ?? "2017-01-01";
+    return minStartDate;
   }
 
   if (config.unit === "month") {
@@ -255,7 +255,7 @@ function buildRelativePriceChartPayload(priceData, rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey);
+  const startDate = shiftDateByRange(latestDate, rangeKey, priceData?.startDate ?? "2017-01-01");
   const selectedLabels = allDates.filter((label) => label >= startDate);
 
   const datasets = items.map(([key, item]) => {
@@ -417,7 +417,7 @@ function buildMarketMacroChartPayload(panel, rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey);
+  const startDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "2017-01-01");
   const selectedLabels = allDates.filter((label) => label >= startDate);
 
   const datasets = seriesEntries.map(([key, item]) => {
