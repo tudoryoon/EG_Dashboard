@@ -1874,6 +1874,9 @@ function getMarketRsUniverseScore(row, universeKey) {
   if (universeKey === "dowjones") {
     return row.rsRatingDowjones;
   }
+  if (universeKey === "russell2000") {
+    return row.rsRatingRussell2000;
+  }
   return row.rsRatingAll;
 }
 

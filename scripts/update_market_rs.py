@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
+import time
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
@@ -17,6 +18,7 @@ WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "3y"
 BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
+MAX_SHARES_FETCH = 300
 LOOKBACKS = {
     "1m": 21,
     "3m": 63,
@@ -45,12 +47,20 @@ UNIVERSES = {
         "ticker_col": "Symbol",
         "name_col": "Company",
     },
+    "russell2000": {
+        "label": "Russell 2000",
+        "url": "https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund",
+        "ticker_col": "Ticker",
+        "name_col": "Name",
+        "source": "csv",
+    },
 }
 COLOR_BY_UNIVERSE = {
     "all": "#111827",
     "sp500": "#4b5563",
     "nasdaq100": "#2563eb",
     "dowjones": "#8b5cf6",
+    "russell2000": "#0f766e",
 }
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
 
@@ -71,10 +81,26 @@ def read_wiki_table(url: str, table_index: int) -> pd.DataFrame:
     return tables[table_index]
 
 
+def read_ishares_holdings_csv(url: str) -> pd.DataFrame:
+    response = requests.get(url, headers=WIKI_HEADERS, timeout=30)
+    response.raise_for_status()
+    text = response.text.lstrip("\ufeff")
+    lines = text.splitlines()
+    header_index = next((index for index, line in enumerate(lines) if line.startswith("Ticker,")), None)
+    if header_index is None:
+        raise RuntimeError("Unable to locate IWM holdings CSV header.")
+    payload = "\n".join(lines[header_index:])
+    frame = pd.read_csv(StringIO(payload))
+    return frame[frame["Asset Class"].fillna("").eq("Equity")].copy()
+
+
 def fetch_universe_frame() -> pd.DataFrame:
     merged: dict[str, dict[str, object]] = {}
     for key, meta in UNIVERSES.items():
-        table = read_wiki_table(str(meta["url"]), int(meta["table_index"]))
+        if meta.get("source") == "csv":
+            table = read_ishares_holdings_csv(str(meta["url"]))
+        else:
+            table = read_wiki_table(str(meta["url"]), int(meta["table_index"]))
         ticker_col = str(meta["ticker_col"])
         name_col = str(meta["name_col"])
         for _, row in table.iterrows():
@@ -89,6 +115,7 @@ def fetch_universe_frame() -> pd.DataFrame:
                     "member_sp500": False,
                     "member_nasdaq100": False,
                     "member_dowjones": False,
+                    "member_russell2000": False,
                 },
             )
             item["name"] = str(row.get(name_col, item["name"])).strip()
@@ -102,7 +129,7 @@ def download_batch(symbols: list[str]) -> dict[str, pd.Series]:
         period=PRICE_PERIOD,
         auto_adjust=True,
         progress=False,
-        threads=True,
+        threads=False,
         group_by="ticker",
     )
     if history.empty:
@@ -119,14 +146,37 @@ def download_batch(symbols: list[str]) -> dict[str, pd.Series]:
         if close.empty:
             continue
         series_map[symbol] = close.rename(symbol)
+    missing = [symbol for symbol in symbols if symbol not in series_map]
+    for symbol in missing:
+        for attempt in range(2):
+            try:
+                single = yf.download(
+                    tickers=symbol,
+                    period=PRICE_PERIOD,
+                    auto_adjust=True,
+                    progress=False,
+                    threads=False,
+                )
+                if single.empty or "Close" not in single.columns:
+                    time.sleep(0.35)
+                    continue
+                close = single["Close"].dropna()
+                if close.empty:
+                    time.sleep(0.35)
+                    continue
+                series_map[symbol] = close.rename(symbol)
+                break
+            except Exception:
+                time.sleep(0.35)
     return series_map
 
 
-def fetch_price_frame(symbols: list[str], batch_size: int = 80) -> pd.DataFrame:
+def fetch_price_frame(symbols: list[str], batch_size: int = 30) -> pd.DataFrame:
     series_map: dict[str, pd.Series] = {}
     for start in range(0, len(symbols), batch_size):
         batch = symbols[start : start + batch_size]
         series_map.update(download_batch(batch))
+        time.sleep(0.2)
     if not series_map:
         raise RuntimeError("No price data downloaded for RS universe.")
     return pd.concat(series_map.values(), axis=1).sort_index()
@@ -157,11 +207,11 @@ def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, ob
         for symbol in symbols
         if symbol in existing_rows and existing_rows[symbol].get("sharesOutstanding")
     }
-    missing = [symbol for symbol in symbols if symbol not in cache]
+    missing = [symbol for symbol in symbols if symbol not in cache][:MAX_SHARES_FETCH]
     if not missing:
         return cache
 
-    with ThreadPoolExecutor(max_workers=12) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(fetch_shares_outstanding_for_symbol, symbol): symbol for symbol in missing}
         for future in as_completed(futures):
             symbol, shares = future.result()
@@ -231,7 +281,11 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
-        tickers = universe.loc[universe[f"member_{key}"], "ticker"].tolist()
+        tickers = [
+            ticker
+            for ticker in universe.loc[universe[f"member_{key}"], "ticker"].tolist()
+            if ticker in rs_raw.columns
+        ]
         if not tickers:
             continue
         subset_raw = rs_raw[tickers]
@@ -286,6 +340,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
             "rsRatingSp500": nullable_int(rs_ratings_by_universe.get("sp500", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingNasdaq100": nullable_int(rs_ratings_by_universe.get("nasdaq100", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingDowjones": nullable_int(rs_ratings_by_universe.get("dowjones", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
+            "rsRatingRussell2000": nullable_int(rs_ratings_by_universe.get("russell2000", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "returns": {
                 "1m": compute_return(price_series, LOOKBACKS["1m"]),
                 "3m": compute_return(price_series, LOOKBACKS["3m"]),
@@ -298,6 +353,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
                 "sp500": bool(member["member_sp500"]),
                 "nasdaq100": bool(member["member_nasdaq100"]),
                 "dowjones": bool(member["member_dowjones"]),
+                "russell2000": bool(member["member_russell2000"]),
             },
         }
         rows.append(row)
@@ -327,6 +383,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
             "sp500": {"label": "S&P 500", "color": COLOR_BY_UNIVERSE["sp500"]},
             "nasdaq100": {"label": "NASDAQ 100", "color": COLOR_BY_UNIVERSE["nasdaq100"]},
             "dowjones": {"label": "Dow Jones", "color": COLOR_BY_UNIVERSE["dowjones"]},
+            "russell2000": {"label": "Russell 2000", "color": COLOR_BY_UNIVERSE["russell2000"]},
         },
         "scoring": {
             "label": "IBD-style RS Rating",
