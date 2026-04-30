@@ -611,6 +611,42 @@ h1 {
   height: 300px;
 }
 
+.total-series-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+
+.total-series-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  color: #5a5a54;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.total-series-chip.active {
+  background: #20201d;
+  border-color: #20201d;
+  color: #fff;
+}
+
+.total-series-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
 .market-panel-wide {
   grid-column: 1 / -1;
 }

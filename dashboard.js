@@ -133,6 +133,16 @@ const state = {
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
   ),
+  totalDashboardRange: "3y",
+  totalDashboardSelection: [
+    "market:sp500",
+    "market:smh",
+    "macro:rates:us10y",
+    "macro:rates:jp10y",
+    "macro:dxy:dxy",
+    "macro:energy:wti",
+    "macro:metals:gold",
+  ],
 };
 
 const charts = [];
@@ -399,6 +409,188 @@ function formatMacroValue(value, formatterKey) {
     default:
       return String(value);
   }
+}
+
+function getTotalDashboardSeriesItems() {
+  const items = [];
+
+  Object.entries(marketPriceData?.items ?? {}).forEach(([key, item]) => {
+    items.push({
+      key: `market:${key}`,
+      group: "Market",
+      label: item.label,
+      color: item.color,
+      dates: item.dates ?? [],
+      values: item.values ?? [],
+      formatter: "number1",
+      rawLabel: item.symbol ?? item.label,
+    });
+  });
+
+  Object.entries(marketMacroData?.panels ?? {}).forEach(([panelKey, panel]) => {
+    Object.entries(panel.series ?? {}).forEach(([seriesKey, item]) => {
+      items.push({
+        key: `macro:${panelKey}:${seriesKey}`,
+        group: panel.title,
+        label: item.name,
+        color: item.color,
+        dates: item.dates ?? [],
+        values: item.values ?? [],
+        formatter: panel.formatter ?? "number1",
+        rawLabel: item.name,
+      });
+    });
+  });
+
+  return items;
+}
+
+function getTotalDashboardSelectedItems() {
+  const selected = new Set(state.totalDashboardSelection ?? []);
+  return getTotalDashboardSeriesItems().filter((item) => selected.has(item.key));
+}
+
+function buildTotalDashboardPayload(rangeKey) {
+  const items = getTotalDashboardSelectedItems();
+  const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? marketPriceData?.startDate ?? "2017-01-01");
+  const selectedLabels = allDates.filter((label) => label >= startDate);
+
+  const datasets = items.map((item) => {
+    const dateIndex = new Map();
+    item.dates.forEach((date, index) => {
+      dateIndex.set(date, index);
+    });
+
+    const baseDate = selectedLabels.find((label) => dateIndex.has(label));
+    const baseIndex = baseDate ? dateIndex.get(baseDate) : null;
+    const baseValue = baseIndex !== null && baseIndex !== undefined ? item.values[baseIndex] : null;
+
+    const data = selectedLabels.map((label) => {
+      if (!Number.isFinite(baseValue)) {
+        return null;
+      }
+      const pointIndex = dateIndex.get(label);
+      if (pointIndex === undefined) {
+        return null;
+      }
+      const pointValue = item.values[pointIndex];
+      if (!Number.isFinite(pointValue)) {
+        return null;
+      }
+      return Number(((pointValue / baseValue) * 100).toFixed(2));
+    });
+
+    return {
+      key: item.key,
+      label: item.label,
+      data,
+      rawDates: item.dates,
+      rawValues: item.values,
+      rawFormatter: item.formatter,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: item.group === "Market" ? 2.6 : 2.2,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+    };
+  });
+
+  return { labels: selectedLabels, datasets };
+}
+
+function createTotalDashboardChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildTotalDashboardPayload(rangeKey);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 80;
+  const maxValue = allValues.length ? Math.max(...allValues) : 180;
+  const yMin = Math.floor((minValue - 5) / 10) * 10;
+  const yMax = Math.ceil((maxValue + 5) / 10) * 10;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => {
+              const dataset = context.dataset;
+              const chartIndex = context.dataIndex;
+              const rawDate = payload.labels[chartIndex];
+              const rawValueIndex = dataset.rawDates?.indexOf(rawDate);
+              const rawValue = rawValueIndex >= 0 ? dataset.rawValues?.[rawValueIndex] : null;
+              const normalized = context.parsed.y;
+              const rawText = Number.isFinite(rawValue) ? formatMacroValue(rawValue, dataset.rawFormatter) : "-";
+              return `${dataset.label}: ${normalized.toFixed(1)} | raw ${rawText}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: rangeKey === "max" ? 14 : 10,
+            maxRotation: 0,
+            callback: (value, index) => formatShortIsoDate(payload.labels[index]),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${value}`,
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "Start = 100",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function getMarketMacroPanel(panelKey) {
@@ -2302,6 +2494,32 @@ function renderMarketOverview() {
     .join("");
 
   const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const totalSeriesItems = getTotalDashboardSeriesItems();
+  const totalSeriesMarkup = totalSeriesItems
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="total-series-chip${(state.totalDashboardSelection ?? []).includes(item.key) ? " active" : ""}"
+          data-total-series="${item.key}"
+        >
+          <span class="total-series-dot" style="background:${item.color}"></span>
+          ${item.label}
+        </button>`,
+    )
+    .join("");
+  const totalRangeMarkup = (marketMacroData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.totalDashboardRange === range.key ? " active" : ""}"
+          data-total-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
   const macroPanels = [
     { key: "rates", canvas: "rates", className: "macro-panel-wide" },
     { key: "dxy", canvas: "dxy", className: "" },
@@ -2350,6 +2568,24 @@ function renderMarketOverview() {
 
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Total Dashboard</h2>
+            <p>All Market data in one normalized chart. Select only the indicators you want to compare. Tooltip shows normalized and raw values together.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${totalRangeMarkup}</div>
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="total-series-row">
+          ${totalSeriesMarkup}
+        </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-total="overview"></canvas>
+        </div>
+      </section>
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
@@ -2403,6 +2639,38 @@ function renderMarketOverview() {
       render();
     });
   });
+
+  usOverviewRoot.querySelectorAll("[data-total-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.totalDashboardRange = button.dataset.totalRange || "3y";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-total-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.totalSeries;
+      if (!key) {
+        return;
+      }
+      const current = new Set(state.totalDashboardSelection ?? []);
+      if (current.has(key)) {
+        if (current.size === 1) {
+          return;
+        }
+        current.delete(key);
+      } else {
+        current.add(key);
+      }
+      state.totalDashboardSelection = [...current];
+      render();
+    });
+  });
+
+  const totalCanvas = usOverviewRoot.querySelector('[data-market-total="overview"]');
+  if (totalCanvas) {
+    createTotalDashboardChart(totalCanvas, state.totalDashboardRange);
+  }
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
   if (relativeCanvas) {
