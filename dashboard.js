@@ -143,6 +143,8 @@ const state = {
     "macro:energy:wti",
     "macro:metals:gold",
   ],
+  totalDashboardCustomStart: "",
+  totalDashboardCustomEnd: "",
 };
 
 const charts = [];
@@ -450,6 +452,16 @@ function getTotalDashboardSelectedItems() {
   return getTotalDashboardSeriesItems().filter((item) => selected.has(item.key));
 }
 
+function getTotalDashboardBounds() {
+  const items = getTotalDashboardSelectedItems();
+  const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
+  return {
+    min: allDates[0] ?? "",
+    max: allDates[allDates.length - 1] ?? "",
+    labels: allDates,
+  };
+}
+
 function buildTotalDashboardPayload(rangeKey) {
   const items = getTotalDashboardSelectedItems();
   const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
@@ -458,8 +470,10 @@ function buildTotalDashboardPayload(rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? marketPriceData?.startDate ?? "2017-01-01");
-  const selectedLabels = allDates.filter((label) => label >= startDate);
+  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? marketPriceData?.startDate ?? "2017-01-01");
+  const customStart = state.totalDashboardCustomStart || derivedStartDate;
+  const customEnd = state.totalDashboardCustomEnd || latestDate;
+  const selectedLabels = allDates.filter((label) => label >= customStart && label <= customEnd);
 
   const datasets = items.map((item) => {
     const dateIndex = new Map();
@@ -2494,6 +2508,9 @@ function renderMarketOverview() {
     .join("");
 
   const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const totalBounds = getTotalDashboardBounds();
+  const totalStartValue = state.totalDashboardCustomStart || "";
+  const totalEndValue = state.totalDashboardCustomEnd || "";
   const totalSeriesItems = getTotalDashboardSeriesItems();
   const totalSeriesMarkup = totalSeriesItems
     .map(
@@ -2579,6 +2596,32 @@ function renderMarketOverview() {
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
           </div>
         </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-total-start
+              min="${totalBounds.min}"
+              max="${totalBounds.max}"
+              value="${totalStartValue}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-total-end
+              min="${totalBounds.min}"
+              max="${totalBounds.max}"
+              value="${totalEndValue}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-total-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-total-reset>Reset</button>
+          </div>
+        </div>
         <div class="total-series-row">
           ${totalSeriesMarkup}
         </div>
@@ -2643,6 +2686,8 @@ function renderMarketOverview() {
   usOverviewRoot.querySelectorAll("[data-total-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.totalDashboardRange = button.dataset.totalRange || "3y";
+      state.totalDashboardCustomStart = "";
+      state.totalDashboardCustomEnd = "";
       render();
     });
   });
@@ -2666,6 +2711,32 @@ function renderMarketOverview() {
       render();
     });
   });
+
+  const totalStartInput = usOverviewRoot.querySelector("[data-total-start]");
+  const totalEndInput = usOverviewRoot.querySelector("[data-total-end]");
+  const totalApplyButton = usOverviewRoot.querySelector("[data-total-apply]");
+  const totalResetButton = usOverviewRoot.querySelector("[data-total-reset]");
+
+  if (totalApplyButton && totalStartInput && totalEndInput) {
+    totalApplyButton.addEventListener("click", () => {
+      const startValue = totalStartInput.value || "";
+      const endValue = totalEndInput.value || "";
+      if (startValue && endValue && startValue > endValue) {
+        return;
+      }
+      state.totalDashboardCustomStart = startValue;
+      state.totalDashboardCustomEnd = endValue;
+      render();
+    });
+  }
+
+  if (totalResetButton) {
+    totalResetButton.addEventListener("click", () => {
+      state.totalDashboardCustomStart = "";
+      state.totalDashboardCustomEnd = "";
+      render();
+    });
+  }
 
   const totalCanvas = usOverviewRoot.querySelector('[data-market-total="overview"]');
   if (totalCanvas) {
