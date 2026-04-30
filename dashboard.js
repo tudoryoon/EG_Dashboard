@@ -248,6 +248,17 @@ function formatShortIsoDate(dateText) {
   return `${year.slice(2)}/${month}`;
 }
 
+function formatRangeAxisDate(dateText, rangeKey) {
+  if (!dateText) {
+    return "-";
+  }
+  const [year, month, day] = dateText.split("-");
+  if (rangeKey === "1m") {
+    return `${month}/${day}`;
+  }
+  return `${year.slice(2)}/${month}`;
+}
+
 function diffUtcDays(startText, endText) {
   const start = new Date(`${startText}T00:00:00Z`);
   const end = new Date(`${endText}T00:00:00Z`);
@@ -355,7 +366,18 @@ function buildRegularDateTickIndexes(labels, rangeKey) {
     ticks.push(labels.length - 1);
   }
 
-  return [...new Set(ticks)];
+  const uniqueTicks = [...new Set(ticks)];
+  const dedupedTicks = [];
+  let lastLabel = "";
+  uniqueTicks.forEach((index) => {
+    const label = formatRangeAxisDate(labels[index], rangeKey);
+    if (label && label !== lastLabel) {
+      dedupedTicks.push(index);
+      lastLabel = label;
+    }
+  });
+
+  return dedupedTicks;
 }
 
 function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
@@ -493,7 +515,7 @@ function createRelativePriceChart(canvas, priceData, rangeKey) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (value) => formatShortIsoDate(payload.labels[value]),
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
           },
           border: { color: "#d8d8d2" },
         },
@@ -733,7 +755,7 @@ function createTotalDashboardChart(canvas, rangeKey) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (value) => formatShortIsoDate(payload.labels[value]),
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
           },
           border: { color: "#d8d8d2" },
         },
@@ -908,7 +930,7 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (value) => formatShortIsoDate(payload.labels[value]),
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
           },
           border: { color: "#d8d8d2" },
         },
