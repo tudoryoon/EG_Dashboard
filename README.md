@@ -4,7 +4,9 @@ GitHub Pages dashboard for market, M7, Taiwan revenue, memory spot, cloud, and c
 
 ## Current Tabs
 
-- `Market`: daily normalized price chart for `S&P 500`, `NASDAQ 100`, `Dow Jones`, `Russell 2000`, `M7 Index ETF`, and `SMH`
+- `Market > Overview`: macro dashboard, total dashboard, and market relative performance
+- `Market > Breadth`: embedded Stockbee breadth monitor
+- `Market > RS`: IBD-style RS leaderboard, search, and stock-level daily RS trend
 - `Big Tech > M7`: M7 relative price chart and quarterly earnings cards
 - `Big Tech > Cloud`: cloud revenue / growth / margin dashboard
 - `Big Tech > Capex`: big tech capex and cash flow dashboard
@@ -16,8 +18,8 @@ GitHub Pages dashboard for market, M7, Taiwan revenue, memory spot, cloud, and c
 
 - `/.github/workflows/update-m7-prices.yml`
   - runs daily
-  - updates both `data/m7-price-data.js` and `data/market-price-data.js`
-  - source: Yahoo Finance daily adjusted close
+  - updates `data/m7-price-data.js`, `data/market-price-data.js`, `data/market-macro-data.js`, and `data/market-rs-data.js`
+  - sources: Yahoo Finance daily adjusted close + Wikipedia constituent tables for RS universe
 
 - `/.github/workflows/update-memory-spot.yml`
   - runs daily
@@ -59,6 +61,7 @@ GitHub Pages dashboard for market, M7, Taiwan revenue, memory spot, cloud, and c
 - `data/*.js`: dashboard datasets
 - `scripts/update_m7_prices.py`: daily M7 price updater
 - `scripts/update_market_prices.py`: market price updater
+- `scripts/update_market_rs.py`: market RS snapshot and history updater
 - `scripts/update_memory_spot.py`: memory spot updater
 
 ## Deployment

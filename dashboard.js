@@ -18,6 +18,16 @@ const capexDashboardData = window.capexDashboardData ?? {
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
+const marketRsData = window.marketRsData ?? {
+  updatedAt: "",
+  benchmark: { symbol: "^GSPC", label: "S&P 500" },
+  historyDates: [],
+  historyRanges: [],
+  universes: {},
+  scoring: { label: "", description: "" },
+  rows: [],
+  histories: {},
+};
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
@@ -174,12 +184,16 @@ const state = {
   ],
   totalDashboardCustomStart: "",
   totalDashboardCustomEnd: "",
+  rsUniverse: "all",
+  rsHistoryRange: "1y",
+  rsSelectedTicker: "",
 };
 
 const charts = [];
 
 const searchInput = document.querySelector("#search-input");
 const sortSelect = document.querySelector("#sort-select");
+const sortBox = document.querySelector(".sortbox");
 const countrySwitch = document.querySelector("#country-switch");
 const subtabSwitch = document.querySelector("#subtab-switch");
 const currencySwitch = document.querySelector("#currency-switch");
@@ -1085,6 +1099,9 @@ function ensureValidSelection() {
   if (!sectors.includes(state.sector)) {
     state.sector = "All";
   }
+  if (!state.rsSelectedTicker && Array.isArray(marketRsData.rows) && marketRsData.rows.length) {
+    state.rsSelectedTicker = marketRsData.rows[0].ticker;
+  }
 }
 
 function destroyCharts() {
@@ -1794,6 +1811,398 @@ function renderMarketBreadthOverview() {
       </article>
     </section>
   `;
+}
+
+function formatRsNumber(value, digits = 0) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return Number(value).toFixed(digits);
+}
+
+function formatRsPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}%`;
+}
+
+function formatRsGapPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toFixed(2)}%`;
+}
+
+function getMarketRsUniverseLabel(key) {
+  return marketRsData?.universes?.[key]?.label ?? "All";
+}
+
+function getMarketRsUniverseScore(row, universeKey) {
+  if (universeKey === "sp500") {
+    return row.rsRatingSp500;
+  }
+  if (universeKey === "nasdaq100") {
+    return row.rsRatingNasdaq100;
+  }
+  if (universeKey === "dowjones") {
+    return row.rsRatingDowjones;
+  }
+  return row.rsRatingAll;
+}
+
+function getVisibleMarketRsRows() {
+  const query = (state.query ?? "").trim().toLowerCase();
+  return (marketRsData.rows ?? [])
+    .filter((row) => {
+      if (state.rsUniverse === "sp500" && !row.memberships?.sp500) {
+        return false;
+      }
+      if (state.rsUniverse === "nasdaq100" && !row.memberships?.nasdaq100) {
+        return false;
+      }
+      if (state.rsUniverse === "dowjones" && !row.memberships?.dowjones) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return row.ticker?.toLowerCase().includes(query) || row.name?.toLowerCase().includes(query);
+    })
+    .sort((left, right) => {
+      const leftScore = getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity;
+      const rightScore = getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity;
+      if (rightScore !== leftScore) {
+        return rightScore - leftScore;
+      }
+      return String(left.ticker).localeCompare(String(right.ticker));
+    });
+}
+
+function getSelectedMarketRsRow(rows) {
+  return rows.find((row) => row.ticker === state.rsSelectedTicker) ?? rows[0] ?? null;
+}
+
+function createMarketRsChart(canvas, row) {
+  if (typeof Chart === "undefined" || !row) {
+    return;
+  }
+  const history = marketRsData.histories?.[row.ticker];
+  const labels = marketRsData.historyDates ?? [];
+  if (!history || !labels.length) {
+    return;
+  }
+
+  const minStart = labels[0];
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
+  const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
+  const selectedLabels = labels.slice(startIndex);
+  const selectedRatings = (history.rsRating ?? []).slice(startIndex);
+  const selectedRsLine = (history.rsLine ?? []).slice(startIndex);
+  const lineValues = selectedRsLine.filter((value) => Number.isFinite(value));
+  const lineMin = lineValues.length ? Math.floor((Math.min(...lineValues) - 3) / 5) * 5 : 90;
+  const lineMax = lineValues.length ? Math.ceil((Math.max(...lineValues) + 3) / 5) * 5 : 120;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: selectedLabels,
+      datasets: [
+        {
+          label: "RS Rating",
+          data: selectedRatings,
+          borderColor: "#111827",
+          backgroundColor: "#111827",
+          borderWidth: 2.6,
+          tension: 0.18,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          yAxisID: "y",
+        },
+        {
+          label: "RS Line vs S&P 500",
+          data: selectedRsLine,
+          borderColor: "#d93025",
+          backgroundColor: "#d93025",
+          borderWidth: 2,
+          tension: 0.18,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => {
+              const digits = context.dataset.yAxisID === "y" ? 0 : 2;
+              return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(digits)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            const indexes = buildRegularDateTickIndexes(selectedLabels, state.rsHistoryRange);
+            axis.ticks = indexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8a8a83",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index) => formatRangeAxisDate(selectedLabels[index], state.rsHistoryRange),
+          },
+        },
+        y: {
+          position: "left",
+          min: 1,
+          max: 99,
+          grid: { color: "rgba(28,28,26,0.08)" },
+          ticks: {
+            color: "#66665f",
+            stepSize: 20,
+            callback: (value) => value,
+          },
+        },
+        y1: {
+          position: "right",
+          min: lineMin,
+          max: lineMax,
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: "#a12620",
+            callback: (value) => `${Number(value).toFixed(0)}`,
+          },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function renderMarketRsOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  const rows = getVisibleMarketRsRows();
+  const selected = getSelectedMarketRsRow(rows);
+  if (selected) {
+    state.rsSelectedTicker = selected.ticker;
+  }
+
+  const universeChips = Object.entries(marketRsData.universes ?? {})
+    .map(
+      ([key, meta]) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.rsUniverse === key ? " active" : ""}"
+          data-rs-universe="${key}"
+        >${meta.label}</button>
+      `,
+    )
+    .join("");
+  const rangeChips = (marketRsData.historyRanges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.rsHistoryRange === range.key ? " active" : ""}"
+          data-rs-range="${range.key}"
+        >${range.label}</button>
+      `,
+    )
+    .join("");
+  const leaderCards = rows
+    .slice(0, 12)
+    .map((row) => {
+      const score = getMarketRsUniverseScore(row, state.rsUniverse);
+      return `
+        <button
+          type="button"
+          class="market-rs-card${state.rsSelectedTicker === row.ticker ? " active" : ""}"
+          data-rs-ticker="${row.ticker}"
+        >
+          <div class="market-rs-card-top">
+            <span class="market-rs-card-ticker">${row.ticker}</span>
+            <span class="market-rs-card-score">${formatRsNumber(score)}</span>
+          </div>
+          <p class="market-rs-card-name">${row.name}</p>
+          <div class="market-rs-card-meta">
+            <span>1M</span>
+            <strong>${formatRsPercent(row.returns?.["1m"])}</strong>
+          </div>
+          <div class="market-rs-card-meta">
+            <span>12M</span>
+            <strong>${formatRsPercent(row.returns?.["12m"])}</strong>
+          </div>
+        </button>
+      `;
+    })
+    .join("");
+  const tableRows = rows
+    .slice(0, 120)
+    .map((row) => {
+      const score = getMarketRsUniverseScore(row, state.rsUniverse);
+      return `
+        <tr data-rs-ticker="${row.ticker}">
+          <td>${row.ticker}</td>
+          <td>${row.name}</td>
+          <td>${formatRsNumber(score)}</td>
+          <td>${formatRsPercent(row.returns?.["1m"])}</td>
+          <td>${formatRsPercent(row.returns?.["3m"])}</td>
+          <td>${formatRsPercent(row.returns?.["6m"])}</td>
+          <td>${formatRsPercent(row.returns?.["12m"])}</td>
+          <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-rs-overview">
+      <article class="us-panel">
+        <div class="us-section-head market-rs-head">
+          <div>
+            <h2>Relative Strength</h2>
+            <p>${marketRsData.scoring?.description ?? ""}</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">As of ${marketRsData.updatedAt ?? "-"}</span>
+            <span class="market-rs-pill">${rows.length} names</span>
+            <span class="market-rs-pill">Sorted 99 → 1</span>
+          </div>
+        </div>
+        <div class="market-rs-controls">
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Universe</span>
+            <div class="market-rs-chip-row">${universeChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Detail Range</span>
+            <div class="market-rs-chip-row">${rangeChips}</div>
+          </div>
+        </div>
+      </article>
+
+      <section class="market-rs-layout">
+        <article class="us-panel market-rs-leaders">
+          <div class="us-section-head">
+            <div>
+              <h2>RS Leaders</h2>
+              <p>${getMarketRsUniverseLabel(state.rsUniverse)} universe leaders by RS Rating.</p>
+            </div>
+          </div>
+          <div class="market-rs-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+        </article>
+
+        <article class="us-panel market-rs-detail">
+          <div class="us-section-head">
+            <div>
+              <h2>${selected?.ticker ?? "-"}</h2>
+              <p>${selected?.name ?? "Select a ticker from the table or search box."}</p>
+            </div>
+            <span class="market-rs-detail-score">${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</span>
+          </div>
+          <div class="market-rs-metrics">
+            <div class="market-rs-metric">
+              <span>RS Rating</span>
+              <strong>${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>1M</span>
+              <strong>${formatRsPercent(selected?.returns?.["1m"])}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>3M</span>
+              <strong>${formatRsPercent(selected?.returns?.["3m"])}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>12M</span>
+              <strong>${formatRsPercent(selected?.returns?.["12m"])}</strong>
+            </div>
+          </div>
+          <div class="chart-wrap market-rs-chart-wrap">
+            <canvas data-rs-chart="detail"></canvas>
+          </div>
+          <p class="market-rs-chart-caption">Left axis: RS Rating 1-99. Right axis: RS Line vs S&P 500, normalized to 100.</p>
+        </article>
+      </section>
+
+      <article class="us-panel market-rs-table-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Full RS Table</h2>
+            <p>Search from the top bar, then click any row to inspect the stock-level daily RS trend.</p>
+          </div>
+        </div>
+        <div class="market-rs-table-wrap">
+          <table class="market-rs-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Name</th>
+                <th>RS</th>
+                <th>1M</th>
+                <th>3M</th>
+                <th>6M</th>
+                <th>12M</th>
+                <th>52W Gap</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows || '<tr><td colspan="8">검색 결과가 없습니다.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-rs-universe]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsUniverse = button.dataset.rsUniverse;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsHistoryRange = button.dataset.rsRange;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-ticker]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.rsSelectedTicker = element.dataset.rsTicker;
+      render();
+    });
+  });
+
+  const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
+  if (detailCanvas && selected) {
+    createMarketRsChart(detailCanvas, selected);
+  }
 }
 
 function getMemorySpotItems() {
@@ -3572,6 +3981,12 @@ function renderSubtabs() {
     button.addEventListener("click", () => {
       if (state.tab === "Market") {
         state.marketView = viewKey;
+        if (viewKey === "RS") {
+          state.query = "";
+          if (searchInput) {
+            searchInput.value = "";
+          }
+        }
       } else if (state.tab === "BigTech") {
         state.bigTechView = viewKey;
       } else if (state.tab === "Semis") {
@@ -3632,7 +4047,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "RS") {
-      summaryText.textContent = "Relative strength dashboard workspace";
+      summaryText.textContent = "IBD-style RS rating leaderboard and searchable stock-level daily RS trend";
       return;
     }
     return;
@@ -3736,8 +4151,19 @@ function renderCards(list) {
 function render() {
   destroyCharts();
   ensureValidSelection();
+  const showRsToolbar = state.tab === "Market" && state.marketView === "RS";
   if (toolbarRow) {
-    toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan");
+    toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
+  }
+  if (sortBox) {
+    sortBox.classList.toggle("hidden", state.tab !== "Taiwan");
+  }
+  if (searchInput) {
+    if (showRsToolbar) {
+      searchInput.placeholder = "Search ticker or company...";
+    } else {
+      searchInput.placeholder = "Search company...";
+    }
   }
   renderCountries();
   renderSubtabs();
@@ -3793,10 +4219,7 @@ function render() {
       return;
     }
     if (state.marketView === "RS") {
-      renderPlaceholderOverview(
-        "Relative Strength",
-        "Sector and stock-level RS dashboards can live here separately from the cross-asset overview so the market workflow stays cleaner.",
-      );
+      renderMarketRsOverview();
       return;
     }
     return;
