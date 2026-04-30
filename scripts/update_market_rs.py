@@ -19,6 +19,7 @@ PRICE_PERIOD = "3y"
 BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
 MAX_SHARES_FETCH = 300
+RS_SMOOTH_WINDOW = 126
 LOOKBACKS = {
     "1m": 21,
     "3m": 63,
@@ -231,6 +232,11 @@ def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     return rating.round().clip(lower=1, upper=99)
 
 
+def smooth_rating_frame(frame: pd.DataFrame, window: int = RS_SMOOTH_WINDOW) -> pd.DataFrame:
+    smoothed = frame.rolling(window, min_periods=1).mean()
+    return percentile_to_rating(smoothed)
+
+
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
     r3 = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
     r6_bucket = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
@@ -277,7 +283,8 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
     benchmark = close_frame[BENCHMARK_SYMBOL].dropna()
     stock_close = close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     rs_raw = build_rs_raw(stock_close)
-    rs_rating_all = percentile_to_rating(rs_raw)
+    rs_rating_all_raw = percentile_to_rating(rs_raw)
+    rs_rating_all = smooth_rating_frame(rs_rating_all_raw)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
@@ -289,7 +296,8 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
         if not tickers:
             continue
         subset_raw = rs_raw[tickers]
-        rs_ratings_by_universe[key] = percentile_to_rating(subset_raw)
+        subset_rating_raw = percentile_to_rating(subset_raw)
+        rs_ratings_by_universe[key] = smooth_rating_frame(subset_rating_raw)
 
     latest_date = rs_rating_all.dropna(how="all").index.max()
     if pd.isna(latest_date):
@@ -317,9 +325,19 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
             continue
 
         current_price = float(price_series.reindex([latest_date]).iloc[0])
+        if not math.isfinite(current_price) or current_price <= 0:
+            continue
         window = stock_close[ticker].reindex(history_rating_all.index)
         rs_line = window.div(benchmark_history)
         shares_outstanding = shares_cache.get(ticker)
+        if shares_outstanding is not None and not isinstance(shares_outstanding, int):
+            try:
+                if math.isfinite(float(shares_outstanding)) and float(shares_outstanding) > 0:
+                    shares_outstanding = int(float(shares_outstanding))
+                else:
+                    shares_outstanding = None
+            except Exception:
+                shares_outstanding = None
         market_cap = None
         if shares_outstanding and shares_outstanding > 0:
             market_cap = round(float(current_price) * int(shares_outstanding))
@@ -387,7 +405,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
         },
         "scoring": {
             "label": "IBD-style RS Rating",
-            "description": "12M split into four 3M buckets with a 40/20/20/20 weighting, ranked daily into a 1-99 percentile score.",
+            "description": "12M split into four 3M buckets with a 40/20/20/20 weighting, then smoothed over 126 trading days and ranked daily into a 1-99 percentile score.",
         },
         "rows": rows,
         "histories": histories,
