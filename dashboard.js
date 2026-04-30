@@ -1893,16 +1893,41 @@ function getVisibleMarketRsRows() {
       if (state.rsUniverse === "dowjones" && !row.memberships?.dowjones) {
         return false;
       }
+      if (state.rsUniverse === "russell2000" && !row.memberships?.russell2000) {
+        return false;
+      }
       if (!query) {
         return state.rsFilter !== "newHigh" || Boolean(row.rsNewHigh);
       }
-      const matchesQuery = row.ticker?.toLowerCase().includes(query) || row.name?.toLowerCase().includes(query);
+      const ticker = row.ticker?.toLowerCase?.() ?? "";
+      const matchesQuery = ticker.includes(query);
       if (!matchesQuery) {
         return false;
       }
       return state.rsFilter !== "newHigh" || Boolean(row.rsNewHigh);
     })
     .sort((left, right) => {
+      if (query) {
+        const leftTicker = String(left.ticker ?? "").toLowerCase();
+        const rightTicker = String(right.ticker ?? "").toLowerCase();
+        const scoreMatch = (ticker) => {
+          if (ticker === query) {
+            return 3;
+          }
+          if (ticker.startsWith(query)) {
+            return 2;
+          }
+          if (ticker.includes(query)) {
+            return 1;
+          }
+          return 0;
+        };
+        const leftMatchScore = scoreMatch(leftTicker);
+        const rightMatchScore = scoreMatch(rightTicker);
+        if (rightMatchScore !== leftMatchScore) {
+          return rightMatchScore - leftMatchScore;
+        }
+      }
       const leftScore = getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity;
       const rightScore = getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity;
       if (rightScore !== leftScore) {

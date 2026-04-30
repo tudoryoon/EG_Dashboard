@@ -20,7 +20,12 @@ BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
 MAX_SHARES_FETCH = 300
 RS_SMOOTH_WINDOW = 126
+RS_BLEND_BASE_WEIGHT = 0.85
+RS_BLEND_20D_WEIGHT = 0.10
+RS_BLEND_10D_WEIGHT = 0.05
 LOOKBACKS = {
+    "10d": 10,
+    "20d": 20,
     "1m": 21,
     "3m": 63,
     "6m": 126,
@@ -237,6 +242,19 @@ def smooth_rating_frame(frame: pd.DataFrame, window: int = RS_SMOOTH_WINDOW) -> 
     return percentile_to_rating(smoothed)
 
 
+def build_recent_return_rating(close_frame: pd.DataFrame, periods: int) -> pd.DataFrame:
+    return percentile_to_rating(close_frame.div(close_frame.shift(periods)).sub(1))
+
+
+def blend_rating_frames(base: pd.DataFrame, recent_20d: pd.DataFrame, recent_10d: pd.DataFrame) -> pd.DataFrame:
+    composite = (
+        RS_BLEND_BASE_WEIGHT * base.astype(float)
+        + RS_BLEND_20D_WEIGHT * recent_20d.astype(float)
+        + RS_BLEND_10D_WEIGHT * recent_10d.astype(float)
+    )
+    return percentile_to_rating(composite)
+
+
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
     r3 = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
     r6_bucket = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
@@ -284,7 +302,10 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
     stock_close = close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     rs_raw = build_rs_raw(stock_close)
     rs_rating_all_raw = percentile_to_rating(rs_raw)
-    rs_rating_all = smooth_rating_frame(rs_rating_all_raw)
+    rs_rating_all_smooth = smooth_rating_frame(rs_rating_all_raw)
+    rs_recent_20d_all = build_recent_return_rating(stock_close, LOOKBACKS["20d"])
+    rs_recent_10d_all = build_recent_return_rating(stock_close, LOOKBACKS["10d"])
+    rs_rating_all = blend_rating_frames(rs_rating_all_smooth, rs_recent_20d_all, rs_recent_10d_all)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
@@ -297,7 +318,11 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
             continue
         subset_raw = rs_raw[tickers]
         subset_rating_raw = percentile_to_rating(subset_raw)
-        rs_ratings_by_universe[key] = smooth_rating_frame(subset_rating_raw)
+        subset_rating_smooth = smooth_rating_frame(subset_rating_raw)
+        subset_close = stock_close[tickers]
+        subset_recent_20d = build_recent_return_rating(subset_close, LOOKBACKS["20d"])
+        subset_recent_10d = build_recent_return_rating(subset_close, LOOKBACKS["10d"])
+        rs_ratings_by_universe[key] = blend_rating_frames(subset_rating_smooth, subset_recent_20d, subset_recent_10d)
 
     latest_date = rs_rating_all.dropna(how="all").index.max()
     if pd.isna(latest_date):
@@ -405,7 +430,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
         },
         "scoring": {
             "label": "IBD-style RS Rating",
-            "description": "12M split into four 3M buckets with a 40/20/20/20 weighting, then smoothed over 126 trading days and ranked daily into a 1-99 percentile score.",
+            "description": "12M split into four 3M buckets with a 40/20/20/20 weighting, smoothed over 126 trading days, then blended with 20D and 10D momentum before the final daily 1-99 percentile ranking.",
         },
         "rows": rows,
         "histories": histories,
