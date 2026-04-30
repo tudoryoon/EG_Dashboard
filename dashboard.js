@@ -55,6 +55,12 @@ const bigTechSubtabMeta = {
   Capex: { label: "Capex & 현금흐름" },
 };
 
+const marketSubtabMeta = {
+  Overview: { label: "Overview" },
+  Breadth: { label: "Breadth" },
+  RS: { label: "RS" },
+};
+
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
   GPUCloud: { label: "GPU Rental Price" },
@@ -141,6 +147,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
 
 const state = {
   tab: "Market",
+  marketView: "Overview",
   bigTechView: "M7",
   semisView: "MemorySpot",
   currency: "USD",
@@ -3508,7 +3515,10 @@ function renderSubtabs() {
   let entries = [];
   let activeKey = "";
 
-  if (state.tab === "BigTech") {
+  if (state.tab === "Market") {
+    entries = Object.entries(marketSubtabMeta);
+    activeKey = state.marketView;
+  } else if (state.tab === "BigTech") {
     entries = Object.entries(bigTechSubtabMeta);
     activeKey = state.bigTechView;
   } else if (state.tab === "Semis") {
@@ -3527,7 +3537,9 @@ function renderSubtabs() {
     button.className = `subtab-chip${activeKey === viewKey ? " active" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
-      if (state.tab === "BigTech") {
+      if (state.tab === "Market") {
+        state.marketView = viewKey;
+      } else if (state.tab === "BigTech") {
         state.bigTechView = viewKey;
       } else if (state.tab === "Semis") {
         state.semisView = viewKey;
@@ -3578,7 +3590,18 @@ function renderSectors() {
 
 function renderSummary(list) {
   if (state.tab === "Market") {
-    summaryText.textContent = "Daily market and macro dashboard";
+    if (state.marketView === "Overview") {
+      summaryText.textContent = "Daily market and macro dashboard";
+      return;
+    }
+    if (state.marketView === "Breadth") {
+      summaryText.textContent = "Daily market breadth dashboard workspace";
+      return;
+    }
+    if (state.marketView === "RS") {
+      summaryText.textContent = "Relative strength dashboard workspace";
+      return;
+    }
     return;
   }
 
@@ -3728,7 +3751,24 @@ function render() {
 
   if (state.tab === "Market") {
     renderSummary([]);
-    renderMarketOverview();
+    if (state.marketView === "Overview") {
+      renderMarketOverview();
+      return;
+    }
+    if (state.marketView === "Breadth") {
+      renderPlaceholderOverview(
+        "Market Breadth",
+        "Advance/decline, new highs/lows, equal-weight leadership, and participation indicators can live here as a dedicated daily breadth workspace.",
+      );
+      return;
+    }
+    if (state.marketView === "RS") {
+      renderPlaceholderOverview(
+        "Relative Strength",
+        "Sector and stock-level RS dashboards can live here separately from the cross-asset overview so the market workflow stays cleaner.",
+      );
+      return;
+    }
     return;
   }
 
