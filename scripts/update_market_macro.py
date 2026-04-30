@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import csv
+import html
 import json
+import re
 from datetime import datetime, timezone
 from xml.etree import ElementTree as ET
 from pathlib import Path
@@ -94,34 +96,39 @@ def parse_us_treasury_yields() -> dict[str, tuple[list[str], list[float]]]:
 
 
 def parse_japan_yields() -> dict[str, tuple[list[str], list[float]]]:
-    url = "https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/historical/jgbcme_all.csv"
-    lines = fetch_text(url).splitlines()
-    header_index = next(index for index, line in enumerate(lines) if line.startswith("Date,"))
-    reader = csv.DictReader(lines[header_index:])
+    url = "https://www.bb.jbts.co.jp/en/historical/main_rate.html"
+    text = fetch_text(url)
+    table_blocks = re.findall(r'<table class="tbCore">(.*?)</table>', text, flags=re.S | re.I)
+    series = {key: ([], []) for key in ("jp2y", "jp10y", "jp30y")}
 
-    buckets = {
-        "jp2y": {"column": "2Y", "label": "Japan 2Y", "color": "#111827", "dash": [6, 4]},
-        "jp10y": {"column": "10Y", "label": "Japan 10Y", "color": "#2563eb", "dash": [6, 4]},
-        "jp30y": {"column": "30Y", "label": "Japan 30Y", "color": "#dc2626", "dash": [6, 4]},
-    }
-    series = {key: ([], []) for key in buckets}
-
-    for row in reader:
-        raw_date = (row.get("Date") or "").strip()
-        if not raw_date:
-            continue
-        try:
-            date_key = datetime.strptime(raw_date, "%Y/%m/%d").strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-        if date_key < START_DATE:
-            continue
-        for key, meta in buckets.items():
-            raw_value = (row.get(meta["column"]) or "").strip()
-            if raw_value in {"", "-", "--"}:
+    for block in table_blocks:
+        row_matches = re.findall(r"<tr>(.*?)</tr>", block, flags=re.S | re.I)
+        for row_html in row_matches:
+            cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, flags=re.S | re.I)
+            if len(cells) < 7:
                 continue
-            series[key][0].append(date_key)
-            series[key][1].append(round(float(raw_value), 4))
+            values = [
+                html.unescape(re.sub(r"<[^>]+>", "", cell).strip())
+                for cell in cells
+            ]
+            raw_date = values[0]
+            if raw_date.lower() == "date" or not raw_date:
+                continue
+            try:
+                date_key = datetime.strptime(raw_date, "%Y/%m/%d").strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+            if date_key < START_DATE:
+                continue
+            for key, index in {"jp30y": 2, "jp10y": 4, "jp2y": 6}.items():
+                raw_value = values[index]
+                if raw_value in {"", "-", "--"}:
+                    continue
+                series[key][0].append(date_key)
+                series[key][1].append(round(float(raw_value), 4))
+    for key, (dates, values) in series.items():
+        paired = sorted(zip(dates, values), key=lambda item: item[0])
+        series[key] = ([date for date, _ in paired], [value for _, value in paired])
     return series
 
 
@@ -185,8 +192,8 @@ def main() -> None:
     panels = {
         "rates": {
             "title": "US & Japan Sovereign Yields",
-            "subtitle": "Daily 2Y / 10Y / 30Y. US Treasury from Treasury XML, Japan JGB from MOF.",
-            "source": "US Treasury / Japan MOF",
+            "subtitle": "Daily 2Y / 10Y / 30Y. US Treasury from Treasury XML, Japan JGB from JBTS.",
+            "source": "US Treasury / Japan Bond Trading",
             "mode": "raw",
             "yAxisLabel": "Yield %",
             "formatter": "percent2",
