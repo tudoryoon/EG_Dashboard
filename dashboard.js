@@ -458,7 +458,7 @@ function buildMarketMacroChartPayload(panel, rangeKey) {
       pointRadius: 0,
       pointHoverRadius: 4,
       pointHitRadius: 10,
-      spanGaps: true,
+      spanGaps: panel.mode === "normalized",
       borderDash: item.dash ?? [],
     };
   });
