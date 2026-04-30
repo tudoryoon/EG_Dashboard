@@ -213,6 +213,16 @@ def normalize_line(series: pd.Series) -> list[float | None]:
     return values
 
 
+def serialize_price_line(series: pd.Series) -> list[float | None]:
+    values: list[float | None] = []
+    for value in series:
+        if value is None or not math.isfinite(value):
+            values.append(None)
+        else:
+            values.append(round(float(value), 2))
+    return values
+
+
 def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cache: dict[str, int | None]) -> dict[str, object]:
     benchmark = close_frame[BENCHMARK_SYMBOL].dropna()
     stock_close = close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
@@ -297,6 +307,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
                 for value in history_rating_all[ticker].tolist()
             ],
             "rsLine": normalize_line(rs_line),
+            "price": serialize_price_line(window),
         }
 
     rows.sort(key=lambda item: (-int(item["rsRatingAll"]), item["ticker"]))

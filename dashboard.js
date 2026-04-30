@@ -1848,6 +1848,18 @@ function formatMarketCapCompact(value) {
   return `$${(numeric / 1_000_000_000).toFixed(1)}B`;
 }
 
+function formatUsStockPrice(value, maximumFractionDigits = 2) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(Number(value));
+}
+
 function getMarketRsUniverseLabel(key) {
   return marketRsData?.universes?.[key]?.label ?? "All";
 }
@@ -1917,9 +1929,9 @@ function createMarketRsChart(canvas, row) {
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
   const selectedRatings = (history.rsRating ?? []).slice(startIndex);
-  const selectedRsLine = (history.rsLine ?? []).slice(startIndex);
+  const selectedPrice = (history.price ?? []).slice(startIndex);
   const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
-  const lineValues = selectedRsLine.filter((value) => Number.isFinite(value));
+  const priceValues = selectedPrice.filter((value) => Number.isFinite(value));
   let ratingMin = ratingValues.length ? Math.floor((Math.min(...ratingValues) - 3) / 5) * 5 : 1;
   let ratingMax = ratingValues.length ? Math.ceil((Math.max(...ratingValues) + 3) / 5) * 5 : 99;
   if (ratingMax - ratingMin < 12) {
@@ -1929,8 +1941,19 @@ function createMarketRsChart(canvas, row) {
   }
   ratingMin = Math.max(1, ratingMin);
   ratingMax = Math.min(99, ratingMax);
-  const lineMin = lineValues.length ? Math.floor((Math.min(...lineValues) - 3) / 5) * 5 : 90;
-  const lineMax = lineValues.length ? Math.ceil((Math.max(...lineValues) + 3) / 5) * 5 : 120;
+  let priceMin = priceValues.length ? Math.min(...priceValues) : (row.price ?? 0);
+  let priceMax = priceValues.length ? Math.max(...priceValues) : (row.price ?? 0);
+  if (Number.isFinite(priceMin) && Number.isFinite(priceMax)) {
+    if (priceMin === priceMax) {
+      const pad = Math.max(1, priceMax * 0.05);
+      priceMin -= pad;
+      priceMax += pad;
+    } else {
+      const pad = (priceMax - priceMin) * 0.08;
+      priceMin = Math.max(0, priceMin - pad);
+      priceMax += pad;
+    }
+  }
 
   const chart = new Chart(canvas, {
     type: "line",
@@ -1949,8 +1972,8 @@ function createMarketRsChart(canvas, row) {
           yAxisID: "y",
         },
         {
-          label: "RS Line vs S&P 500",
-          data: selectedRsLine,
+          label: "Stock Price",
+          data: selectedPrice,
           borderColor: "#d93025",
           backgroundColor: "#d93025",
           borderWidth: 2,
@@ -1981,8 +2004,10 @@ function createMarketRsChart(canvas, row) {
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => {
-              const digits = context.dataset.yAxisID === "y" ? 0 : 2;
-              return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(digits)}`;
+              if (context.dataset.yAxisID === "y") {
+                return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(0)}`;
+              }
+              return `${context.dataset.label}: ${formatUsStockPrice(Number(context.parsed.y))}`;
             },
           },
         },
@@ -2017,12 +2042,12 @@ function createMarketRsChart(canvas, row) {
         },
         y1: {
           position: "right",
-          min: lineMin,
-          max: lineMax,
+          min: priceMin,
+          max: priceMax,
           grid: { drawOnChartArea: false },
           ticks: {
             color: "#a12620",
-            callback: (value) => `${Number(value).toFixed(0)}`,
+            callback: (value) => formatUsStockPrice(Number(value), value >= 100 ? 0 : 2),
           },
         },
       },
@@ -2194,7 +2219,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: RS Rating 1-99. Right axis: RS Line vs S&P 500, normalized to 100.</p>
+          <p class="market-rs-chart-caption">Left axis: RS Rating 1-99. Right axis: stock price.</p>
         </article>
       </section>
 
