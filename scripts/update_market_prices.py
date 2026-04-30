@@ -7,7 +7,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-START_DATE = "2017-01-01"
+START_DATE = "1997-01-01"
 SYMBOLS = [
     {"key": "sp500", "symbol": "SPY", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
     {"key": "nasdaq100", "symbol": "QQQ", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
@@ -20,9 +20,10 @@ SYMBOLS = [
 def yahoo_chart_url(symbol: str) -> str:
     encoded = quote(symbol, safe="")
     period2 = int(datetime.now(timezone.utc).timestamp())
+    period1 = int(datetime.fromisoformat(f"{START_DATE}T00:00:00+00:00").timestamp())
     return (
         f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}"
-        f"?period1=1483228800&period2={period2}&interval=1d&includeAdjustedClose=true&events=div%2Csplits"
+        f"?period1={period1}&period2={period2}&interval=1d&includeAdjustedClose=true&events=div%2Csplits"
     )
 
 
