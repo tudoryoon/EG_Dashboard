@@ -65,6 +65,9 @@ const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
   GPUCloud: { label: "GPU Rental Price" },
 };
+const MARKET_BREADTH_SOURCE_URL = "https://stockbee.blogspot.com/p/mm.html";
+const MARKET_BREADTH_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1O6OhS7ciA8zwfycBfGPbP2fWJnR0pn2UUvFZVDP9jpE/pubhtml?widget=true&headers=false";
 
 const marketReferenceItems = [
   {
@@ -1758,6 +1761,36 @@ function renderPlaceholderOverview(title, description) {
       <article class="placeholder-panel">
         <h2>${title}</h2>
         <p>${description}</p>
+      </article>
+    </section>
+  `;
+}
+
+function renderMarketBreadthOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+  usOverviewRoot.innerHTML = `
+    <section class="market-breadth-overview">
+      <article class="us-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Market Breadth</h2>
+            <p>Stockbee Market Monitor breadth sheet embedded directly so the daily source updates flow through with minimal maintenance.</p>
+          </div>
+          <div class="market-breadth-actions">
+            <a class="market-breadth-link" href="${MARKET_BREADTH_SOURCE_URL}" target="_blank" rel="noreferrer">Open Source Page</a>
+            <a class="market-breadth-link" href="${MARKET_BREADTH_SHEET_URL}" target="_blank" rel="noreferrer">Open Sheet</a>
+          </div>
+        </div>
+      </article>
+      <article class="us-panel market-breadth-frame-panel">
+        <iframe
+          class="market-breadth-frame"
+          src="${MARKET_BREADTH_SHEET_URL}"
+          title="Stockbee Market Breadth"
+          loading="lazy"
+        ></iframe>
       </article>
     </section>
   `;
@@ -3756,10 +3789,7 @@ function render() {
       return;
     }
     if (state.marketView === "Breadth") {
-      renderPlaceholderOverview(
-        "Market Breadth",
-        "Advance/decline, new highs/lows, equal-weight leadership, and participation indicators can live here as a dedicated daily breadth workspace.",
-      );
+      renderMarketBreadthOverview();
       return;
     }
     if (state.marketView === "RS") {

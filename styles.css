@@ -292,6 +292,44 @@ h1 {
   gap: 18px;
 }
 
+.market-breadth-overview {
+  display: grid;
+  gap: 14px;
+}
+
+.market-breadth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.market-breadth-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  color: #20201d;
+  text-decoration: none;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.market-breadth-frame-panel {
+  padding: 10px;
+}
+
+.market-breadth-frame {
+  display: block;
+  width: 100%;
+  min-height: 1600px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+}
+
 .memory-banner {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
