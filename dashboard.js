@@ -2357,7 +2357,6 @@ function renderMarketOverview() {
             <p>Daily macro dashboard for US and Japan rates, dollar, energy, and metals. Metals are normalized for cleaner cross-asset comparison.</p>
           </div>
           <div class="us-price-controls">
-            <div class="m7-range-row">${rangeMarkup}</div>
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
           </div>
         </div>
