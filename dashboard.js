@@ -462,6 +462,17 @@ function getTotalDashboardBounds() {
   };
 }
 
+function getDateIndex(dateList, targetDate, fallbackIndex) {
+  if (!Array.isArray(dateList) || !dateList.length) {
+    return 0;
+  }
+  const index = dateList.indexOf(targetDate);
+  if (index >= 0) {
+    return index;
+  }
+  return Math.min(Math.max(fallbackIndex, 0), dateList.length - 1);
+}
+
 function buildTotalDashboardPayload(rangeKey) {
   const items = getTotalDashboardSelectedItems();
   const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
@@ -2511,6 +2522,11 @@ function renderMarketOverview() {
   const totalBounds = getTotalDashboardBounds();
   const totalStartValue = state.totalDashboardCustomStart || "";
   const totalEndValue = state.totalDashboardCustomEnd || "";
+  const totalStartIndex = getDateIndex(totalBounds.labels, totalStartValue || totalBounds.min, 0);
+  const totalEndIndex = getDateIndex(totalBounds.labels, totalEndValue || totalBounds.max, Math.max(totalBounds.labels.length - 1, 0));
+  const totalSliderMax = Math.max(totalBounds.labels.length - 1, 0);
+  const totalSliderStartPercent = totalSliderMax > 0 ? (totalStartIndex / totalSliderMax) * 100 : 0;
+  const totalSliderEndPercent = totalSliderMax > 0 ? (totalEndIndex / totalSliderMax) * 100 : 100;
   const totalSeriesItems = getTotalDashboardSeriesItems();
   const totalSeriesMarkup = totalSeriesItems
     .map(
@@ -2622,6 +2638,37 @@ function renderMarketOverview() {
             <button type="button" class="total-date-button total-date-button-secondary" data-total-reset>Reset</button>
           </div>
         </div>
+        <div class="total-slider-block">
+          <div class="total-slider-head">
+            <span>${totalStartValue || totalBounds.min || "-"}</span>
+            <span>${totalEndValue || totalBounds.max || "-"}</span>
+          </div>
+          <div
+            class="total-slider-wrap"
+            style="--slider-start:${totalSliderStartPercent}%; --slider-end:${totalSliderEndPercent}%"
+          >
+            <input
+              type="range"
+              class="total-range-slider total-range-slider-start"
+              data-total-start-slider
+              min="0"
+              max="${totalSliderMax}"
+              value="${totalStartIndex}"
+            />
+            <input
+              type="range"
+              class="total-range-slider total-range-slider-end"
+              data-total-end-slider
+              min="0"
+              max="${totalSliderMax}"
+              value="${totalEndIndex}"
+            />
+          </div>
+          <div class="total-slider-foot">
+            <span>${totalBounds.min || "-"}</span>
+            <span>${totalBounds.max || "-"}</span>
+          </div>
+        </div>
         <div class="total-series-row">
           ${totalSeriesMarkup}
         </div>
@@ -2716,6 +2763,8 @@ function renderMarketOverview() {
   const totalEndInput = usOverviewRoot.querySelector("[data-total-end]");
   const totalApplyButton = usOverviewRoot.querySelector("[data-total-apply]");
   const totalResetButton = usOverviewRoot.querySelector("[data-total-reset]");
+  const totalStartSlider = usOverviewRoot.querySelector("[data-total-start-slider]");
+  const totalEndSlider = usOverviewRoot.querySelector("[data-total-end-slider]");
 
   if (totalApplyButton && totalStartInput && totalEndInput) {
     totalApplyButton.addEventListener("click", () => {
@@ -2734,6 +2783,30 @@ function renderMarketOverview() {
     totalResetButton.addEventListener("click", () => {
       state.totalDashboardCustomStart = "";
       state.totalDashboardCustomEnd = "";
+      render();
+    });
+  }
+
+  if (totalStartSlider && totalEndSlider) {
+    totalStartSlider.addEventListener("input", () => {
+      const startIndex = Number(totalStartSlider.value);
+      const endIndex = Number(totalEndSlider.value);
+      const safeIndex = Math.min(startIndex, endIndex);
+      state.totalDashboardCustomStart = totalBounds.labels[safeIndex] ?? "";
+      if (!state.totalDashboardCustomEnd) {
+        state.totalDashboardCustomEnd = totalBounds.labels[endIndex] ?? "";
+      }
+      render();
+    });
+
+    totalEndSlider.addEventListener("input", () => {
+      const startIndex = Number(totalStartSlider.value);
+      const endIndex = Number(totalEndSlider.value);
+      const safeIndex = Math.max(endIndex, startIndex);
+      state.totalDashboardCustomEnd = totalBounds.labels[safeIndex] ?? "";
+      if (!state.totalDashboardCustomStart) {
+        state.totalDashboardCustomStart = totalBounds.labels[startIndex] ?? "";
+      }
       render();
     });
   }
