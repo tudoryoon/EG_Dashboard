@@ -187,6 +187,7 @@ const state = {
   rsUniverse: "all",
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
+  rsFilter: "all",
 };
 
 const charts = [];
@@ -1836,6 +1837,17 @@ function formatRsGapPercent(value) {
   return `${Number(value).toFixed(2)}%`;
 }
 
+function formatMarketCapCompact(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (numeric >= 1_000_000_000_000) {
+    return `$${(numeric / 1_000_000_000_000).toFixed(2)}T`;
+  }
+  return `$${(numeric / 1_000_000_000).toFixed(1)}B`;
+}
+
 function getMarketRsUniverseLabel(key) {
   return marketRsData?.universes?.[key]?.label ?? "All";
 }
@@ -1867,9 +1879,13 @@ function getVisibleMarketRsRows() {
         return false;
       }
       if (!query) {
-        return true;
+        return state.rsFilter !== "newHigh" || Boolean(row.rsNewHigh);
       }
-      return row.ticker?.toLowerCase().includes(query) || row.name?.toLowerCase().includes(query);
+      const matchesQuery = row.ticker?.toLowerCase().includes(query) || row.name?.toLowerCase().includes(query);
+      if (!matchesQuery) {
+        return false;
+      }
+      return state.rsFilter !== "newHigh" || Boolean(row.rsNewHigh);
     })
     .sort((left, right) => {
       const leftScore = getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity;
@@ -2036,6 +2052,10 @@ function renderMarketRsOverview() {
       `,
     )
     .join("");
+  const filterChips = `
+    <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All</button>
+    <button type="button" class="market-rs-chip${state.rsFilter === "newHigh" ? " active" : ""}" data-rs-filter="newHigh">RS New High</button>
+  `;
   const leaderCards = rows
     .slice(0, 12)
     .map((row) => {
@@ -2051,6 +2071,7 @@ function renderMarketRsOverview() {
             <span class="market-rs-card-score">${formatRsNumber(score)}</span>
           </div>
           <p class="market-rs-card-name">${row.name}</p>
+          <p class="market-rs-card-cap">${formatMarketCapCompact(row.marketCap)}</p>
           <div class="market-rs-card-meta">
             <span>1M</span>
             <strong>${formatRsPercent(row.returns?.["1m"])}</strong>
@@ -2059,6 +2080,7 @@ function renderMarketRsOverview() {
             <span>12M</span>
             <strong>${formatRsPercent(row.returns?.["12m"])}</strong>
           </div>
+          ${row.rsNewHigh ? '<div class="market-rs-flag">RS New High</div>' : ""}
         </button>
       `;
     })
@@ -2071,12 +2093,14 @@ function renderMarketRsOverview() {
         <tr data-rs-ticker="${row.ticker}">
           <td>${row.ticker}</td>
           <td>${row.name}</td>
+          <td>${formatMarketCapCompact(row.marketCap)}</td>
           <td>${formatRsNumber(score)}</td>
           <td>${formatRsPercent(row.returns?.["1m"])}</td>
           <td>${formatRsPercent(row.returns?.["3m"])}</td>
           <td>${formatRsPercent(row.returns?.["6m"])}</td>
           <td>${formatRsPercent(row.returns?.["12m"])}</td>
           <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
+          <td>${row.rsNewHigh ? "Yes" : "-"}</td>
         </tr>
       `;
     })
@@ -2093,6 +2117,7 @@ function renderMarketRsOverview() {
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${marketRsData.updatedAt ?? "-"}</span>
             <span class="market-rs-pill">${rows.length} names</span>
+            <span class="market-rs-pill">${rows.filter((row) => row.rsNewHigh).length} RS highs</span>
             <span class="market-rs-pill">Sorted 99 → 1</span>
           </div>
         </div>
@@ -2104,6 +2129,10 @@ function renderMarketRsOverview() {
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Detail Range</span>
             <div class="market-rs-chip-row">${rangeChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Filter</span>
+            <div class="market-rs-chip-row">${filterChips}</div>
           </div>
         </div>
       </article>
@@ -2131,6 +2160,10 @@ function renderMarketRsOverview() {
             <div class="market-rs-metric">
               <span>RS Rating</span>
               <strong>${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Market Cap</span>
+              <strong>${formatMarketCapCompact(selected?.marketCap)}</strong>
             </div>
             <div class="market-rs-metric">
               <span>1M</span>
@@ -2165,15 +2198,17 @@ function renderMarketRsOverview() {
               <tr>
                 <th>Ticker</th>
                 <th>Name</th>
+                <th>Market Cap</th>
                 <th>RS</th>
                 <th>1M</th>
                 <th>3M</th>
                 <th>6M</th>
                 <th>12M</th>
                 <th>52W Gap</th>
+                <th>RS NH</th>
               </tr>
             </thead>
-            <tbody>${tableRows || '<tr><td colspan="8">검색 결과가 없습니다.</td></tr>'}</tbody>
+            <tbody>${tableRows || '<tr><td colspan="10">검색 결과가 없습니다.</td></tr>'}</tbody>
           </table>
         </div>
       </article>
@@ -2189,6 +2224,12 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsHistoryRange = button.dataset.rsRange;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsFilter = button.dataset.rsFilter;
       render();
     });
   });

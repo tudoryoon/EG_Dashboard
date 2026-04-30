@@ -1412,14 +1412,31 @@ h1 {
 }
 
 .market-rs-card-name {
-  margin: 10px 0;
+  margin: 10px 0 4px;
   font-size: 1rem;
   font-weight: 500;
+}
+
+.market-rs-card-cap {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .market-rs-card-meta {
   color: #64645e;
   font-size: 0.92rem;
+}
+
+.market-rs-flag {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(217, 48, 37, 0.1);
+  color: var(--red);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .market-rs-detail-score {

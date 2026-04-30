@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pandas as pd
 import requests
@@ -50,6 +52,7 @@ COLOR_BY_UNIVERSE = {
     "nasdaq100": "#2563eb",
     "dowjones": "#8b5cf6",
 }
+OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
 
 
 def normalize_ticker(raw: object) -> str:
@@ -129,6 +132,43 @@ def fetch_price_frame(symbols: list[str], batch_size: int = 80) -> pd.DataFrame:
     return pd.concat(series_map.values(), axis=1).sort_index()
 
 
+def load_existing_rows() -> dict[str, dict[str, object]]:
+    if not OUTPUT_PATH.exists():
+        return {}
+    text = OUTPUT_PATH.read_text(encoding="utf-8")
+    payload = json.loads(re.sub(r"^window\.marketRsData = |;\s*$", "", text))
+    return {row["ticker"]: row for row in payload.get("rows", [])}
+
+
+def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
+    try:
+        info = yf.Ticker(symbol).get_info()
+        shares = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
+        if shares and float(shares) > 0:
+            return symbol, int(float(shares))
+    except Exception:
+        return symbol, None
+    return symbol, None
+
+
+def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, object]]) -> dict[str, int | None]:
+    cache = {
+        symbol: int(existing_rows[symbol]["sharesOutstanding"])
+        for symbol in symbols
+        if symbol in existing_rows and existing_rows[symbol].get("sharesOutstanding")
+    }
+    missing = [symbol for symbol in symbols if symbol not in cache]
+    if not missing:
+        return cache
+
+    with ThreadPoolExecutor(max_workers=12) as executor:
+        futures = {executor.submit(fetch_shares_outstanding_for_symbol, symbol): symbol for symbol in missing}
+        for future in as_completed(futures):
+            symbol, shares = future.result()
+            cache[symbol] = shares
+    return cache
+
+
 def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     valid_counts = frame.notna().sum(axis=1)
     ranks = frame.rank(axis=1, method="min", ascending=False)
@@ -173,7 +213,7 @@ def normalize_line(series: pd.Series) -> list[float | None]:
     return values
 
 
-def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame) -> dict[str, object]:
+def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cache: dict[str, int | None]) -> dict[str, object]:
     benchmark = close_frame[BENCHMARK_SYMBOL].dropna()
     stock_close = close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     rs_raw = build_rs_raw(stock_close)
@@ -215,11 +255,23 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame) -> dict[str
         current_price = float(price_series.reindex([latest_date]).iloc[0])
         window = stock_close[ticker].reindex(history_rating_all.index)
         rs_line = window.div(benchmark_history)
+        shares_outstanding = shares_cache.get(ticker)
+        market_cap = None
+        if shares_outstanding and shares_outstanding > 0:
+            market_cap = round(float(current_price) * int(shares_outstanding))
+        rs_line_window = rs_line.dropna().tail(HISTORY_POINTS)
+        rs_new_high = False
+        if not rs_line_window.empty:
+            latest_rs_line = float(rs_line_window.iloc[-1])
+            trailing_high = float(rs_line_window.max())
+            rs_new_high = latest_rs_line >= trailing_high - 1e-9
 
         row = {
             "ticker": ticker,
             "name": str(member["name"]),
             "price": round(current_price, 2),
+            "marketCap": market_cap,
+            "sharesOutstanding": shares_outstanding,
             "rsRatingAll": int(latest_rating),
             "rsRatingSp500": nullable_int(rs_ratings_by_universe.get("sp500", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingNasdaq100": nullable_int(rs_ratings_by_universe.get("nasdaq100", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
@@ -231,6 +283,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame) -> dict[str
                 "12m": compute_return(price_series, LOOKBACKS["12m"]),
             },
             "distanceTo52wHighPct": compute_52w_gap(price_series),
+            "rsNewHigh": rs_new_high,
             "memberships": {
                 "sp500": bool(member["member_sp500"]),
                 "nasdaq100": bool(member["member_nasdaq100"]),
@@ -294,15 +347,16 @@ def main() -> None:
     universe = fetch_universe_frame()
     symbols = sorted(universe["ticker"].tolist())
     close_frame = fetch_price_frame(symbols + [BENCHMARK_SYMBOL])
-    payload = build_payload(universe, close_frame)
+    existing_rows = load_existing_rows()
+    shares_cache = build_shares_cache(symbols, existing_rows)
+    payload = build_payload(universe, close_frame, shares_cache)
 
-    output_path = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
-    output_path.write_text(
+    OUTPUT_PATH.write_text(
         "window.marketRsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
         newline="\n",
     )
-    print(f"Wrote {output_path}")
+    print(f"Wrote {OUTPUT_PATH}")
     print(f"Rows: {len(payload['rows'])}")
     print(f"As of: {payload['updatedAt']}")
 
