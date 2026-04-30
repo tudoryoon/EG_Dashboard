@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -18,7 +19,7 @@ WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "3y"
 BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
-MAX_SHARES_FETCH = 300
+MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
 RS_SMOOTH_WINDOW = 126
 RS_BLEND_BASE_WEIGHT = 0.85
 RS_BLEND_20D_WEIGHT = 0.10
@@ -111,7 +112,7 @@ def fetch_universe_frame() -> pd.DataFrame:
         name_col = str(meta["name_col"])
         for _, row in table.iterrows():
             ticker = normalize_ticker(row.get(ticker_col, ""))
-            if ticker in {"", "NAN"}:
+            if ticker in {"", "NAN", "-"}:
                 continue
             item = merged.setdefault(
                 ticker,
@@ -129,63 +130,77 @@ def fetch_universe_frame() -> pd.DataFrame:
     return pd.DataFrame(merged.values()).sort_values("ticker").reset_index(drop=True)
 
 
-def download_batch(symbols: list[str]) -> dict[str, pd.Series]:
+def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, pd.Series]]:
     history = yf.download(
         tickers=symbols,
         period=PRICE_PERIOD,
-        auto_adjust=True,
+        auto_adjust=False,
         progress=False,
         threads=False,
         group_by="ticker",
     )
     if history.empty:
-        return {}
+        return {}, {}
 
-    series_map: dict[str, pd.Series] = {}
+    raw_close_map: dict[str, pd.Series] = {}
+    adjusted_close_map: dict[str, pd.Series] = {}
     multi = isinstance(history.columns, pd.MultiIndex)
     for symbol in symbols:
         try:
-            close = history[symbol]["Close"] if multi else history["Close"]
+            symbol_frame = history[symbol] if multi else history
         except KeyError:
             continue
-        close = close.dropna()
-        if close.empty:
+        raw_close = symbol_frame.get("Close")
+        adjusted_close = symbol_frame.get("Adj Close", raw_close)
+        if raw_close is None or adjusted_close is None:
             continue
-        series_map[symbol] = close.rename(symbol)
-    missing = [symbol for symbol in symbols if symbol not in series_map]
+        raw_close = raw_close.dropna()
+        adjusted_close = adjusted_close.dropna()
+        if raw_close.empty or adjusted_close.empty:
+            continue
+        raw_close_map[symbol] = raw_close.rename(symbol)
+        adjusted_close_map[symbol] = adjusted_close.rename(symbol)
+    missing = [symbol for symbol in symbols if symbol not in raw_close_map or symbol not in adjusted_close_map]
     for symbol in missing:
         for attempt in range(2):
             try:
                 single = yf.download(
                     tickers=symbol,
                     period=PRICE_PERIOD,
-                    auto_adjust=True,
+                    auto_adjust=False,
                     progress=False,
                     threads=False,
                 )
                 if single.empty or "Close" not in single.columns:
                     time.sleep(0.35)
                     continue
-                close = single["Close"].dropna()
-                if close.empty:
+                raw_close = single["Close"].dropna()
+                adjusted_close = single["Adj Close"].dropna() if "Adj Close" in single.columns else raw_close
+                if raw_close.empty or adjusted_close.empty:
                     time.sleep(0.35)
                     continue
-                series_map[symbol] = close.rename(symbol)
+                raw_close_map[symbol] = raw_close.rename(symbol)
+                adjusted_close_map[symbol] = adjusted_close.rename(symbol)
                 break
             except Exception:
                 time.sleep(0.35)
-    return series_map
+    return raw_close_map, adjusted_close_map
 
 
-def fetch_price_frame(symbols: list[str], batch_size: int = 30) -> pd.DataFrame:
-    series_map: dict[str, pd.Series] = {}
+def fetch_price_frames(symbols: list[str], batch_size: int = 30) -> tuple[pd.DataFrame, pd.DataFrame]:
+    raw_close_map: dict[str, pd.Series] = {}
+    adjusted_close_map: dict[str, pd.Series] = {}
     for start in range(0, len(symbols), batch_size):
         batch = symbols[start : start + batch_size]
-        series_map.update(download_batch(batch))
+        batch_raw_close_map, batch_adjusted_close_map = download_batch(batch)
+        raw_close_map.update(batch_raw_close_map)
+        adjusted_close_map.update(batch_adjusted_close_map)
         time.sleep(0.2)
-    if not series_map:
+    if not raw_close_map or not adjusted_close_map:
         raise RuntimeError("No price data downloaded for RS universe.")
-    return pd.concat(series_map.values(), axis=1).sort_index()
+    raw_close_frame = pd.concat(raw_close_map.values(), axis=1).sort_index()
+    adjusted_close_frame = pd.concat(adjusted_close_map.values(), axis=1).sort_index()
+    return raw_close_frame, adjusted_close_frame
 
 
 def load_existing_rows() -> dict[str, dict[str, object]]:
@@ -208,11 +223,33 @@ def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
 
 
 def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, object]]) -> dict[str, int | None]:
-    cache = {
-        symbol: int(existing_rows[symbol]["sharesOutstanding"])
-        for symbol in symbols
-        if symbol in existing_rows and existing_rows[symbol].get("sharesOutstanding")
-    }
+    cache: dict[str, int | None] = {}
+    for symbol in symbols:
+        if symbol not in existing_rows:
+            continue
+        row = existing_rows[symbol]
+        shares = row.get("sharesOutstanding")
+        if shares:
+            try:
+                numeric = int(float(shares))
+                if numeric > 0:
+                    cache[symbol] = numeric
+                    continue
+            except Exception:
+                pass
+
+        # Fallback: infer shares from the last known market cap / price so daily market-cap
+        # refresh can keep running even if Yahoo blocks quote fundamentals.
+        market_cap = row.get("marketCap")
+        price = row.get("price")
+        try:
+            if market_cap and price and float(price) > 0 and float(market_cap) > 0:
+                inferred = int(round(float(market_cap) / float(price)))
+                if inferred > 0:
+                    cache[symbol] = inferred
+        except Exception:
+            continue
+
     missing = [symbol for symbol in symbols if symbol not in cache][:MAX_SHARES_FETCH]
     if not missing:
         return cache
@@ -297,14 +334,20 @@ def serialize_price_line(series: pd.Series) -> list[float | None]:
     return values
 
 
-def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cache: dict[str, int | None]) -> dict[str, object]:
-    benchmark = close_frame[BENCHMARK_SYMBOL].dropna()
-    stock_close = close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
-    rs_raw = build_rs_raw(stock_close)
+def build_payload(
+    universe: pd.DataFrame,
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    shares_cache: dict[str, int | None],
+) -> dict[str, object]:
+    benchmark = adjusted_close_frame[BENCHMARK_SYMBOL].dropna()
+    stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
+    stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
+    rs_raw = build_rs_raw(stock_adjusted_close)
     rs_rating_all_raw = percentile_to_rating(rs_raw)
     rs_rating_all_smooth = smooth_rating_frame(rs_rating_all_raw)
-    rs_recent_20d_all = build_recent_return_rating(stock_close, LOOKBACKS["20d"])
-    rs_recent_10d_all = build_recent_return_rating(stock_close, LOOKBACKS["10d"])
+    rs_recent_20d_all = build_recent_return_rating(stock_adjusted_close, LOOKBACKS["20d"])
+    rs_recent_10d_all = build_recent_return_rating(stock_adjusted_close, LOOKBACKS["10d"])
     rs_rating_all = blend_rating_frames(rs_rating_all_smooth, rs_recent_20d_all, rs_recent_10d_all)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
@@ -319,7 +362,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
         subset_raw = rs_raw[tickers]
         subset_rating_raw = percentile_to_rating(subset_raw)
         subset_rating_smooth = smooth_rating_frame(subset_rating_raw)
-        subset_close = stock_close[tickers]
+        subset_close = stock_adjusted_close[tickers]
         subset_recent_20d = build_recent_return_rating(subset_close, LOOKBACKS["20d"])
         subset_recent_10d = build_recent_return_rating(subset_close, LOOKBACKS["10d"])
         rs_ratings_by_universe[key] = blend_rating_frames(subset_rating_smooth, subset_recent_20d, subset_recent_10d)
@@ -339,21 +382,23 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
 
     for _, member in universe.iterrows():
         ticker = str(member["ticker"])
-        if ticker not in stock_close.columns:
+        if ticker not in stock_adjusted_close.columns or ticker not in stock_raw_close.columns:
             continue
         latest_rating = rs_rating_all.at[latest_date, ticker] if ticker in rs_rating_all.columns else None
         if latest_rating is None or pd.isna(latest_rating):
             continue
 
-        price_series = stock_close[ticker].dropna()
-        if len(price_series) <= LOOKBACKS["12m"]:
+        performance_series = stock_adjusted_close[ticker].dropna()
+        raw_price_series = stock_raw_close[ticker].dropna()
+        if len(performance_series) <= LOOKBACKS["12m"]:
             continue
 
-        current_price = float(price_series.reindex([latest_date]).iloc[0])
+        current_price = float(raw_price_series.reindex([latest_date]).iloc[0])
         if not math.isfinite(current_price) or current_price <= 0:
             continue
-        window = stock_close[ticker].reindex(history_rating_all.index)
-        rs_line = window.div(benchmark_history)
+        raw_price_window = stock_raw_close[ticker].reindex(history_rating_all.index)
+        adjusted_window = stock_adjusted_close[ticker].reindex(history_rating_all.index)
+        rs_line = adjusted_window.div(benchmark_history)
         shares_outstanding = shares_cache.get(ticker)
         if shares_outstanding is not None and not isinstance(shares_outstanding, int):
             try:
@@ -385,12 +430,12 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
             "rsRatingDowjones": nullable_int(rs_ratings_by_universe.get("dowjones", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingRussell2000": nullable_int(rs_ratings_by_universe.get("russell2000", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "returns": {
-                "1m": compute_return(price_series, LOOKBACKS["1m"]),
-                "3m": compute_return(price_series, LOOKBACKS["3m"]),
-                "6m": compute_return(price_series, LOOKBACKS["6m"]),
-                "12m": compute_return(price_series, LOOKBACKS["12m"]),
+                "1m": compute_return(performance_series, LOOKBACKS["1m"]),
+                "3m": compute_return(performance_series, LOOKBACKS["3m"]),
+                "6m": compute_return(performance_series, LOOKBACKS["6m"]),
+                "12m": compute_return(performance_series, LOOKBACKS["12m"]),
             },
-            "distanceTo52wHighPct": compute_52w_gap(price_series),
+            "distanceTo52wHighPct": compute_52w_gap(performance_series),
             "rsNewHigh": rs_new_high,
             "memberships": {
                 "sp500": bool(member["member_sp500"]),
@@ -406,7 +451,7 @@ def build_payload(universe: pd.DataFrame, close_frame: pd.DataFrame, shares_cach
                 for value in history_rating_all[ticker].tolist()
             ],
             "rsLine": normalize_line(rs_line),
-            "price": serialize_price_line(window),
+            "price": serialize_price_line(raw_price_window),
         }
 
     rows.sort(key=lambda item: (-int(item["rsRatingAll"]), item["ticker"]))
@@ -457,10 +502,10 @@ def nullable_int(value: object) -> int | None:
 def main() -> None:
     universe = fetch_universe_frame()
     symbols = sorted(universe["ticker"].tolist())
-    close_frame = fetch_price_frame(symbols + [BENCHMARK_SYMBOL])
+    raw_close_frame, adjusted_close_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
     existing_rows = load_existing_rows()
     shares_cache = build_shares_cache(symbols, existing_rows)
-    payload = build_payload(universe, close_frame, shares_cache)
+    payload = build_payload(universe, raw_close_frame, adjusted_close_frame, shares_cache)
 
     OUTPUT_PATH.write_text(
         "window.marketRsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",

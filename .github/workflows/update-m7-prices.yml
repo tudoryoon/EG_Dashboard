@@ -33,6 +33,8 @@ jobs:
         run: python scripts/update_market_macro.py
 
       - name: Refresh market RS history
+        env:
+          MARKET_RS_MAX_SHARES_FETCH: "50"
         run: python scripts/update_market_rs.py
 
       - name: Commit updated price history
