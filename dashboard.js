@@ -145,6 +145,7 @@ const state = {
   ],
   totalDashboardCustomStart: "",
   totalDashboardCustomEnd: "",
+  totalDashboardMode: "normalized",
 };
 
 const charts = [];
@@ -426,6 +427,7 @@ function getTotalDashboardSeriesItems() {
       values: item.values ?? [],
       formatter: "number1",
       rawLabel: item.symbol ?? item.label,
+      isRate: false,
     });
   });
 
@@ -440,6 +442,7 @@ function getTotalDashboardSeriesItems() {
         values: item.values ?? [],
         formatter: panel.formatter ?? "number1",
         rawLabel: item.name,
+        isRate: panelKey === "rates",
       });
     });
   });
@@ -462,7 +465,7 @@ function getTotalDashboardBounds() {
   };
 }
 
-function buildTotalDashboardPayload(rangeKey) {
+function buildTotalDashboardPayload(rangeKey, mode = "normalized") {
   const items = getTotalDashboardSelectedItems();
   const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
   if (!allDates.length) {
@@ -486,15 +489,18 @@ function buildTotalDashboardPayload(rangeKey) {
     const baseValue = baseIndex !== null && baseIndex !== undefined ? item.values[baseIndex] : null;
 
     const data = selectedLabels.map((label) => {
-      if (!Number.isFinite(baseValue)) {
-        return null;
-      }
       const pointIndex = dateIndex.get(label);
       if (pointIndex === undefined) {
         return null;
       }
       const pointValue = item.values[pointIndex];
       if (!Number.isFinite(pointValue)) {
+        return null;
+      }
+      if (mode === "raw") {
+        return pointValue;
+      }
+      if (!Number.isFinite(baseValue)) {
         return null;
       }
       return Number(((pointValue / baseValue) * 100).toFixed(2));
@@ -515,6 +521,8 @@ function buildTotalDashboardPayload(rangeKey) {
       pointHoverRadius: 4,
       pointHitRadius: 10,
       spanGaps: true,
+      yAxisID: mode === "raw" && item.isRate ? "yYield" : "y",
+      isRate: item.isRate,
     };
   });
 
@@ -526,12 +534,19 @@ function createTotalDashboardChart(canvas, rangeKey) {
     return;
   }
 
-  const payload = buildTotalDashboardPayload(rangeKey);
-  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
-  const minValue = allValues.length ? Math.min(...allValues) : 80;
-  const maxValue = allValues.length ? Math.max(...allValues) : 180;
-  const yMin = Math.floor((minValue - 5) / 10) * 10;
-  const yMax = Math.ceil((maxValue + 5) / 10) * 10;
+  const mode = state.totalDashboardMode || "normalized";
+  const payload = buildTotalDashboardPayload(rangeKey, mode);
+  const leftValues = payload.datasets
+    .filter((dataset) => !(mode === "raw" && dataset.isRate))
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const rightValues = payload.datasets
+    .filter((dataset) => mode === "raw" && dataset.isRate)
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const hasRightAxis = mode === "raw" && rightValues.length > 0;
+  const minValue = leftValues.length ? Math.min(...leftValues) : 80;
+  const maxValue = leftValues.length ? Math.max(...leftValues) : 180;
+  const yMin = mode === "normalized" ? Math.floor((minValue - 5) / 10) * 10 : undefined;
+  const yMax = mode === "normalized" ? Math.ceil((maxValue + 5) / 10) * 10 : undefined;
 
   const chart = new Chart(canvas, {
     type: "line",
@@ -565,8 +580,11 @@ function createTotalDashboardChart(canvas, rangeKey) {
               const rawDate = payload.labels[chartIndex];
               const rawValueIndex = dataset.rawDates?.indexOf(rawDate);
               const rawValue = rawValueIndex >= 0 ? dataset.rawValues?.[rawValueIndex] : null;
-              const normalized = context.parsed.y;
               const rawText = Number.isFinite(rawValue) ? formatMacroValue(rawValue, dataset.rawFormatter) : "-";
+              if (mode === "raw") {
+                return `${dataset.label}: ${rawText}`;
+              }
+              const normalized = context.parsed.y;
               return `${dataset.label}: ${normalized.toFixed(1)} | raw ${rawText}`;
             },
           },
@@ -589,15 +607,31 @@ function createTotalDashboardChart(canvas, rangeKey) {
           max: yMax,
           ticks: {
             color: "#8d8d86",
-            callback: (value) => `${value}`,
+            callback: (value) => (mode === "raw" ? formatMacroValue(Number(value), "number1") : `${value}`),
             maxTicksLimit: 6,
           },
           title: {
             display: true,
-            text: "Start = 100",
+            text: mode === "raw" ? "Index / Price" : "Start = 100",
             color: "#8d8d86",
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yYield: {
+          display: hasRightAxis,
+          position: "right",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${Number(value).toFixed(2)}%`,
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: hasRightAxis,
+            text: "Yield (%)",
+            color: "#8d8d86",
+          },
+          grid: { drawOnChartArea: false },
           border: { color: "#d8d8d2" },
         },
       },
@@ -2537,6 +2571,21 @@ function renderMarketOverview() {
         </button>`,
     )
     .join("");
+  const totalModeMarkup = [
+    { key: "normalized", label: "Normalized" },
+    { key: "raw", label: "Raw" },
+  ]
+    .map(
+      (mode) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.totalDashboardMode === mode.key ? " active" : ""}"
+          data-total-mode="${mode.key}"
+        >
+          ${mode.label}
+        </button>`,
+    )
+    .join("");
   const macroPanels = [
     { key: "rates", canvas: "rates", className: "macro-panel-wide" },
     { key: "dxy", canvas: "dxy", className: "" },
@@ -2589,9 +2638,12 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Total Dashboard</h2>
-            <p>All Market data in one normalized chart. Select only the indicators you want to compare. Tooltip shows normalized and raw values together.</p>
+            <p>${state.totalDashboardMode === "raw"
+              ? "Raw mode keeps the original scale. Yields use the right axis in percent, while the other series stay on the left axis."
+              : "All Market data in one normalized chart. Select only the indicators you want to compare. Tooltip shows normalized and raw values together."}</p>
           </div>
           <div class="us-price-controls">
+            <div class="m7-range-row">${totalModeMarkup}</div>
             <div class="m7-range-row">${totalRangeMarkup}</div>
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
           </div>
@@ -2688,6 +2740,13 @@ function renderMarketOverview() {
       state.totalDashboardRange = button.dataset.totalRange || "3y";
       state.totalDashboardCustomStart = "";
       state.totalDashboardCustomEnd = "";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-total-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.totalDashboardMode = button.dataset.totalMode || "normalized";
       render();
     });
   });
