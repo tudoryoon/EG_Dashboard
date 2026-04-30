@@ -2348,25 +2348,6 @@ function renderMarketOverview() {
     })
     .join("");
 
-  const rows = marketReferenceItems
-    .map(
-      (item) => `
-        <tr>
-          <td>
-            <div class="market-name-cell">
-              <strong>${item.name}</strong>
-              <span>${item.description}</span>
-            </div>
-          </td>
-          <td><span class="market-bucket-pill">${item.bucket}</span></td>
-          <td><code>${item.benchmarkTicker}</code></td>
-          <td><code>${item.etfTicker}</code></td>
-          <td><code>${item.chartTicker}</code></td>
-        </tr>
-      `,
-    )
-    .join("");
-
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
       <section class="us-panel us-price-panel">
@@ -2399,36 +2380,6 @@ function renderMarketOverview() {
           <canvas data-market-relative="performance"></canvas>
         </div>
       </section>
-      <div class="us-section-head cloud-section-head">
-        <div>
-          <h2>Market Reference Dashboard</h2>
-          <p>Representative ETF mapping for major US benchmark sleeves and semiconductor exposure.</p>
-        </div>
-      </div>
-      <div class="market-panel-grid">
-        <article class="cloud-panel market-panel-wide">
-          <div class="us-panel-head">
-            <h3>Market Index / ETF Map</h3>
-            <p>Primary benchmark ticker, representative ETF, and the exact ticker used in the normalized chart above.</p>
-          </div>
-          <div class="market-table-wrap">
-            <table class="market-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Bucket</th>
-                  <th>Benchmark</th>
-                  <th>ETF</th>
-                  <th>Chart</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      </div>
     </section>
   `;
 
