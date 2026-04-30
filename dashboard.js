@@ -1918,7 +1918,17 @@ function createMarketRsChart(canvas, row) {
   const selectedLabels = labels.slice(startIndex);
   const selectedRatings = (history.rsRating ?? []).slice(startIndex);
   const selectedRsLine = (history.rsLine ?? []).slice(startIndex);
+  const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
   const lineValues = selectedRsLine.filter((value) => Number.isFinite(value));
+  let ratingMin = ratingValues.length ? Math.floor((Math.min(...ratingValues) - 3) / 5) * 5 : 1;
+  let ratingMax = ratingValues.length ? Math.ceil((Math.max(...ratingValues) + 3) / 5) * 5 : 99;
+  if (ratingMax - ratingMin < 12) {
+    const mid = (ratingMax + ratingMin) / 2;
+    ratingMin = Math.floor((mid - 6) / 5) * 5;
+    ratingMax = Math.ceil((mid + 6) / 5) * 5;
+  }
+  ratingMin = Math.max(1, ratingMin);
+  ratingMax = Math.min(99, ratingMax);
   const lineMin = lineValues.length ? Math.floor((Math.min(...lineValues) - 3) / 5) * 5 : 90;
   const lineMax = lineValues.length ? Math.ceil((Math.max(...lineValues) + 3) / 5) * 5 : 120;
 
@@ -1988,17 +1998,20 @@ function createMarketRsChart(canvas, row) {
             color: "#8a8a83",
             autoSkip: false,
             maxRotation: 0,
-            callback: (_, index) => formatRangeAxisDate(selectedLabels[index], state.rsHistoryRange),
+            callback: (_, index, ticks) => {
+              const labelIndex = ticks?.[index]?.value;
+              return formatRangeAxisDate(selectedLabels[labelIndex], state.rsHistoryRange);
+            },
           },
         },
         y: {
           position: "left",
-          min: 1,
-          max: 99,
+          min: ratingMin,
+          max: ratingMax,
           grid: { color: "rgba(28,28,26,0.08)" },
           ticks: {
             color: "#66665f",
-            stepSize: 20,
+            stepSize: ratingMax - ratingMin <= 20 ? 5 : 10,
             callback: (value) => value,
           },
         },
