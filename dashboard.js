@@ -130,6 +130,9 @@ const state = {
   sort: "marketCapDesc",
   m7PriceRange: m7PriceData.defaultRange ?? "max",
   marketPriceRange: marketPriceData.defaultRange ?? "max",
+  marketMacroRanges: Object.fromEntries(
+    Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
+  ),
 };
 
 const charts = [];
@@ -400,6 +403,10 @@ function formatMacroValue(value, formatterKey) {
 
 function getMarketMacroPanel(panelKey) {
   return marketMacroData?.panels?.[panelKey] ?? null;
+}
+
+function getMarketMacroRange(panelKey) {
+  return state.marketMacroRanges?.[panelKey] ?? marketMacroData.defaultRange ?? "max";
 }
 
 function buildMarketMacroChartPayload(panel, rangeKey) {
@@ -2313,6 +2320,21 @@ function renderMarketOverview() {
               <h3>${panel.title}</h3>
               <p>${panel.subtitle}</p>
             </div>
+            <div class="m7-range-row">
+              ${rangeSource
+                .map(
+                  (range) => `
+                    <button
+                      type="button"
+                      class="m7-range-chip${getMarketMacroRange(key) === range.key ? " active" : ""}"
+                      data-market-macro-range="${range.key}"
+                      data-market-macro-panel="${key}"
+                    >
+                      ${range.label}
+                    </button>`,
+                )
+                .join("")}
+            </div>
           </div>
           <div class="macro-panel-meta">
             <span>${panel.source ?? ""}</span>
@@ -2417,6 +2439,21 @@ function renderMarketOverview() {
     });
   });
 
+  usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroPanel;
+      const rangeKey = button.dataset.marketMacroRange || marketMacroData.defaultRange || "max";
+      if (!panelKey) {
+        return;
+      }
+      state.marketMacroRanges = {
+        ...state.marketMacroRanges,
+        [panelKey]: rangeKey,
+      };
+      render();
+    });
+  });
+
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
   if (relativeCanvas) {
     createMarketRelativeChart(relativeCanvas, state.marketPriceRange);
@@ -2424,7 +2461,7 @@ function renderMarketOverview() {
   ["rates", "dxy", "energy", "metals"].forEach((panelKey) => {
     const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
     if (canvas) {
-      createMarketMacroChart(canvas, panelKey, state.marketPriceRange);
+      createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));
     }
   });
 }

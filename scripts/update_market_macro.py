@@ -96,11 +96,31 @@ def parse_us_treasury_yields() -> dict[str, tuple[list[str], list[float]]]:
 
 
 def parse_japan_yields() -> dict[str, tuple[list[str], list[float]]]:
-    url = "https://www.bb.jbts.co.jp/en/historical/main_rate.html"
-    text = fetch_text(url)
-    table_blocks = re.findall(r'<table class="tbCore">(.*?)</table>', text, flags=re.S | re.I)
-    series = {key: ([], []) for key in ("jp2y", "jp10y", "jp30y")}
+    series_map: dict[str, dict[str, float]] = {key: {} for key in ("jp2y", "jp10y", "jp30y")}
 
+    mof_url = "https://www.mof.go.jp/english/policy/jgbs/reference/interest_rate/historical/jgbcme_all.csv"
+    mof_lines = fetch_text(mof_url).splitlines()
+    header_index = next(index for index, line in enumerate(mof_lines) if line.startswith("Date,"))
+    mof_reader = csv.DictReader(mof_lines[header_index:])
+    for row in mof_reader:
+        raw_date = (row.get("Date") or "").strip()
+        if not raw_date:
+            continue
+        try:
+            date_key = datetime.strptime(raw_date, "%Y/%m/%d").strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+        if date_key < START_DATE:
+            continue
+        for key, column in {"jp2y": "2Y", "jp10y": "10Y", "jp30y": "30Y"}.items():
+            raw_value = (row.get(column) or "").strip()
+            if raw_value in {"", "-", "--"}:
+                continue
+            series_map[key][date_key] = round(float(raw_value), 4)
+
+    jbts_url = "https://www.bb.jbts.co.jp/en/historical/main_rate.html"
+    text = fetch_text(jbts_url)
+    table_blocks = re.findall(r'<table class="tbCore">(.*?)</table>', text, flags=re.S | re.I)
     for block in table_blocks:
         row_matches = re.findall(r"<tr>(.*?)</tr>", block, flags=re.S | re.I)
         for row_html in row_matches:
@@ -124,11 +144,12 @@ def parse_japan_yields() -> dict[str, tuple[list[str], list[float]]]:
                 raw_value = values[index]
                 if raw_value in {"", "-", "--"}:
                     continue
-                series[key][0].append(date_key)
-                series[key][1].append(round(float(raw_value), 4))
-    for key, (dates, values) in series.items():
-        paired = sorted(zip(dates, values), key=lambda item: item[0])
-        series[key] = ([date for date, _ in paired], [value for _, value in paired])
+                series_map[key][date_key] = round(float(raw_value), 4)
+
+    series = {}
+    for key, by_date in series_map.items():
+        dates = sorted(by_date)
+        series[key] = (dates, [by_date[date] for date in dates])
     return series
 
 
