@@ -249,6 +249,116 @@ function formatShortIsoDate(dateText) {
   return `${year.slice(2)}/${month}`;
 }
 
+function diffUtcDays(startText, endText) {
+  const start = new Date(`${startText}T00:00:00Z`);
+  const end = new Date(`${endText}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 0;
+  }
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86400000));
+}
+
+function diffUtcMonths(startText, endText) {
+  const start = new Date(`${startText}T00:00:00Z`);
+  const end = new Date(`${endText}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return 0;
+  }
+  return Math.max(
+    0,
+    (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + (end.getUTCMonth() - start.getUTCMonth()),
+  );
+}
+
+function getRegularTickStep(labels, rangeKey) {
+  if (!labels?.length) {
+    return { mode: "none", step: 1 };
+  }
+  if (rangeKey === "1m") {
+    return { mode: "days", step: 7 };
+  }
+  if (rangeKey === "3m" || rangeKey === "6m") {
+    return { mode: "months", step: 1 };
+  }
+  if (rangeKey === "1y") {
+    return { mode: "months", step: 2 };
+  }
+  if (rangeKey === "3y") {
+    return { mode: "months", step: 3 };
+  }
+  if (rangeKey === "5y") {
+    return { mode: "months", step: 6 };
+  }
+
+  const startLabel = labels[0];
+  const endLabel = labels[labels.length - 1];
+  const spanDays = diffUtcDays(startLabel, endLabel);
+  const spanMonths = diffUtcMonths(startLabel, endLabel);
+  if (spanDays <= 45) {
+    return { mode: "days", step: 7 };
+  }
+  if (spanMonths <= 6) {
+    return { mode: "months", step: 1 };
+  }
+  if (spanMonths <= 18) {
+    return { mode: "months", step: 2 };
+  }
+  if (spanMonths <= 48) {
+    return { mode: "months", step: 3 };
+  }
+  if (spanMonths <= 96) {
+    return { mode: "months", step: 6 };
+  }
+  return { mode: "months", step: 12 };
+}
+
+function buildRegularDateTickIndexes(labels, rangeKey) {
+  if (!labels?.length) {
+    return [];
+  }
+
+  const config = getRegularTickStep(labels, rangeKey);
+  const ticks = [];
+  let lastIndex = -1;
+  let lastDayTick = null;
+  let lastMonthBucket = null;
+  const firstDate = new Date(`${labels[0]}T00:00:00Z`);
+  const firstMonthBase = firstDate.getUTCFullYear() * 12 + firstDate.getUTCMonth();
+
+  labels.forEach((label, index) => {
+    const date = new Date(`${label}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) {
+      return;
+    }
+
+    if (config.mode === "days") {
+      if (!lastDayTick || date.getTime() - lastDayTick >= config.step * 86400000) {
+        ticks.push(index);
+        lastIndex = index;
+        lastDayTick = date.getTime();
+      }
+      return;
+    }
+
+    const monthBucket = date.getUTCFullYear() * 12 + date.getUTCMonth();
+    const relativeBucket = monthBucket - firstMonthBase;
+    if (relativeBucket % config.step !== 0) {
+      return;
+    }
+    if (monthBucket !== lastMonthBucket) {
+      ticks.push(index);
+      lastIndex = index;
+      lastMonthBucket = monthBucket;
+    }
+  });
+
+  if (lastIndex !== labels.length - 1) {
+    ticks.push(labels.length - 1);
+  }
+
+  return [...new Set(ticks)];
+}
+
 function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
   if (!dateText || rangeKey === "max") {
     return minStartDate;
@@ -377,12 +487,14 @@ function createRelativePriceChart(canvas, priceData, rangeKey) {
       scales: {
         x: {
           grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = buildRegularDateTickIndexes(payload.labels, rangeKey).map((index) => ({ value: index }));
+          },
           ticks: {
             color: "#8d8d86",
-            autoSkip: true,
-            maxTicksLimit: rangeKey === "max" ? 12 : 10,
+            autoSkip: false,
             maxRotation: 0,
-            callback: (value, index) => formatShortIsoDate(payload.labels[index]),
+            callback: (value) => formatShortIsoDate(payload.labels[value]),
           },
           border: { color: "#d8d8d2" },
         },
@@ -616,12 +728,14 @@ function createTotalDashboardChart(canvas, rangeKey) {
       scales: {
         x: {
           grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = buildRegularDateTickIndexes(payload.labels, rangeKey).map((index) => ({ value: index }));
+          },
           ticks: {
             color: "#8d8d86",
-            autoSkip: true,
-            maxTicksLimit: rangeKey === "max" ? 14 : 10,
+            autoSkip: false,
             maxRotation: 0,
-            callback: (value, index) => formatShortIsoDate(payload.labels[index]),
+            callback: (value) => formatShortIsoDate(payload.labels[value]),
           },
           border: { color: "#d8d8d2" },
         },
@@ -789,12 +903,14 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
       scales: {
         x: {
           grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = buildRegularDateTickIndexes(payload.labels, rangeKey).map((index) => ({ value: index }));
+          },
           ticks: {
             color: "#8d8d86",
-            autoSkip: true,
-            maxTicksLimit: rangeKey === "max" ? 12 : 10,
+            autoSkip: false,
             maxRotation: 0,
-            callback: (value, index) => formatShortIsoDate(payload.labels[index]),
+            callback: (value) => formatShortIsoDate(payload.labels[value]),
           },
           border: { color: "#d8d8d2" },
         },
