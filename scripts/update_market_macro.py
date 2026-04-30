@@ -11,7 +11,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-START_DATE = "2017-01-01"
+START_DATE = "1997-01-01"
 RANGES = [
     {"key": "1m", "label": "1M"},
     {"key": "3m", "label": "3M"},
@@ -54,10 +54,11 @@ def fred_csv_url(series_id: str) -> str:
 
 def yahoo_chart_url(symbol: str) -> str:
     encoded = quote(symbol, safe="")
+    period1 = int(datetime.strptime(START_DATE, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
     period2 = int(datetime.now(timezone.utc).timestamp())
     return (
         f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}"
-        f"?period1=1483228800&period2={period2}&interval=1d&includeAdjustedClose=true&events=div%2Csplits"
+        f"?period1={period1}&period2={period2}&interval=1d&includeAdjustedClose=true&events=div%2Csplits"
     )
 
 
