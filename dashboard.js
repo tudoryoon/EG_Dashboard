@@ -17,6 +17,7 @@ const capexDashboardData = window.capexDashboardData ?? {
 };
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
+const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
@@ -379,6 +380,175 @@ function createM7RelativeChart(canvas, rangeKey) {
 
 function createMarketRelativeChart(canvas, rangeKey) {
   createRelativePriceChart(canvas, marketPriceData, rangeKey);
+}
+
+function formatMacroValue(value, formatterKey) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  switch (formatterKey) {
+    case "percent2":
+      return `${Number(value).toFixed(2)}%`;
+    case "dollar1":
+      return `$${Number(value).toFixed(1)}`;
+    case "number1":
+      return Number(value).toFixed(1);
+    default:
+      return String(value);
+  }
+}
+
+function getMarketMacroPanel(panelKey) {
+  return marketMacroData?.panels?.[panelKey] ?? null;
+}
+
+function buildMarketMacroChartPayload(panel, rangeKey) {
+  const seriesEntries = Object.entries(panel?.series ?? {});
+  const allDates = [...new Set(seriesEntries.flatMap(([, item]) => item.dates ?? []))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [], mode: panel?.mode ?? "raw" };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey);
+  const selectedLabels = allDates.filter((label) => label >= startDate);
+
+  const datasets = seriesEntries.map(([key, item]) => {
+    const dateIndex = new Map();
+    (item.dates ?? []).forEach((date, index) => {
+      dateIndex.set(date, index);
+    });
+    const baseDate = selectedLabels.find((label) => dateIndex.has(label));
+    const baseIndex = baseDate ? dateIndex.get(baseDate) : null;
+    const baseValue = baseIndex !== null && baseIndex !== undefined ? item.values?.[baseIndex] : null;
+
+    const data = selectedLabels.map((label) => {
+      const pointIndex = dateIndex.get(label);
+      if (pointIndex === undefined) {
+        return null;
+      }
+      const pointValue = item.values?.[pointIndex];
+      if (!Number.isFinite(pointValue)) {
+        return null;
+      }
+      if (panel.mode === "normalized") {
+        if (!Number.isFinite(baseValue)) {
+          return null;
+        }
+        return Number(((pointValue / baseValue) * 100).toFixed(2));
+      }
+      return Number(pointValue);
+    });
+
+    return {
+      key,
+      label: item.name,
+      data,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: 2.4,
+      tension: panel.mode === "normalized" ? 0.18 : 0.12,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+      borderDash: item.dash ?? [],
+    };
+  });
+
+  return { labels: selectedLabels, datasets, mode: panel.mode ?? "raw" };
+}
+
+function createMarketMacroChart(canvas, panelKey, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const panel = getMarketMacroPanel(panelKey);
+  if (!panel) {
+    return;
+  }
+
+  const payload = buildMarketMacroChartPayload(panel, rangeKey);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+
+  let yMin;
+  let yMax;
+  if (panel.mode === "normalized") {
+    yMin = Math.floor((minValue - 5) / 10) * 10;
+    yMax = Math.ceil((maxValue + 5) / 10) * 10;
+  } else {
+    const spread = Math.max(maxValue - minValue, Math.abs(maxValue) * 0.15, 1);
+    const padding = spread * 0.12;
+    yMin = minValue >= 0 ? Math.max(0, minValue - padding) : minValue - padding;
+    yMax = maxValue + padding;
+  }
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatMacroValue(context.parsed.y, panel.formatter)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: true,
+            maxTicksLimit: rangeKey === "max" ? 12 : 10,
+            maxRotation: 0,
+            callback: (value, index) => formatShortIsoDate(payload.labels[index]),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatMacroValue(value, panel.formatter),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: panel.yAxisLabel ?? "",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function parseCompanyMonth(monthText) {
@@ -2110,7 +2280,8 @@ function renderMarketOverview() {
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  const rangeMarkup = (marketPriceData.ranges ?? [])
+  const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
+  const rangeMarkup = rangeSource
     .map(
       (range) => `
         <button
@@ -2121,6 +2292,38 @@ function renderMarketOverview() {
           ${range.label}
         </button>`,
     )
+    .join("");
+
+  const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const macroPanels = [
+    { key: "rates", canvas: "rates", className: "macro-panel-wide" },
+    { key: "dxy", canvas: "dxy", className: "" },
+    { key: "energy", canvas: "energy", className: "" },
+    { key: "metals", canvas: "metals", className: "" },
+  ]
+    .map(({ key, canvas, className }) => {
+      const panel = getMarketMacroPanel(key);
+      if (!panel) {
+        return "";
+      }
+      return `
+        <article class="cloud-panel macro-panel ${className}">
+          <div class="us-panel-head">
+            <div>
+              <h3>${panel.title}</h3>
+              <p>${panel.subtitle}</p>
+            </div>
+          </div>
+          <div class="macro-panel-meta">
+            <span>${panel.source ?? ""}</span>
+            <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
+          </div>
+          <div class="macro-chart-wrap">
+            <canvas data-market-macro="${canvas}"></canvas>
+          </div>
+        </article>
+      `;
+    })
     .join("");
 
   const rows = marketReferenceItems
@@ -2147,12 +2350,27 @@ function renderMarketOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
+            <h2>Macro Dashboard</h2>
+            <p>Daily macro dashboard for US and Japan rates, dollar, energy, and metals. Metals are normalized for cleaner cross-asset comparison.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="macro-panel-grid">
+          ${macroPanels}
+        </div>
+      </section>
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
             <h2>Market Relative Performance</h2>
             <p>Daily close normalized to 100 at the selected start date. Max begins ${marketPriceData.startDate ?? "2017-01-01"}.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
-            <div class="us-price-updated">Updated ${marketPriceData.updatedAt || "-"}</div>
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
           </div>
         </div>
         <div class="us-price-chart-wrap">
@@ -2203,6 +2421,12 @@ function renderMarketOverview() {
   if (relativeCanvas) {
     createMarketRelativeChart(relativeCanvas, state.marketPriceRange);
   }
+  ["rates", "dxy", "energy", "metals"].forEach((panelKey) => {
+    const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
+    if (canvas) {
+      createMarketMacroChart(canvas, panelKey, state.marketPriceRange);
+    }
+  });
 }
 
 function createUsMarginChart(canvas, company) {
@@ -2835,7 +3059,7 @@ function renderSectors() {
 
 function renderSummary(list) {
   if (state.tab === "Market") {
-    summaryText.textContent = "Daily normalized market relative-performance dashboard";
+    summaryText.textContent = "Daily market and macro dashboard";
     return;
   }
 
