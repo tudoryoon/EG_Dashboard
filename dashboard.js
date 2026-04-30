@@ -119,6 +119,25 @@ const currencyMeta = {
 const yearColors = ["#2563eb", "#7c3aed", "#f59e0b", "#14b8a6", "#d93025", "#0f172a"];
 const SERIES_START_YEAR = 2021;
 const SERIES_START_MONTH = 1;
+const TOTAL_DASHBOARD_COLOR_BY_KEY = {
+  "market:sp500": "#111827",
+  "market:nasdaq100": "#2563eb",
+  "market:dowjones": "#6b7280",
+  "market:russell2000": "#8b5cf6",
+  "market:smh": "#dc2626",
+  "macro:rates:us2y": "#0f766e",
+  "macro:rates:us10y": "#14b8a6",
+  "macro:rates:us30y": "#06b6d4",
+  "macro:rates:jp2y": "#f59e0b",
+  "macro:rates:jp10y": "#f97316",
+  "macro:rates:jp30y": "#ef4444",
+  "macro:dxy:dxy": "#7c3aed",
+  "macro:energy:wti": "#16a34a",
+  "macro:energy:brent": "#65a30d",
+  "macro:metals:gold": "#d4a017",
+  "macro:metals:silver": "#94a3b8",
+  "macro:metals:copper": "#b45309",
+};
 
 const state = {
   tab: "Market",
@@ -447,7 +466,10 @@ function getTotalDashboardSeriesItems() {
     });
   });
 
-  return items;
+  return items.map((item, index) => ({
+    ...item,
+    color: TOTAL_DASHBOARD_COLOR_BY_KEY[item.key] ?? item.color ?? yearColors[index % yearColors.length],
+  }));
 }
 
 function getTotalDashboardSelectedItems() {
@@ -516,6 +538,7 @@ function buildTotalDashboardPayload(rangeKey, mode = "normalized") {
       borderColor: item.color,
       backgroundColor: item.color,
       borderWidth: item.group === "Market" ? 2.6 : 2.2,
+      borderDash: item.isRate ? [7, 5] : [],
       tension: 0.18,
       pointRadius: 0,
       pointHoverRadius: 4,
