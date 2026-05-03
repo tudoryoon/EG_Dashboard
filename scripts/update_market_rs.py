@@ -342,6 +342,15 @@ def normalize_line(series: pd.Series) -> list[float | None]:
     return values
 
 
+def compute_rating_new_high(series: pd.Series, window: int = LOOKBACKS["12m"]) -> bool:
+    recent = series.dropna().tail(window)
+    if recent.empty:
+        return False
+    latest = float(recent.iloc[-1])
+    trailing_high = float(recent.max())
+    return latest >= trailing_high - 1e-9
+
+
 def serialize_price_line(series: pd.Series) -> list[float | None]:
     values: list[float | None] = []
     for value in series:
@@ -429,12 +438,30 @@ def build_payload(
         market_cap = None
         if shares_outstanding and shares_outstanding > 0:
             market_cap = round(float(current_price) * int(shares_outstanding))
-        rs_line_window = rs_line.dropna().tail(HISTORY_POINTS)
-        rs_new_high = False
-        if not rs_line_window.empty:
-            latest_rs_line = float(rs_line_window.iloc[-1])
-            trailing_high = float(rs_line_window.max())
-            rs_new_high = latest_rs_line >= trailing_high - 1e-9
+        rs_rating_sp500_frame = rs_ratings_by_universe.get("sp500", pd.DataFrame())
+        rs_rating_nasdaq100_frame = rs_ratings_by_universe.get("nasdaq100", pd.DataFrame())
+        rs_rating_dowjones_frame = rs_ratings_by_universe.get("dowjones", pd.DataFrame())
+        rs_rating_russell2000_frame = rs_ratings_by_universe.get("russell2000", pd.DataFrame())
+
+        history_all_series = rs_rating_all[ticker] if ticker in rs_rating_all.columns else pd.Series(dtype=float)
+        history_sp500_series = (
+            rs_rating_sp500_frame[ticker] if ticker in rs_rating_sp500_frame.columns else pd.Series(dtype=float)
+        )
+        history_nasdaq100_series = (
+            rs_rating_nasdaq100_frame[ticker] if ticker in rs_rating_nasdaq100_frame.columns else pd.Series(dtype=float)
+        )
+        history_dowjones_series = (
+            rs_rating_dowjones_frame[ticker] if ticker in rs_rating_dowjones_frame.columns else pd.Series(dtype=float)
+        )
+        history_russell2000_series = (
+            rs_rating_russell2000_frame[ticker] if ticker in rs_rating_russell2000_frame.columns else pd.Series(dtype=float)
+        )
+
+        rs_new_high_all = compute_rating_new_high(history_all_series)
+        rs_new_high_sp500 = compute_rating_new_high(history_sp500_series)
+        rs_new_high_nasdaq100 = compute_rating_new_high(history_nasdaq100_series)
+        rs_new_high_dowjones = compute_rating_new_high(history_dowjones_series)
+        rs_new_high_russell2000 = compute_rating_new_high(history_russell2000_series)
 
         row = {
             "ticker": ticker,
@@ -454,7 +481,12 @@ def build_payload(
                 "12m": compute_return(performance_series, LOOKBACKS["12m"]),
             },
             "distanceTo52wHighPct": compute_52w_gap(performance_series),
-            "rsNewHigh": rs_new_high,
+            "rsNewHigh": rs_new_high_all,
+            "rsNewHighAll": rs_new_high_all,
+            "rsNewHighSp500": rs_new_high_sp500,
+            "rsNewHighNasdaq100": rs_new_high_nasdaq100,
+            "rsNewHighDowjones": rs_new_high_dowjones,
+            "rsNewHighRussell2000": rs_new_high_russell2000,
             "memberships": {
                 "sp500": bool(member["member_sp500"]),
                 "nasdaq100": bool(member["member_nasdaq100"]),
@@ -467,6 +499,26 @@ def build_payload(
             "rsRating": [
                 None if pd.isna(value) else int(value)
                 for value in history_rating_all[ticker].tolist()
+            ],
+            "rsRatingAll": [
+                None if pd.isna(value) else int(value)
+                for value in history_rating_all[ticker].tolist()
+            ],
+            "rsRatingSp500": [
+                None if pd.isna(value) else int(value)
+                for value in history_sp500_series.reindex(history_rating_all.index).tolist()
+            ],
+            "rsRatingNasdaq100": [
+                None if pd.isna(value) else int(value)
+                for value in history_nasdaq100_series.reindex(history_rating_all.index).tolist()
+            ],
+            "rsRatingDowjones": [
+                None if pd.isna(value) else int(value)
+                for value in history_dowjones_series.reindex(history_rating_all.index).tolist()
+            ],
+            "rsRatingRussell2000": [
+                None if pd.isna(value) else int(value)
+                for value in history_russell2000_series.reindex(history_rating_all.index).tolist()
             ],
             "rsLine": normalize_line(rs_line),
             "price": serialize_price_line(raw_price_window),

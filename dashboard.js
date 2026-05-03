@@ -1882,6 +1882,41 @@ function getMarketRsUniverseScore(row, universeKey) {
   return row.rsRatingAll;
 }
 
+function getMarketRsUniverseNewHigh(row, universeKey) {
+  if (universeKey === "sp500") {
+    return Boolean(row.rsNewHighSp500);
+  }
+  if (universeKey === "nasdaq100") {
+    return Boolean(row.rsNewHighNasdaq100);
+  }
+  if (universeKey === "dowjones") {
+    return Boolean(row.rsNewHighDowjones);
+  }
+  if (universeKey === "russell2000") {
+    return Boolean(row.rsNewHighRussell2000);
+  }
+  return Boolean(row.rsNewHighAll ?? row.rsNewHigh);
+}
+
+function getMarketRsHistoryRatings(history, universeKey) {
+  if (!history) {
+    return [];
+  }
+  if (universeKey === "sp500") {
+    return history.rsRatingSp500 ?? history.rsRating ?? [];
+  }
+  if (universeKey === "nasdaq100") {
+    return history.rsRatingNasdaq100 ?? history.rsRating ?? [];
+  }
+  if (universeKey === "dowjones") {
+    return history.rsRatingDowjones ?? history.rsRating ?? [];
+  }
+  if (universeKey === "russell2000") {
+    return history.rsRatingRussell2000 ?? history.rsRating ?? [];
+  }
+  return history.rsRatingAll ?? history.rsRating ?? [];
+}
+
 function getVisibleMarketRsRows() {
   const query = (state.query ?? "").trim().toLowerCase();
   return (marketRsData.rows ?? [])
@@ -1899,14 +1934,14 @@ function getVisibleMarketRsRows() {
         return false;
       }
       if (!query) {
-        return state.rsFilter !== "newHigh" || Boolean(row.rsNewHigh);
+        return state.rsFilter !== "newHigh" || getMarketRsUniverseNewHigh(row, state.rsUniverse);
       }
       const ticker = row.ticker?.toLowerCase?.() ?? "";
       const matchesQuery = ticker.includes(query);
       if (!matchesQuery) {
         return false;
       }
-      return state.rsFilter !== "newHigh" || Boolean(row.rsNewHigh);
+      return state.rsFilter !== "newHigh" || getMarketRsUniverseNewHigh(row, state.rsUniverse);
     })
     .sort((left, right) => {
       if (query) {
@@ -1964,7 +1999,7 @@ function getMarketRsTableSortValue(row, sortKey) {
     case "gap52w":
       return row.distanceTo52wHighPct ?? Number.POSITIVE_INFINITY;
     case "rsNewHigh":
-      return row.rsNewHigh ? 1 : 0;
+      return getMarketRsUniverseNewHigh(row, state.rsUniverse) ? 1 : 0;
     default:
       return getMarketRsUniverseScore(row, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
   }
@@ -2017,7 +2052,7 @@ function createMarketRsChart(canvas, row) {
   const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
-  const selectedRatings = (history.rsRating ?? []).slice(startIndex);
+  const selectedRatings = getMarketRsHistoryRatings(history, state.rsUniverse).slice(startIndex);
   const selectedPrice = (history.price ?? []).slice(startIndex);
   const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
   const priceValues = selectedPrice.filter((value) => Number.isFinite(value));
@@ -2050,7 +2085,7 @@ function createMarketRsChart(canvas, row) {
       labels: selectedLabels,
       datasets: [
         {
-          label: "RS Rating",
+          label: `RS Rating (${getMarketRsUniverseLabel(state.rsUniverse)})`,
           data: selectedRatings,
           borderColor: "#111827",
           backgroundColor: "#111827",
@@ -2208,7 +2243,7 @@ function renderMarketRsOverview() {
             <span>12M</span>
             <strong>${formatRsPercent(row.returns?.["12m"])}</strong>
           </div>
-          ${row.rsNewHigh ? '<div class="market-rs-flag">RS New High</div>' : ""}
+          ${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? '<div class="market-rs-flag">RS New High</div>' : ""}
         </button>
       `;
     })
@@ -2228,7 +2263,7 @@ function renderMarketRsOverview() {
           <td>${formatRsPercent(row.returns?.["6m"])}</td>
           <td>${formatRsPercent(row.returns?.["12m"])}</td>
           <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
-          <td>${row.rsNewHigh ? "Yes" : "-"}</td>
+          <td>${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? "Yes" : "-"}</td>
         </tr>
       `;
     })
@@ -2245,7 +2280,7 @@ function renderMarketRsOverview() {
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${marketRsData.updatedAt ?? "-"}</span>
             <span class="market-rs-pill">${rows.length} names</span>
-            <span class="market-rs-pill">${rows.filter((row) => row.rsNewHigh).length} RS highs</span>
+            <span class="market-rs-pill">${rows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse)).length} RS highs</span>
             <span class="market-rs-pill">Sorted 99 → 1</span>
           </div>
         </div>
@@ -2309,7 +2344,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: RS Rating 1-99. Right axis: stock price.</p>
+          <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price.</p>
         </article>
       </section>
 
