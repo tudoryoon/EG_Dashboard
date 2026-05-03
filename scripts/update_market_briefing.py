@@ -330,8 +330,16 @@ def build_major_news() -> list[dict[str, object]]:
 
 def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
     movers = [item for item in snapshots if item.get("dayChangePct") is not None]
-    movers.sort(key=lambda item: abs(float(item["dayChangePct"])), reverse=True)
-    selected = movers[:6]
+    gainers = sorted(
+        [item for item in movers if float(item["dayChangePct"]) > 0],
+        key=lambda item: float(item["dayChangePct"]),
+        reverse=True,
+    )[:3]
+    decliners = sorted(
+        [item for item in movers if float(item["dayChangePct"]) < 0],
+        key=lambda item: float(item["dayChangePct"]),
+    )[:3]
+    selected = gainers + decliners
     output = []
     for item in selected:
         catalyst = {"title": "", "source": "", "publishedAt": "", "link": ""}

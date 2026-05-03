@@ -2051,7 +2051,7 @@ function renderMarketBriefingOverview() {
           <div class="us-section-head">
             <div>
               <h2>종목 브리핑</h2>
-              <p>맵 안에서 크게 움직인 종목과 연결된 재료를 한글 문장으로 정리했습니다.</p>
+              <p>맵 안에서 크게 오른 종목과 많이 빠진 종목을 함께 묶어, 연결된 재료를 한글 문장으로 정리했습니다.</p>
             </div>
           </div>
           <div class="briefing-mover-grid">${moversMarkup || '<p class="market-rs-empty">급등락 종목 브리핑을 아직 불러오지 못했습니다.</p>'}</div>
