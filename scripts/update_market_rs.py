@@ -211,12 +211,30 @@ def load_existing_rows() -> dict[str, dict[str, object]]:
     return {row["ticker"]: row for row in payload.get("rows", [])}
 
 
+def normalize_positive_int(value: object) -> int | None:
+    try:
+        numeric = float(value)
+    except Exception:
+        return None
+    if not math.isfinite(numeric) or numeric <= 0:
+        return None
+    return int(numeric)
+
+
 def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
     try:
-        info = yf.Ticker(symbol).get_info()
-        shares = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
-        if shares and float(shares) > 0:
-            return symbol, int(float(shares))
+        ticker = yf.Ticker(symbol)
+        fast_info = getattr(ticker, "fast_info", {}) or {}
+        shares = normalize_positive_int(fast_info.get("shares"))
+        if shares:
+            return symbol, shares
+
+        info = ticker.get_info()
+        shares = normalize_positive_int(
+            info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
+        )
+        if shares:
+            return symbol, shares
     except Exception:
         return symbol, None
     return symbol, None
