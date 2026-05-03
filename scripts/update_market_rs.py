@@ -20,16 +20,14 @@ PRICE_PERIOD = "3y"
 BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
-RS_SMOOTH_WINDOW = 126
-RS_BLEND_BASE_WEIGHT = 0.85
-RS_BLEND_20D_WEIGHT = 0.10
-RS_BLEND_10D_WEIGHT = 0.05
 LOOKBACKS = {
+    "1w": 5,
     "10d": 10,
     "20d": 20,
     "1m": 21,
     "3m": 63,
     "6m": 126,
+    "9m": 189,
     "12m": 252,
 }
 UNIVERSES = {
@@ -292,30 +290,14 @@ def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     return rating.round().clip(lower=1, upper=99)
 
 
-def smooth_rating_frame(frame: pd.DataFrame, window: int = RS_SMOOTH_WINDOW) -> pd.DataFrame:
-    smoothed = frame.rolling(window, min_periods=1).mean()
-    return percentile_to_rating(smoothed)
-
-
-def build_recent_return_rating(close_frame: pd.DataFrame, periods: int) -> pd.DataFrame:
-    return percentile_to_rating(close_frame.div(close_frame.shift(periods)).sub(1))
-
-
-def blend_rating_frames(base: pd.DataFrame, recent_20d: pd.DataFrame, recent_10d: pd.DataFrame) -> pd.DataFrame:
-    composite = (
-        RS_BLEND_BASE_WEIGHT * base.astype(float)
-        + RS_BLEND_20D_WEIGHT * recent_20d.astype(float)
-        + RS_BLEND_10D_WEIGHT * recent_10d.astype(float)
-    )
-    return percentile_to_rating(composite)
-
-
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
-    r3 = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
-    r6_bucket = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
-    r9_bucket = close_frame.shift(LOOKBACKS["6m"]).div(close_frame.shift(189)).sub(1)
-    r12_bucket = close_frame.shift(189).div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
-    return 0.4 * r3 + 0.2 * r6_bucket + 0.2 * r9_bucket + 0.2 * r12_bucket
+    r1w = close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)
+    r1m = close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
+    r3m = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
+    r6m = close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
+    r9m = close_frame.div(close_frame.shift(LOOKBACKS["9m"])).sub(1)
+    r12m = close_frame.div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
+    return 0.10 * r1w + 0.20 * r1m + 0.30 * r3m + 0.20 * r6m + 0.10 * r9m + 0.10 * r12m
 
 
 def compute_return(series: pd.Series, periods: int) -> float | None:
@@ -371,11 +353,7 @@ def build_payload(
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     rs_raw = build_rs_raw(stock_adjusted_close)
-    rs_rating_all_raw = percentile_to_rating(rs_raw)
-    rs_rating_all_smooth = smooth_rating_frame(rs_rating_all_raw)
-    rs_recent_20d_all = build_recent_return_rating(stock_adjusted_close, LOOKBACKS["20d"])
-    rs_recent_10d_all = build_recent_return_rating(stock_adjusted_close, LOOKBACKS["10d"])
-    rs_rating_all = blend_rating_frames(rs_rating_all_smooth, rs_recent_20d_all, rs_recent_10d_all)
+    rs_rating_all = percentile_to_rating(rs_raw)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
@@ -387,12 +365,7 @@ def build_payload(
         if not tickers:
             continue
         subset_raw = rs_raw[tickers]
-        subset_rating_raw = percentile_to_rating(subset_raw)
-        subset_rating_smooth = smooth_rating_frame(subset_rating_raw)
-        subset_close = stock_adjusted_close[tickers]
-        subset_recent_20d = build_recent_return_rating(subset_close, LOOKBACKS["20d"])
-        subset_recent_10d = build_recent_return_rating(subset_close, LOOKBACKS["10d"])
-        rs_ratings_by_universe[key] = blend_rating_frames(subset_rating_smooth, subset_recent_20d, subset_recent_10d)
+        rs_ratings_by_universe[key] = percentile_to_rating(subset_raw)
 
     latest_date = rs_rating_all.dropna(how="all").index.max()
     if pd.isna(latest_date):
@@ -545,7 +518,7 @@ def build_payload(
         },
         "scoring": {
             "label": "IBD-style RS Rating",
-            "description": "12M split into four 3M buckets with a 40/20/20/20 weighting, smoothed over 126 trading days, then blended with 20D and 10D momentum before the final daily 1-99 percentile ranking.",
+            "description": "Weighted relative strength score using 1W 10%, 1M 20%, 3M 30%, 6M 20%, 9M 10%, and 12M 10%, then converted into a daily 1-99 percentile ranking.",
         },
         "rows": rows,
         "histories": histories,
