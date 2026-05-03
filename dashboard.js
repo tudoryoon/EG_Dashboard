@@ -2128,7 +2128,7 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>Daily Market Briefing</h2>
-            <p>AI, 반도체, 클라우드, 크립토 유니버스를 한 화면에서 보고 주요 뉴스와 급등락 원인을 함께 브리핑합니다.</p>
+            <p>주요 지수 흐름, 섹터별 종목 맵, 핵심 뉴스, 급등락 종목 브리핑을 한 화면에서 빠르게 확인합니다.</p>
           </div>
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${briefing.updatedAt ?? "-"}</span>
@@ -2147,7 +2147,7 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>미국 주요 지수</h2>
-            <p>다우, S&P500, 나스닥100, 러셀2000의 최신 레벨과 하루 등락을 먼저 확인합니다.</p>
+            <p>다우, S&amp;P 500, 나스닡 100, 러셀 2000의 최신 레벨과 등락을 바로 확인합니다.</p>
           </div>
         </div>
         <div class="briefing-index-grid">${indexMarkup}</div>
@@ -2157,11 +2157,11 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>전체 맵</h2>
-            <p>finviz처럼 섹터 경계를 먼저 나누고, 각 섹터 안에서 종목 등락을 한눈에 보는 종합 맵입니다.</p>
+            <p>Finviz처럼 섹터 경계를 먼저 나누고, 각 섹터 안 종목의 수익률 흐름을 한눈에 비교합니다.</p>
           </div>
           <div class="briefing-range-chip-row">${briefingRangeChips}</div>
         </div>
-        <p class="briefing-mini-map-caption">Mini map basis: ${selectedBriefingRangeMeta.label} return</p>
+        <p class="briefing-mini-map-caption">Mini map basis: ${selectedBriefingRangeMeta.label} 수익률</p>
         <div class="briefing-total-sector-grid">${combinedSectorMarkup}</div>
       </article>
 
