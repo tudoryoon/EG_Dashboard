@@ -187,7 +187,7 @@ const state = {
   rsUniverse: "all",
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
-  rsFilter: "all",
+  rsFilter: "newHigh",
 };
 
 const charts = [];
