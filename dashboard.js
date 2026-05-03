@@ -408,6 +408,63 @@ function buildRegularDateTickIndexes(labels, rangeKey) {
   return dedupedTicks;
 }
 
+function capDateTickIndexes(labels, indexes, rangeKey, maxCount) {
+  if (!Array.isArray(indexes) || indexes.length <= maxCount) {
+    return indexes;
+  }
+  if (!Number.isFinite(maxCount) || maxCount < 2) {
+    return indexes;
+  }
+
+  const output = [indexes[0]];
+  const interior = indexes.slice(1, -1);
+  const interiorSlots = Math.max(0, maxCount - 2);
+
+  if (interior.length && interiorSlots > 0) {
+    const step = interior.length / interiorSlots;
+    for (let slot = 0; slot < interiorSlots; slot += 1) {
+      const index = interior[Math.min(interior.length - 1, Math.floor(slot * step))];
+      output.push(index);
+    }
+  }
+
+  output.push(indexes[indexes.length - 1]);
+
+  const unique = [...new Set(output)].sort((a, b) => a - b);
+  const deduped = [];
+  let lastLabel = "";
+  unique.forEach((index) => {
+    const label = formatRangeAxisDate(labels[index], rangeKey);
+    if (label && label !== lastLabel) {
+      deduped.push(index);
+      lastLabel = label;
+    }
+  });
+  return deduped;
+}
+
+function getMacroTickIndexes(labels, rangeKey, chartWidth = 0) {
+  const baseIndexes = buildRegularDateTickIndexes(labels, rangeKey);
+  const width = Number(chartWidth) || 0;
+  let maxCount = 7;
+
+  if (width && width < 560) {
+    maxCount = 4;
+  } else if (width && width < 760) {
+    maxCount = 5;
+  } else if (width && width < 980) {
+    maxCount = 6;
+  }
+
+  if (rangeKey === "1m") {
+    maxCount = Math.min(maxCount, 5);
+  } else if (rangeKey === "3m" || rangeKey === "6m") {
+    maxCount = Math.min(maxCount, 6);
+  }
+
+  return capDateTickIndexes(labels, baseIndexes, rangeKey, maxCount);
+}
+
 function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
   if (!dateText || rangeKey === "max") {
     return minStartDate;
@@ -537,7 +594,7 @@ function createRelativePriceChart(canvas, priceData, rangeKey) {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            axis.ticks = buildRegularDateTickIndexes(payload.labels, rangeKey).map((index) => ({ value: index }));
+            axis.ticks = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0).map((index) => ({ value: index }));
           },
           ticks: {
             color: "#8d8d86",
