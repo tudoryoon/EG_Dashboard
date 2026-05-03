@@ -21,8 +21,10 @@ BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
 RS_SMOOTH_WINDOW = 126
+RS_BLEND_BASE_WEIGHT = 0.85
+RS_BLEND_20D_WEIGHT = 0.10
+RS_BLEND_10D_WEIGHT = 0.05
 LOOKBACKS = {
-    "1w": 5,
     "10d": 10,
     "20d": 20,
     "1m": 21,
@@ -272,12 +274,30 @@ def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     return rating.round().clip(lower=1, upper=99)
 
 
+def smooth_rating_frame(frame: pd.DataFrame, window: int = RS_SMOOTH_WINDOW) -> pd.DataFrame:
+    smoothed = frame.rolling(window, min_periods=1).mean()
+    return percentile_to_rating(smoothed)
+
+
+def build_recent_return_rating(close_frame: pd.DataFrame, periods: int) -> pd.DataFrame:
+    return percentile_to_rating(close_frame.div(close_frame.shift(periods)).sub(1))
+
+
+def blend_rating_frames(base: pd.DataFrame, recent_20d: pd.DataFrame, recent_10d: pd.DataFrame) -> pd.DataFrame:
+    composite = (
+        RS_BLEND_BASE_WEIGHT * base.astype(float)
+        + RS_BLEND_20D_WEIGHT * recent_20d.astype(float)
+        + RS_BLEND_10D_WEIGHT * recent_10d.astype(float)
+    )
+    return percentile_to_rating(composite)
+
+
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
-    r1w = close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)
-    r1m = close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
-    r3m = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
-    r6m = close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
-    return 0.2 * r1w + 0.4 * r1m + 0.2 * r3m + 0.2 * r6m
+    r3 = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
+    r6_bucket = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
+    r9_bucket = close_frame.shift(LOOKBACKS["6m"]).div(close_frame.shift(189)).sub(1)
+    r12_bucket = close_frame.shift(189).div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
+    return 0.4 * r3 + 0.2 * r6_bucket + 0.2 * r9_bucket + 0.2 * r12_bucket
 
 
 def compute_return(series: pd.Series, periods: int) -> float | None:
@@ -324,7 +344,11 @@ def build_payload(
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     rs_raw = build_rs_raw(stock_adjusted_close)
-    rs_rating_all = percentile_to_rating(rs_raw)
+    rs_rating_all_raw = percentile_to_rating(rs_raw)
+    rs_rating_all_smooth = smooth_rating_frame(rs_rating_all_raw)
+    rs_recent_20d_all = build_recent_return_rating(stock_adjusted_close, LOOKBACKS["20d"])
+    rs_recent_10d_all = build_recent_return_rating(stock_adjusted_close, LOOKBACKS["10d"])
+    rs_rating_all = blend_rating_frames(rs_rating_all_smooth, rs_recent_20d_all, rs_recent_10d_all)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
@@ -336,7 +360,12 @@ def build_payload(
         if not tickers:
             continue
         subset_raw = rs_raw[tickers]
-        rs_ratings_by_universe[key] = percentile_to_rating(subset_raw)
+        subset_rating_raw = percentile_to_rating(subset_raw)
+        subset_rating_smooth = smooth_rating_frame(subset_rating_raw)
+        subset_close = stock_adjusted_close[tickers]
+        subset_recent_20d = build_recent_return_rating(subset_close, LOOKBACKS["20d"])
+        subset_recent_10d = build_recent_return_rating(subset_close, LOOKBACKS["10d"])
+        rs_ratings_by_universe[key] = blend_rating_frames(subset_rating_smooth, subset_recent_20d, subset_recent_10d)
 
     latest_date = rs_rating_all.dropna(how="all").index.max()
     if pd.isna(latest_date):
@@ -361,7 +390,7 @@ def build_payload(
 
         performance_series = stock_adjusted_close[ticker].dropna()
         raw_price_series = stock_raw_close[ticker].dropna()
-        if len(performance_series) <= LOOKBACKS["6m"]:
+        if len(performance_series) <= LOOKBACKS["12m"]:
             continue
 
         current_price = float(raw_price_series.reindex([latest_date]).iloc[0])
@@ -445,8 +474,8 @@ def build_payload(
             "russell2000": {"label": "Russell 2000", "color": COLOR_BY_UNIVERSE["russell2000"]},
         },
         "scoring": {
-            "label": "6M Weighted RS Rating",
-            "description": "6M RS proxy with 1W/1M/3M/6M returns weighted 20/40/20/20, then ranked into a daily 1-99 percentile score across the universe.",
+            "label": "IBD-style RS Rating",
+            "description": "12M split into four 3M buckets with a 40/20/20/20 weighting, smoothed over 126 trading days, then blended with 20D and 10D momentum before the final daily 1-99 percentile ranking.",
         },
         "rows": rows,
         "histories": histories,
