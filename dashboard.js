@@ -2590,7 +2590,6 @@ function renderMarketRsOverview() {
     })
     .join("");
   const tableRows = tableSortRows
-    .slice(0, 120)
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
       return `

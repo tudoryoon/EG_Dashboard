@@ -1802,6 +1802,10 @@ h1 {
 .market-rs-table-wrap {
   margin-top: 14px;
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 960px;
+  border: 1px solid #ecece7;
+  border-radius: 16px;
 }
 
 .market-rs-table {
@@ -1819,6 +1823,10 @@ h1 {
 }
 
 .market-rs-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(252, 252, 249, 0.98);
   color: #66665f;
   font-size: 0.84rem;
   text-transform: uppercase;
