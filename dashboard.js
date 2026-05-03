@@ -1969,6 +1969,31 @@ function renderMarketBriefingOverview() {
     })
     .join("");
 
+  const combinedItems = (briefing.sectorPanels ?? [])
+    .flatMap((sector) => sector.items ?? [])
+    .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0));
+
+  const combinedTiles = combinedItems
+    .map((item, index) => {
+      const changeClass = Number(item.dayChangePct) > 0 ? "is-up" : Number(item.dayChangePct) < 0 ? "is-down" : "";
+      const combinedClass =
+        index === 0 ? "xl" : index <= 3 ? "lg" : index <= 11 ? "md" : "sm";
+      return `
+        <article
+          class="briefing-tile ${combinedClass} ${changeClass}"
+          style="background:${item.mapColor ?? "#f3f4f6"}"
+          title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
+        >
+          <span class="briefing-tile-sector">${item.sectorLabel}</span>
+          <span class="briefing-tile-ticker">${item.label}</span>
+          <strong class="briefing-tile-name">${item.name}</strong>
+          <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
+          <span class="briefing-tile-change">${formatSignedPercent(item.dayChangePct)}</span>
+        </article>
+      `;
+    })
+    .join("");
+
   const newsMarkup = (briefing.majorNews ?? [])
     .map(
       (item) => `
@@ -2030,6 +2055,16 @@ function renderMarketBriefingOverview() {
           <span>${briefing.mapLegend?.negative ?? ""}</span>
           <span>${briefing.mapLegend?.size ?? ""}</span>
         </div>
+      </article>
+
+      <article class="us-panel briefing-total-map-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>전체 맵</h2>
+            <p>섹터를 나누기 전에 전체 유니버스를 시총 순으로 한 번에 보는 요약 맵입니다.</p>
+          </div>
+        </div>
+        <div class="briefing-heatmap-grid briefing-heatmap-grid-total">${combinedTiles}</div>
       </article>
 
       <section class="briefing-sector-stack">
