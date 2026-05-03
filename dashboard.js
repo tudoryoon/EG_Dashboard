@@ -975,6 +975,9 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
     yMax = maxValue + padding;
   }
 
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
@@ -1009,13 +1012,18 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            axis.ticks = buildRegularDateTickIndexes(payload.labels, rangeKey).map((index) => ({ value: index }));
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
           },
           ticks: {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
+            callback: (value) => {
+              if (!selectedTickSet.has(value)) {
+                return "";
+              }
+              return formatRangeAxisDate(payload.labels[value], rangeKey);
+            },
           },
           border: { color: "#d8d8d2" },
         },
