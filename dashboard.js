@@ -1985,6 +1985,28 @@ function getBriefingOverviewSizeClass(items, item) {
   return "cap-sm";
 }
 
+function getBriefingSectorSizeClass(sectors, sector) {
+  const totals = (sectors ?? []).map(
+    (entry) => (entry.items ?? []).reduce((sum, item) => sum + (Number(item.marketCapUsd) || 0), 0),
+  );
+  const maxTotal = Math.max(...totals, 0);
+  const sectorTotal = (sector?.items ?? []).reduce((sum, item) => sum + (Number(item.marketCapUsd) || 0), 0);
+  if (maxTotal <= 0 || sectorTotal <= 0) {
+    return "sector-sm";
+  }
+  const ratio = sectorTotal / maxTotal;
+  if (ratio >= 0.7) {
+    return "sector-xl";
+  }
+  if (ratio >= 0.35) {
+    return "sector-lg";
+  }
+  if (ratio >= 0.14) {
+    return "sector-md";
+  }
+  return "sector-sm";
+}
+
 function renderMarketBriefingOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -2045,6 +2067,7 @@ function renderMarketBriefingOverview() {
 
   const combinedSectorMarkup = (briefing.sectorPanels ?? [])
     .map((sector) => {
+      const sectorSizeClass = getBriefingSectorSizeClass(briefing.sectorPanels ?? [], sector);
       const sectorTiles = (sector.items ?? [])
         .slice()
         .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0))
@@ -2060,13 +2083,15 @@ function renderMarketBriefingOverview() {
             >
               <span class="briefing-tile-ticker">${item.label}</span>
               <span class="briefing-tile-change">${formatSignedPercent(overviewChange)}</span>
+              <span class="briefing-tile-price">${formatBriefingPrice(item)}</span>
+              <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
             </article>
           `;
         })
         .join("");
 
       return `
-        <section class="briefing-total-sector-block">
+        <section class="briefing-total-sector-block ${sectorSizeClass}">
           <div class="briefing-total-sector-head">
             <strong>${sector.label}</strong>
             <span>${(sector.items ?? []).length}개</span>

@@ -350,7 +350,9 @@ h1 {
 
 .briefing-total-sector-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  grid-auto-rows: 28px;
   gap: 6px;
 }
 
@@ -360,11 +362,34 @@ h1 {
 }
 
 .briefing-total-sector-block {
-  border: 1px solid #d2d2cb;
+  grid-column: span 2;
+  grid-row: span 3;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: linear-gradient(180deg, #edede8, #e3e3dc);
-  padding: 4px 5px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  background: linear-gradient(180deg, #282a2f, #1f2126);
+  padding: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.briefing-total-sector-block.sector-xl {
+  grid-column: span 4;
+  grid-row: span 5;
+}
+
+.briefing-total-sector-block.sector-lg {
+  grid-column: span 3;
+  grid-row: span 4;
+}
+
+.briefing-total-sector-block.sector-md {
+  grid-column: span 3;
+  grid-row: span 3;
+}
+
+.briefing-total-sector-block.sector-sm {
+  grid-column: span 2;
+  grid-row: span 3;
 }
 
 .briefing-total-sector-head {
@@ -373,16 +398,21 @@ h1 {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
+  padding: 2px 3px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .briefing-total-sector-head strong {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   line-height: 1.1;
+  color: rgba(255, 255, 255, 0.96);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .briefing-total-sector-head span {
-  font-size: 0.58rem;
-  color: var(--muted);
+  font-size: 0.55rem;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .briefing-heatmap-grid {
@@ -494,31 +524,49 @@ h1 {
 .briefing-heatmap-grid-total-sector {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 3px;
+  grid-auto-flow: dense;
+  grid-auto-rows: 18px;
 }
 
 .briefing-tile-overview {
   min-height: 0;
-  aspect-ratio: 2.25 / 1;
-  border-radius: 6px;
-  padding: 2px 4px;
-  gap: 2px;
-  justify-content: center;
+  aspect-ratio: auto;
+  border-radius: 4px;
+  padding: 3px 4px;
+  gap: 1px;
+  justify-content: flex-start;
   align-items: flex-start;
-  border-color: rgba(28, 28, 26, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
 }
 
 .briefing-tile-overview .briefing-tile-ticker {
-  font-size: 0.46rem;
+  font-size: 0.52rem;
   line-height: 1;
-  color: rgba(28, 28, 26, 0.82);
+  color: #ffffff;
   white-space: nowrap;
+  font-weight: 700;
 }
 
 .briefing-tile-overview .briefing-tile-change {
-  font-size: 0.54rem;
+  font-size: 0.58rem;
   line-height: 1;
-  color: rgba(28, 28, 26, 0.84);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.briefing-tile-overview.is-up .briefing-tile-change,
+.briefing-tile-overview.is-down .briefing-tile-change {
+  color: #ffffff;
+}
+
+.briefing-tile-overview .briefing-tile-price,
+.briefing-tile-overview .briefing-tile-cap {
+  font-size: 0.44rem;
+  line-height: 1.05;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
 }
 
 .briefing-range-chip-row {
@@ -540,19 +588,23 @@ h1 {
 }
 
 .briefing-heatmap-grid-total-sector .briefing-tile.cap-xl {
-  grid-column: span 4;
+  grid-column: span 6;
+  grid-row: span 4;
 }
 
 .briefing-heatmap-grid-total-sector .briefing-tile.cap-lg {
-  grid-column: span 3;
+  grid-column: span 4;
+  grid-row: span 3;
 }
 
 .briefing-heatmap-grid-total-sector .briefing-tile.cap-md {
-  grid-column: span 2;
+  grid-column: span 3;
+  grid-row: span 2;
 }
 
 .briefing-heatmap-grid-total-sector .briefing-tile.cap-sm {
   grid-column: span 2;
+  grid-row: span 2;
 }
 
 .briefing-news-grid,
@@ -1922,7 +1974,8 @@ h1 {
   }
 
   .briefing-total-sector-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-auto-rows: 24px;
   }
 
   .briefing-heatmap-grid-total {
@@ -1993,7 +2046,8 @@ h1 {
   }
 
   .briefing-total-sector-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 22px;
   }
 
   .briefing-heatmap-grid-total {
@@ -2002,6 +2056,7 @@ h1 {
 
   .briefing-heatmap-grid-total-sector {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-rows: 16px;
   }
 
   .briefing-tile.xl,
