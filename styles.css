@@ -525,7 +525,7 @@ h1 {
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 3px;
   grid-auto-flow: dense;
-  grid-auto-rows: 18px;
+  grid-auto-rows: 20px;
 }
 
 .briefing-tile-overview {
@@ -567,6 +567,7 @@ h1 {
   color: rgba(28, 32, 36, 0.82);
   white-space: nowrap;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+  display: none;
 }
 
 .briefing-tile-tooltip {
@@ -644,6 +645,13 @@ h1 {
 .briefing-heatmap-grid-total-sector .briefing-tile.cap-sm {
   grid-column: span 2;
   grid-row: span 2;
+}
+
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-xl .briefing-tile-price,
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-xl .briefing-tile-cap,
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-lg .briefing-tile-price,
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-lg .briefing-tile-cap {
+  display: block;
 }
 
 .briefing-news-grid,

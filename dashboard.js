@@ -2087,9 +2087,9 @@ function renderMarketBriefingOverview() {
               <div class="briefing-tile-tooltip">
                 <strong>${item.name}</strong>
                 <span>${sector.label}</span>
-                <span>${selectedBriefingRangeMeta.label} 수익률 ${formatSignedPercent(overviewChange)}</span>
-                <span>가격 ${formatBriefingPrice(item)}</span>
-                <span>시총 ${formatMarketCapCompact(item.marketCapUsd)}</span>
+                <span>${selectedBriefingRangeMeta.label} return ${formatSignedPercent(overviewChange)}</span>
+                <span>Price ${formatBriefingPrice(item)}</span>
+                <span>Market cap ${formatMarketCapCompact(item.marketCapUsd)}</span>
               </div>
             </article>
           `;
@@ -2100,7 +2100,7 @@ function renderMarketBriefingOverview() {
         <section class="briefing-total-sector-block ${sectorSizeClass}">
           <div class="briefing-total-sector-head">
             <strong>${sector.label}</strong>
-            <span>${(sector.items ?? []).length}개</span>
+            <span>${(sector.items ?? []).length} names</span>
           </div>
           <div class="briefing-heatmap-grid briefing-heatmap-grid-total-sector">${sectorTiles}</div>
         </section>
