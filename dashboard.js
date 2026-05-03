@@ -1979,9 +1979,41 @@ function renderMarketBriefingOverview() {
     })
     .join("");
 
-  const combinedItems = (briefing.sectorPanels ?? [])
-    .flatMap((sector) => sector.items ?? [])
-    .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0));
+  const combinedSectorMarkup = (briefing.sectorPanels ?? [])
+    .map((sector) => {
+      const sectorTiles = (sector.items ?? [])
+        .slice()
+        .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0))
+        .map((item, index) => {
+          const changeClass = Number(item.dayChangePct) > 0 ? "is-up" : Number(item.dayChangePct) < 0 ? "is-down" : "";
+          const combinedClass =
+            index === 0 ? "xl" : index <= 2 ? "lg" : index <= 7 ? "md" : "sm";
+          return `
+            <article
+              class="briefing-tile ${combinedClass} ${changeClass}"
+              style="background:${item.mapColor ?? "#f3f4f6"}"
+              title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
+            >
+              <span class="briefing-tile-ticker">${item.label}</span>
+              <strong class="briefing-tile-name">${item.name}</strong>
+              <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
+              <span class="briefing-tile-change">${formatSignedPercent(item.dayChangePct)}</span>
+            </article>
+          `;
+        })
+        .join("");
+
+      return `
+        <section class="briefing-total-sector-block">
+          <div class="briefing-total-sector-head">
+            <strong>${sector.label}</strong>
+            <span>${(sector.items ?? []).length} names</span>
+          </div>
+          <div class="briefing-heatmap-grid briefing-heatmap-grid-total-sector">${sectorTiles}</div>
+        </section>
+      `;
+    })
+    .join("");
 
   const briefingIndexConfigs = [
     { key: "dowjones", label: "Dow Jones" },
@@ -2018,27 +2050,6 @@ function renderMarketBriefingOverview() {
             <span class="briefing-index-change">${formatSignedPercent(dayChangePct)}</span>
             <span class="briefing-index-caption">1D change</span>
           </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  const combinedTiles = combinedItems
-    .map((item, index) => {
-      const changeClass = Number(item.dayChangePct) > 0 ? "is-up" : Number(item.dayChangePct) < 0 ? "is-down" : "";
-      const combinedClass =
-        index === 0 ? "xl" : index <= 3 ? "lg" : index <= 11 ? "md" : "sm";
-      return `
-        <article
-          class="briefing-tile ${combinedClass} ${changeClass}"
-          style="background:${item.mapColor ?? "#f3f4f6"}"
-          title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
-        >
-          <span class="briefing-tile-sector">${item.sectorLabel}</span>
-          <span class="briefing-tile-ticker">${item.label}</span>
-          <strong class="briefing-tile-name">${item.name}</strong>
-          <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
-          <span class="briefing-tile-change">${formatSignedPercent(item.dayChangePct)}</span>
         </article>
       `;
     })
@@ -2121,10 +2132,10 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>전체 맵</h2>
-            <p>섹터를 나누기 전에 전체 유니버스를 시총 순으로 한 번에 보는 요약 맵입니다.</p>
+            <p>finviz처럼 섹터 경계를 먼저 나누고, 각 섹터 안에서 종목 등락을 한눈에 보는 종합 맵입니다.</p>
           </div>
         </div>
-        <div class="briefing-heatmap-grid briefing-heatmap-grid-total">${combinedTiles}</div>
+        <div class="briefing-total-sector-grid">${combinedSectorMarkup}</div>
       </article>
 
       <section class="briefing-sector-stack">
