@@ -52,6 +52,7 @@ const gpuCloudRuntime = {
 };
 
 const primaryTabMeta = {
+  DailyBriefing: { label: "Daily Briefing" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
@@ -67,7 +68,6 @@ const bigTechSubtabMeta = {
 
 const marketSubtabMeta = {
   Overview: { label: "Overview" },
-  Briefing: { label: "Briefing" },
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
 };
@@ -1845,6 +1845,19 @@ function formatBriefingPrice(item) {
   return formatUsStockPrice(item.price);
 }
 
+function formatMoverBriefingKorean(item) {
+  if (!item) {
+    return "";
+  }
+  const directionWord = Number(item.dayChangePct) >= 0 ? "상승" : "하락";
+  const moveText = formatSignedPercent(item.dayChangePct);
+  const sourceText = item.source ? `${item.source} 보도 기준` : "관련 뉴스 기준";
+  if (item.headline) {
+    return `${item.label}는 오늘 ${moveText} ${directionWord}했습니다. ${sourceText} 주요 재료는 "${item.headline}" 입니다.`;
+  }
+  return `${item.label}는 오늘 ${moveText} ${directionWord}했습니다. 아직 연결된 핵심 헤드라인을 찾지 못했습니다.`;
+}
+
 function formatSignedPercent(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -1929,6 +1942,7 @@ function renderMarketBriefingOverview() {
             </div>
           </div>
           <p class="briefing-mover-cap">Market Cap ${formatMarketCapCompact(item.marketCapUsd)}</p>
+          <p class="briefing-mover-brief">${formatMoverBriefingKorean(item)}</p>
           <p class="briefing-mover-headline">${item.headline || "관련 뉴스 헤드라인을 아직 찾지 못했습니다."}</p>
           <div class="briefing-news-meta">
             <span>${item.source || "Source"}</span>
@@ -1946,7 +1960,7 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>Daily Market Briefing</h2>
-            <p>Heatmap snapshot for the curated AI, semi, cloud, and crypto universe with daily market-moving headlines.</p>
+            <p>AI, 반도체, 클라우드, 크립토 유니버스를 한 화면에서 보고 주요 뉴스와 급등락 원인을 함께 브리핑합니다.</p>
           </div>
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${briefing.updatedAt ?? "-"}</span>
@@ -1969,8 +1983,8 @@ function renderMarketBriefingOverview() {
         <article class="us-panel">
           <div class="us-section-head">
             <div>
-              <h2>Market-moving Headlines</h2>
-              <p>3-5 macro and sector stories most likely to shape today's tape.</p>
+              <h2>주요 뉴스</h2>
+              <p>오늘 시장 흐름에 영향을 줄 만한 3~5개 핵심 헤드라인입니다.</p>
             </div>
           </div>
           <div class="briefing-news-grid">${newsMarkup || '<p class="market-rs-empty">뉴스를 아직 불러오지 못했습니다.</p>'}</div>
@@ -1979,8 +1993,8 @@ function renderMarketBriefingOverview() {
         <article class="us-panel">
           <div class="us-section-head">
             <div>
-              <h2>Mover Briefing</h2>
-              <p>Largest daily movers in the map with a likely headline catalyst.</p>
+              <h2>종목 브리핑</h2>
+              <p>맵 안에서 크게 움직인 종목과 연결된 재료를 한글 문장으로 정리했습니다.</p>
             </div>
           </div>
           <div class="briefing-mover-grid">${moversMarkup || '<p class="market-rs-empty">급등락 종목 브리핑을 아직 불러오지 못했습니다.</p>'}</div>
@@ -4432,10 +4446,6 @@ function renderSummary(list) {
       summaryText.textContent = "Daily market and macro dashboard";
       return;
     }
-    if (state.marketView === "Briefing") {
-      summaryText.textContent = "Daily market briefing with curated heatmap, key headlines, and mover catalysts";
-      return;
-    }
     if (state.marketView === "Breadth") {
       summaryText.textContent = "Daily market breadth dashboard workspace";
       return;
@@ -4464,6 +4474,11 @@ function renderSummary(list) {
 
   if (state.tab === "Semis") {
     summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "GPU rental price dashboard workspace";
+    return;
+  }
+
+  if (state.tab === "DailyBriefing") {
+    summaryText.textContent = "Daily market briefing with curated heatmap, key headlines, and Korean mover notes";
     return;
   }
 
@@ -4582,6 +4597,12 @@ function render() {
     return;
   }
 
+  if (state.tab === "DailyBriefing") {
+    renderSummary([]);
+    renderMarketBriefingOverview();
+    return;
+  }
+
   if (state.tab === "Semis") {
     renderSummary([]);
     if (state.semisView === "MemorySpot") {
@@ -4606,10 +4627,6 @@ function render() {
     renderSummary([]);
     if (state.marketView === "Overview") {
       renderMarketOverview();
-      return;
-    }
-    if (state.marketView === "Briefing") {
-      renderMarketBriefingOverview();
       return;
     }
     if (state.marketView === "Breadth") {
