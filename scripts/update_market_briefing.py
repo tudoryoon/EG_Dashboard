@@ -16,9 +16,26 @@ import yfinance as yf
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-data.js"
 USER_AGENT = {"User-Agent": "Mozilla/5.0"}
-PRICE_PERIOD = "10d"
+PRICE_PERIOD = "2y"
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT"]
 USD_PER_KRW_SYMBOL = "KRW=X"
+MAP_RANGE_PERIODS = {
+    "1d": 1,
+    "1w": 5,
+    "1m": 21,
+    "3m": 63,
+    "6m": 126,
+    "1y": 252,
+}
+MAP_RANGE_LABELS = {
+    "1d": "1D",
+    "1w": "1W",
+    "1m": "1M",
+    "3m": "3M",
+    "6m": "6M",
+    "1y": "1Y",
+    "ytd": "YTD",
+}
 
 SECTOR_GROUPS = [
     {
@@ -515,6 +532,32 @@ def tile_class_for_rank(rank: int) -> str:
     return "sm"
 
 
+def compute_period_return(series: pd.Series, periods: int) -> float | None:
+    if len(series) <= periods:
+        return None
+    current = normalize_number(series.iloc[-1])
+    base = normalize_number(series.iloc[-(periods + 1)])
+    if current is None or base is None or base == 0:
+        return None
+    return round((current / base - 1) * 100, 2)
+
+
+def compute_ytd_return(series: pd.Series) -> float | None:
+    if series.empty:
+        return None
+    current = normalize_number(series.iloc[-1])
+    if current is None:
+        return None
+    current_year = int(series.index[-1].year)
+    ytd_series = series[series.index.year == current_year]
+    if ytd_series.empty:
+        return None
+    base = normalize_number(ytd_series.iloc[0])
+    if base is None or base == 0:
+        return None
+    return round((current / base - 1) * 100, 2)
+
+
 def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str]:
     companies = [item | {"sectorKey": sector["key"], "sectorLabel": sector["label"]} for sector in SECTOR_GROUPS for item in sector["items"]]
     symbols = sorted({company["ticker"] for company in companies} | set(BENCHMARK_SYMBOLS) | {USD_PER_KRW_SYMBOL})
@@ -538,11 +581,16 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         symbol = company["ticker"]
         series = close_frame[symbol].dropna() if symbol in close_frame.columns else pd.Series(dtype=float)
         price = previous_close = day_change_pct = None
+        range_returns = {key: None for key in MAP_RANGE_LABELS}
         if len(series) >= 2:
             price = float(series.iloc[-1])
             previous_close = float(series.iloc[-2])
             if previous_close:
                 day_change_pct = round((price / previous_close - 1) * 100, 2)
+        if not series.empty:
+            range_returns.update({key: compute_period_return(series, periods) for key, periods in MAP_RANGE_PERIODS.items()})
+            range_returns["1d"] = day_change_pct
+            range_returns["ytd"] = compute_ytd_return(series)
         meta = meta_by_symbol.get(symbol, {})
         market_cap = normalize_number(meta.get("marketCap"))
         market_cap_usd = market_cap
@@ -557,6 +605,8 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
             "marketCap": round(market_cap) if market_cap is not None else None,
             "marketCapUsd": round(market_cap_usd) if market_cap_usd is not None else None,
             "mapColor": color_for_change(day_change_pct),
+            "overviewReturns": range_returns,
+            "overviewColors": {key: color_for_change(value) for key, value in range_returns.items()},
         }
         snapshots.append(snapshot)
         by_ticker[symbol] = snapshot
@@ -650,6 +700,7 @@ def build_payload() -> dict[str, object]:
             "positive": "Green = daily gain",
             "size": "Tile size follows market-cap rank inside each sector",
         },
+        "mapRanges": [{"key": key, "label": label} for key, label in MAP_RANGE_LABELS.items()],
         "sectorPanels": sector_panels,
         "majorNews": major_news,
         "movers": movers,

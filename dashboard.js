@@ -185,6 +185,7 @@ const state = {
   ],
   totalDashboardCustomStart: "",
   totalDashboardCustomEnd: "",
+  briefingMapRange: "1d",
   rsUniverse: "all",
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
@@ -1926,6 +1927,26 @@ function formatBriefingIndexValue(value) {
   });
 }
 
+function getBriefingMapRangeMeta(rangeKey) {
+  const fallback = { key: "1d", label: "1D" };
+  const ranges = window.marketBriefingData?.mapRanges ?? [];
+  return ranges.find((range) => range.key === rangeKey) ?? fallback;
+}
+
+function getBriefingOverviewReturn(item, rangeKey) {
+  if (!item) {
+    return null;
+  }
+  return item.overviewReturns?.[rangeKey] ?? item.dayChangePct ?? null;
+}
+
+function getBriefingOverviewColor(item, rangeKey) {
+  if (!item) {
+    return "#f3f4f6";
+  }
+  return item.overviewColors?.[rangeKey] ?? item.mapColor ?? "#f3f4f6";
+}
+
 function renderMarketBriefingOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -1936,6 +1957,19 @@ function renderMarketBriefingOverview() {
     renderPlaceholderOverview("Daily Market Briefing", "브리핑 데이터가 아직 준비되지 않았습니다.");
     return;
   }
+
+  const selectedBriefingRangeMeta = getBriefingMapRangeMeta(state.briefingMapRange);
+  const briefingRangeChips = (briefing.mapRanges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="market-rs-chip briefing-range-chip${state.briefingMapRange === range.key ? " active" : ""}"
+          data-briefing-range="${range.key}"
+        >${range.label}</button>
+      `,
+    )
+    .join("");
 
   const sectorPanels = (briefing.sectorPanels ?? [])
     .map((sector) => {
@@ -1977,17 +2011,18 @@ function renderMarketBriefingOverview() {
         .slice()
         .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0))
         .map((item, index) => {
-          const changeClass = Number(item.dayChangePct) > 0 ? "is-up" : Number(item.dayChangePct) < 0 ? "is-down" : "";
+          const overviewChange = getBriefingOverviewReturn(item, state.briefingMapRange);
+          const changeClass = Number(overviewChange) > 0 ? "is-up" : Number(overviewChange) < 0 ? "is-down" : "";
           const combinedClass =
             index === 0 ? "xl" : index <= 2 ? "lg" : index <= 7 ? "md" : "sm";
           return `
             <article
               class="briefing-tile briefing-tile-overview ${combinedClass} ${changeClass}"
-              style="background:${item.mapColor ?? "#f3f4f6"}"
-              title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
+              style="background:${getBriefingOverviewColor(item, state.briefingMapRange)}"
+              title="${item.name} / ${selectedBriefingRangeMeta.label} ${formatSignedPercent(overviewChange)}"
             >
               <span class="briefing-tile-ticker">${item.label}</span>
-              <span class="briefing-tile-change">${formatSignedPercent(item.dayChangePct)}</span>
+              <span class="briefing-tile-change">${formatSignedPercent(overviewChange)}</span>
             </article>
           `;
         })
@@ -2124,7 +2159,9 @@ function renderMarketBriefingOverview() {
             <h2>전체 맵</h2>
             <p>finviz처럼 섹터 경계를 먼저 나누고, 각 섹터 안에서 종목 등락을 한눈에 보는 종합 맵입니다.</p>
           </div>
+          <div class="briefing-range-chip-row">${briefingRangeChips}</div>
         </div>
+        <p class="briefing-mini-map-caption">Mini map basis: ${selectedBriefingRangeMeta.label} return</p>
         <div class="briefing-total-sector-grid">${combinedSectorMarkup}</div>
       </article>
 
@@ -2155,6 +2192,13 @@ function renderMarketBriefingOverview() {
       </section>
     </section>
   `;
+
+  usOverviewRoot.querySelectorAll("[data-briefing-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingMapRange = button.dataset.briefingRange;
+      render();
+    });
+  });
 }
 
 function formatRsNumber(value, digits = 0) {
