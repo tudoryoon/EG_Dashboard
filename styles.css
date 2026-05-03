@@ -280,6 +280,61 @@ h1 {
   font-size: 1.02rem;
 }
 
+.briefing-index-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.briefing-index-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fcfcfa;
+  padding: 15px 16px;
+}
+
+.briefing-index-head,
+.briefing-index-change-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.briefing-index-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #44443e;
+}
+
+.briefing-index-date,
+.briefing-index-caption {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.briefing-index-value {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.briefing-index-change {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.briefing-index-card.is-up .briefing-index-change {
+  color: #15803d;
+}
+
+.briefing-index-card.is-down .briefing-index-change {
+  color: #b42318;
+}
+
 .briefing-heatmap-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1740,6 +1795,10 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .briefing-index-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .briefing-heatmap-grid-total {
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
@@ -1801,6 +1860,10 @@ h1 {
 
   .briefing-heatmap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .briefing-index-grid {
+    grid-template-columns: 1fr;
   }
 
   .briefing-heatmap-grid-total {

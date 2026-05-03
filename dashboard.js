@@ -1924,6 +1924,16 @@ function formatSignedPercent(value) {
   return `${sign}${numeric.toFixed(2)}%`;
 }
 
+function formatBriefingIndexValue(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return Number(value).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 function renderMarketBriefingOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -1972,6 +1982,46 @@ function renderMarketBriefingOverview() {
   const combinedItems = (briefing.sectorPanels ?? [])
     .flatMap((sector) => sector.items ?? [])
     .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0));
+
+  const briefingIndexConfigs = [
+    { key: "dowjones", label: "Dow Jones" },
+    { key: "sp500", label: "S&P 500" },
+    { key: "nasdaq100", label: "NASDAQ 100" },
+    { key: "russell2000", label: "Russell 2000" },
+  ];
+
+  const indexMarkup = briefingIndexConfigs
+    .map(({ key, label }) => {
+      const item = window.marketPriceData?.items?.[key];
+      const dates = item?.dates ?? [];
+      const values = item?.values ?? [];
+      const latestValue = values.at(-1);
+      const previousValue = values.at(-2);
+      const latestDate = dates.at(-1);
+      const dayChangePct =
+        Number.isFinite(Number(latestValue)) &&
+        Number.isFinite(Number(previousValue)) &&
+        Number(previousValue) !== 0
+          ? ((Number(latestValue) - Number(previousValue)) / Number(previousValue)) * 100
+          : null;
+      const changeClass =
+        Number(dayChangePct) > 0 ? "is-up" : Number(dayChangePct) < 0 ? "is-down" : "";
+
+      return `
+        <article class="briefing-index-card ${changeClass}">
+          <div class="briefing-index-head">
+            <span class="briefing-index-label">${label}</span>
+            <span class="briefing-index-date">${formatShortIsoDate(latestDate)}</span>
+          </div>
+          <strong class="briefing-index-value">${formatBriefingIndexValue(latestValue)}</strong>
+          <div class="briefing-index-change-row">
+            <span class="briefing-index-change">${formatSignedPercent(dayChangePct)}</span>
+            <span class="briefing-index-caption">1D change</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
 
   const combinedTiles = combinedItems
     .map((item, index) => {
@@ -2055,6 +2105,16 @@ function renderMarketBriefingOverview() {
           <span>${briefing.mapLegend?.negative ?? ""}</span>
           <span>${briefing.mapLegend?.size ?? ""}</span>
         </div>
+      </article>
+
+      <article class="us-panel briefing-index-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>미국 주요 지수</h2>
+            <p>다우, S&P500, 나스닥100, 러셀2000의 최신 레벨과 하루 등락을 먼저 확인합니다.</p>
+          </div>
+        </div>
+        <div class="briefing-index-grid">${indexMarkup}</div>
       </article>
 
       <article class="us-panel briefing-total-map-panel">
