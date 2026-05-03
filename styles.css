@@ -337,15 +337,15 @@ h1 {
 
 .briefing-total-sector-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .briefing-total-sector-block {
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: #fcfcfa;
-  padding: 14px;
+  padding: 10px;
 }
 
 .briefing-total-sector-head {
@@ -353,15 +353,15 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .briefing-total-sector-head strong {
-  font-size: 0.96rem;
+  font-size: 0.88rem;
 }
 
 .briefing-total-sector-head span {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -472,17 +472,28 @@ h1 {
 }
 
 .briefing-heatmap-grid-total-sector {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
 }
 
-.briefing-heatmap-grid-total-sector .briefing-tile.xl {
-  grid-column: span 4;
+.briefing-tile-overview {
+  min-height: 52px;
+  border-radius: 10px;
+  padding: 7px 8px;
+  gap: 6px;
 }
 
-.briefing-heatmap-grid-total-sector .briefing-tile.lg {
-  grid-column: span 4;
+.briefing-tile-overview .briefing-tile-ticker {
+  font-size: 0.68rem;
+  color: rgba(28, 28, 26, 0.78);
 }
 
+.briefing-tile-overview .briefing-tile-change {
+  font-size: 0.82rem;
+}
+
+.briefing-heatmap-grid-total-sector .briefing-tile.xl,
+.briefing-heatmap-grid-total-sector .briefing-tile.lg,
 .briefing-heatmap-grid-total-sector .briefing-tile.md,
 .briefing-heatmap-grid-total-sector .briefing-tile.sm {
   grid-column: span 2;
@@ -1847,7 +1858,7 @@ h1 {
   }
 
   .briefing-total-sector-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .briefing-heatmap-grid-total {

@@ -111,7 +111,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "sw_platform",
-        "label": "S/W Platform",
+        "label": "S/W 플랫폼",
         "items": [
             {"ticker": "PLTR", "label": "PLTR US", "name": "Palantir", "query": "Palantir stock"},
             {"ticker": "IBM", "label": "IBM US", "name": "IBM", "query": "IBM stock"},
@@ -124,7 +124,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "legacy_software",
-        "label": "Traditional S/W",
+        "label": "전통 S/W",
         "items": [
             {"ticker": "CRM", "label": "CRM US", "name": "Salesforce", "query": "Salesforce stock"},
             {"ticker": "NOW", "label": "NOW US", "name": "ServiceNow", "query": "ServiceNow stock"},
@@ -133,7 +133,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "cybersecurity",
-        "label": "Cybersecurity",
+        "label": "사이버보안",
         "items": [
             {"ticker": "NET", "label": "NET US", "name": "Cloudflare", "query": "Cloudflare stock"},
             {"ticker": "CRWD", "label": "CRWD US", "name": "CrowdStrike", "query": "CrowdStrike stock"},
@@ -143,7 +143,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "entertainment",
-        "label": "Entertainment",
+        "label": "엔터테인먼트",
         "items": [
             {"ticker": "NFLX", "label": "NFLX US", "name": "Netflix", "query": "Netflix stock"},
             {"ticker": "SPOT", "label": "SPOT US", "name": "Spotify", "query": "Spotify stock"},
@@ -155,7 +155,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "telecom_infra",
-        "label": "Telecom Infra",
+        "label": "통신 인프라",
         "items": [
             {"ticker": "T", "label": "T US", "name": "AT&T", "query": "AT&T stock"},
             {"ticker": "CSCO", "label": "CSCO US", "name": "Cisco", "query": "Cisco stock"},
@@ -174,7 +174,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "datacenter_infra",
-        "label": "Data Center Infra",
+        "label": "데이터센터 인프라",
         "items": [
             {"ticker": "VRT", "label": "VRT US", "name": "Vertiv", "query": "Vertiv stock"},
             {"ticker": "FIX", "label": "FIX US", "name": "Comfort Systems", "query": "Comfort Systems stock"},
@@ -183,7 +183,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "quantum",
-        "label": "Quantum",
+        "label": "양자컴퓨터",
         "items": [
             {"ticker": "IONQ", "label": "IONQ US", "name": "IonQ", "query": "IonQ stock"},
             {"ticker": "RGTI", "label": "RGTI US", "name": "Rigetti", "query": "Rigetti stock"},
@@ -192,7 +192,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "staples",
-        "label": "Staples",
+        "label": "필수 소비재",
         "items": [
             {"ticker": "WMT", "label": "WMT US", "name": "Walmart", "query": "Walmart stock"},
             {"ticker": "COST", "label": "COST US", "name": "Costco", "query": "Costco stock"},
@@ -203,7 +203,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "discretionary",
-        "label": "Discretionary",
+        "label": "경기 소비재",
         "items": [
             {"ticker": "HD", "label": "HD US", "name": "Home Depot", "query": "Home Depot stock"},
             {"ticker": "SBUX", "label": "SBUX US", "name": "Starbucks", "query": "Starbucks stock"},
@@ -217,7 +217,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "defense",
-        "label": "Defense",
+        "label": "방산",
         "items": [
             {"ticker": "RTX", "label": "RTX US", "name": "RTX", "query": "RTX stock"},
             {"ticker": "LMT", "label": "LMT US", "name": "Lockheed Martin", "query": "Lockheed Martin stock"},

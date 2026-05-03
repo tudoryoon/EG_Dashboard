@@ -1982,13 +1982,11 @@ function renderMarketBriefingOverview() {
             index === 0 ? "xl" : index <= 2 ? "lg" : index <= 7 ? "md" : "sm";
           return `
             <article
-              class="briefing-tile ${combinedClass} ${changeClass}"
+              class="briefing-tile briefing-tile-overview ${combinedClass} ${changeClass}"
               style="background:${item.mapColor ?? "#f3f4f6"}"
               title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
             >
               <span class="briefing-tile-ticker">${item.label}</span>
-              <strong class="briefing-tile-name">${item.name}</strong>
-              <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
               <span class="briefing-tile-change">${formatSignedPercent(item.dayChangePct)}</span>
             </article>
           `;
@@ -1999,7 +1997,7 @@ function renderMarketBriefingOverview() {
         <section class="briefing-total-sector-block">
           <div class="briefing-total-sector-head">
             <strong>${sector.label}</strong>
-            <span>${(sector.items ?? []).length} names</span>
+            <span>${(sector.items ?? []).length}개</span>
           </div>
           <div class="briefing-heatmap-grid briefing-heatmap-grid-total-sector">${sectorTiles}</div>
         </section>
