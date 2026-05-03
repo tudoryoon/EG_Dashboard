@@ -1940,6 +1940,61 @@ function getBriefingOverviewReturn(item, rangeKey) {
   return item.overviewReturns?.[rangeKey] ?? item.dayChangePct ?? null;
 }
 
+function getBriefingIndexReturn(item, rangeKey) {
+  if (!item) {
+    return null;
+  }
+  const dates = item.dates ?? [];
+  const values = item.values ?? [];
+  if (!dates.length || !values.length) {
+    return null;
+  }
+
+  const latestValue = Number(values.at(-1));
+  if (!Number.isFinite(latestValue) || latestValue === 0) {
+    return null;
+  }
+
+  if (rangeKey === "1d") {
+    const previousValue = Number(values.at(-2));
+    if (!Number.isFinite(previousValue) || previousValue === 0) {
+      return null;
+    }
+    return ((latestValue - previousValue) / previousValue) * 100;
+  }
+
+  if (rangeKey === "ytd") {
+    const latestDate = dates.at(-1);
+    const latestYear = latestDate ? String(latestDate).slice(0, 4) : "";
+    const baseIndex = dates.findIndex((date) => String(date).slice(0, 4) === latestYear);
+    if (baseIndex < 0) {
+      return null;
+    }
+    const baseValue = Number(values[baseIndex]);
+    if (!Number.isFinite(baseValue) || baseValue === 0) {
+      return null;
+    }
+    return ((latestValue - baseValue) / baseValue) * 100;
+  }
+
+  const periodMap = {
+    "1w": 5,
+    "1m": 21,
+    "3m": 63,
+    "6m": 126,
+    "1y": 252,
+  };
+  const periods = periodMap[rangeKey];
+  if (!periods || values.length <= periods) {
+    return null;
+  }
+  const baseValue = Number(values.at(-(periods + 1)));
+  if (!Number.isFinite(baseValue) || baseValue === 0) {
+    return null;
+  }
+  return ((latestValue - baseValue) / baseValue) * 100;
+}
+
 function getBriefingOverviewColor(item, rangeKey) {
   if (!item) {
     return "#f3f4f6";
@@ -2121,16 +2176,10 @@ function renderMarketBriefingOverview() {
       const dates = item?.dates ?? [];
       const values = item?.values ?? [];
       const latestValue = values.at(-1);
-      const previousValue = values.at(-2);
       const latestDate = dates.at(-1);
-      const dayChangePct =
-        Number.isFinite(Number(latestValue)) &&
-        Number.isFinite(Number(previousValue)) &&
-        Number(previousValue) !== 0
-          ? ((Number(latestValue) - Number(previousValue)) / Number(previousValue)) * 100
-          : null;
+      const rangeReturn = getBriefingIndexReturn(item, state.briefingMapRange);
       const changeClass =
-        Number(dayChangePct) > 0 ? "is-up" : Number(dayChangePct) < 0 ? "is-down" : "";
+        Number(rangeReturn) > 0 ? "is-up" : Number(rangeReturn) < 0 ? "is-down" : "";
 
       return `
         <article class="briefing-index-card ${changeClass}">
@@ -2140,8 +2189,8 @@ function renderMarketBriefingOverview() {
           </div>
           <strong class="briefing-index-value">${formatBriefingIndexValue(latestValue)}</strong>
           <div class="briefing-index-change-row">
-            <span class="briefing-index-change">${formatSignedPercent(dayChangePct)}</span>
-            <span class="briefing-index-caption">1D change</span>
+            <span class="briefing-index-change">${formatSignedPercent(rangeReturn)}</span>
+            <span class="briefing-index-caption">${selectedBriefingRangeMeta.label} return</span>
           </div>
         </article>
       `;
