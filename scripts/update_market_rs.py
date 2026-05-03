@@ -291,13 +291,20 @@ def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
-    r1w = close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)
-    r1m = close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
-    r3m = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
-    r6m = close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
-    r9m = close_frame.div(close_frame.shift(LOOKBACKS["9m"])).sub(1)
-    r12m = close_frame.div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
-    return 0.10 * r1w + 0.20 * r1m + 0.30 * r3m + 0.20 * r6m + 0.10 * r9m + 0.10 * r12m
+    r_0_1w = close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)
+    r_1w_1m = close_frame.shift(LOOKBACKS["1w"]).div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
+    r_1m_3m = close_frame.shift(LOOKBACKS["1m"]).div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
+    r_3m_6m = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
+    r_6m_9m = close_frame.shift(LOOKBACKS["6m"]).div(close_frame.shift(LOOKBACKS["9m"])).sub(1)
+    r_9m_12m = close_frame.shift(LOOKBACKS["9m"]).div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
+    return (
+        0.10 * r_0_1w
+        + 0.20 * r_1w_1m
+        + 0.30 * r_1m_3m
+        + 0.20 * r_3m_6m
+        + 0.10 * r_6m_9m
+        + 0.10 * r_9m_12m
+    )
 
 
 def compute_return(series: pd.Series, periods: int) -> float | None:
@@ -518,7 +525,7 @@ def build_payload(
         },
         "scoring": {
             "label": "IBD-style RS Rating",
-            "description": "Weighted relative strength score using 1W 10%, 1M 20%, 3M 30%, 6M 20%, 9M 10%, and 12M 10%, then converted into a daily 1-99 percentile ranking.",
+            "description": "Weighted relative strength score using interval returns across 0-1W 10%, 1W-1M 20%, 1M-3M 30%, 3M-6M 20%, 6M-9M 10%, and 9M-12M 10%, then converted into a daily 1-99 percentile ranking.",
         },
         "rows": rows,
         "histories": histories,
