@@ -1500,6 +1500,21 @@ h1 {
   letter-spacing: 0.05em;
 }
 
+.market-rs-sort {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.market-rs-sort.active {
+  color: #242421;
+}
+
 .market-rs-table tbody tr {
   cursor: pointer;
   transition: 160ms ease;

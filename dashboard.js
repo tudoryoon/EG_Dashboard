@@ -188,6 +188,8 @@ const state = {
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
   rsFilter: "newHigh",
+  rsTableSortKey: "rs",
+  rsTableSortDirection: "desc",
 };
 
 const charts = [];
@@ -1941,6 +1943,65 @@ function getSelectedMarketRsRow(rows) {
   return rows.find((row) => row.ticker === state.rsSelectedTicker) ?? rows[0] ?? null;
 }
 
+function getMarketRsTableSortValue(row, sortKey) {
+  switch (sortKey) {
+    case "ticker":
+      return row.ticker ?? "";
+    case "name":
+      return row.name ?? "";
+    case "marketCap":
+      return row.marketCap ?? Number.NEGATIVE_INFINITY;
+    case "rs":
+      return getMarketRsUniverseScore(row, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+    case "1m":
+      return row.returns?.["1m"] ?? Number.NEGATIVE_INFINITY;
+    case "3m":
+      return row.returns?.["3m"] ?? Number.NEGATIVE_INFINITY;
+    case "6m":
+      return row.returns?.["6m"] ?? Number.NEGATIVE_INFINITY;
+    case "12m":
+      return row.returns?.["12m"] ?? Number.NEGATIVE_INFINITY;
+    case "gap52w":
+      return row.distanceTo52wHighPct ?? Number.POSITIVE_INFINITY;
+    case "rsNewHigh":
+      return row.rsNewHigh ? 1 : 0;
+    default:
+      return getMarketRsUniverseScore(row, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+  }
+}
+
+function sortMarketRsTableRows(rows) {
+  const direction = state.rsTableSortDirection === "asc" ? 1 : -1;
+  const sortKey = state.rsTableSortKey ?? "rs";
+  return [...rows].sort((left, right) => {
+    const leftValue = getMarketRsTableSortValue(left, sortKey);
+    const rightValue = getMarketRsTableSortValue(right, sortKey);
+
+    if (typeof leftValue === "string" || typeof rightValue === "string") {
+      const comparison = String(leftValue).localeCompare(String(rightValue));
+      if (comparison !== 0) {
+        return comparison * direction;
+      }
+    } else if (rightValue !== leftValue) {
+      return (leftValue < rightValue ? -1 : 1) * direction;
+    }
+
+    const leftScore = getMarketRsUniverseScore(left, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+    const rightScore = getMarketRsUniverseScore(right, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+    if (rightScore !== leftScore) {
+      return rightScore - leftScore;
+    }
+
+    return (left.ticker ?? "").localeCompare(right.ticker ?? "");
+  });
+}
+
+function renderMarketRsSortHeader(label, sortKey) {
+  const active = state.rsTableSortKey === sortKey;
+  const arrow = !active ? "" : state.rsTableSortDirection === "asc" ? " ↑" : " ↓";
+  return `<button type="button" class="market-rs-sort${active ? " active" : ""}" data-rs-sort="${sortKey}">${label}${arrow}</button>`;
+}
+
 function createMarketRsChart(canvas, row) {
   if (typeof Chart === "undefined" || !row) {
     return;
@@ -2122,6 +2183,7 @@ function renderMarketRsOverview() {
     <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh" ? " active" : ""}" data-rs-filter="newHigh">RS New High</button>
   `;
+  const tableSortRows = sortMarketRsTableRows(rows);
   const leaderCards = rows
     .slice(0, 12)
     .map((row) => {
@@ -2151,7 +2213,7 @@ function renderMarketRsOverview() {
       `;
     })
     .join("");
-  const tableRows = rows
+  const tableRows = tableSortRows
     .slice(0, 120)
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -2262,16 +2324,16 @@ function renderMarketRsOverview() {
           <table class="market-rs-table">
             <thead>
               <tr>
-                <th>Ticker</th>
-                <th>Name</th>
-                <th>Market Cap</th>
-                <th>RS</th>
-                <th>1M</th>
-                <th>3M</th>
-                <th>6M</th>
-                <th>12M</th>
-                <th>52W Gap</th>
-                <th>RS NH</th>
+                <th>${renderMarketRsSortHeader("Ticker", "ticker")}</th>
+                <th>${renderMarketRsSortHeader("Name", "name")}</th>
+                <th>${renderMarketRsSortHeader("Market Cap", "marketCap")}</th>
+                <th>${renderMarketRsSortHeader("RS", "rs")}</th>
+                <th>${renderMarketRsSortHeader("1M", "1m")}</th>
+                <th>${renderMarketRsSortHeader("3M", "3m")}</th>
+                <th>${renderMarketRsSortHeader("6M", "6m")}</th>
+                <th>${renderMarketRsSortHeader("12M", "12m")}</th>
+                <th>${renderMarketRsSortHeader("52W Gap", "gap52w")}</th>
+                <th>${renderMarketRsSortHeader("RS NH", "rsNewHigh")}</th>
               </tr>
             </thead>
             <tbody>${tableRows || '<tr><td colspan="10">검색 결과가 없습니다.</td></tr>'}</tbody>
@@ -2296,6 +2358,18 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsFilter = button.dataset.rsFilter;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextSortKey = button.dataset.rsSort;
+      if (state.rsTableSortKey === nextSortKey) {
+        state.rsTableSortDirection = state.rsTableSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        state.rsTableSortKey = nextSortKey;
+        state.rsTableSortDirection = nextSortKey === "ticker" || nextSortKey === "name" ? "asc" : "desc";
+      }
       render();
     });
   });
