@@ -390,10 +390,6 @@ function buildRegularDateTickIndexes(labels, rangeKey) {
     }
   });
 
-  if (lastIndex !== labels.length - 1) {
-    ticks.push(labels.length - 1);
-  }
-
   const uniqueTicks = [...new Set(ticks)];
   const dedupedTicks = [];
   let lastLabel = "";
@@ -416,21 +412,9 @@ function capDateTickIndexes(labels, indexes, rangeKey, maxCount) {
     return indexes;
   }
 
-  const output = [indexes[0]];
-  const interior = indexes.slice(1, -1);
-  const interiorSlots = Math.max(0, maxCount - 2);
-
-  if (interior.length && interiorSlots > 0) {
-    const step = interior.length / interiorSlots;
-    for (let slot = 0; slot < interiorSlots; slot += 1) {
-      const index = interior[Math.min(interior.length - 1, Math.floor(slot * step))];
-      output.push(index);
-    }
-  }
-
-  output.push(indexes[indexes.length - 1]);
-
-  const unique = [...new Set(output)].sort((a, b) => a - b);
+  const stride = Math.max(1, Math.ceil(indexes.length / maxCount));
+  const sampled = indexes.filter((_, index) => index % stride === 0);
+  const unique = [...new Set(sampled)].sort((a, b) => a - b);
   const deduped = [];
   let lastLabel = "";
   unique.forEach((index) => {
