@@ -32,6 +32,9 @@ jobs:
       - name: Refresh market macro history
         run: python scripts/update_market_macro.py
 
+      - name: Refresh market briefing
+        run: python scripts/update_market_briefing.py
+
       - name: Refresh market RS history
         env:
           MARKET_RS_MAX_SHARES_FETCH: "250"
@@ -39,12 +42,12 @@ jobs:
 
       - name: Commit updated price history
         run: |
-          if git diff --quiet -- data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-rs-data.js; then
-            echo "No M7, market, macro, or RS price changes detected."
+          if git diff --quiet -- data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-briefing-data.js data/market-rs-data.js; then
+            echo "No M7, market, macro, briefing, or RS price changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-rs-data.js
-          git commit -m "Update M7, market, macro, and RS price history"
+          git add data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-briefing-data.js data/market-rs-data.js
+          git commit -m "Update M7, market, macro, briefing, and RS price history"
           git push

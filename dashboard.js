@@ -67,6 +67,7 @@ const bigTechSubtabMeta = {
 
 const marketSubtabMeta = {
   Overview: { label: "Overview" },
+  Briefing: { label: "Briefing" },
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
 };
@@ -1812,6 +1813,179 @@ function renderMarketBreadthOverview() {
           loading="lazy"
         ></iframe>
       </article>
+    </section>
+  `;
+}
+
+function formatBriefingTimestamp(value) {
+  if (!value) {
+    return "-";
+  }
+  try {
+    return new Intl.DateTimeFormat("ko-KR", {
+      year: "2-digit",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date(value));
+  } catch (error) {
+    return value;
+  }
+}
+
+function formatBriefingPrice(item) {
+  if (!item || !Number.isFinite(Number(item.price))) {
+    return "-";
+  }
+  if (item.currency === "KRW") {
+    return `₩${Number(item.price).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}`;
+  }
+  return formatUsStockPrice(item.price);
+}
+
+function formatSignedPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}%`;
+}
+
+function renderMarketBriefingOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const briefing = window.marketBriefingData ?? null;
+  if (!briefing) {
+    renderPlaceholderOverview("Daily Market Briefing", "브리핑 데이터가 아직 준비되지 않았습니다.");
+    return;
+  }
+
+  const sectorPanels = (briefing.sectorPanels ?? [])
+    .map((sector) => {
+      const tiles = (sector.items ?? [])
+        .map((item) => {
+          const changeClass = Number(item.dayChangePct) > 0 ? "is-up" : Number(item.dayChangePct) < 0 ? "is-down" : "";
+          return `
+            <article
+              class="briefing-tile ${item.tileClass ?? "sm"} ${changeClass}"
+              style="background:${item.mapColor ?? "#f3f4f6"}"
+              title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
+            >
+              <span class="briefing-tile-ticker">${item.label}</span>
+              <strong class="briefing-tile-name">${item.name}</strong>
+              <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
+              <span class="briefing-tile-change">${formatSignedPercent(item.dayChangePct)}</span>
+            </article>
+          `;
+        })
+        .join("");
+
+      return `
+        <article class="us-panel briefing-sector-panel">
+          <div class="us-section-head">
+            <div>
+              <h3>${sector.label}</h3>
+              <p>${(sector.items ?? []).length} names</p>
+            </div>
+          </div>
+          <div class="briefing-heatmap-grid">${tiles}</div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const newsMarkup = (briefing.majorNews ?? [])
+    .map(
+      (item) => `
+        <a class="briefing-news-card" href="${item.link}" target="_blank" rel="noreferrer">
+          <span class="briefing-news-bucket">${item.bucket}</span>
+          <strong>${item.title}</strong>
+          <div class="briefing-news-meta">
+            <span>${item.source || "Source"}</span>
+            <span>${formatBriefingTimestamp(item.publishedAt)}</span>
+          </div>
+        </a>
+      `,
+    )
+    .join("");
+
+  const moversMarkup = (briefing.movers ?? [])
+    .map(
+      (item) => `
+        <article class="briefing-mover-card ${item.direction === "up" ? "is-up" : "is-down"}">
+          <div class="briefing-mover-head">
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.sectorLabel}</p>
+            </div>
+            <div class="briefing-mover-stats">
+              <strong>${formatSignedPercent(item.dayChangePct)}</strong>
+              <span>${formatBriefingPrice(item)}</span>
+            </div>
+          </div>
+          <p class="briefing-mover-cap">Market Cap ${formatMarketCapCompact(item.marketCapUsd)}</p>
+          <p class="briefing-mover-headline">${item.headline || "관련 뉴스 헤드라인을 아직 찾지 못했습니다."}</p>
+          <div class="briefing-news-meta">
+            <span>${item.source || "Source"}</span>
+            <span>${formatBriefingTimestamp(item.publishedAt)}</span>
+          </div>
+          ${item.link ? `<a class="briefing-mover-link" href="${item.link}" target="_blank" rel="noreferrer">Open source news</a>` : ""}
+        </article>
+      `,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-briefing-overview">
+      <article class="us-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Daily Market Briefing</h2>
+            <p>Heatmap snapshot for the curated AI, semi, cloud, and crypto universe with daily market-moving headlines.</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">As of ${briefing.updatedAt ?? "-"}</span>
+            <span class="market-rs-pill">${(briefing.majorNews ?? []).length} key stories</span>
+            <span class="market-rs-pill">${(briefing.movers ?? []).length} movers</span>
+          </div>
+        </div>
+        <div class="briefing-legend">
+          <span>${briefing.mapLegend?.positive ?? ""}</span>
+          <span>${briefing.mapLegend?.negative ?? ""}</span>
+          <span>${briefing.mapLegend?.size ?? ""}</span>
+        </div>
+      </article>
+
+      <section class="briefing-sector-stack">
+        ${sectorPanels}
+      </section>
+
+      <section class="briefing-news-layout">
+        <article class="us-panel">
+          <div class="us-section-head">
+            <div>
+              <h2>Market-moving Headlines</h2>
+              <p>3-5 macro and sector stories most likely to shape today's tape.</p>
+            </div>
+          </div>
+          <div class="briefing-news-grid">${newsMarkup || '<p class="market-rs-empty">뉴스를 아직 불러오지 못했습니다.</p>'}</div>
+        </article>
+
+        <article class="us-panel">
+          <div class="us-section-head">
+            <div>
+              <h2>Mover Briefing</h2>
+              <p>Largest daily movers in the map with a likely headline catalyst.</p>
+            </div>
+          </div>
+          <div class="briefing-mover-grid">${moversMarkup || '<p class="market-rs-empty">급등락 종목 브리핑을 아직 불러오지 못했습니다.</p>'}</div>
+        </article>
+      </section>
     </section>
   `;
 }
@@ -4258,6 +4432,10 @@ function renderSummary(list) {
       summaryText.textContent = "Daily market and macro dashboard";
       return;
     }
+    if (state.marketView === "Briefing") {
+      summaryText.textContent = "Daily market briefing with curated heatmap, key headlines, and mover catalysts";
+      return;
+    }
     if (state.marketView === "Breadth") {
       summaryText.textContent = "Daily market breadth dashboard workspace";
       return;
@@ -4428,6 +4606,10 @@ function render() {
     renderSummary([]);
     if (state.marketView === "Overview") {
       renderMarketOverview();
+      return;
+    }
+    if (state.marketView === "Briefing") {
+      renderMarketBriefingOverview();
       return;
     }
     if (state.marketView === "Breadth") {
