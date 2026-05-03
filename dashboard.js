@@ -1944,7 +1944,45 @@ function getBriefingOverviewColor(item, rangeKey) {
   if (!item) {
     return "#f3f4f6";
   }
-  return item.overviewColors?.[rangeKey] ?? item.mapColor ?? "#f3f4f6";
+  const change = getBriefingOverviewReturn(item, rangeKey);
+  if (!Number.isFinite(change)) {
+    return "#eef0eb";
+  }
+  const magnitude = Math.min(Math.abs(change), 25);
+  const strength = magnitude / 25;
+  if (change > 0) {
+    const lightness = 97 - strength * 18;
+    const saturation = 48 + strength * 18;
+    return `hsl(145, ${saturation}%, ${lightness}%)`;
+  }
+  if (change < 0) {
+    const lightness = 97 - strength * 18;
+    const saturation = 56 + strength * 16;
+    return `hsl(6, ${saturation}%, ${lightness}%)`;
+  }
+  return "#eef0eb";
+}
+
+function getBriefingOverviewSizeClass(items, item) {
+  if (!item) {
+    return "cap-sm";
+  }
+  const maxCap = Math.max(...(items ?? []).map((entry) => Number(entry.marketCapUsd) || 0), 0);
+  const itemCap = Number(item.marketCapUsd) || 0;
+  if (maxCap <= 0 || itemCap <= 0) {
+    return "cap-sm";
+  }
+  const ratio = itemCap / maxCap;
+  if (ratio >= 0.5) {
+    return "cap-xl";
+  }
+  if (ratio >= 0.18) {
+    return "cap-lg";
+  }
+  if (ratio >= 0.06) {
+    return "cap-md";
+  }
+  return "cap-sm";
 }
 
 function renderMarketBriefingOverview() {
@@ -2010,14 +2048,13 @@ function renderMarketBriefingOverview() {
       const sectorTiles = (sector.items ?? [])
         .slice()
         .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0))
-        .map((item, index) => {
+        .map((item) => {
           const overviewChange = getBriefingOverviewReturn(item, state.briefingMapRange);
           const changeClass = Number(overviewChange) > 0 ? "is-up" : Number(overviewChange) < 0 ? "is-down" : "";
-          const combinedClass =
-            index === 0 ? "xl" : index <= 2 ? "lg" : index <= 7 ? "md" : "sm";
+          const sizeClass = getBriefingOverviewSizeClass(sector.items ?? [], item);
           return `
             <article
-              class="briefing-tile briefing-tile-overview ${combinedClass} ${changeClass}"
+              class="briefing-tile briefing-tile-overview ${sizeClass} ${changeClass}"
               style="background:${getBriefingOverviewColor(item, state.briefingMapRange)}"
               title="${item.name} / ${selectedBriefingRangeMeta.label} ${formatSignedPercent(overviewChange)}"
             >

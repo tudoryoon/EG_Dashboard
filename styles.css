@@ -350,8 +350,8 @@ h1 {
 
 .briefing-total-sector-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .briefing-total-map-panel {
@@ -361,9 +361,9 @@ h1 {
 
 .briefing-total-sector-block {
   border: 1px solid #d2d2cb;
-  border-radius: 12px;
+  border-radius: 10px;
   background: linear-gradient(180deg, #edede8, #e3e3dc);
-  padding: 6px 7px;
+  padding: 4px 5px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
@@ -372,15 +372,16 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 
 .briefing-total-sector-head strong {
-  font-size: 0.76rem;
+  font-size: 0.68rem;
+  line-height: 1.1;
 }
 
 .briefing-total-sector-head span {
-  font-size: 0.66rem;
+  font-size: 0.58rem;
   color: var(--muted);
 }
 
@@ -491,26 +492,33 @@ h1 {
 }
 
 .briefing-heatmap-grid-total-sector {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 3px;
 }
 
 .briefing-tile-overview {
-  min-height: 26px;
-  border-radius: 7px;
-  padding: 4px 5px;
-  gap: 3px;
-  border-color: rgba(28, 28, 26, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  min-height: 0;
+  aspect-ratio: 2.25 / 1;
+  border-radius: 6px;
+  padding: 2px 4px;
+  gap: 2px;
+  justify-content: center;
+  align-items: flex-start;
+  border-color: rgba(28, 28, 26, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .briefing-tile-overview .briefing-tile-ticker {
-  font-size: 0.52rem;
-  color: rgba(28, 28, 26, 0.88);
+  font-size: 0.46rem;
+  line-height: 1;
+  color: rgba(28, 28, 26, 0.82);
+  white-space: nowrap;
 }
 
 .briefing-tile-overview .briefing-tile-change {
-  font-size: 0.62rem;
+  font-size: 0.54rem;
+  line-height: 1;
+  color: rgba(28, 28, 26, 0.84);
 }
 
 .briefing-range-chip-row {
@@ -531,10 +539,19 @@ h1 {
   font-size: 0.78rem;
 }
 
-.briefing-heatmap-grid-total-sector .briefing-tile.xl,
-.briefing-heatmap-grid-total-sector .briefing-tile.lg,
-.briefing-heatmap-grid-total-sector .briefing-tile.md,
-.briefing-heatmap-grid-total-sector .briefing-tile.sm {
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-xl {
+  grid-column: span 4;
+}
+
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-lg {
+  grid-column: span 3;
+}
+
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-md {
+  grid-column: span 2;
+}
+
+.briefing-heatmap-grid-total-sector .briefing-tile.cap-sm {
   grid-column: span 2;
 }
 
@@ -1905,7 +1922,7 @@ h1 {
   }
 
   .briefing-total-sector-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .briefing-heatmap-grid-total {
@@ -1984,7 +2001,7 @@ h1 {
   }
 
   .briefing-heatmap-grid-total-sector {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .briefing-tile.xl,
