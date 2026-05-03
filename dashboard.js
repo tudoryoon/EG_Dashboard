@@ -2079,12 +2079,18 @@ function renderMarketBriefingOverview() {
             <article
               class="briefing-tile briefing-tile-overview ${sizeClass} ${changeClass}"
               style="background:${getBriefingOverviewColor(item, state.briefingMapRange)}"
-              title="${item.name} / ${selectedBriefingRangeMeta.label} ${formatSignedPercent(overviewChange)}"
             >
               <span class="briefing-tile-ticker">${item.label}</span>
               <span class="briefing-tile-change">${formatSignedPercent(overviewChange)}</span>
               <span class="briefing-tile-price">${formatBriefingPrice(item)}</span>
               <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
+              <div class="briefing-tile-tooltip">
+                <strong>${item.name}</strong>
+                <span>${sector.label}</span>
+                <span>${selectedBriefingRangeMeta.label} 수익률 ${formatSignedPercent(overviewChange)}</span>
+                <span>가격 ${formatBriefingPrice(item)}</span>
+                <span>시총 ${formatMarketCapCompact(item.marketCapUsd)}</span>
+              </div>
             </article>
           `;
         })

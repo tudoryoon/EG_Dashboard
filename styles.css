@@ -539,34 +539,73 @@ h1 {
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: hidden;
+  position: relative;
+  cursor: default;
 }
 
 .briefing-tile-overview .briefing-tile-ticker {
   font-size: 0.52rem;
   line-height: 1;
-  color: #ffffff;
+  color: rgba(20, 24, 28, 0.96);
   white-space: nowrap;
   font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .briefing-tile-overview .briefing-tile-change {
   font-size: 0.58rem;
   line-height: 1;
-  color: #ffffff;
+  color: rgba(20, 24, 28, 0.96);
   font-weight: 700;
-}
-
-.briefing-tile-overview.is-up .briefing-tile-change,
-.briefing-tile-overview.is-down .briefing-tile-change {
-  color: #ffffff;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .briefing-tile-overview .briefing-tile-price,
 .briefing-tile-overview .briefing-tile-cap {
   font-size: 0.44rem;
   line-height: 1.05;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(28, 32, 36, 0.82);
   white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.briefing-tile-tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%) translateY(6px);
+  min-width: 132px;
+  max-width: 180px;
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(22, 25, 29, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 28px rgba(15, 18, 22, 0.28);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.54rem;
+  line-height: 1.25;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.briefing-tile-tooltip strong {
+  font-size: 0.6rem;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.briefing-tile-overview:hover {
+  overflow: visible;
+  z-index: 10;
+}
+
+.briefing-tile-overview:hover .briefing-tile-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .briefing-range-chip-row {
