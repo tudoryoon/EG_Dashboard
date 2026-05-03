@@ -20,6 +20,10 @@ PRICE_PERIOD = "3y"
 BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
+BATCH_SIZE = int(os.getenv("MARKET_RS_BATCH_SIZE", "15"))
+BATCH_SLEEP = float(os.getenv("MARKET_RS_BATCH_SLEEP", "0.6"))
+RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
+RETRY_ATTEMPTS = int(os.getenv("MARKET_RS_RETRY_ATTEMPTS", "4"))
 LOOKBACKS = {
     "1w": 5,
     "10d": 10,
@@ -68,10 +72,16 @@ COLOR_BY_UNIVERSE = {
     "russell2000": "#0f766e",
 }
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
+SYMBOL_ALIASES = {
+    "CRDA": "CRD-A",
+    "GEFB": "GEF-B",
+    "MOGA": "MOG-A",
+}
 
 
 def normalize_ticker(raw: object) -> str:
-    return str(raw).strip().upper().replace(".", "-")
+    ticker = str(raw).strip().upper().replace(".", "-")
+    return SYMBOL_ALIASES.get(ticker, ticker)
 
 
 def fetch_html(url: str) -> str:
@@ -160,7 +170,7 @@ def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, 
         adjusted_close_map[symbol] = adjusted_close.rename(symbol)
     missing = [symbol for symbol in symbols if symbol not in raw_close_map or symbol not in adjusted_close_map]
     for symbol in missing:
-        for attempt in range(2):
+        for attempt in range(RETRY_ATTEMPTS):
             try:
                 single = yf.download(
                     tickers=symbol,
@@ -170,22 +180,22 @@ def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, 
                     threads=False,
                 )
                 if single.empty or "Close" not in single.columns:
-                    time.sleep(0.35)
+                    time.sleep(RETRY_SLEEP)
                     continue
                 raw_close = single["Close"].dropna()
                 adjusted_close = single["Adj Close"].dropna() if "Adj Close" in single.columns else raw_close
                 if raw_close.empty or adjusted_close.empty:
-                    time.sleep(0.35)
+                    time.sleep(RETRY_SLEEP)
                     continue
                 raw_close_map[symbol] = raw_close.rename(symbol)
                 adjusted_close_map[symbol] = adjusted_close.rename(symbol)
                 break
             except Exception:
-                time.sleep(0.35)
+                time.sleep(RETRY_SLEEP)
     return raw_close_map, adjusted_close_map
 
 
-def fetch_price_frames(symbols: list[str], batch_size: int = 30) -> tuple[pd.DataFrame, pd.DataFrame]:
+def fetch_price_frames(symbols: list[str], batch_size: int = BATCH_SIZE) -> tuple[pd.DataFrame, pd.DataFrame]:
     raw_close_map: dict[str, pd.Series] = {}
     adjusted_close_map: dict[str, pd.Series] = {}
     for start in range(0, len(symbols), batch_size):
@@ -193,7 +203,7 @@ def fetch_price_frames(symbols: list[str], batch_size: int = 30) -> tuple[pd.Dat
         batch_raw_close_map, batch_adjusted_close_map = download_batch(batch)
         raw_close_map.update(batch_raw_close_map)
         adjusted_close_map.update(batch_adjusted_close_map)
-        time.sleep(0.2)
+        time.sleep(BATCH_SLEEP)
     if not raw_close_map or not adjusted_close_map:
         raise RuntimeError("No price data downloaded for RS universe.")
     raw_close_frame = pd.concat(raw_close_map.values(), axis=1).sort_index()
@@ -280,7 +290,7 @@ def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, ob
 
 def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     valid_counts = frame.notna().sum(axis=1)
-    ranks = frame.rank(axis=1, method="min", ascending=False)
+    ranks = frame.rank(axis=1, method="average", ascending=False)
     denominator = (valid_counts - 1).replace(0, 1)
     rating = 99 - (ranks.sub(1, axis=0)).mul(98).div(denominator, axis=0)
     rating = rating.where(frame.notna())
@@ -290,6 +300,18 @@ def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     return rating.round().clip(lower=1, upper=99)
 
 
+def cross_sectional_percentile(frame: pd.DataFrame) -> pd.DataFrame:
+    valid_counts = frame.notna().sum(axis=1)
+    ranks = frame.rank(axis=1, method="average", ascending=True)
+    denominator = (valid_counts - 1).replace(0, 1)
+    percentile = ranks.sub(1, axis=0).div(denominator, axis=0)
+    percentile = percentile.where(frame.notna())
+    single_name_mask = valid_counts <= 1
+    if single_name_mask.any():
+        percentile.loc[single_name_mask] = frame.loc[single_name_mask].notna().astype(float)
+    return percentile.clip(lower=0, upper=1)
+
+
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
     r_0_1w = close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)
     r_1w_1m = close_frame.shift(LOOKBACKS["1w"]).div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
@@ -297,14 +319,24 @@ def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
     r_3m_6m = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
     r_6m_9m = close_frame.shift(LOOKBACKS["6m"]).div(close_frame.shift(LOOKBACKS["9m"])).sub(1)
     r_9m_12m = close_frame.shift(LOOKBACKS["9m"]).div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
-    return (
-        0.10 * r_0_1w
-        + 0.20 * r_1w_1m
-        + 0.30 * r_1m_3m
-        + 0.20 * r_3m_6m
-        + 0.10 * r_6m_9m
-        + 0.10 * r_9m_12m
-    )
+
+    weighted_components = [
+        (cross_sectional_percentile(r_0_1w), 0.10),
+        (cross_sectional_percentile(r_1w_1m), 0.20),
+        (cross_sectional_percentile(r_1m_3m), 0.30),
+        (cross_sectional_percentile(r_3m_6m), 0.20),
+        (cross_sectional_percentile(r_6m_9m), 0.10),
+        (cross_sectional_percentile(r_9m_12m), 0.10),
+    ]
+
+    weighted_sum = pd.DataFrame(0.0, index=close_frame.index, columns=close_frame.columns)
+    weight_sum = pd.DataFrame(0.0, index=close_frame.index, columns=close_frame.columns)
+
+    for component, weight in weighted_components:
+        weighted_sum = weighted_sum.add(component.fillna(0).mul(weight), fill_value=0)
+        weight_sum = weight_sum.add(component.notna().astype(float).mul(weight), fill_value=0)
+
+    return weighted_sum.div(weight_sum.where(weight_sum > 0))
 
 
 def compute_return(series: pd.Series, periods: int) -> float | None:
@@ -397,9 +429,6 @@ def build_payload(
 
         performance_series = stock_adjusted_close[ticker].dropna()
         raw_price_series = stock_raw_close[ticker].dropna()
-        if len(performance_series) <= LOOKBACKS["12m"]:
-            continue
-
         current_price = float(raw_price_series.reindex([latest_date]).iloc[0])
         if not math.isfinite(current_price) or current_price <= 0:
             continue
