@@ -26,6 +26,8 @@ class SeriesConfig:
     unit: str
     color: str
     primary: bool = False
+    release_url: str | None = None
+    release_unit: str | None = None
 
 
 INDICATORS: list[dict[str, Any]] = [
@@ -38,9 +40,9 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("payems", "Nonfarm Payrolls", "PAYEMS", "thousands", "#111827", True),
-            SeriesConfig("unrate", "Unemployment Rate", "UNRATE", "percent", "#2563eb"),
-            SeriesConfig("ahe", "Average Hourly Earnings", "CES0500000003", "currency", "#d93025"),
+            SeriesConfig("payems", "Nonfarm Payrolls", "PAYEMS", "thousands", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-non-farm-payrolls/3248716", "thousands"),
+            SeriesConfig("unrate", "Unemployment Rate", "UNRATE", "percent", "#2563eb", False, "https://www.moneycontrol.com/economic-calendar/usa-unemployment-rate/3248717", "percent"),
+            SeriesConfig("ahe", "Average Hourly Earnings", "CES0500000003", "currency", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/average-hourly-earnings-mom/3248715", "percent"),
         ],
     },
     {
@@ -52,8 +54,8 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("headline_cpi", "Headline CPI", "CPIAUCSL", "index", "#111827", True),
-            SeriesConfig("core_cpi", "Core CPI", "CPILFESL", "index", "#d93025"),
+            SeriesConfig("headline_cpi", "Headline CPI", "CPIAUCSL", "index", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-inflation-rate-mom-final/5128770", "percent"),
+            SeriesConfig("core_cpi", "Core CPI", "CPILFESL", "index", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/united-states-core-inflation-rate-mom-final/13516542", "percent"),
         ],
     },
     {
@@ -65,8 +67,8 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("headline_pce", "Headline PCE", "PCEPI", "index", "#111827", True),
-            SeriesConfig("core_pce", "Core PCE", "PCEPILFE", "index", "#d93025"),
+            SeriesConfig("headline_pce", "Headline PCE", "PCEPI", "index", "#111827", True, "https://www.moneycontrol.com/economic-calendar/usa-pce-price-index-mom/13516496", "percent"),
+            SeriesConfig("core_pce", "Core PCE", "PCEPILFE", "index", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/core-pce-price-index-mom/13516494", "percent"),
         ],
     },
     {
@@ -78,8 +80,8 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("final_demand_ppi", "Final Demand PPI", "PPIFIS", "index", "#111827", True),
-            SeriesConfig("core_ppi", "Core PPI", "PPIFES", "index", "#d93025"),
+            SeriesConfig("final_demand_ppi", "Final Demand PPI", "PPIFIS", "index", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-ppi-mom/13516126", "percent"),
+            SeriesConfig("core_ppi", "Core PPI", "PPIFES", "index", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/united-states-core-producer-prices-mom/13516228", "percent"),
         ],
     },
     {
@@ -91,7 +93,7 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("retail_sales", "Retail Sales", "RSAFS", "usd_millions", "#111827", True),
+            SeriesConfig("retail_sales", "Retail Sales", "RSAFS", "usd_millions", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-retail-sales-mom/5877376", "percent"),
         ],
     },
     {
@@ -134,8 +136,8 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("job_openings", "Job Openings", "JTSJOL", "thousands", "#111827", True),
-            SeriesConfig("quits_rate", "Quits Rate", "JTSQUR", "percent", "#d93025"),
+            SeriesConfig("job_openings", "Job Openings", "JTSJOL", "thousands", "#111827", True, "https://www.moneycontrol.com/economic-calendar/jolts-job-openings/4770591", "millions"),
+            SeriesConfig("quits_rate", "Quits Rate", "JTSQUR", "percent", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/jolts-job-quits/13516226", "millions"),
             SeriesConfig("hires", "Hires", "JTSHIR", "thousands", "#2563eb"),
         ],
     },
@@ -148,8 +150,8 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("durable_goods_orders", "Durable Goods Orders", "DGORDER", "usd_millions", "#111827", True),
-            SeriesConfig("core_capex_orders", "Core Capital Goods", "NEWORDER", "usd_millions", "#2563eb"),
+            SeriesConfig("durable_goods_orders", "Durable Goods Orders", "DGORDER", "usd_millions", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-durable-goods-orders-mom/119", "percent"),
+            SeriesConfig("core_capex_orders", "Core Capital Goods", "NEWORDER", "usd_millions", "#2563eb", False, "https://www.moneycontrol.com/economic-calendar/usa-durable-goods-orders-ex-transp-mom/121", "percent"),
         ],
     },
     {
@@ -161,11 +163,13 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("housing_starts", "Housing Starts", "HOUST", "thousands", "#111827", True),
-            SeriesConfig("building_permits", "Building Permits", "PERMIT", "thousands", "#d93025"),
+            SeriesConfig("housing_starts", "Housing Starts", "HOUST", "thousands", "#111827", True, "https://www.moneycontrol.com/economic-calendar/usa-housing-starts/12206442", "millions"),
+            SeriesConfig("building_permits", "Building Permits", "PERMIT", "thousands", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/united-states-building-permits/12206443", "millions"),
         ],
     },
 ]
+
+RELEASE_START_DATE = "2025-01-01"
 
 
 def fetch_text(url: str) -> str:
@@ -257,6 +261,125 @@ def compute_snapshot(dates: list[str], values: list[float]) -> dict[str, Any]:
     }
 
 
+def parse_release_numeric(text: str) -> tuple[float | None, str | None]:
+    cleaned = (text or "").strip().replace(",", "")
+    if not cleaned or cleaned == "-":
+        return None, None
+    multiplier = 1.0
+    unit = "plain"
+    if cleaned.endswith("%"):
+        unit = "percent"
+        cleaned = cleaned[:-1]
+    elif cleaned.endswith("K"):
+        unit = "thousands"
+        multiplier = 1_000
+        cleaned = cleaned[:-1]
+    elif cleaned.endswith("M"):
+        unit = "millions"
+        multiplier = 1_000_000
+        cleaned = cleaned[:-1]
+    elif cleaned.endswith("B"):
+        unit = "billions"
+        multiplier = 1_000_000_000
+        cleaned = cleaned[:-1]
+    try:
+        return float(cleaned) * multiplier, unit
+    except ValueError:
+        return None, unit
+
+
+def format_release_numeric(value: float | None, unit: str | None) -> str | None:
+    if value is None:
+        return None
+    if unit == "percent":
+        return f"{value:.2f}%"
+    if unit == "thousands":
+        return f"{value / 1_000:.0f}K"
+    if unit == "millions":
+        formatted = f"{value / 1_000_000:.3f}".rstrip("0").rstrip(".")
+        return f"{formatted}M"
+    if unit == "billions":
+        formatted = f"{value / 1_000_000_000:.3f}".rstrip("0").rstrip(".")
+        return f"{formatted}B"
+    return f"{value:.2f}"
+
+
+def format_release_surprise(value: float | None, unit: str | None) -> str | None:
+    if value is None:
+        return None
+    prefix = "+" if value >= 0 else ""
+    if unit == "percent":
+        return f"{prefix}{value:.2f}%p"
+    if unit == "thousands":
+        return f"{prefix}{value / 1_000:.0f}K"
+    if unit == "millions":
+        return f"{prefix}{value / 1_000_000:.3f}M"
+    if unit == "billions":
+        return f"{prefix}{value / 1_000_000_000:.3f}B"
+    return f"{prefix}{value:.2f}"
+
+
+def parse_moneycontrol_release_history(url: str, release_unit: str | None) -> list[dict[str, Any]]:
+    from bs4 import BeautifulSoup
+
+    text = fetch_text(url)
+    soup = BeautifulSoup(text, "html.parser")
+    table = soup.select_one("#hist_tbl")
+    if not table:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for tr in table.select("tbody tr"):
+        tds = tr.select("td")
+        if len(tds) < 6:
+            continue
+        release_date = datetime.strptime(tds[0].get_text(" ", strip=True), "%b %d, %Y").strftime("%Y-%m-%d")
+        if release_date < RELEASE_START_DATE:
+            continue
+        reference = tds[2].get_text(" ", strip=True)
+        actual_text = tds[3].get_text(" ", strip=True)
+        previous_text = tds[4].get_text(" ", strip=True)
+        consensus_text = tds[5].get_text(" ", strip=True)
+        if not actual_text or actual_text == "-":
+            continue
+        actual_value, actual_unit = parse_release_numeric(actual_text)
+        previous_value, previous_unit = parse_release_numeric(previous_text)
+        consensus_value, consensus_unit = parse_release_numeric(consensus_text)
+        unit = release_unit or actual_unit or consensus_unit or previous_unit
+        surprise_value = actual_value - consensus_value if actual_value is not None and consensus_value is not None else None
+        rows.append(
+            {
+                "releaseDate": release_date,
+                "time": tds[1].get_text(" ", strip=True),
+                "reference": reference,
+                "actual": actual_text,
+                "actualValue": safe_round(actual_value, 4),
+                "previous": previous_text if previous_text else "-",
+                "consensus": consensus_text if consensus_text else "-",
+                "surprise": format_release_surprise(surprise_value, unit) if surprise_value is not None else None,
+                "surpriseValue": safe_round(surprise_value, 4),
+                "unit": unit,
+            }
+        )
+
+    deduped: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = row["reference"]
+        existing = deduped.get(key)
+        if not existing:
+            deduped[key] = row
+            continue
+        existing_has_consensus = existing.get("consensus") not in {"", "-", None}
+        row_has_consensus = row.get("consensus") not in {"", "-", None}
+        if row_has_consensus and not existing_has_consensus:
+            deduped[key] = row
+            continue
+        if row["releaseDate"] > existing["releaseDate"]:
+            deduped[key] = row
+
+    return sorted(deduped.values(), key=lambda item: item["releaseDate"])
+
+
 def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
     indicator_series: list[dict[str, Any]] = []
     latest_months: list[str] = []
@@ -281,6 +404,8 @@ def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
 
         parsed = parse_fred_series(series.source_id, config["startMonth"])
         snapshot = compute_snapshot(parsed["dates"], parsed["values"])
+        release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
+        latest_release = release_history[-1] if release_history else None
         if parsed["dates"]:
             latest_months.append(parsed["dates"][-1])
             available_start_months.append(parsed["dates"][0])
@@ -294,6 +419,8 @@ def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
                 "primary": series.primary,
                 "dates": parsed["dates"],
                 "values": [safe_round(value, 4) for value in parsed["values"]],
+                "releaseHistory": release_history,
+                "latestRelease": latest_release,
                 **snapshot,
             }
         )

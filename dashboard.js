@@ -1277,6 +1277,13 @@ function formatMacroDeltaValue(unit, value) {
   return `${sign}${formatMacroIndicatorValue(unit, Math.abs(numeric))}`;
 }
 
+function formatMacroReleaseSurpriseText(release) {
+  if (!release?.surprise) {
+    return "vs cons -";
+  }
+  return `vs cons ${release.surprise}`;
+}
+
 function buildMacroChartPayload(indicator, series, mode) {
   if (!indicator || !series) {
     return { labels: [], values: [] };
@@ -4357,6 +4364,7 @@ function renderMarketMacroOverview() {
       const latestLabel = entry.latestMonth ? formatMonthLabel(entry.latestMonth) : entry.statusNote ?? "manual/source pending";
       const seriesMarkup = (entry.series ?? [])
         .map((item) => {
+          const latestRelease = item.latestRelease ?? null;
           if (!item.latestDate || !Number.isFinite(Number(item.latestValue))) {
             return `
               <div class="macro-snapshot-stat">
@@ -4371,6 +4379,7 @@ function renderMarketMacroOverview() {
               <span>${item.label}</span>
               <strong>${formatMacroIndicatorValue(item.unit, item.latestValue)}</strong>
               <small>MoM ${formatMacroChangePercent(item.momPct)} | YoY ${formatMacroChangePercent(item.yoyPct)}</small>
+              <small>${latestRelease ? `${formatMonthLabel(latestRelease.releaseDate.slice(0, 7))} ${formatMacroReleaseSurpriseText(latestRelease)}` : "consensus pending"}</small>
             </div>
           `;
         })
@@ -4461,9 +4470,30 @@ function renderMarketMacroOverview() {
             <span>Coverage</span>
             <strong>${state.macroHistoryMode === "common" ? "2010-04+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
           </div>
+          <div class="market-rs-metric">
+            <span>Latest Surprise</span>
+            <strong>${series.latestRelease?.surprise ?? "-"}</strong>
+          </div>
         </div>
       `
       : "";
+
+  const releaseRows = (series?.releaseHistory ?? [])
+    .slice()
+    .reverse()
+    .map(
+      (row) => `
+        <tr>
+          <td>${row.releaseDate}</td>
+          <td>${row.reference ?? "-"}</td>
+          <td>${row.actual ?? "-"}</td>
+          <td>${row.consensus ?? "-"}</td>
+          <td>${row.previous ?? "-"}</td>
+          <td>${row.surprise ?? "-"}</td>
+        </tr>
+      `,
+    )
+    .join("");
 
   const chartBodyMarkup =
     indicator?.status === "manual" || !series?.dates?.length
@@ -4481,6 +4511,27 @@ function renderMarketMacroOverview() {
         <p class="market-rs-chart-caption">
           ${indicator?.title ?? "-"} / ${series?.label ?? "-"} / ${state.macroHistoryMode === "common" ? "2010-04+ common view" : "full history"}
         </p>
+        <div class="macro-release-table-wrap">
+          <div class="us-section-head macro-release-head">
+            <div>
+              <h3>Release Surprise History</h3>
+              <p>2025-01 이후 actual / consensus / previous / surprise 기록입니다.</p>
+            </div>
+          </div>
+          <table class="macro-coverage-table macro-release-table">
+            <thead>
+              <tr>
+                <th>Release</th>
+                <th>Ref</th>
+                <th>Actual</th>
+                <th>Cons</th>
+                <th>Prev</th>
+                <th>Surprise</th>
+              </tr>
+            </thead>
+            <tbody>${releaseRows || '<tr><td colspan="6">Release history pending.</td></tr>'}</tbody>
+          </table>
+        </div>
       `;
 
   usOverviewRoot.innerHTML = `
