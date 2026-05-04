@@ -68,6 +68,7 @@ const bigTechSubtabMeta = {
 
 const marketSubtabMeta = {
   Overview: { label: "Overview" },
+  Macro: { label: "Macro" },
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
 };
@@ -3923,52 +3924,6 @@ function renderMarketOverview() {
         </button>`,
     )
     .join("");
-  const macroPanels = [
-    { key: "rates", canvas: "rates", className: "macro-panel-wide" },
-    { key: "dxy", canvas: "dxy", className: "" },
-    { key: "energy", canvas: "energy", className: "" },
-    { key: "metals", canvas: "metals", className: "" },
-  ]
-    .map(({ key, canvas, className }) => {
-      const panel = getMarketMacroPanel(key);
-      if (!panel) {
-        return "";
-      }
-      return `
-        <article class="cloud-panel macro-panel ${className}">
-          <div class="us-panel-head">
-            <div>
-              <h3>${panel.title}</h3>
-              <p>${panel.subtitle}</p>
-            </div>
-            <div class="m7-range-row">
-              ${rangeSource
-                .map(
-                  (range) => `
-                    <button
-                      type="button"
-                      class="m7-range-chip${getMarketMacroRange(key) === range.key ? " active" : ""}"
-                      data-market-macro-range="${range.key}"
-                      data-market-macro-panel="${key}"
-                    >
-                      ${range.label}
-                    </button>`,
-                )
-                .join("")}
-            </div>
-          </div>
-          <div class="macro-panel-meta">
-            <span>${panel.source ?? ""}</span>
-            <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
-          </div>
-          <div class="macro-chart-wrap">
-            <canvas data-market-macro="${canvas}"></canvas>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
       <section class="us-panel us-price-panel">
@@ -4013,20 +3968,6 @@ function renderMarketOverview() {
         </div>
         <div class="us-price-chart-wrap">
           <canvas data-market-total="overview"></canvas>
-        </div>
-      </section>
-      <section class="us-panel us-price-panel">
-        <div class="us-section-head us-price-head">
-          <div>
-            <h2>Macro Dashboard</h2>
-            <p>Daily macro dashboard for US and Japan rates, dollar, energy, and metals. Metals are normalized for cleaner cross-asset comparison.</p>
-          </div>
-          <div class="us-price-controls">
-            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
-          </div>
-        </div>
-        <div class="macro-panel-grid">
-          ${macroPanels}
         </div>
       </section>
       <section class="us-panel us-price-panel">
@@ -4133,6 +4074,95 @@ function renderMarketOverview() {
   if (relativeCanvas) {
     createMarketRelativeChart(relativeCanvas, state.marketPriceRange);
   }
+}
+
+function renderMarketMacroOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
+  const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const macroPanels = [
+    { key: "rates", canvas: "rates", className: "macro-panel-wide" },
+    { key: "dxy", canvas: "dxy", className: "" },
+    { key: "energy", canvas: "energy", className: "" },
+    { key: "metals", canvas: "metals", className: "" },
+  ]
+    .map(({ key, canvas, className }) => {
+      const panel = getMarketMacroPanel(key);
+      if (!panel) {
+        return "";
+      }
+      return `
+        <article class="cloud-panel macro-panel ${className}">
+          <div class="us-panel-head">
+            <div>
+              <h3>${panel.title}</h3>
+              <p>${panel.subtitle}</p>
+            </div>
+            <div class="m7-range-row">
+              ${rangeSource
+                .map(
+                  (range) => `
+                    <button
+                      type="button"
+                      class="m7-range-chip${getMarketMacroRange(key) === range.key ? " active" : ""}"
+                      data-market-macro-range="${range.key}"
+                      data-market-macro-panel="${key}"
+                    >
+                      ${range.label}
+                    </button>`,
+                )
+                .join("")}
+            </div>
+          </div>
+          <div class="macro-panel-meta">
+            <span>${panel.source ?? ""}</span>
+            <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
+          </div>
+          <div class="macro-chart-wrap">
+            <canvas data-market-macro="${canvas}"></canvas>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Macro Dashboard</h2>
+            <p>Daily macro dashboard for US and Japan rates, dollar, energy, and metals. Metals are normalized for cleaner cross-asset comparison.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="macro-panel-grid">
+          ${macroPanels}
+        </div>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroPanel;
+      const rangeKey = button.dataset.marketMacroRange || marketMacroData.defaultRange || "max";
+      if (!panelKey) {
+        return;
+      }
+      state.marketMacroRanges = {
+        ...state.marketMacroRanges,
+        [panelKey]: rangeKey,
+      };
+      render();
+    });
+  });
+
   ["rates", "dxy", "energy", "metals"].forEach((panelKey) => {
     const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
     if (canvas) {
@@ -4967,6 +4997,10 @@ function render() {
     renderSummary([]);
     if (state.marketView === "Overview") {
       renderMarketOverview();
+      return;
+    }
+    if (state.marketView === "Macro") {
+      renderMarketMacroOverview();
       return;
     }
     if (state.marketView === "Breadth") {
