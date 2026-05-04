@@ -18,6 +18,7 @@ const capexDashboardData = window.capexDashboardData ?? {
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
+const macroIndicatorsData = window.macroIndicatorsData ?? { updatedAt: "", commonStartMonth: "2010-04", indicators: [], categories: [] };
 const marketRsData = window.marketRsData ?? {
   updatedAt: "",
   benchmark: { symbol: "^GSPC", label: "S&P 500" },
@@ -193,6 +194,9 @@ const state = {
   rsFilter: "newHigh",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
+  macroIndicatorKey: "",
+  macroSeriesKey: "",
+  macroHistoryMode: "common",
 };
 
 const charts = [];
@@ -278,6 +282,17 @@ function formatShortIsoDate(dateText) {
   return `${year.slice(2)}/${month}`;
 }
 
+function formatMonthLabel(monthText) {
+  if (!monthText) {
+    return "-";
+  }
+  const [year, month] = monthText.split("-");
+  if (!year || !month) {
+    return monthText;
+  }
+  return `${year.slice(2)}/${month}`;
+}
+
 function formatRangeAxisDate(dateText, rangeKey) {
   if (!dateText) {
     return "-";
@@ -287,6 +302,28 @@ function formatRangeAxisDate(dateText, rangeKey) {
     return `${month}/${day}`;
   }
   return `${year.slice(2)}/${month}`;
+}
+
+function buildMonthlyTickIndexes(labels, maxCount = 10) {
+  if (!Array.isArray(labels) || !labels.length) {
+    return [];
+  }
+  const stride = Math.max(1, Math.ceil(labels.length / maxCount));
+  const ticks = [];
+  for (let index = 0; index < labels.length; index += stride) {
+    ticks.push(index);
+  }
+  const unique = [...new Set(ticks)].sort((a, b) => a - b);
+  const deduped = [];
+  let lastLabel = "";
+  unique.forEach((index) => {
+    const label = formatMonthLabel(labels[index]);
+    if (label && label !== lastLabel) {
+      deduped.push(index);
+      lastLabel = label;
+    }
+  });
+  return deduped;
 }
 
 function diffUtcDays(startText, endText) {
@@ -1157,6 +1194,178 @@ function ensureValidSelection() {
   if (!state.rsSelectedTicker && Array.isArray(marketRsData.rows) && marketRsData.rows.length) {
     state.rsSelectedTicker = marketRsData.rows[0].ticker;
   }
+  if (!state.macroIndicatorKey && Array.isArray(macroIndicatorsData.indicators) && macroIndicatorsData.indicators.length) {
+    state.macroIndicatorKey = macroIndicatorsData.indicators[0].key;
+  }
+  const selectedIndicator = macroIndicatorsData.indicators.find((indicator) => indicator.key === state.macroIndicatorKey);
+  if (!selectedIndicator && Array.isArray(macroIndicatorsData.indicators) && macroIndicatorsData.indicators.length) {
+    state.macroIndicatorKey = macroIndicatorsData.indicators[0].key;
+  }
+  const safeIndicator = macroIndicatorsData.indicators.find((indicator) => indicator.key === state.macroIndicatorKey);
+  if (safeIndicator && !safeIndicator.series.some((series) => series.key === state.macroSeriesKey)) {
+    state.macroSeriesKey = safeIndicator.series[0]?.key ?? "";
+  }
+  if (!["common", "full"].includes(state.macroHistoryMode)) {
+    state.macroHistoryMode = "common";
+  }
+}
+
+function getMacroIndicatorByKey(key) {
+  return (macroIndicatorsData.indicators ?? []).find((indicator) => indicator.key === key) ?? null;
+}
+
+function getSelectedMacroIndicator() {
+  return getMacroIndicatorByKey(state.macroIndicatorKey) ?? (macroIndicatorsData.indicators ?? [])[0] ?? null;
+}
+
+function getSelectedMacroSeries(indicator = getSelectedMacroIndicator()) {
+  if (!indicator) {
+    return null;
+  }
+  return indicator.series.find((series) => series.key === state.macroSeriesKey) ?? indicator.series[0] ?? null;
+}
+
+function formatMacroIndicatorValue(unit, value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (unit === "thousands") {
+    if (Math.abs(numeric) >= 1000) {
+      return `${(numeric / 1000).toFixed(2)}M`;
+    }
+    return `${numeric.toFixed(0)}k`;
+  }
+  if (unit === "usd_millions") {
+    return formatCompactDollarMillions(numeric);
+  }
+  if (unit === "currency") {
+    return `$${numeric.toFixed(2)}`;
+  }
+  if (unit === "percent") {
+    return `${numeric.toFixed(2)}%`;
+  }
+  if (Math.abs(numeric) >= 1000) {
+    return numeric.toLocaleString("en-US", { maximumFractionDigits: 1 });
+  }
+  return numeric.toFixed(2);
+}
+
+function formatMacroChangePercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  return `${numeric >= 0 ? "+" : ""}${numeric.toFixed(2)}%`;
+}
+
+function formatMacroDeltaValue(unit, value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric >= 0 ? "+" : "";
+  if (unit === "percent") {
+    return `${sign}${numeric.toFixed(2)}%p`;
+  }
+  if (unit === "currency") {
+    return `${sign}$${numeric.toFixed(2)}`;
+  }
+  if (unit === "usd_millions") {
+    return `${sign}${formatCompactDollarMillions(Math.abs(numeric)).replace("$", "$")}`;
+  }
+  return `${sign}${formatMacroIndicatorValue(unit, Math.abs(numeric))}`;
+}
+
+function buildMacroChartPayload(indicator, series, mode) {
+  if (!indicator || !series) {
+    return { labels: [], values: [] };
+  }
+  const startMonth = mode === "common" ? macroIndicatorsData.commonStartMonth ?? indicator.commonStartMonth : indicator.availableStartMonth ?? indicator.startMonth;
+  const labels = [];
+  const values = [];
+  (series.dates ?? []).forEach((dateText, index) => {
+    if (startMonth && dateText < startMonth) {
+      return;
+    }
+    labels.push(dateText);
+    values.push(series.values?.[index] ?? null);
+  });
+  return { labels, values };
+}
+
+function createMacroIndicatorChart(canvas, indicator, series, mode) {
+  if (typeof Chart === "undefined" || !canvas || !indicator || !series) {
+    return;
+  }
+  const payload = buildMacroChartPayload(indicator, series, mode);
+  const tickIndexes = new Set(buildMonthlyTickIndexes(payload.labels, 9));
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: [
+        {
+          label: series.label,
+          data: payload.values,
+          borderColor: series.color ?? "#111827",
+          backgroundColor: series.color ?? "#111827",
+          borderWidth: 2.5,
+          tension: 0.18,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          spanGaps: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => formatMonthLabel(items[0]?.label ?? ""),
+            label: (context) => `${series.label}: ${formatMacroIndicatorValue(series.unit, context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index) => (tickIndexes.has(index) ? formatMonthLabel(payload.labels[index]) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatMacroIndicatorValue(series.unit, Number(value)),
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function destroyCharts() {
@@ -4138,19 +4347,248 @@ function renderMarketMacroOverview() {
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  usOverviewRoot.innerHTML = `
-    <section class="market-overview">
-      <section class="us-panel us-price-panel">
-        <div class="us-section-head us-price-head">
-          <div>
-            <h2>Macro</h2>
-            <p>ISM 제조업지수, CPI, 고용 같은 경기/물가 매크로 지표를 이 탭에 따로 쌓아갈 예정입니다.</p>
+  const indicator = getSelectedMacroIndicator();
+  const series = getSelectedMacroSeries(indicator);
+  const indicators = macroIndicatorsData.indicators ?? [];
+  const categories = macroIndicatorsData.categories ?? [];
+
+  const snapshotMarkup = indicators
+    .map((entry) => {
+      const latestLabel = entry.latestMonth ? formatMonthLabel(entry.latestMonth) : entry.statusNote ?? "manual/source pending";
+      const seriesMarkup = (entry.series ?? [])
+        .map((item) => {
+          if (!item.latestDate || !Number.isFinite(Number(item.latestValue))) {
+            return `
+              <div class="macro-snapshot-stat">
+                <span>${item.label}</span>
+                <strong>Pending</strong>
+                <small>${entry.statusNote ?? "manual/source pending"}</small>
+              </div>
+            `;
+          }
+          return `
+            <div class="macro-snapshot-stat">
+              <span>${item.label}</span>
+              <strong>${formatMacroIndicatorValue(item.unit, item.latestValue)}</strong>
+              <small>MoM ${formatMacroChangePercent(item.momPct)} | YoY ${formatMacroChangePercent(item.yoyPct)}</small>
+            </div>
+          `;
+        })
+        .join("");
+      return `
+        <article class="macro-snapshot-card">
+          <div class="macro-snapshot-head">
+            <div>
+              <h3>${entry.title}</h3>
+              <p>${entry.category}</p>
+            </div>
+            <span class="macro-status-pill ${entry.status === "manual" ? "manual" : "auto"}">${entry.status === "manual" ? "Manual" : "Auto"}</span>
+          </div>
+          <p class="macro-snapshot-date">Latest ${latestLabel}</p>
+          <div class="macro-snapshot-stats">${seriesMarkup}</div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const coverageRows = indicators
+    .map(
+      (entry) => `
+        <tr>
+          <td>${entry.title}</td>
+          <td>${entry.availableStartMonth ?? entry.startMonth ?? "-"}</td>
+          <td>${entry.sourceLabel ?? "-"}</td>
+          <td>${entry.status === "manual" ? (entry.statusNote ?? "manual/source pending") : "ready"}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  const categoryMarkup = categories
+    .map(
+      (entry) => `
+        <article class="macro-category-card">
+          <h3>${entry.label}</h3>
+          <div class="macro-category-list">
+            ${(entry.items ?? []).map((item) => `<span class="market-rs-chip">${item}</span>`).join("")}
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  const indicatorOptions = indicators
+    .map((entry) => `<option value="${entry.key}"${entry.key === indicator?.key ? " selected" : ""}>${entry.title}</option>`)
+    .join("");
+
+  const seriesChips = (indicator?.series ?? [])
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="market-rs-chip${item.key === series?.key ? " active" : ""}"
+          data-macro-series="${item.key}"
+        >${item.label}</button>
+      `,
+    )
+    .join("");
+
+  const chartMetaMarkup =
+    indicator && series
+      ? `
+        <div class="macro-chart-metrics">
+          <div class="market-rs-metric">
+            <span>Latest</span>
+            <strong>${formatMacroIndicatorValue(series.unit, series.latestValue)}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Previous</span>
+            <strong>${formatMacroIndicatorValue(series.unit, series.previousValue)}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Delta</span>
+            <strong>${formatMacroDeltaValue(series.unit, series.deltaValue)}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>MoM</span>
+            <strong>${formatMacroChangePercent(series.momPct)}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>YoY</span>
+            <strong>${formatMacroChangePercent(series.yoyPct)}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Coverage</span>
+            <strong>${state.macroHistoryMode === "common" ? "2010-04+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
           </div>
         </div>
-        <div class="market-rs-empty">Macro 전용 지표 영역 준비 중입니다.</div>
+      `
+      : "";
+
+  const chartBodyMarkup =
+    indicator?.status === "manual" || !series?.dates?.length
+      ? `
+        <div class="market-rs-empty macro-pending-state">
+          <strong>${indicator?.title ?? "Selected indicator"}</strong>
+          <span>${indicator?.statusNote ?? "manual/source pending"}</span>
+          <a href="${indicator?.sourceUrl ?? "#"}" target="_blank" rel="noreferrer">Open source page</a>
+        </div>
+      `
+      : `
+        <div class="chart-wrap macro-chart-wrap">
+          <canvas data-macro-indicator-chart></canvas>
+        </div>
+        <p class="market-rs-chart-caption">
+          ${indicator?.title ?? "-"} / ${series?.label ?? "-"} / ${state.macroHistoryMode === "common" ? "2010-04+ common view" : "full history"}
+        </p>
+      `;
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <section class="us-panel macro-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Latest Macro Snapshot</h2>
+            <p>미국 투자자들이 매달 확인하는 핵심 매크로 지표 10개를 최신 발표월 기준으로 빠르게 확인합니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${macroIndicatorsData.updatedAt ? formatKstDateTime(macroIndicatorsData.updatedAt) : "-"}</div>
+          </div>
+        </div>
+        <div class="macro-snapshot-grid">${snapshotMarkup}</div>
+      </section>
+
+      <section class="macro-panel-grid macro-indicator-grid">
+        <article class="us-panel">
+          <div class="us-section-head">
+            <div>
+              <h2>Release Coverage</h2>
+              <p>사용 가능 시작월, 데이터 소스, 자동/수동 업데이트 상태를 한 번에 확인합니다.</p>
+            </div>
+          </div>
+          <div class="macro-coverage-table-wrap">
+            <table class="macro-coverage-table">
+              <thead>
+                <tr>
+                  <th>Indicator</th>
+                  <th>Start</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>${coverageRows}</tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="us-panel">
+          <div class="us-section-head">
+            <div>
+              <h2>Category Grouping</h2>
+              <p>인플레이션, 노동, 수요, 경기순환, 금리민감도로 매크로 지표를 묶었습니다.</p>
+            </div>
+          </div>
+          <div class="macro-category-grid">${categoryMarkup}</div>
+        </article>
+      </section>
+
+      <section class="us-panel macro-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Historical Chart</h2>
+            <p>개별 지표는 각 지표별 전체 기간 또는 공통 시작월 2010-04 이후 구간으로 볼 수 있습니다.</p>
+          </div>
+        </div>
+        <div class="market-rs-controls macro-chart-controls">
+          <label class="macro-control-field">
+            <span class="market-rs-control-label">Indicator</span>
+            <select id="macro-indicator-select" class="macro-select">${indicatorOptions}</select>
+          </label>
+          <div>
+            <span class="market-rs-control-label">History</span>
+            <div class="market-rs-chip-row">
+              <button type="button" class="market-rs-chip${state.macroHistoryMode === "common" ? " active" : ""}" data-macro-mode="common">2010-04+</button>
+              <button type="button" class="market-rs-chip${state.macroHistoryMode === "full" ? " active" : ""}" data-macro-mode="full">Full History</button>
+            </div>
+          </div>
+          <div>
+            <span class="market-rs-control-label">Series</span>
+            <div class="market-rs-chip-row">${seriesChips}</div>
+          </div>
+        </div>
+        ${chartMetaMarkup}
+        ${chartBodyMarkup}
       </section>
     </section>
   `;
+
+  usOverviewRoot.querySelector("#macro-indicator-select")?.addEventListener("change", (event) => {
+    state.macroIndicatorKey = event.target.value;
+    const nextIndicator = getSelectedMacroIndicator();
+    state.macroSeriesKey = nextIndicator?.series?.[0]?.key ?? "";
+    render();
+  });
+
+  usOverviewRoot.querySelectorAll("[data-macro-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.macroHistoryMode = button.dataset.macroMode;
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-macro-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.macroSeriesKey = button.dataset.macroSeries;
+      render();
+    });
+  });
+
+  if (indicator?.status !== "manual" && series?.dates?.length) {
+    const canvas = usOverviewRoot.querySelector("[data-macro-indicator-chart]");
+    if (canvas) {
+      createMacroIndicatorChart(canvas, indicator, series, state.macroHistoryMode);
+    }
+  }
 }
 
 function createUsMarginChart(canvas, company) {
@@ -4795,11 +5233,11 @@ function renderSectors() {
 function renderSummary(list) {
   if (state.tab === "Market") {
     if (state.marketView === "Overview") {
-      summaryText.textContent = "Daily market price dashboard";
+      summaryText.textContent = "Price dashboard for major indexes, rates, dollar, energy, and metals";
       return;
     }
     if (state.marketView === "Macro") {
-      summaryText.textContent = "Macro indicator workspace";
+      summaryText.textContent = "US monthly macro dashboard with snapshot, coverage, categories, and history";
       return;
     }
     if (state.marketView === "Breadth") {
