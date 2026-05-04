@@ -361,29 +361,13 @@ h1 {
 }
 
 .briefing-total-sector-block {
-  grid-column: span 2;
+  grid-column: span 3;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   background: linear-gradient(180deg, #282a2f, #1f2126);
   padding: 4px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
-}
-
-.briefing-total-sector-block.sector-xl {
-  grid-column: span 4;
-}
-
-.briefing-total-sector-block.sector-lg {
-  grid-column: span 3;
-}
-
-.briefing-total-sector-block.sector-md {
-  grid-column: span 3;
-}
-
-.briefing-total-sector-block.sector-sm {
-  grid-column: span 2;
 }
 
 .briefing-total-sector-head {
@@ -2018,6 +2002,10 @@ h1 {
     grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
+  .briefing-total-sector-block {
+    grid-column: span 4;
+  }
+
   .briefing-heatmap-grid-total {
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
@@ -2087,6 +2075,10 @@ h1 {
 
   .briefing-total-sector-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .briefing-total-sector-block {
+    grid-column: span 2;
   }
 
   .briefing-heatmap-grid-total {

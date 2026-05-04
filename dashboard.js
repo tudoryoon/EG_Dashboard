@@ -2077,14 +2077,7 @@ function getBriefingOverviewTileSpan(sizeClass) {
 }
 
 function getBriefingSectorLayout(sectors, sector) {
-  const sizeClass = getBriefingSectorSizeClass(sectors, sector);
-  const colSpanMap = {
-    "sector-xl": 4,
-    "sector-lg": 3,
-    "sector-md": 3,
-    "sector-sm": 2,
-  };
-  return { sizeClass, cols: colSpanMap[sizeClass] ?? 2 };
+  return { sizeClass: "sector-uniform", cols: 3 };
 }
 
 function renderMarketBriefingOverview() {
@@ -2179,7 +2172,6 @@ function renderMarketBriefingOverview() {
       return `
         <section
           class="briefing-total-sector-block ${sectorLayout.sizeClass}"
-          style="grid-column: span ${sectorLayout.cols};"
         >
           <div class="briefing-total-sector-head">
             <strong>${sector.label}</strong>
