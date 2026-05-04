@@ -4774,7 +4774,7 @@ function buildUsSegmentHistoryMap(segment, company, quarterLabels) {
 }
 
 function buildUsSegmentTable(company) {
-  const marginLabel = company.marginLabel ?? "OPM";
+  const marginLabel = company.segmentMarginLabel ?? company.marginLabel ?? "OPM";
   const recentQuarterLabels = (company.labels ?? []).slice(-8).reverse();
   const displayQuarterLabels = getCompanyDisplayQuarterLabels(company, 8).reverse();
 
