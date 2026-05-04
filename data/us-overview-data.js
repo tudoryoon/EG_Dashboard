@@ -125,6 +125,7 @@ window.usOverviewData = (() => {
       name: "Microsoft",
       marginLabel: "GPM",
       segmentMarginLabel: "OPM",
+      quarterOffset: 0,
       labels: ["23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1", "26Q2", "26Q3"],
       revenue: [56.2, 56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 70.1, 76.4, 77.7, 81.3, 82.9],
       revenueYoy: [8.3, 12.8, 17.6, 17.0, 15.2, 16.1, 12.3, 13.3, 18.1, 18.4, 16.7, 18.3],

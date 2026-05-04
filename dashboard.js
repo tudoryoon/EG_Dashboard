@@ -1403,7 +1403,11 @@ function shiftQuarterLabel(label, quarterOffset, prefix = "") {
   return formatQuarterLabel(year, quarter, prefix);
 }
 
-function getCompanyQuarterOffset(companyName) {
+function getCompanyQuarterOffset(company) {
+  if (Number.isFinite(company?.quarterOffset)) {
+    return company.quarterOffset;
+  }
+  const companyName = company?.name;
   if (companyName === "Apple") {
     return 1;
   }
@@ -1419,7 +1423,7 @@ function getCompanyQuarterOffset(companyName) {
 function getCompanyDisplayQuarterLabels(company, limit = null) {
   const sourceLabels = Array.isArray(company?.labels) ? company.labels : [];
   const selectedLabels = limit ? sourceLabels.slice(-limit) : sourceLabels;
-  const quarterOffset = getCompanyQuarterOffset(company?.name);
+  const quarterOffset = getCompanyQuarterOffset(company);
   const prefix = "FY";
   return selectedLabels.map((label) => shiftQuarterLabel(label, quarterOffset, prefix));
 }
