@@ -4647,13 +4647,15 @@ function createUsMarginChart(canvas, company) {
     return;
   }
 
+  const marginLabel = company.marginLabel ?? "OPM";
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
       labels: company.displayLabels ?? company.labels,
       datasets: [
         {
-          label: "OPM",
+          label: marginLabel,
           data: company.opm,
           borderColor: "#2563eb",
           backgroundColor: "#2563eb",
@@ -4772,6 +4774,7 @@ function buildUsSegmentHistoryMap(segment, company, quarterLabels) {
 }
 
 function buildUsSegmentTable(company) {
+  const marginLabel = company.marginLabel ?? "OPM";
   const recentQuarterLabels = (company.labels ?? []).slice(-8).reverse();
   const displayQuarterLabels = getCompanyDisplayQuarterLabels(company, 8).reverse();
 
@@ -4780,7 +4783,7 @@ function buildUsSegmentTable(company) {
     .join("");
 
   const subHead = recentQuarterLabels
-    .map(() => '<span>Rev</span><span>YoY</span><span>OPM</span>')
+    .map(() => `<span>Rev</span><span>YoY</span><span>${marginLabel}</span>`)
     .join("");
 
   const rows = company.segments
@@ -4835,7 +4838,7 @@ function buildUsSegmentTable(company) {
           ${rows}
         </div>
       </div>
-      <p class="us-segment-note">OPM is shown only when a company officially discloses segment operating profit or operating income. If not disclosed, it remains N/A.</p>
+      <p class="us-segment-note">${marginLabel} is shown only when a company officially discloses the relevant segment margin or segment profit detail. If not disclosed, it remains N/A.</p>
     </div>
   `;
 }
@@ -4852,7 +4855,7 @@ function renderUSOverview() {
           <div class="us-panel-head">
             <div>
               <h3>${company.name}</h3>
-              <p>Last 12 reported fiscal quarters with revenue, revenue YoY, and OPM</p>
+              <p>Last 12 reported fiscal quarters with revenue, revenue YoY, and ${company.marginLabel ?? "OPM"}</p>
             </div>
           </div>
           <div class="us-mini-chart-wrap">
