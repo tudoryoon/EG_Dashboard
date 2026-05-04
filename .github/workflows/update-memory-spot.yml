@@ -3,7 +3,7 @@ name: Update Memory Spot
 on:
   workflow_dispatch:
   schedule:
-    - cron: "20 22 * * *"
+    - cron: "40 21 * * *"
 
 permissions:
   contents: write

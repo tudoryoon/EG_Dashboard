@@ -3,7 +3,7 @@ name: Update M7 And Market Prices
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 22 * * *"
+    - cron: "40 21 * * *"
 
 permissions:
   contents: write
