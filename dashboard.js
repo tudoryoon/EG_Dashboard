@@ -2062,6 +2062,49 @@ function getBriefingSectorSizeClass(sectors, sector) {
   return "sector-sm";
 }
 
+function getBriefingOverviewTileSpan(sizeClass) {
+  switch (sizeClass) {
+    case "cap-xl":
+      return { cols: 6, rows: 4, area: 24 };
+    case "cap-lg":
+      return { cols: 4, rows: 3, area: 12 };
+    case "cap-md":
+      return { cols: 3, rows: 2, area: 6 };
+    default:
+      return { cols: 2, rows: 2, area: 4 };
+  }
+}
+
+function getBriefingSectorLayout(sectors, sector) {
+  const sizeClass = getBriefingSectorSizeClass(sectors, sector);
+  const colSpanMap = {
+    "sector-xl": 4,
+    "sector-lg": 3,
+    "sector-md": 3,
+    "sector-sm": 2,
+  };
+  const minimumRowsMap = {
+    "sector-xl": 5,
+    "sector-lg": 4,
+    "sector-md": 3,
+    "sector-sm": 3,
+  };
+
+  const items = sector?.items ?? [];
+  const totalArea = items.reduce((sum, item) => {
+    const footprint = getBriefingOverviewTileSpan(getBriefingOverviewSizeClass(items, item));
+    return sum + footprint.area;
+  }, 0);
+
+  const cols = colSpanMap[sizeClass] ?? 2;
+  const widthFactor = cols / 12;
+  const effectiveInnerColumns = Math.max(4, Math.floor(12 * widthFactor));
+  const contentRows = Math.ceil(totalArea / effectiveInnerColumns);
+  const rows = Math.max(minimumRowsMap[sizeClass] ?? 3, contentRows + 2);
+
+  return { sizeClass, cols, rows };
+}
+
 function renderMarketBriefingOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -2122,7 +2165,7 @@ function renderMarketBriefingOverview() {
 
   const combinedSectorMarkup = (briefing.sectorPanels ?? [])
     .map((sector) => {
-      const sectorSizeClass = getBriefingSectorSizeClass(briefing.sectorPanels ?? [], sector);
+      const sectorLayout = getBriefingSectorLayout(briefing.sectorPanels ?? [], sector);
       const sectorTiles = (sector.items ?? [])
         .slice()
         .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0))
@@ -2152,7 +2195,10 @@ function renderMarketBriefingOverview() {
         .join("");
 
       return `
-        <section class="briefing-total-sector-block ${sectorSizeClass}">
+        <section
+          class="briefing-total-sector-block ${sectorLayout.sizeClass}"
+          style="grid-column: span ${sectorLayout.cols}; grid-row: span ${sectorLayout.rows};"
+        >
           <div class="briefing-total-sector-head">
             <strong>${sector.label}</strong>
             <span>${(sector.items ?? []).length} names</span>
