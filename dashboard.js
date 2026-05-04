@@ -4537,6 +4537,34 @@ function renderMarketMacroOverview() {
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
       <section class="us-panel macro-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Historical Chart</h2>
+            <p>개별 지표는 각 지표별 전체 기간 또는 공통 시작월 2010-04 이후 구간으로 볼 수 있습니다.</p>
+          </div>
+        </div>
+        <div class="market-rs-controls macro-chart-controls">
+          <label class="macro-control-field">
+            <span class="market-rs-control-label">Indicator</span>
+            <select id="macro-indicator-select" class="macro-select">${indicatorOptions}</select>
+          </label>
+          <div>
+            <span class="market-rs-control-label">History</span>
+            <div class="market-rs-chip-row">
+              <button type="button" class="market-rs-chip${state.macroHistoryMode === "common" ? " active" : ""}" data-macro-mode="common">2010-04+</button>
+              <button type="button" class="market-rs-chip${state.macroHistoryMode === "full" ? " active" : ""}" data-macro-mode="full">Full History</button>
+            </div>
+          </div>
+          <div>
+            <span class="market-rs-control-label">Series</span>
+            <div class="market-rs-chip-row">${seriesChips}</div>
+          </div>
+        </div>
+        ${chartMetaMarkup}
+        ${chartBodyMarkup}
+      </section>
+
+      <section class="us-panel macro-panel">
         <div class="us-section-head us-price-head">
           <div>
             <h2>Latest Macro Snapshot</h2>
@@ -4581,34 +4609,6 @@ function renderMarketMacroOverview() {
           </div>
           <div class="macro-category-grid">${categoryMarkup}</div>
         </article>
-      </section>
-
-      <section class="us-panel macro-panel">
-        <div class="us-section-head">
-          <div>
-            <h2>Historical Chart</h2>
-            <p>개별 지표는 각 지표별 전체 기간 또는 공통 시작월 2010-04 이후 구간으로 볼 수 있습니다.</p>
-          </div>
-        </div>
-        <div class="market-rs-controls macro-chart-controls">
-          <label class="macro-control-field">
-            <span class="market-rs-control-label">Indicator</span>
-            <select id="macro-indicator-select" class="macro-select">${indicatorOptions}</select>
-          </label>
-          <div>
-            <span class="market-rs-control-label">History</span>
-            <div class="market-rs-chip-row">
-              <button type="button" class="market-rs-chip${state.macroHistoryMode === "common" ? " active" : ""}" data-macro-mode="common">2010-04+</button>
-              <button type="button" class="market-rs-chip${state.macroHistoryMode === "full" ? " active" : ""}" data-macro-mode="full">Full History</button>
-            </div>
-          </div>
-          <div>
-            <span class="market-rs-control-label">Series</span>
-            <div class="market-rs-chip-row">${seriesChips}</div>
-          </div>
-        </div>
-        ${chartMetaMarkup}
-        ${chartBodyMarkup}
       </section>
     </section>
   `;
