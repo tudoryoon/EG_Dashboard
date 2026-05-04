@@ -2083,26 +2083,7 @@ function getBriefingSectorLayout(sectors, sector) {
     "sector-md": 3,
     "sector-sm": 2,
   };
-  const minimumRowsMap = {
-    "sector-xl": 5,
-    "sector-lg": 4,
-    "sector-md": 3,
-    "sector-sm": 3,
-  };
-
-  const items = sector?.items ?? [];
-  const totalArea = items.reduce((sum, item) => {
-    const footprint = getBriefingOverviewTileSpan(getBriefingOverviewSizeClass(items, item));
-    return sum + footprint.area;
-  }, 0);
-
-  const cols = colSpanMap[sizeClass] ?? 2;
-  const widthFactor = cols / 12;
-  const effectiveInnerColumns = Math.max(4, Math.floor(12 * widthFactor));
-  const contentRows = Math.ceil(totalArea / effectiveInnerColumns);
-  const rows = Math.max(minimumRowsMap[sizeClass] ?? 3, contentRows + 2);
-
-  return { sizeClass, cols, rows };
+  return { sizeClass, cols: colSpanMap[sizeClass] ?? 2 };
 }
 
 function renderMarketBriefingOverview() {
@@ -2197,7 +2178,7 @@ function renderMarketBriefingOverview() {
       return `
         <section
           class="briefing-total-sector-block ${sectorLayout.sizeClass}"
-          style="grid-column: span ${sectorLayout.cols}; grid-row: span ${sectorLayout.rows};"
+          style="grid-column: span ${sectorLayout.cols};"
         >
           <div class="briefing-total-sector-head">
             <strong>${sector.label}</strong>

@@ -351,8 +351,7 @@ h1 {
 .briefing-total-sector-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-auto-flow: dense;
-  grid-auto-rows: 28px;
+  align-items: start;
   gap: 6px;
 }
 
@@ -363,7 +362,6 @@ h1 {
 
 .briefing-total-sector-block {
   grid-column: span 2;
-  grid-row: span 3;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   background: linear-gradient(180deg, #282a2f, #1f2126);
@@ -374,22 +372,18 @@ h1 {
 
 .briefing-total-sector-block.sector-xl {
   grid-column: span 4;
-  grid-row: span 5;
 }
 
 .briefing-total-sector-block.sector-lg {
   grid-column: span 3;
-  grid-row: span 4;
 }
 
 .briefing-total-sector-block.sector-md {
   grid-column: span 3;
-  grid-row: span 3;
 }
 
 .briefing-total-sector-block.sector-sm {
   grid-column: span 2;
-  grid-row: span 3;
 }
 
 .briefing-total-sector-head {
@@ -2022,7 +2016,6 @@ h1 {
 
   .briefing-total-sector-grid {
     grid-template-columns: repeat(8, minmax(0, 1fr));
-    grid-auto-rows: 24px;
   }
 
   .briefing-heatmap-grid-total {
@@ -2094,7 +2087,6 @@ h1 {
 
   .briefing-total-sector-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-auto-rows: 22px;
   }
 
   .briefing-heatmap-grid-total {
