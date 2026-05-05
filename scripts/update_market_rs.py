@@ -77,11 +77,25 @@ SYMBOL_ALIASES = {
     "GEFB": "GEF-B",
     "MOGA": "MOG-A",
 }
+TERMINAL_SKIP_TICKERS = {
+    "ADRO",
+    "AKE",
+    "GTXI",
+    "INH",
+    "P5N994",
+    "PDLI",
+    "SBT",
+    "THRD",
+}
 
 
 def normalize_ticker(raw: object) -> str:
     ticker = str(raw).strip().upper().replace(".", "-")
     return SYMBOL_ALIASES.get(ticker, ticker)
+
+
+def is_terminal_symbol(symbol: str) -> bool:
+    return normalize_ticker(symbol) in TERMINAL_SKIP_TICKERS
 
 
 def fetch_html(url: str) -> str:
@@ -120,7 +134,7 @@ def fetch_universe_frame() -> pd.DataFrame:
         name_col = str(meta["name_col"])
         for _, row in table.iterrows():
             ticker = normalize_ticker(row.get(ticker_col, ""))
-            if ticker in {"", "NAN", "-"}:
+            if ticker in {"", "NAN", "-"} or is_terminal_symbol(ticker):
                 continue
             item = merged.setdefault(
                 ticker,
@@ -139,6 +153,9 @@ def fetch_universe_frame() -> pd.DataFrame:
 
 
 def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, pd.Series]]:
+    symbols = [symbol for symbol in symbols if not is_terminal_symbol(symbol)]
+    if not symbols:
+        return {}, {}
     history = yf.download(
         tickers=symbols,
         period=PRICE_PERIOD,
@@ -170,6 +187,8 @@ def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, 
         adjusted_close_map[symbol] = adjusted_close.rename(symbol)
     missing = [symbol for symbol in symbols if symbol not in raw_close_map or symbol not in adjusted_close_map]
     for symbol in missing:
+        if is_terminal_symbol(symbol):
+            continue
         for attempt in range(RETRY_ATTEMPTS):
             try:
                 single = yf.download(
@@ -580,7 +599,7 @@ def nullable_int(value: object) -> int | None:
 
 def main() -> None:
     universe = fetch_universe_frame()
-    symbols = sorted(universe["ticker"].tolist())
+    symbols = sorted(symbol for symbol in universe["ticker"].tolist() if not is_terminal_symbol(str(symbol)))
     raw_close_frame, adjusted_close_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
     existing_rows = load_existing_rows()
     shares_cache = build_shares_cache(symbols, existing_rows)

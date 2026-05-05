@@ -172,16 +172,31 @@ INDICATORS: list[dict[str, Any]] = [
 RELEASE_START_DATE = "2025-01-01"
 
 
+def load_existing_payload() -> dict[str, Any]:
+    if not OUTPUT_PATH.exists():
+        return {}
+    text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+    prefix = "window.macroIndicatorsData = "
+    if text.startswith(prefix):
+        text = text[len(prefix):]
+    if text.endswith(";"):
+        text = text[:-1]
+    try:
+        return json.loads(text)
+    except Exception:
+        return {}
+
+
 def fetch_text(url: str) -> str:
     last_error: Exception | None = None
-    for attempt in range(4):
+    for attempt in range(3):
         try:
-            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=60)
+            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
             response.raise_for_status()
             return response.text
         except Exception as error:  # pragma: no cover - network variability
             last_error = error
-            time.sleep(1.2 * (attempt + 1))
+            time.sleep(0.8 * (attempt + 1))
     raise RuntimeError(f"Failed to fetch {url}") from last_error
 
 
@@ -380,10 +395,15 @@ def parse_moneycontrol_release_history(url: str, release_unit: str | None) -> li
     return sorted(deduped.values(), key=lambda item: item["releaseDate"])
 
 
-def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
+def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str, Any] | None = None) -> dict[str, Any]:
     indicator_series: list[dict[str, Any]] = []
     latest_months: list[str] = []
     available_start_months: list[str] = []
+    series_by_key = {
+        str(series.get("key")): series
+        for series in (existing_indicator or {}).get("series", [])
+        if isinstance(series, dict)
+    }
 
     for series in config["series"]:
         if config["status"] != "auto" or not series.source_id:
@@ -402,15 +422,13 @@ def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
             )
             continue
 
-        parsed = parse_fred_series(series.source_id, config["startMonth"])
-        snapshot = compute_snapshot(parsed["dates"], parsed["values"])
-        release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
-        latest_release = release_history[-1] if release_history else None
-        if parsed["dates"]:
-            latest_months.append(parsed["dates"][-1])
-            available_start_months.append(parsed["dates"][0])
-        indicator_series.append(
-            {
+        existing_series = series_by_key.get(series.key, {})
+        try:
+            parsed = parse_fred_series(series.source_id, config["startMonth"])
+            release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
+            latest_release = release_history[-1] if release_history else None
+            snapshot = compute_snapshot(parsed["dates"], parsed["values"])
+            payload_series = {
                 "key": series.key,
                 "label": series.label,
                 "sourceId": series.source_id,
@@ -423,7 +441,49 @@ def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
                 "latestRelease": latest_release,
                 **snapshot,
             }
-        )
+        except Exception as error:  # pragma: no cover - network variability
+            if existing_series:
+                payload_series = {
+                    "key": series.key,
+                    "label": series.label,
+                    "sourceId": series.source_id,
+                    "unit": series.unit,
+                    "color": series.color,
+                    "primary": series.primary,
+                    "dates": existing_series.get("dates", []),
+                    "values": existing_series.get("values", []),
+                    "releaseHistory": existing_series.get("releaseHistory", []),
+                    "latestRelease": existing_series.get("latestRelease"),
+                    "latestDate": existing_series.get("latestDate"),
+                    "latestValue": existing_series.get("latestValue"),
+                    "previousValue": existing_series.get("previousValue"),
+                    "deltaValue": existing_series.get("deltaValue"),
+                    "momPct": existing_series.get("momPct"),
+                    "yoyPct": existing_series.get("yoyPct"),
+                    "fetchStatus": "stale",
+                    "fetchError": str(error),
+                }
+            else:
+                payload_series = {
+                    "key": series.key,
+                    "label": series.label,
+                    "sourceId": series.source_id,
+                    "unit": series.unit,
+                    "color": series.color,
+                    "primary": series.primary,
+                    "dates": [],
+                    "values": [],
+                    "releaseHistory": [],
+                    "latestRelease": None,
+                    "fetchStatus": "error",
+                    "fetchError": str(error),
+                    **compute_snapshot([], []),
+                }
+
+        if payload_series["dates"]:
+            latest_months.append(str(payload_series["dates"][-1]))
+            available_start_months.append(str(payload_series["dates"][0]))
+        indicator_series.append(payload_series)
 
     latest_month = max(latest_months) if latest_months else None
     available_start_month = min(available_start_months) if available_start_months else None
@@ -444,7 +504,13 @@ def build_indicator_payload(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_payload() -> dict[str, Any]:
-    indicators = [build_indicator_payload(config) for config in INDICATORS]
+    existing_payload = load_existing_payload()
+    existing_by_key = {
+        str(indicator.get("key")): indicator
+        for indicator in existing_payload.get("indicators", [])
+        if isinstance(indicator, dict)
+    }
+    indicators = [build_indicator_payload(config, existing_by_key.get(config["key"])) for config in INDICATORS]
     categories = [
         {"key": "inflation", "label": "Inflation", "items": ["CPI", "PPI", "PCE / Core PCE"]},
         {"key": "labor", "label": "Labor", "items": ["Employment Situation", "JOLTS"]},
