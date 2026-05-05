@@ -32,8 +32,14 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `/.github/workflows/update-m7-prices.yml`
   - runs daily
   - scheduled at `21:40 UTC` / `06:40 KST`
-  - updates `data/m7-price-data.js`, `data/market-price-data.js`, `data/market-macro-data.js`, `data/market-briefing-data.js`, and `data/market-rs-data.js`
+  - updates `data/m7-price-data.js`, `data/market-price-data.js`, `data/market-macro-data.js`, and `data/market-rs-data.js`
   - sources: Yahoo Finance, public macro/market pages, and constituent tables used by the RS pipeline
+
+- `/.github/workflows/update-market-briefing.yml`
+  - runs daily
+  - scheduled at `21:50 UTC` / `06:50 KST`
+  - updates `data/market-briefing-data.js`
+  - sources: Yahoo Finance and Google News/public news feeds used by the briefing script
 
 - `/.github/workflows/update-memory-spot.yml`
   - runs daily
