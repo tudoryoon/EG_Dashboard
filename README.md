@@ -37,7 +37,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 
 - `/.github/workflows/update-market-briefing.yml`
   - runs daily
-  - scheduled at `21:50 UTC` / `06:50 KST`
+  - scheduled at `21:30 UTC` / `06:30 KST`
   - updates `data/market-briefing-data.js`
   - sources: Yahoo Finance and Google News/public news feeds used by the briefing script
 
