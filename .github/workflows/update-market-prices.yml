@@ -37,7 +37,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add data/market-price-data.js data/market-macro-data.js
-          git commit -m "Update market price and macro history"
+          git commit -m "Update market price and macro history" || exit 0
+          git pull --rebase origin main
           git push
