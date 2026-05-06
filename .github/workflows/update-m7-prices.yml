@@ -1,9 +1,9 @@
-name: Update M7 And Market Prices
+name: Update M7 Prices
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "40 21 * * *"
+    - cron: "20 22 * * *"
 
 permissions:
   contents: write
@@ -11,7 +11,7 @@ permissions:
 jobs:
   update-m7-prices:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,32 +21,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install RS dependencies
-        run: python -m pip install pandas yfinance requests lxml html5lib
+      - name: Install dependencies
+        run: python -m pip install pandas yfinance
 
       - name: Refresh M7 price history
         run: python scripts/update_m7_prices.py
 
-      - name: Refresh market price history
-        run: python scripts/update_market_prices.py
-
-      - name: Refresh market macro history
-        run: python scripts/update_market_macro.py
-
-      - name: Refresh market RS history
-        env:
-          MARKET_RS_MAX_SHARES_FETCH: "250"
-        run: python scripts/update_market_rs.py
-
       - name: Commit updated price history
         run: |
-          if git diff --quiet -- data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-rs-data.js; then
-            echo "No M7, market, macro, or RS price changes detected."
+          if git diff --quiet -- data/m7-price-data.js; then
+            echo "No M7 price changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
-          git add data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-rs-data.js
-          git commit -m "Update M7, market, macro, and RS price history"
+          git add data/m7-price-data.js
+          git commit -m "Update M7 price history"
           git push
