@@ -46,6 +46,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           git add data/m7-price-data.js data/market-price-data.js data/market-macro-data.js data/market-rs-data.js
           git commit -m "Update M7, market, macro, and RS price history"
           git push
