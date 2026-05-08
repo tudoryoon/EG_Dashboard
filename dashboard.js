@@ -4132,6 +4132,21 @@ function getGpuSemiAnalysisSpotSeries() {
   return gpuCloudData.semiAnalysisH100Spot ?? null;
 }
 
+function buildGpuMergedLabels(seriesList) {
+  return [...new Set(seriesList.flatMap((series) => series?.labels ?? []))];
+}
+
+function buildGpuAlignedSeriesData(labels, sourceLabels, sourceValues) {
+  const labelIndex = new Map();
+  (sourceLabels ?? []).forEach((label, index) => {
+    labelIndex.set(label, index);
+  });
+  return labels.map((label) => {
+    const index = labelIndex.get(label);
+    return index === undefined ? null : sourceValues?.[index] ?? null;
+  });
+}
+
 function renderGpuCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -4165,25 +4180,26 @@ function renderGpuCloudOverview() {
   const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
   const semiSeries = getGpuSemiAnalysisSeries();
   const semiSpotSeries = getGpuSemiAnalysisSpotSeries();
+  const mergedLabels = buildGpuMergedLabels([semiSeries, semiSpotSeries]);
 
   usOverviewRoot.innerHTML = `
     <section class="memory-overview">
       <div class="us-section-head cloud-section-head">
-        <h2>${gpuCloudData.dashboard?.title ?? "GPU Cloud Rental Dashboard"}</h2>
-        <p>${gpuCloudData.dashboard?.subtitle ?? "Daily benchmark series with monthly timeline labels"}</p>
+        <h2>${gpuCloudData.dashboard?.title ?? "GPU Rental Price Dashboard"}</h2>
+        <p>${gpuCloudData.dashboard?.subtitle ?? "SemiAnalysis H100 contract benchmark and spot selected index"}</p>
       </div>
       <section class="memory-banner">
         <div>
-          <strong>Contract benchmark</strong>
+          <strong>Contract</strong>
           <span>${gpuCloudData.source?.semiAnalysisName ?? "SemiAnalysis H100 1Y contract index"}</span>
         </div>
         <div>
           <strong>Update</strong>
-          <span>${semiSeries?.updatedAt ?? "-"}</span>
+          <span>${semiSpotSeries?.updatedAt ?? semiSeries?.updatedAt ?? "-"}</span>
         </div>
         <div>
           <strong>Series</strong>
-          <span>H100 1Y midpoint</span>
+          <span>H100 1Y + H100 spot selected index</span>
         </div>
         <div>
           <strong>Source</strong>
@@ -4191,31 +4207,31 @@ function renderGpuCloudOverview() {
         </div>
         <div>
           <strong>Method</strong>
-          <span>Public chart approximation</span>
+          <span>Public chart approximation / preview midpoint</span>
         </div>
       </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
         <article class="memory-panel">
           <div class="us-panel-head">
             <div>
-              <h3>${semiSeries?.title ?? "SemiAnalysis H100 1Y Contract Index"}</h3>
-              <p>${semiSeries?.subtitle ?? ""}</p>
+              <h3>GPU Rental Pricing Trends (1Y contract)</h3>
+              <p>H100 contract benchmark and SemiAnalysis H100 spot selected index on one chart</p>
             </div>
           </div>
           <div class="memory-card-meta gpu-term-meta">
-            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"}</span>
+            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"} + ${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index preview"}</span>
             <span>${semiSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSeries?.latestValue) ? `· ${formatGpuCloudValue(semiSeries.latestValue)}` : ""}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">Cycle low</span>
+            <span class="memory-stat-label">Contract low</span>
             <span class="memory-stat-value">${Number.isFinite(semiSeries?.floor) ? `${formatGpuCloudValue(semiSeries.floor)} · ${semiSeries.floorLabel}` : "N/A"}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">Method</span>
-            <span class="memory-stat-value">${semiSeries?.method ?? ""}</span>
+            <span class="memory-stat-label">Spot low</span>
+            <span class="memory-stat-value">${Number.isFinite(semiSpotSeries?.floor) ? `${formatGpuCloudValue(semiSpotSeries.floor)} · ${semiSpotSeries.floorLabel}` : "N/A"}</span>
           </div>
           <div class="memory-chart-wrap">
-            <canvas data-gpu-basket="semi-h100-1y"></canvas>
+            <canvas data-gpu-basket="semi-h100-combined"></canvas>
           </div>
         </article>
         <article class="memory-panel">
@@ -4245,20 +4261,38 @@ function renderGpuCloudOverview() {
     </section>
   `;
 
-  const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-1y"]');
-  if (semiCanvas && semiSeries) {
+  const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-combined"]');
+  const legacySpotPanel = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-spot"]')?.closest(".memory-panel");
+  if (legacySpotPanel) {
+    legacySpotPanel.style.display = "none";
+  }
+
+  if (semiCanvas && mergedLabels.length && (semiSeries || semiSpotSeries)) {
     createGpuLineChart(
       semiCanvas,
-      semiSeries.labels ?? [],
+      mergedLabels,
       [
         {
-          label: "H100 1Y",
-          data: semiSeries.values ?? [],
-          borderColor: "#111827",
-          backgroundColor: "#111827",
+          label: "H100",
+          data: buildGpuAlignedSeriesData(mergedLabels, semiSeries?.labels ?? [], semiSeries?.values ?? []),
+          borderColor: "#a8b3c9",
+          backgroundColor: "#a8b3c9",
           borderWidth: 2.6,
           tension: 0.22,
           pointRadius: 3,
+          pointHoverRadius: 5,
+          pointHitRadius: 10,
+          spanGaps: false,
+        },
+        {
+          label: "SemiAnalysis H100 Spot Selected Index",
+          data: buildGpuAlignedSeriesData(mergedLabels, semiSpotSeries?.labels ?? [], semiSpotSeries?.values ?? []),
+          borderColor: "#3b82f6",
+          backgroundColor: "#3b82f6",
+          borderWidth: 2.4,
+          borderDash: [8, 6],
+          tension: 0.18,
+          pointRadius: 2.5,
           pointHoverRadius: 5,
           pointHitRadius: 10,
           spanGaps: false,
@@ -4267,30 +4301,6 @@ function renderGpuCloudOverview() {
       (value) => `$${Number(value).toFixed(2)}`,
     );
   }
-
-  const semiSpotCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-spot"]');
-  if (semiSpotCanvas && semiSpotSeries) {
-    createGpuLineChart(
-      semiSpotCanvas,
-      semiSpotSeries.labels ?? [],
-      [
-        {
-          label: "H100 Spot",
-          data: semiSpotSeries.values ?? [],
-          borderColor: "#2563eb",
-          backgroundColor: "#2563eb",
-          borderWidth: 2.6,
-          tension: 0.22,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          pointHitRadius: 10,
-          spanGaps: false,
-        },
-      ],
-      (value) => `$${Number(value).toFixed(2)}`,
-    );
-  }
-
 }
 
 function renderMemorySpotOverview() {
