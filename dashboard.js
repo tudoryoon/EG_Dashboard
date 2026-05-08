@@ -18,6 +18,17 @@ const capexDashboardData = window.capexDashboardData ?? {
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
+const marketVixData = window.marketVixData ?? {
+  updatedAt: "",
+  generatedAt: "",
+  startDate: "2017-01-01",
+  defaultRange: "1y",
+  ranges: [],
+  source: {},
+  family: {},
+  curve: {},
+  snapshots: [],
+};
 const macroIndicatorsData = window.macroIndicatorsData ?? { updatedAt: "", commonStartMonth: "2010-04", indicators: [], categories: [] };
 const marketRsData = window.marketRsData ?? {
   updatedAt: "",
@@ -70,6 +81,7 @@ const bigTechSubtabMeta = {
 const marketSubtabMeta = {
   Overview: { label: "Price" },
   Macro: { label: "Macro" },
+  VIX: { label: "VIX" },
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
 };
@@ -172,6 +184,7 @@ const state = {
   sort: "marketCapDesc",
   m7PriceRange: m7PriceData.defaultRange ?? "max",
   marketPriceRange: marketPriceData.defaultRange ?? "max",
+  marketVixRange: marketVixData.defaultRange ?? "1y",
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
   ),
@@ -672,6 +685,384 @@ function formatMacroValue(value, formatterKey) {
     default:
       return String(value);
   }
+}
+
+function formatVixLevel(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return Number(value).toFixed(2);
+}
+
+function formatVixPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}%`;
+}
+
+function getMarketVixUpdatedAt() {
+  return [marketVixData.updatedAt, marketPriceData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+}
+
+function buildMarketVixFamilyPayload(rangeKey) {
+  const items = Object.entries(marketVixData?.family ?? {});
+  const allDates = [...new Set(items.flatMap(([, item]) => item.dates ?? []))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, marketVixData?.startDate ?? "2017-01-01");
+  const selectedLabels = allDates.filter((label) => label >= startDate);
+
+  const datasets = items.map(([key, item]) => {
+    const dateIndex = new Map();
+    (item.dates ?? []).forEach((date, index) => {
+      dateIndex.set(date, index);
+    });
+
+    return {
+      key,
+      label: item.label,
+      data: selectedLabels.map((label) => {
+        const pointIndex = dateIndex.get(label);
+        return pointIndex === undefined ? null : item.values?.[pointIndex] ?? null;
+      }),
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: key === "vix" ? 2.8 : 2.2,
+      tension: 0.16,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+    };
+  });
+
+  return { labels: selectedLabels, datasets };
+}
+
+function buildMarketVixMetricsPayload(rangeKey) {
+  const curve = marketVixData?.curve ?? {};
+  const labels = (curve.historyDates ?? []).filter(Boolean);
+  if (!labels.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, labels[0]);
+  const startIndex = labels.findIndex((label) => label >= startDate);
+  const slicedLabels = labels.slice(Math.max(0, startIndex));
+
+  const metrics = curve.metrics ?? {};
+  const metricSeries = [
+    { key: "spot", label: "VIX Spot", color: "#111827", formatter: "number1", values: metrics.spot ?? [], yAxisID: "y" },
+    { key: "m1", label: "M1", color: "#dc2626", formatter: "number1", values: metrics.m1 ?? [], yAxisID: "y" },
+    { key: "m2", label: "M2", color: "#2563eb", formatter: "number1", values: metrics.m2 ?? [], yAxisID: "y" },
+    {
+      key: "m1SpotPremiumPct",
+      label: "M1 vs Spot",
+      color: "#7c3aed",
+      formatter: "percent2",
+      values: metrics.m1SpotPremiumPct ?? [],
+      yAxisID: "yPremium",
+    },
+    {
+      key: "m2M1PremiumPct",
+      label: "M2 vs M1",
+      color: "#0f766e",
+      formatter: "percent2",
+      values: metrics.m2M1PremiumPct ?? [],
+      yAxisID: "yPremium",
+    },
+  ];
+
+  const datasets = metricSeries.map((series) => {
+    const data = series.values.slice(Math.max(0, startIndex));
+    return {
+      key: series.key,
+      label: series.label,
+      data,
+      rawFormatter: series.formatter,
+      borderColor: series.color,
+      backgroundColor: series.color,
+      borderWidth: series.yAxisID === "y" ? 2.4 : 2.1,
+      tension: 0.16,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+      yAxisID: series.yAxisID,
+    };
+  });
+
+  return { labels: slicedLabels, datasets };
+}
+
+function createMarketVixFamilyChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildMarketVixFamilyPayload(rangeKey);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 10;
+  const maxValue = allValues.length ? Math.max(...allValues) : 40;
+  const spread = Math.max(maxValue - minValue, 2);
+  const yMin = Math.max(0, minValue - spread * 0.12);
+  const yMax = maxValue + spread * 0.12;
+
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: payload.labels, datasets: payload.datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatVixLevel(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (selectedTickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatVixLevel(value),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "Index level",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMarketVixMetricsChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildMarketVixMetricsPayload(rangeKey);
+  const levelValues = payload.datasets
+    .filter((dataset) => dataset.yAxisID === "y")
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const premiumValues = payload.datasets
+    .filter((dataset) => dataset.yAxisID === "yPremium")
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+
+  const levelMin = levelValues.length ? Math.min(...levelValues) : 10;
+  const levelMax = levelValues.length ? Math.max(...levelValues) : 40;
+  const levelSpread = Math.max(levelMax - levelMin, 2);
+  const premiumMin = premiumValues.length ? Math.min(...premiumValues) : -10;
+  const premiumMax = premiumValues.length ? Math.max(...premiumValues) : 15;
+  const premiumSpread = Math.max(premiumMax - premiumMin, 4);
+
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: payload.labels, datasets: payload.datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => {
+              const suffix = context.dataset.yAxisID === "yPremium" ? "%" : "";
+              return `${context.dataset.label}: ${formatVixLevel(context.parsed.y)}${suffix}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (selectedTickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: Math.max(0, levelMin - levelSpread * 0.12),
+          max: levelMax + levelSpread * 0.12,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatVixLevel(value),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "VIX level",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yPremium: {
+          position: "right",
+          min: premiumMin - premiumSpread * 0.12,
+          max: premiumMax + premiumSpread * 0.12,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${Number(value).toFixed(1)}%`,
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "Premium / discount",
+            color: "#8d8d86",
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMarketVixCurveChart(canvas) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const curve = marketVixData?.curve ?? {};
+  const labels = curve.expiries ?? [];
+  const latestCurve = curve.latestCurve ?? [];
+  const previousCurve = curve.previousCurve ?? [];
+  const allValues = [...latestCurve, ...previousCurve].filter((value) => Number.isFinite(value));
+  const minValue = allValues.length ? Math.min(...allValues) : 10;
+  const maxValue = allValues.length ? Math.max(...allValues) : 30;
+  const spread = Math.max(maxValue - minValue, 2);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: `Latest (${curve.latestDate || "-"})`,
+          data: latestCurve,
+          borderColor: "#111827",
+          backgroundColor: "#111827",
+          borderWidth: 2.8,
+          tension: 0.18,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        },
+        {
+          label: `Previous (${curve.previousDate || "-"})`,
+          data: previousCurve,
+          borderColor: "#9ca3af",
+          backgroundColor: "#9ca3af",
+          borderWidth: 2.0,
+          borderDash: [6, 4],
+          tension: 0.18,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatVixLevel(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", maxRotation: 0, autoSkip: false },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: Math.max(0, minValue - spread * 0.12),
+          max: maxValue + spread * 0.12,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatVixLevel(value),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "Settlement",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function getTotalDashboardSeriesItems() {
@@ -4646,6 +5037,168 @@ function renderMarketMacroOverview() {
   }
 }
 
+function renderMarketVixOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const vixUpdatedAt = getMarketVixUpdatedAt();
+  const rangeMarkup = (marketVixData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketVixRange === range.key ? " active" : ""}"
+          data-market-vix-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+
+  const snapshotMarkup = (marketVixData.snapshots ?? [])
+    .map((item) => {
+      if (item.key === "term-regime") {
+        return `
+          <article class="vix-snapshot-card vix-regime-card">
+            <span class="vix-snapshot-label">${item.label}</span>
+            <strong class="vix-snapshot-value">${item.value ?? "-"}</strong>
+            <span class="vix-snapshot-note">M1 vs Spot ${formatVixPercent(item.change)} | M2 vs M1 ${formatVixPercent(item.changePct)}</span>
+            <span class="vix-snapshot-date">${item.date || "-"}</span>
+          </article>
+        `;
+      }
+      const deltaClass = Number(item.changePct) >= 0 ? "positive" : "negative";
+      return `
+        <article class="vix-snapshot-card">
+          <span class="vix-snapshot-label">${item.label}</span>
+          <strong class="vix-snapshot-value">${formatVixLevel(item.value)}</strong>
+          <span class="vix-snapshot-change ${deltaClass}">${formatVixPercent(item.changePct)}</span>
+          <span class="vix-snapshot-date">${item.date || "-"}</span>
+        </article>
+      `;
+    })
+    .join("");
+
+  const latestContractsMarkup = ((marketVixData.curve?.latestContracts ?? []) || [])
+    .map(
+      (contract) => `
+        <tr>
+          <td>${contract.label}</td>
+          <td>${contract.symbol}</td>
+          <td>${contract.expiration}</td>
+          <td>${formatVixLevel(contract.price)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>VIX Dashboard</h2>
+            <p>VIXCentral-inspired dashboard built from official CBOE delayed settlement curves and Yahoo Finance VIX family history.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${vixUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="vix-snapshot-grid">
+          ${snapshotMarkup}
+        </div>
+      </section>
+
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>VIX Futures Term Structure</h2>
+            <p>Front monthly VX settlement curve with previous trading day overlay.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Curve ${marketVixData.curve?.latestDate || "-"}</div>
+          </div>
+        </div>
+        <div class="vix-curve-layout">
+          <div class="us-price-chart-wrap">
+            <canvas data-market-vix="curve"></canvas>
+          </div>
+          <div class="vix-contract-table-wrap">
+            <table class="macro-release-table vix-contract-table">
+              <thead>
+                <tr>
+                  <th>Expiry</th>
+                  <th>Symbol</th>
+                  <th>Date</th>
+                  <th>Settlement</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${latestContractsMarkup}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Term Structure Metrics</h2>
+            <p>Spot, front-month futures, and contango/backwardation metrics over time.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">${marketVixData.source?.futures ?? ""}</div>
+          </div>
+        </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-vix="metrics"></canvas>
+        </div>
+      </section>
+
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>VIX Family History</h2>
+            <p>Spot and term indexes including VIX 9D, 3M, 6M, and 1Y.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">${marketVixData.source?.family ?? ""}</div>
+          </div>
+        </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-vix="family"></canvas>
+        </div>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-market-vix-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketVixRange = button.dataset.marketVixRange || marketVixData.defaultRange || "1y";
+      render();
+    });
+  });
+
+  const curveCanvas = usOverviewRoot.querySelector('[data-market-vix="curve"]');
+  if (curveCanvas) {
+    createMarketVixCurveChart(curveCanvas);
+  }
+
+  const metricsCanvas = usOverviewRoot.querySelector('[data-market-vix="metrics"]');
+  if (metricsCanvas) {
+    createMarketVixMetricsChart(metricsCanvas, state.marketVixRange);
+  }
+
+  const familyCanvas = usOverviewRoot.querySelector('[data-market-vix="family"]');
+  if (familyCanvas) {
+    createMarketVixFamilyChart(familyCanvas, state.marketVixRange);
+  }
+}
+
 function createUsMarginChart(canvas, company) {
   if (typeof Chart === "undefined") {
     return;
@@ -5298,6 +5851,10 @@ function renderSummary(list) {
       summaryText.textContent = "US monthly macro dashboard with snapshot, coverage, categories, and history";
       return;
     }
+    if (state.marketView === "VIX") {
+      summaryText.textContent = "VIXCentral-inspired volatility dashboard using CBOE delayed settlement and VIX family history";
+      return;
+    }
     if (state.marketView === "Breadth") {
       summaryText.textContent = "Daily market breadth dashboard workspace";
       return;
@@ -5483,6 +6040,10 @@ function render() {
     }
     if (state.marketView === "Macro") {
       renderMarketMacroOverview();
+      return;
+    }
+    if (state.marketView === "VIX") {
+      renderMarketVixOverview();
       return;
     }
     if (state.marketView === "Breadth") {

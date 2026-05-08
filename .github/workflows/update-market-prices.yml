@@ -28,16 +28,17 @@ jobs:
         run: |
           python scripts/update_market_prices.py
           python scripts/update_market_macro.py
+          python scripts/update_market_vix.py
 
       - name: Commit updated market price history
         run: |
-          if git diff --quiet -- data/market-price-data.js data/market-macro-data.js; then
-            echo "No market price or macro changes detected."
+          if git diff --quiet -- data/market-price-data.js data/market-macro-data.js data/market-vix-data.js; then
+            echo "No market price, macro, or VIX changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-price-data.js data/market-macro-data.js
-          git commit -m "Update market price and macro history" || exit 0
+          git add data/market-price-data.js data/market-macro-data.js data/market-vix-data.js
+          git commit -m "Update market price, macro, and VIX history" || exit 0
           git pull --rebase origin main
           git push
