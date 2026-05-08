@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 
 START_DATE = "2018-01-01"
+CURVE_START_DATE = "2025-05-01"
 MAX_CURVE_CONTRACTS = 8
 MONTHLY_VX_PATTERN = re.compile(r"^VX/[FGHJKMNQUVXZ]\d+$")
 
@@ -180,6 +181,16 @@ def fetch_latest_curves() -> list[CurveSnapshot]:
     return snapshots
 
 
+def iter_business_days(start_day: date, end_day: date) -> list[str]:
+    days: list[str] = []
+    current = start_day
+    while current <= end_day:
+        if current.weekday() < 5:
+            days.append(current.isoformat())
+        current += timedelta(days=1)
+    return days
+
+
 def load_existing_curve_history() -> list[CurveSnapshot]:
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
     if not output_path.exists():
@@ -213,6 +224,24 @@ def load_existing_curve_history() -> list[CurveSnapshot]:
         if parsed_contracts:
             snapshots.append(CurveSnapshot(date=date_key, contracts=parsed_contracts))
     return snapshots
+
+
+def fetch_curve_history(existing_curves: list[CurveSnapshot]) -> list[CurveSnapshot]:
+    curve_by_date = {snapshot.date: snapshot for snapshot in existing_curves}
+    today = datetime.now(timezone.utc).date()
+    history_days = iter_business_days(datetime.strptime(CURVE_START_DATE, "%Y-%m-%d").date(), today)
+
+    for day in history_days:
+        if day in curve_by_date:
+            continue
+        snapshot = parse_curve_for_day(day)
+        if snapshot:
+            curve_by_date[day] = snapshot
+
+    for snapshot in fetch_latest_curves():
+        curve_by_date[snapshot.date] = snapshot
+
+    return [curve_by_date[key] for key in sorted(curve_by_date)]
 
 
 def build_spot_lookup(dates: list[str], values: list[float]) -> dict[str, float]:
@@ -363,11 +392,7 @@ def build_snapshot_cards(vix_family: dict[str, dict[str, object]], curve_payload
 def main() -> None:
     vix_family = {meta["key"]: parse_vix_family_item(meta) for meta in VIX_FAMILY}
     existing_curves = load_existing_curve_history()
-    curves = fetch_latest_curves()
-    curve_by_date = {snapshot.date: snapshot for snapshot in existing_curves}
-    for snapshot in curves:
-        curve_by_date[snapshot.date] = snapshot
-    merged_curves = [curve_by_date[key] for key in sorted(curve_by_date)]
+    merged_curves = fetch_curve_history(existing_curves)
     curve_payload = build_curve_payload(merged_curves, vix_family["vix"])
 
     latest_dates = [item.get("latestDate") for item in vix_family.values() if item.get("latestDate")]
