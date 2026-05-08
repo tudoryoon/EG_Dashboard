@@ -4204,11 +4204,11 @@ function renderGpuCloudOverview() {
         </div>
         <div>
           <strong>Source</strong>
-          <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"}</span>
+          <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"} + ${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index public endpoint"}</span>
         </div>
         <div>
           <strong>Method</strong>
-          <span>Public chart approximation / preview midpoint</span>
+          <span>Contract midpoint + daily public spot index</span>
         </div>
       </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
@@ -4220,16 +4220,16 @@ function renderGpuCloudOverview() {
             </div>
           </div>
           <div class="memory-card-meta gpu-term-meta">
-            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"} + ${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index preview"}</span>
-            <span>${semiSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSeries?.latestValue) ? `· ${formatGpuCloudValue(semiSeries.latestValue)}` : ""}</span>
+            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"} + ${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index public endpoint"}</span>
+            <span>${semiSpotSeries?.latestLabel ?? semiSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSeries?.latestValue) ? `| Contract ${formatGpuCloudValue(semiSeries.latestValue)}` : ""}${Number.isFinite(semiSpotSeries?.latestValue) ? ` | Spot ${formatGpuCloudValue(semiSpotSeries.latestValue)}` : ""}</span>
           </div>
           <div class="memory-stat-row">
             <span class="memory-stat-label">Contract low</span>
-            <span class="memory-stat-value">${Number.isFinite(semiSeries?.floor) ? `${formatGpuCloudValue(semiSeries.floor)} · ${semiSeries.floorLabel}` : "N/A"}</span>
+            <span class="memory-stat-value">${Number.isFinite(semiSeries?.floor) ? `${formatGpuCloudValue(semiSeries.floor)} | ${semiSeries.floorLabel}` : "N/A"}</span>
           </div>
           <div class="memory-stat-row">
             <span class="memory-stat-label">Spot low</span>
-            <span class="memory-stat-value">${Number.isFinite(semiSpotSeries?.floor) ? `${formatGpuCloudValue(semiSpotSeries.floor)} · ${semiSpotSeries.floorLabel}` : "N/A"}</span>
+            <span class="memory-stat-value">${Number.isFinite(semiSpotSeries?.floor) ? `${formatGpuCloudValue(semiSpotSeries.floor)} | ${semiSpotSeries.floorLabel}` : "N/A"}</span>
           </div>
           <div class="memory-chart-wrap">
             <canvas data-gpu-basket="semi-h100-combined"></canvas>
