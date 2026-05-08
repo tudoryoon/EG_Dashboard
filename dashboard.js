@@ -174,7 +174,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
 };
 
 const state = {
-  tab: "Market",
+  tab: "DailyBriefing",
   marketView: "Overview",
   bigTechView: "M7",
   semisView: "MemorySpot",
