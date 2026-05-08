@@ -786,6 +786,36 @@ function buildMarketVixFamilyPayload(rangeKey) {
   return { labels: selectedLabels, datasets };
 }
 
+function buildMarketVixNasdaqSeries(labels) {
+  const nasdaqItem = marketPriceData?.items?.nasdaq100;
+  if (!nasdaqItem?.dates?.length || !labels?.length) {
+    return [];
+  }
+
+  const dateIndex = new Map();
+  (nasdaqItem.dates ?? []).forEach((date, index) => {
+    dateIndex.set(date, index);
+  });
+
+  let lastKnownIndex = -1;
+  return labels.map((label) => {
+    const exactIndex = dateIndex.get(label);
+    if (exactIndex !== undefined) {
+      lastKnownIndex = exactIndex;
+      return nasdaqItem.values?.[exactIndex] ?? null;
+    }
+
+    while (
+      lastKnownIndex + 1 < (nasdaqItem.dates?.length ?? 0) &&
+      nasdaqItem.dates[lastKnownIndex + 1] <= label
+    ) {
+      lastKnownIndex += 1;
+    }
+
+    return lastKnownIndex >= 0 ? nasdaqItem.values?.[lastKnownIndex] ?? null : null;
+  });
+}
+
 function buildMarketVixMetricsPayload(rangeKey) {
   const curve = marketVixData?.curve ?? {};
   const labels = (curve.historyDates ?? []).filter(Boolean);
@@ -855,19 +885,48 @@ function createMarketVixFamilyChart(canvas, rangeKey) {
   }
 
   const payload = buildMarketVixFamilyPayload(rangeKey);
-  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
-  const minValue = allValues.length ? Math.min(...allValues) : 10;
-  const maxValue = allValues.length ? Math.max(...allValues) : 40;
+  const nasdaqData = buildMarketVixNasdaqSeries(payload.labels);
+  const vixValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const nasdaqValues = nasdaqData.filter((value) => Number.isFinite(value));
+
+  const minValue = vixValues.length ? Math.min(...vixValues) : 10;
+  const maxValue = vixValues.length ? Math.max(...vixValues) : 40;
   const spread = Math.max(maxValue - minValue, 2);
   const yMin = Math.max(0, minValue - spread * 0.12);
   const yMax = maxValue + spread * 0.12;
 
+  const nasdaqMin = nasdaqValues.length ? Math.min(...nasdaqValues) : 15000;
+  const nasdaqMax = nasdaqValues.length ? Math.max(...nasdaqValues) : 25000;
+  const nasdaqSpread = Math.max(nasdaqMax - nasdaqMin, 250);
+  const yNasdaqMin = Math.max(0, nasdaqMin - nasdaqSpread * 0.08);
+  const yNasdaqMax = nasdaqMax + nasdaqSpread * 0.08;
+
   const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
   const selectedTickSet = new Set(selectedTickIndexes);
+  const chartDatasets = [
+    ...payload.datasets.map((dataset) => ({
+      ...dataset,
+      yAxisID: "y",
+    })),
+    {
+      key: "nasdaq100",
+      label: "NASDAQ 100",
+      data: nasdaqData,
+      borderColor: "#111827",
+      backgroundColor: "#111827",
+      borderWidth: 2.2,
+      tension: 0.16,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+      yAxisID: "yNasdaq",
+    },
+  ];
 
   const chart = new Chart(canvas, {
     type: "line",
-    data: { labels: payload.labels, datasets: payload.datasets },
+    data: { labels: payload.labels, datasets: chartDatasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -882,7 +941,10 @@ function createMarketVixFamilyChart(canvas, rangeKey) {
         tooltip: {
           callbacks: {
             title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
-            label: (context) => `${context.dataset.label}: ${formatVixLevel(context.parsed.y)}`,
+            label: (context) =>
+              context.dataset.yAxisID === "yNasdaq"
+                ? `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                : `${context.dataset.label}: ${formatVixLevel(context.parsed.y)}`,
           },
         },
       },
@@ -914,6 +976,23 @@ function createMarketVixFamilyChart(canvas, rangeKey) {
             color: "#8d8d86",
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yNasdaq: {
+          position: "right",
+          min: yNasdaqMin,
+          max: yNasdaqMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => Number(value).toLocaleString("en-US", { maximumFractionDigits: 0 }),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "NASDAQ 100",
+            color: "#8d8d86",
+          },
+          grid: { drawOnChartArea: false },
           border: { color: "#d8d8d2" },
         },
       },
