@@ -215,6 +215,7 @@ const state = {
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
+  memorySpotRanges: {},
 };
 
 const charts = [];
@@ -3698,6 +3699,39 @@ function formatYearMonthPeriodLabel(dateKey) {
   return `${year.slice(2)}/${month}`;
 }
 
+const MEMORY_SPOT_RANGE_OPTIONS = [
+  { key: "1m", label: "1M" },
+  { key: "3m", label: "3M" },
+  { key: "6m", label: "6M" },
+  { key: "1y", label: "1Y" },
+  { key: "max", label: "Max" },
+];
+
+function getMemorySpotRange(targetKey) {
+  return state.memorySpotRanges?.[targetKey] ?? "1y";
+}
+
+function buildMemoryChartPayload(labels, datasets, rangeKey) {
+  if (!Array.isArray(labels) || !labels.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, labels[0]);
+  const startIndex = Math.max(
+    0,
+    labels.findIndex((label) => label >= startDate),
+  );
+
+  return {
+    labels: labels.slice(startIndex),
+    datasets: datasets.map((dataset) => ({
+      ...dataset,
+      data: (dataset.data ?? []).slice(startIndex),
+    })),
+  };
+}
+
 function hydrateMemorySpotRuntimeFromLocal() {
   if (!memorySpotHistoryData || !Array.isArray(memorySpotHistoryData.labels) || typeof memorySpotHistoryData.items !== "object") {
     return false;
@@ -3806,20 +3840,23 @@ async function loadMemorySpotHistory() {
   }
 }
 
-function createMemoryLineChart(canvas, labels, datasets, formatter) {
+function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "1y") {
   if (typeof Chart === "undefined") {
     return;
   }
 
-  const allValues = datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const payload = buildMemoryChartPayload(labels, datasets, rangeKey);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const yMin = minValue > 0 ? Math.floor(minValue * 0.9) : Math.floor(minValue * 1.1);
   const yMax = Math.ceil(maxValue * 1.1);
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
 
   const chart = new Chart(canvas, {
     type: "line",
-    data: { labels, datasets },
+    data: payload,
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -3846,21 +3883,18 @@ function createMemoryLineChart(canvas, labels, datasets, formatter) {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            axis.ticks = axis.ticks.filter((tick) => {
-              const label = labels[tick.value];
-              return label && label.endsWith("-01-01");
-            });
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
           },
           ticks: {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
             callback: (value) => {
-              const label = labels[value];
-              if (!label) {
+              if (!selectedTickSet.has(value)) {
                 return "";
               }
-              return formatMemoryPeriodLabel(label);
+              const label = payload.labels[value];
+              return label ? formatRangeAxisDate(label, rangeKey) : "";
             },
           },
           border: { color: "#d8d8d2" },
@@ -4219,6 +4253,19 @@ function renderMemorySpotOverview() {
               <h3>${panel.title}</h3>
               <p>${panel.description}</p>
             </div>
+            <div class="m7-range-row">
+              ${MEMORY_SPOT_RANGE_OPTIONS.map(
+                (range) => `
+                  <button
+                    type="button"
+                    class="m7-range-chip${getMemorySpotRange(`basket:${panel.key}`) === range.key ? " active" : ""}"
+                    data-memory-range="${range.key}"
+                    data-memory-target="basket:${panel.key}"
+                  >
+                    ${range.label}
+                  </button>`,
+              ).join("")}
+            </div>
           </div>
           <div class="memory-list">
             <div class="memory-list-head">
@@ -4253,6 +4300,19 @@ function renderMemorySpotOverview() {
             <div>
               <h3>${item.label}</h3>
               <p>${item.benchmarkName}</p>
+            </div>
+            <div class="m7-range-row">
+              ${MEMORY_SPOT_RANGE_OPTIONS.map(
+                (range) => `
+                  <button
+                    type="button"
+                    class="m7-range-chip${getMemorySpotRange(`series:${item.key}`) === range.key ? " active" : ""}"
+                    data-memory-range="${range.key}"
+                    data-memory-target="series:${item.key}"
+                  >
+                    ${range.label}
+                  </button>`,
+              ).join("")}
             </div>
           </div>
           <div class="memory-stat-row">
@@ -4323,6 +4383,22 @@ function renderMemorySpotOverview() {
     return;
   }
 
+  usOverviewRoot.querySelectorAll("[data-memory-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetKey = button.dataset.memoryTarget;
+      const rangeKey = button.dataset.memoryRange;
+      if (!targetKey || !rangeKey) {
+        return;
+      }
+
+      state.memorySpotRanges = {
+        ...(state.memorySpotRanges ?? {}),
+        [targetKey]: rangeKey,
+      };
+      renderMemorySpotOverview();
+    });
+  });
+
   (memorySpotData.dashboards?.basketPanels ?? []).forEach((panel) => {
     const canvas = usOverviewRoot.querySelector(`[data-memory-basket="${panel.key}"]`);
     if (!canvas) {
@@ -4351,7 +4427,13 @@ function renderMemorySpotOverview() {
       })
       .filter(Boolean);
 
-    createMemoryLineChart(canvas, memorySpotRuntime.labels, datasets, (value) => `$${Number(value).toFixed(2)}`);
+    createMemoryLineChart(
+      canvas,
+      memorySpotRuntime.labels,
+      datasets,
+      (value) => `$${Number(value).toFixed(2)}`,
+      getMemorySpotRange(`basket:${panel.key}`),
+    );
   });
 
   getMemorySpotItems().forEach((item) => {
@@ -4379,6 +4461,7 @@ function renderMemorySpotOverview() {
         },
       ],
       (value) => `$${Number(value).toFixed(2)}`,
+      getMemorySpotRange(`series:${item.key}`),
     );
   });
 }
