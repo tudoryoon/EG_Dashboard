@@ -4042,6 +4042,10 @@ function getGpuSemiAnalysisSeries() {
   return gpuCloudData.semiAnalysisH100 ?? null;
 }
 
+function getGpuSemiAnalysisSpotSeries() {
+  return gpuCloudData.semiAnalysisH100Spot ?? null;
+}
+
 function renderGpuCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -4074,6 +4078,7 @@ function renderGpuCloudOverview() {
   const periodStart = gpuCloudRuntime.labels[0] || "2024-07-11";
   const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
   const semiSeries = getGpuSemiAnalysisSeries();
+  const semiSpotSeries = getGpuSemiAnalysisSpotSeries();
 
   usOverviewRoot.innerHTML = `
     <section class="memory-overview">
@@ -4127,6 +4132,29 @@ function renderGpuCloudOverview() {
             <canvas data-gpu-basket="semi-h100-1y"></canvas>
           </div>
         </article>
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${semiSpotSeries?.title ?? "SemiAnalysis H100 Spot Index (Preview)"}</h3>
+              <p>${semiSpotSeries?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index preview"}</span>
+            <span>${semiSpotSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSpotSeries?.latestValue) ? `· ${formatGpuCloudValue(semiSpotSeries.latestValue)}` : ""}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Preview low</span>
+            <span class="memory-stat-value">${Number.isFinite(semiSpotSeries?.floor) ? `${formatGpuCloudValue(semiSpotSeries.floor)} · ${semiSpotSeries.floorLabel}` : "N/A"}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Method</span>
+            <span class="memory-stat-value">${semiSpotSeries?.method ?? ""}</span>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-gpu-basket="semi-h100-spot"></canvas>
+          </div>
+        </article>
       </section>
     </section>
   `;
@@ -4142,6 +4170,29 @@ function renderGpuCloudOverview() {
           data: semiSeries.values ?? [],
           borderColor: "#111827",
           backgroundColor: "#111827",
+          borderWidth: 2.6,
+          tension: 0.22,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointHitRadius: 10,
+          spanGaps: false,
+        },
+      ],
+      (value) => `$${Number(value).toFixed(2)}`,
+    );
+  }
+
+  const semiSpotCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-spot"]');
+  if (semiSpotCanvas && semiSpotSeries) {
+    createGpuLineChart(
+      semiSpotCanvas,
+      semiSpotSeries.labels ?? [],
+      [
+        {
+          label: "H100 Spot",
+          data: semiSpotSeries.values ?? [],
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
           borderWidth: 2.6,
           tension: 0.22,
           pointRadius: 3,

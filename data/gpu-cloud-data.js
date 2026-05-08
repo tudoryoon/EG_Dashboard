@@ -4,6 +4,9 @@ window.gpuCloudData = {
     semiAnalysisName: "SemiAnalysis H100 1Y contract index",
     semiAnalysisNote:
       "Public H100 1Y midpoint series is approximated from the freely published SemiAnalysis chart image. Raw transaction-level index data is not publicly downloadable.",
+    semiAnalysisSpotName: "SemiAnalysis H100 spot index preview",
+    semiAnalysisSpotNote:
+      "Public H100 spot preview is derived from the SemiAnalysis GPU Pricing Index preview bundle. Values below use the midpoint of the shown on-demand/rental range when a range is published.",
     reservedName: "Crusoe reserved pricing",
     reservedNote:
       "1Y and 6M benchmarks use Crusoe's official reserved GPU pricing page. These are public reserved-capacity offers rather than private negotiated market clears.",
@@ -12,6 +15,7 @@ window.gpuCloudData = {
       "Public-offer history is modeled as a daily step series from publicly observed Runpod pricing events and the current pricing page.",
     links: {
       semiAnalysisArticle: "https://newsletter.semianalysis.com/p/the-great-gpu-shortage-rental-capacity",
+      semiAnalysisSpotPreview: "https://semianalysis.com/gpu-pricing-index/",
       crusoePricing: "https://www.crusoe.ai/cloud/pricing",
       runpodPricing: "https://www.runpod.io/gpu-pricing",
       runpodJuly2024PriceCut:
@@ -39,6 +43,24 @@ window.gpuCloudData = {
     latestLabel: "Mar 2026",
     method:
       "Midpoint values are visually digitized approximations from the public chart. Use this as a directional contract-market benchmark rather than a raw downloadable dataset.",
+  },
+  semiAnalysisH100Spot: {
+    title: "SemiAnalysis H100 Spot Index (Preview)",
+    subtitle: "Public on-demand H100 midpoint derived from the SemiAnalysis GPU Pricing Index preview",
+    sourceLabel: "SemiAnalysis GPU Pricing Index preview",
+    cadence: "periodic",
+    unit: "USD/hr",
+    updatedAt: "2026-03",
+    labels: ["2Q 2024", "3Q 2024", "4Q 2024", "1Q 2025", "2Q 2025", "Jul 2025", "Aug 2025", "Sep 2025", "Oct 2025", "Nov 2025", "Dec 2025", "Jan 2026"],
+    values: [3.9, 3.45, 3.0, 2.85, 2.75, 2.625, 2.5, 2.5, 2.6, 2.6, 2.6, 2.6],
+    rangeLow: [3.9, 3.45, 2.85, 2.7, 2.5, 2.25, 2.0, 2.0, 2.2, 2.2, 2.2, 2.2],
+    rangeHigh: [3.9, 3.45, 3.15, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+    latestValue: 2.6,
+    latestLabel: "Jan 2026",
+    floor: 2.5,
+    floorLabel: "Aug/Sep 2025 low",
+    method:
+      "Values use the published preview points from SemiAnalysis. When the preview shows a range, the dashboard uses the midpoint for the line and retains low/high bounds for reference.",
   },
   termBenchmarks: [
     {
