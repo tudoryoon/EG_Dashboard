@@ -2971,7 +2971,11 @@ function renderMarketBriefingOverview() {
 
   const moversMarkup = (briefing.movers ?? [])
     .map(
-      (item) => `
+      (item) => {
+        const summaryMarkup = (item.summaryLines ?? [])
+          .map((line) => `<span>${line}</span>`)
+          .join("");
+        return `
         <article class="briefing-mover-card ${item.direction === "up" ? "is-up" : "is-down"}">
           <div class="briefing-mover-head">
             <div>
@@ -2985,14 +2989,17 @@ function renderMarketBriefingOverview() {
           </div>
           <p class="briefing-mover-cap">Market Cap ${formatMarketCapCompact(item.marketCapUsd)}</p>
           <p class="briefing-mover-brief">${formatMoverBriefingKorean(item)}</p>
-          <p class="briefing-mover-headline">${item.headline || "관련 뉴스 헤드라인을 아직 찾지 못했습니다."}</p>
+          <div class="briefing-mover-summary">
+            ${summaryMarkup || `<span>${item.headline || "관련 뉴스 핵심 내용을 아직 찾지 못했습니다."}</span>`}
+          </div>
           <div class="briefing-news-meta">
             <span>${item.source || "Source"}</span>
             <span>${formatBriefingTimestamp(item.publishedAt)}</span>
           </div>
           ${item.link ? `<a class="briefing-mover-link" href="${item.link}" target="_blank" rel="noreferrer">Open source news</a>` : ""}
         </article>
-      `,
+      `;
+      },
     )
     .join("");
 

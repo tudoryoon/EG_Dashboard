@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from html import unescape
 from pathlib import Path
 from urllib.parse import quote_plus
 from xml.etree import ElementTree as ET
@@ -133,6 +135,7 @@ SECTOR_GROUPS = [
             {"ticker": "PLTR", "label": "PLTR US", "name": "Palantir", "query": "Palantir stock"},
             {"ticker": "IBM", "label": "IBM US", "name": "IBM", "query": "IBM stock"},
             {"ticker": "APP", "label": "APP US", "name": "AppLovin", "query": "AppLovin stock"},
+            {"ticker": "DDOG", "label": "DDOG US", "name": "Datadog", "query": "Datadog stock"},
             {"ticker": "HOOD", "label": "HOOD US", "name": "Robinhood", "query": "Robinhood stock"},
             {"ticker": "RDDT", "label": "RDDT US", "name": "Reddit", "query": "Reddit stock"},
             {"ticker": "SHOP", "label": "SHOP US", "name": "Shopify", "query": "Shopify stock"},
@@ -428,6 +431,7 @@ def parse_google_news_feed(query: str, limit: int = 5) -> list[dict[str, str]]:
         title = (item.findtext("title") or "").strip()
         link = (item.findtext("link") or "").strip()
         source = (item.findtext("source") or "").strip()
+        description = (item.findtext("description") or "").strip()
         published = (item.findtext("pubDate") or "").strip()
         published_iso = ""
         if published:
@@ -440,10 +444,142 @@ def parse_google_news_feed(query: str, limit: int = 5) -> list[dict[str, str]]:
                 "title": title,
                 "link": link,
                 "source": source,
+                "description": description,
                 "publishedAt": published_iso,
             }
         )
     return items
+
+
+def clean_text(value: str) -> str:
+    text = unescape(value or "")
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def split_sentences(text: str) -> list[str]:
+    cleaned = clean_text(text)
+    if not cleaned:
+        return []
+    parts = re.split(r"(?<=[.!?])\s+", cleaned)
+    output: list[str] = []
+    for part in parts:
+        candidate = part.strip(" -")
+        if len(candidate) < 40:
+            continue
+        output.append(candidate)
+    return output
+
+
+def extract_meta_description(html: str) -> str:
+    patterns = [
+        r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:description["\']',
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']description["\']',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, html, flags=re.IGNORECASE)
+        if match:
+            return clean_text(match.group(1))
+    return ""
+
+
+def extract_paragraphs(html: str, limit: int = 10) -> list[str]:
+    raw_paragraphs = re.findall(r"<p\b[^>]*>(.*?)</p>", html, flags=re.IGNORECASE | re.DOTALL)
+    paragraphs: list[str] = []
+    for raw in raw_paragraphs:
+        text = clean_text(raw)
+        if len(text) < 60:
+            continue
+        lowered = text.lower()
+        if any(
+            token in lowered
+            for token in [
+                "cookie",
+                "privacy policy",
+                "sign up",
+                "all rights reserved",
+                "advertisement",
+                "newsletter",
+                "subscribe",
+            ]
+        ):
+            continue
+        paragraphs.append(text)
+        if len(paragraphs) >= limit:
+            break
+    return paragraphs
+
+
+def translate_finance_phrase(text: str) -> str:
+    phrase = clean_text(text)
+    replacements = [
+        (r"\bafter earnings\b", "실적 발표 이후"),
+        (r"\bafter results\b", "실적 발표 이후"),
+        (r"\bafter q1 results\b", "1분기 실적 발표 이후"),
+        (r"\bafter q2 results\b", "2분기 실적 발표 이후"),
+        (r"\bon weak revenue guidance\b", "약한 매출 가이던스"),
+        (r"\brevenue beat\b", "매출 예상 상회"),
+        (r"\bearnings beat\b", "실적 예상 상회"),
+        (r"\bweak guidance\b", "약한 가이던스"),
+        (r"\bincreased spending forecast\b", "지출 전망 상향"),
+        (r"\brecord launch contract\b", "대형 발사 계약"),
+        (r"\bhyperscaler orders\b", "하이퍼스케일러 주문"),
+        (r"\bprice target\b", "목표주가"),
+        (r"\bforecast\b", "전망"),
+        (r"\bguidance\b", "가이던스"),
+        (r"\bearnings\b", "실적"),
+        (r"\brevenue\b", "매출"),
+        (r"\borders\b", "주문"),
+        (r"\bcontract\b", "계약"),
+        (r"\bstock\b", "주가"),
+        (r"\bshares\b", "주가"),
+        (r"\bsoars\b", "급등"),
+        (r"\bsurges\b", "급등"),
+        (r"\bjumps\b", "급등"),
+        (r"\bsinks\b", "급락"),
+        (r"\bfalls\b", "하락"),
+        (r"\bdrops\b", "하락"),
+    ]
+    lowered = phrase.lower()
+    for pattern, replacement in replacements:
+        lowered = re.sub(pattern, replacement, lowered, flags=re.IGNORECASE)
+    lowered = re.sub(r"\s+", " ", lowered).strip(" .,-")
+    return lowered
+
+
+def extract_headline_reason(title: str, company_name: str) -> str:
+    cleaned = clean_text(title)
+    cleaned = re.sub(r"\s+-\s+[^-]+$", "", cleaned).strip()
+    cleaned = re.sub(re.escape(company_name), "", cleaned, flags=re.IGNORECASE).strip(" ,.-:")
+    lowered = cleaned.lower()
+    for token in [" on ", " after ", " as ", " amid ", " following ", " over "]:
+        if token in lowered:
+            index = lowered.index(token)
+            cleaned = cleaned[index + len(token) :].strip(" ,.-:")
+            break
+    translated = translate_finance_phrase(cleaned)
+    return translated or clean_text(title)
+
+
+def build_story_summary(stories: list[dict[str, str]], company_name: str, direction: str) -> list[str]:
+    if not stories:
+        return []
+    primary_reason = extract_headline_reason(stories[0].get("title", ""), company_name)
+    tone = "매수 심리" if direction == "up" else "매도 심리"
+    lines = [f"{company_name} 주가는 {primary_reason} 재료가 직접 반영됐습니다."]
+
+    if len(stories) >= 2:
+        secondary_reason = extract_headline_reason(stories[1].get("title", ""), company_name)
+        if secondary_reason and secondary_reason != primary_reason:
+            lines.append(f"{secondary_reason} 이슈가 {tone}를 추가로 자극했습니다.")
+
+    if len(lines) == 1:
+        lines.append(f"관련 뉴스 흐름이 단기 {tone}를 강화한 것으로 해석됩니다.")
+    return lines[:2]
 
 
 def unique_items(items: list[dict[str, str]], limit: int) -> list[dict[str, str]]:
@@ -661,12 +797,14 @@ def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
     output = []
     for item in selected:
         catalyst = {"title": "", "source": "", "publishedAt": "", "link": ""}
+        stories: list[dict[str, str]] = []
         try:
             stories = parse_google_news_feed(f'{item["query"]} when:7d', limit=3)
             if stories:
                 catalyst = stories[0]
         except Exception:
             pass
+        summary_lines = build_story_summary(stories, str(item["name"]), "up" if float(item["dayChangePct"]) >= 0 else "down")
         output.append(
             {
                 "ticker": item["ticker"],
@@ -678,6 +816,7 @@ def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
                 "marketCapUsd": item["marketCapUsd"],
                 "direction": "up" if float(item["dayChangePct"]) >= 0 else "down",
                 "headline": catalyst["title"],
+                "summaryLines": summary_lines,
                 "source": catalyst["source"],
                 "publishedAt": catalyst["publishedAt"],
                 "link": catalyst["link"],

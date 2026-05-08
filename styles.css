@@ -651,8 +651,19 @@ h1 {
 }
 
 .briefing-news-card strong,
-.briefing-mover-headline {
+.briefing-mover-headline,
+.briefing-mover-summary {
   line-height: 1.35;
+}
+
+.briefing-mover-summary {
+  display: grid;
+  gap: 4px;
+  color: #3f3f39;
+}
+
+.briefing-mover-summary span {
+  display: block;
 }
 
 .briefing-news-bucket {
