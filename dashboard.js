@@ -2959,11 +2959,6 @@ function renderMarketBriefingOverview() {
         <p class="briefing-mini-map-caption">Mini map basis: ${selectedBriefingRangeMeta.label} 수익률</p>
         <div class="briefing-total-sector-grid">${combinedSectorMarkup}</div>
       </article>
-
-      <section class="briefing-sector-stack">
-        ${sectorPanels}
-      </section>
-
       <section class="briefing-news-layout">
         <article class="us-panel">
           <div class="us-section-head">
