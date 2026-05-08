@@ -184,9 +184,12 @@ const state = {
   sort: "marketCapDesc",
   m7PriceRange: m7PriceData.defaultRange ?? "max",
   marketPriceRange: marketPriceData.defaultRange ?? "max",
-  marketVixRange: marketVixData.defaultRange ?? "1y",
-  marketVixCustomStart: "",
-  marketVixCustomEnd: "",
+  marketVixMetricsRange: marketVixData.defaultRange ?? "1y",
+  marketVixMetricsCustomStart: "",
+  marketVixMetricsCustomEnd: "",
+  marketVixFamilyRange: marketVixData.defaultRange ?? "1y",
+  marketVixFamilyCustomStart: "",
+  marketVixFamilyCustomEnd: "",
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
   ),
@@ -709,24 +712,29 @@ function getMarketVixUpdatedAt() {
   return [marketVixData.updatedAt, marketPriceData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
 }
 
-function getMarketVixBounds() {
+function getMarketVixBounds(type = "all") {
   const familyDates = Object.values(marketVixData?.family ?? {}).flatMap((item) => item.dates ?? []);
   const metricDates = marketVixData?.curve?.historyDates ?? [];
-  const allDates = [...new Set([...familyDates, ...metricDates])].sort();
+  const allDates =
+    type === "family"
+      ? [...new Set(familyDates)].sort()
+      : type === "metrics"
+        ? [...new Set(metricDates)].sort()
+        : [...new Set([...familyDates, ...metricDates])].sort();
   return {
     min: allDates[0] ?? "",
     max: allDates[allDates.length - 1] ?? "",
   };
 }
 
-function getMarketVixSelectedWindow(rangeKey, labels, fallbackStartDate) {
+function getMarketVixSelectedWindow(rangeKey, labels, fallbackStartDate, customStart = "", customEnd = "") {
   if (!labels?.length) {
     return { labels: [], startDate: "", endDate: "" };
   }
   const latestDate = labels[labels.length - 1];
   const derivedStartDate = shiftDateByRange(latestDate, rangeKey, fallbackStartDate);
-  const startDate = state.marketVixCustomStart || derivedStartDate;
-  const endDate = state.marketVixCustomEnd || latestDate;
+  const startDate = customStart || derivedStartDate;
+  const endDate = customEnd || latestDate;
   return {
     labels: labels.filter((label) => label >= startDate && label <= endDate),
     startDate,
@@ -741,7 +749,13 @@ function buildMarketVixFamilyPayload(rangeKey) {
     return { labels: [], datasets: [] };
   }
 
-  const selectedWindow = getMarketVixSelectedWindow(rangeKey, allDates, marketVixData?.startDate ?? "2018-01-01");
+  const selectedWindow = getMarketVixSelectedWindow(
+    rangeKey,
+    allDates,
+    marketVixData?.startDate ?? "2018-01-01",
+    state.marketVixFamilyCustomStart,
+    state.marketVixFamilyCustomEnd,
+  );
   const selectedLabels = selectedWindow.labels;
 
   const datasets = items.map(([key, item]) => {
@@ -778,7 +792,13 @@ function buildMarketVixMetricsPayload(rangeKey) {
     return { labels: [], datasets: [] };
   }
 
-  const selectedWindow = getMarketVixSelectedWindow(rangeKey, labels, labels[0]);
+  const selectedWindow = getMarketVixSelectedWindow(
+    rangeKey,
+    labels,
+    labels[0],
+    state.marketVixMetricsCustomStart,
+    state.marketVixMetricsCustomEnd,
+  );
   const slicedLabels = selectedWindow.labels;
   const startIndex = labels.findIndex((label) => label === slicedLabels[0]);
   const safeStartIndex = startIndex < 0 ? 0 : startIndex;
@@ -5069,16 +5089,27 @@ function renderMarketVixOverview() {
   companyGrid.innerHTML = "";
 
   const vixUpdatedAt = getMarketVixUpdatedAt();
-  const vixBounds = getMarketVixBounds();
-  const customStartValue = state.marketVixCustomStart || "";
-  const customEndValue = state.marketVixCustomEnd || "";
-  const rangeMarkup = (marketVixData.ranges ?? [])
+  const familyBounds = getMarketVixBounds("family");
+  const metricsBounds = getMarketVixBounds("metrics");
+  const metricsRangeMarkup = (marketVixData.ranges ?? [])
     .map(
       (range) => `
         <button
           type="button"
-          class="m7-range-chip${state.marketVixRange === range.key ? " active" : ""}"
-          data-market-vix-range="${range.key}"
+          class="m7-range-chip${state.marketVixMetricsRange === range.key ? " active" : ""}"
+          data-market-vix-metrics-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+  const familyRangeMarkup = (marketVixData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketVixFamilyRange === range.key ? " active" : ""}"
+          data-market-vix-family-range="${range.key}"
         >
           ${range.label}
         </button>`,
@@ -5142,44 +5173,6 @@ function renderMarketVixOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>VIX Range Controls</h2>
-            <p>Price 탭처럼 빠른 구간 선택과 시작일/종료일 직접 지정이 모두 가능합니다.</p>
-          </div>
-          <div class="us-price-controls">
-            <div class="m7-range-row">${rangeMarkup}</div>
-          </div>
-        </div>
-        <div class="total-date-row">
-          <label class="total-date-field">
-            <span>Start</span>
-            <input
-              type="date"
-              data-vix-start
-              min="${vixBounds.min}"
-              max="${vixBounds.max}"
-              value="${customStartValue}"
-            />
-          </label>
-          <label class="total-date-field">
-            <span>End</span>
-            <input
-              type="date"
-              data-vix-end
-              min="${vixBounds.min}"
-              max="${vixBounds.max}"
-              value="${customEndValue}"
-            />
-          </label>
-          <div class="total-date-actions">
-            <button type="button" class="total-date-button" data-vix-apply>Apply</button>
-            <button type="button" class="total-date-button total-date-button-secondary" data-vix-reset>Reset</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="us-panel us-price-panel">
-        <div class="us-section-head us-price-head">
-          <div>
             <h2>VIX Futures Term Structure</h2>
             <p>Front monthly VX settlement curve with previous trading day overlay.</p>
           </div>
@@ -5216,8 +5209,34 @@ function renderMarketVixOverview() {
             <p>누적된 curve history 안에서만 spot, M1, M2와 premium 흐름을 보여줍니다.</p>
           </div>
           <div class="us-price-controls">
-            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="m7-range-row">${metricsRangeMarkup}</div>
             <div class="us-price-updated">${marketVixData.source?.futures ?? ""}</div>
+          </div>
+        </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-vix-metrics-start
+              min="${metricsBounds.min}"
+              max="${metricsBounds.max}"
+              value="${state.marketVixMetricsCustomStart || ""}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-vix-metrics-end
+              min="${metricsBounds.min}"
+              max="${metricsBounds.max}"
+              value="${state.marketVixMetricsCustomEnd || ""}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-vix-metrics-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-vix-metrics-reset>Reset</button>
           </div>
         </div>
         <div class="us-price-chart-wrap">
@@ -5232,8 +5251,34 @@ function renderMarketVixOverview() {
             <p>2018-01-01 이후 수집 가능한 VIX spot 및 term index history입니다.</p>
           </div>
           <div class="us-price-controls">
-            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="m7-range-row">${familyRangeMarkup}</div>
             <div class="us-price-updated">${marketVixData.source?.family ?? ""}</div>
+          </div>
+        </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-vix-family-start
+              min="${familyBounds.min}"
+              max="${familyBounds.max}"
+              value="${state.marketVixFamilyCustomStart || ""}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-vix-family-end
+              min="${familyBounds.min}"
+              max="${familyBounds.max}"
+              value="${state.marketVixFamilyCustomEnd || ""}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-vix-family-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-vix-family-reset>Reset</button>
           </div>
         </div>
         <div class="us-price-chart-wrap">
@@ -5243,37 +5288,71 @@ function renderMarketVixOverview() {
     </section>
   `;
 
-  usOverviewRoot.querySelectorAll("[data-market-vix-range]").forEach((button) => {
+  usOverviewRoot.querySelectorAll("[data-market-vix-metrics-range]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.marketVixRange = button.dataset.marketVixRange || marketVixData.defaultRange || "1y";
-      state.marketVixCustomStart = "";
-      state.marketVixCustomEnd = "";
+      state.marketVixMetricsRange = button.dataset.marketVixMetricsRange || marketVixData.defaultRange || "1y";
+      state.marketVixMetricsCustomStart = "";
+      state.marketVixMetricsCustomEnd = "";
       render();
     });
   });
 
-  const vixStartInput = usOverviewRoot.querySelector("[data-vix-start]");
-  const vixEndInput = usOverviewRoot.querySelector("[data-vix-end]");
-  const vixApplyButton = usOverviewRoot.querySelector("[data-vix-apply]");
-  const vixResetButton = usOverviewRoot.querySelector("[data-vix-reset]");
+  usOverviewRoot.querySelectorAll("[data-market-vix-family-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketVixFamilyRange = button.dataset.marketVixFamilyRange || marketVixData.defaultRange || "1y";
+      state.marketVixFamilyCustomStart = "";
+      state.marketVixFamilyCustomEnd = "";
+      render();
+    });
+  });
 
-  if (vixApplyButton && vixStartInput && vixEndInput) {
-    vixApplyButton.addEventListener("click", () => {
-      const startValue = vixStartInput.value || "";
-      const endValue = vixEndInput.value || "";
+  const vixMetricsStartInput = usOverviewRoot.querySelector("[data-vix-metrics-start]");
+  const vixMetricsEndInput = usOverviewRoot.querySelector("[data-vix-metrics-end]");
+  const vixMetricsApplyButton = usOverviewRoot.querySelector("[data-vix-metrics-apply]");
+  const vixMetricsResetButton = usOverviewRoot.querySelector("[data-vix-metrics-reset]");
+  const vixFamilyStartInput = usOverviewRoot.querySelector("[data-vix-family-start]");
+  const vixFamilyEndInput = usOverviewRoot.querySelector("[data-vix-family-end]");
+  const vixFamilyApplyButton = usOverviewRoot.querySelector("[data-vix-family-apply]");
+  const vixFamilyResetButton = usOverviewRoot.querySelector("[data-vix-family-reset]");
+
+  if (vixMetricsApplyButton && vixMetricsStartInput && vixMetricsEndInput) {
+    vixMetricsApplyButton.addEventListener("click", () => {
+      const startValue = vixMetricsStartInput.value || "";
+      const endValue = vixMetricsEndInput.value || "";
       if (startValue && endValue && startValue > endValue) {
         return;
       }
-      state.marketVixCustomStart = startValue;
-      state.marketVixCustomEnd = endValue;
+      state.marketVixMetricsCustomStart = startValue;
+      state.marketVixMetricsCustomEnd = endValue;
       render();
     });
   }
 
-  if (vixResetButton) {
-    vixResetButton.addEventListener("click", () => {
-      state.marketVixCustomStart = "";
-      state.marketVixCustomEnd = "";
+  if (vixMetricsResetButton) {
+    vixMetricsResetButton.addEventListener("click", () => {
+      state.marketVixMetricsCustomStart = "";
+      state.marketVixMetricsCustomEnd = "";
+      render();
+    });
+  }
+
+  if (vixFamilyApplyButton && vixFamilyStartInput && vixFamilyEndInput) {
+    vixFamilyApplyButton.addEventListener("click", () => {
+      const startValue = vixFamilyStartInput.value || "";
+      const endValue = vixFamilyEndInput.value || "";
+      if (startValue && endValue && startValue > endValue) {
+        return;
+      }
+      state.marketVixFamilyCustomStart = startValue;
+      state.marketVixFamilyCustomEnd = endValue;
+      render();
+    });
+  }
+
+  if (vixFamilyResetButton) {
+    vixFamilyResetButton.addEventListener("click", () => {
+      state.marketVixFamilyCustomStart = "";
+      state.marketVixFamilyCustomEnd = "";
       render();
     });
   }
@@ -5285,12 +5364,12 @@ function renderMarketVixOverview() {
 
   const metricsCanvas = usOverviewRoot.querySelector('[data-market-vix="metrics"]');
   if (metricsCanvas) {
-    createMarketVixMetricsChart(metricsCanvas, state.marketVixRange);
+    createMarketVixMetricsChart(metricsCanvas, state.marketVixMetricsRange);
   }
 
   const familyCanvas = usOverviewRoot.querySelector('[data-market-vix="family"]');
   if (familyCanvas) {
-    createMarketVixFamilyChart(familyCanvas, state.marketVixRange);
+    createMarketVixFamilyChart(familyCanvas, state.marketVixFamilyRange);
   }
 }
 
