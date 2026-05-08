@@ -4472,12 +4472,12 @@ function renderMemorySpotOverview() {
     <section class="memory-overview">
       <div class="us-section-head cloud-section-head">
         <h2>Memory Spot Dashboard</h2>
-        <p>Representative DRAM and NAND spot benchmarks based on public TrendForce pages</p>
+        <p>Representative DRAM and NAND spot benchmarks for tracking memory pricing trends</p>
       </div>
       <section class="memory-banner">
         <div>
           <strong>Source</strong>
-          <span>${memorySpotData.source?.name ?? "TrendForce"}</span>
+          <span>${memorySpotData.source?.name ?? "Public memory benchmark dashboard"}</span>
         </div>
         <div>
           <strong>Updated</strong>

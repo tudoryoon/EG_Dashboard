@@ -5,8 +5,6 @@ window.memorySpotData = {
     note: "Spot history is built from the public sheets referenced by memorysupercycle.net.",
     links: {
       spotSource: "https://memorysupercycle.net/",
-      dramSpot: "https://www.trendforce.com/price/dram/mobileDram_contract",
-      nandSpot: "https://www.trendforce.com/price/flash/pcc_oem_ssd_contract",
     },
   },
   cadence: {
