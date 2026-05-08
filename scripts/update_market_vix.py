@@ -12,10 +12,9 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-START_DATE = "2017-01-01"
-CURVE_LOOKBACK_DAYS = 430
+START_DATE = "2018-01-01"
 MAX_CURVE_CONTRACTS = 8
-MAX_WORKERS = 6
+MAX_WORKERS = 24
 MONTHLY_VX_PATTERN = re.compile(r"^VX/[FGHJKMNQUVXZ]\d+$")
 
 RANGES = [
@@ -53,7 +52,7 @@ class CurveSnapshot:
 
 def fetch_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(request, timeout=30) as response:  # nosec B310 - fixed public endpoints
+    with urlopen(request, timeout=8) as response:  # nosec B310 - fixed public endpoints
         return response.read().decode("utf-8-sig")
 
 
@@ -166,14 +165,21 @@ def parse_curve_for_day(day: str) -> CurveSnapshot | None:
 
 def fetch_curve_history() -> list[CurveSnapshot]:
     today = datetime.now(timezone.utc).date()
+    start_day = date.fromisoformat(START_DATE)
+    existing = load_existing_curve_history()
+    existing_by_date = {snapshot.date: snapshot for snapshot in existing}
     candidate_days: list[str] = []
-    for offset in range(CURVE_LOOKBACK_DAYS + 1):
-        current = today - timedelta(days=offset)
+    current = start_day
+    while current <= today:
         if current.weekday() >= 5:
+            current += timedelta(days=1)
             continue
-        candidate_days.append(current.isoformat())
+        day_key = current.isoformat()
+        if day_key not in existing_by_date:
+            candidate_days.append(day_key)
+        current += timedelta(days=1)
 
-    snapshots: list[CurveSnapshot] = []
+    snapshots: list[CurveSnapshot] = list(existing_by_date.values())
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         future_map = {executor.submit(parse_curve_for_day, day): day for day in candidate_days}
         for future in as_completed(future_map):
@@ -181,7 +187,47 @@ def fetch_curve_history() -> list[CurveSnapshot]:
             if snapshot:
                 snapshots.append(snapshot)
 
-    snapshots.sort(key=lambda item: item.date)
+    deduped = {}
+    for snapshot in snapshots:
+        deduped[snapshot.date] = snapshot
+    return [deduped[key] for key in sorted(deduped)]
+
+
+def load_existing_curve_history() -> list[CurveSnapshot]:
+    output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
+    if not output_path.exists():
+        return []
+    try:
+        text = output_path.read_text(encoding="utf-8").strip()
+        prefix = "window.marketVixData = "
+        suffix = ";"
+        payload = json.loads(text[len(prefix) : -len(suffix)])
+    except Exception:
+        return []
+
+    raw_history = payload.get("curve", {}).get("curveHistory", []) or []
+    snapshots: list[CurveSnapshot] = []
+    for item in raw_history:
+        date_key = item.get("date")
+        contracts = item.get("contracts") or []
+        if not date_key or not contracts:
+            continue
+        parsed_contracts = []
+        for contract in contracts:
+            try:
+                parsed_contracts.append(
+                    CurveContract(
+                        symbol=str(contract["symbol"]),
+                        expiration=str(contract["expiration"]),
+                        label=str(contract["label"]),
+                        price=round(float(contract["price"]), 4),
+                    )
+                )
+            except Exception:
+                parsed_contracts = []
+                break
+        if parsed_contracts:
+            snapshots.append(CurveSnapshot(date=date_key, contracts=parsed_contracts))
     return snapshots
 
 
@@ -282,6 +328,21 @@ def build_curve_payload(curves: list[CurveSnapshot], spot_item: dict[str, object
                 "price": contract.price,
             }
             for contract in latest.contracts
+        ],
+        "curveHistory": [
+            {
+                "date": snapshot.date,
+                "contracts": [
+                    {
+                        "symbol": contract.symbol,
+                        "expiration": contract.expiration,
+                        "label": contract.label,
+                        "price": contract.price,
+                    }
+                    for contract in snapshot.contracts
+                ],
+            }
+            for snapshot in curves
         ],
     }
 
