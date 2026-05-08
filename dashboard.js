@@ -4187,52 +4187,52 @@ function renderGpuCloudOverview() {
     <section class="memory-overview">
       <div class="us-section-head cloud-section-head">
         <h2>${gpuCloudData.dashboard?.title ?? "GPU Rental Price Dashboard"}</h2>
-        <p>${gpuCloudData.dashboard?.subtitle ?? "SemiAnalysis H100 contract benchmark and spot selected index"}</p>
+        <p>${gpuCloudData.dashboard?.subtitle ?? "SemiAnalysis H100 1Y monthly contract benchmark"}</p>
       </div>
       <section class="memory-banner">
         <div>
-          <strong>Contract</strong>
+          <strong>Contract benchmark</strong>
           <span>${gpuCloudData.source?.semiAnalysisName ?? "SemiAnalysis H100 1Y contract index"}</span>
         </div>
         <div>
           <strong>Update</strong>
-          <span>${semiSpotSeries?.updatedAt ?? semiSeries?.updatedAt ?? "-"}</span>
+          <span>${semiSeries?.updatedAt ?? "-"}</span>
         </div>
         <div>
           <strong>Series</strong>
-          <span>H100 1Y + H100 spot selected index</span>
+          <span>H100 1Y midpoint</span>
         </div>
         <div>
           <strong>Source</strong>
-          <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"} + ${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index public endpoint"}</span>
+          <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"}</span>
         </div>
         <div>
           <strong>Method</strong>
-          <span>Contract midpoint + daily public spot index</span>
+          <span>Public chart approximation</span>
         </div>
       </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
         <article class="memory-panel">
           <div class="us-panel-head">
             <div>
-              <h3>GPU Rental Pricing Trends (1Y contract)</h3>
-              <p>H100 contract benchmark and SemiAnalysis H100 spot selected index on one chart</p>
+              <h3>${semiSeries?.title ?? "SemiAnalysis H100 1Y Contract Index"}</h3>
+              <p>${semiSeries?.subtitle ?? ""}</p>
             </div>
           </div>
           <div class="memory-card-meta gpu-term-meta">
-            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"} + ${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index public endpoint"}</span>
-            <span>${semiSpotSeries?.latestLabel ?? semiSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSeries?.latestValue) ? `| Contract ${formatGpuCloudValue(semiSeries.latestValue)}` : ""}${Number.isFinite(semiSpotSeries?.latestValue) ? ` | Spot ${formatGpuCloudValue(semiSpotSeries.latestValue)}` : ""}</span>
+            <span>${semiSeries?.sourceLabel ?? "SemiAnalysis / ClusterMAX research"}</span>
+            <span>${semiSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSeries?.latestValue) ? `| ${formatGpuCloudValue(semiSeries.latestValue)}` : ""}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">Contract low</span>
+            <span class="memory-stat-label">Cycle low</span>
             <span class="memory-stat-value">${Number.isFinite(semiSeries?.floor) ? `${formatGpuCloudValue(semiSeries.floor)} | ${semiSeries.floorLabel}` : "N/A"}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">Spot low</span>
-            <span class="memory-stat-value">${Number.isFinite(semiSpotSeries?.floor) ? `${formatGpuCloudValue(semiSpotSeries.floor)} | ${semiSpotSeries.floorLabel}` : "N/A"}</span>
+            <span class="memory-stat-label">Method</span>
+            <span class="memory-stat-value">${semiSeries?.method ?? ""}</span>
           </div>
           <div class="memory-chart-wrap">
-            <canvas data-gpu-basket="semi-h100-combined"></canvas>
+            <canvas data-gpu-basket="semi-h100-1y"></canvas>
           </div>
         </article>
         <article class="memory-panel">
@@ -4262,38 +4262,25 @@ function renderGpuCloudOverview() {
     </section>
   `;
 
-  const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-combined"]');
+  const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-1y"]');
   const legacySpotPanel = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-spot"]')?.closest(".memory-panel");
   if (legacySpotPanel) {
     legacySpotPanel.style.display = "none";
   }
 
-  if (semiCanvas && mergedLabels.length && (semiSeries || semiSpotSeries)) {
+  if (semiCanvas && semiSeries) {
     createGpuLineChart(
       semiCanvas,
-      mergedLabels,
+      semiSeries.labels ?? [],
       [
         {
-          label: "H100",
-          data: buildGpuAlignedSeriesData(mergedLabels, semiSeries?.labels ?? [], semiSeries?.values ?? []),
-          borderColor: "#a8b3c9",
-          backgroundColor: "#a8b3c9",
+          label: "H100 1Y",
+          data: semiSeries.values ?? [],
+          borderColor: "#111827",
+          backgroundColor: "#111827",
           borderWidth: 2.6,
           tension: 0.22,
           pointRadius: 3,
-          pointHoverRadius: 5,
-          pointHitRadius: 10,
-          spanGaps: false,
-        },
-        {
-          label: "SemiAnalysis H100 Spot Selected Index",
-          data: buildGpuAlignedSeriesData(mergedLabels, semiSpotSeries?.labels ?? [], semiSpotSeries?.values ?? []),
-          borderColor: "#3b82f6",
-          backgroundColor: "#3b82f6",
-          borderWidth: 2.4,
-          borderDash: [8, 6],
-          tension: 0.18,
-          pointRadius: 2.5,
           pointHoverRadius: 5,
           pointHitRadius: 10,
           spanGaps: false,
