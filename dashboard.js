@@ -2921,10 +2921,10 @@ function renderMarketBriefingOverview() {
     .join("");
 
   const briefingIndexConfigs = [
-    { key: "dowjones", label: "Dow Jones" },
-    { key: "sp500", label: "S&P 500" },
-    { key: "nasdaq100", label: "NASDAQ 100" },
-    { key: "russell2000", label: "Russell 2000" },
+    { key: "dowjones", label: "Dow Jones (DIA)" },
+    { key: "sp500", label: "S&P 500 (SPY)" },
+    { key: "nasdaq100", label: "나스닥 100 (QQQ)" },
+    { key: "russell2000", label: "Russell 2000 (IWM)" },
   ];
 
   const indexMarkup = briefingIndexConfigs
@@ -3021,7 +3021,7 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>미국 주요 지수</h2>
-            <p>다우, S&amp;P 500, 나스닡 100, 러셀 2000의 최신 레벨과 등락을 바로 확인합니다.</p>
+            <p>다우 (DIA), S&amp;P 500 (SPY), 나스닥 100 (QQQ), 러셀 2000 (IWM)의 최신 레벨과 등락을 바로 확인합니다.</p>
           </div>
         </div>
         <div class="briefing-index-grid">${indexMarkup}</div>
