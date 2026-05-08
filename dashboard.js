@@ -5099,7 +5099,7 @@ function renderMarketVixOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>VIX Dashboard</h2>
-            <p>VIXCentral-inspired dashboard built from official CBOE delayed settlement curves and Yahoo Finance VIX family history.</p>
+            <p>2018-01-01 이후 안정적으로 수집 가능한 VIX family history와 최신 CBOE settlement curve만 반영했습니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="us-price-updated">Updated ${vixUpdatedAt}</div>
@@ -5145,24 +5145,8 @@ function renderMarketVixOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>Term Structure Metrics</h2>
-            <p>Spot, front-month futures, and contango/backwardation metrics over time.</p>
-          </div>
-          <div class="us-price-controls">
-            <div class="m7-range-row">${rangeMarkup}</div>
-            <div class="us-price-updated">${marketVixData.source?.futures ?? ""}</div>
-          </div>
-        </div>
-        <div class="us-price-chart-wrap">
-          <canvas data-market-vix="metrics"></canvas>
-        </div>
-      </section>
-
-      <section class="us-panel us-price-panel">
-        <div class="us-section-head us-price-head">
-          <div>
             <h2>VIX Family History</h2>
-            <p>Spot and term indexes including VIX 9D, 3M, 6M, and 1Y.</p>
+            <p>2018-01-01 이후 수집 가능한 VIX spot 및 term index history입니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
@@ -5186,11 +5170,6 @@ function renderMarketVixOverview() {
   const curveCanvas = usOverviewRoot.querySelector('[data-market-vix="curve"]');
   if (curveCanvas) {
     createMarketVixCurveChart(curveCanvas);
-  }
-
-  const metricsCanvas = usOverviewRoot.querySelector('[data-market-vix="metrics"]');
-  if (metricsCanvas) {
-    createMarketVixMetricsChart(metricsCanvas, state.marketVixRange);
   }
 
   const familyCanvas = usOverviewRoot.querySelector('[data-market-vix="family"]');
@@ -5852,7 +5831,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "VIX") {
-      summaryText.textContent = "VIXCentral-inspired volatility dashboard using CBOE delayed settlement and VIX family history";
+      summaryText.textContent = "2018-01-01 이후 수집 가능한 VIX family history와 최신 CBOE settlement curve";
       return;
     }
     if (state.marketView === "Breadth") {

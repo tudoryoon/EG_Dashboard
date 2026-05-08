@@ -4,7 +4,6 @@ import csv
 import io
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -14,7 +13,6 @@ from urllib.request import Request, urlopen
 
 START_DATE = "2018-01-01"
 MAX_CURVE_CONTRACTS = 8
-MAX_WORKERS = 24
 MONTHLY_VX_PATTERN = re.compile(r"^VX/[FGHJKMNQUVXZ]\d+$")
 
 RANGES = [
@@ -163,71 +161,22 @@ def parse_curve_for_day(day: str) -> CurveSnapshot | None:
     return CurveSnapshot(date=day, contracts=monthly_contracts[:MAX_CURVE_CONTRACTS])
 
 
-def fetch_curve_history() -> list[CurveSnapshot]:
+def fetch_latest_curves() -> list[CurveSnapshot]:
     today = datetime.now(timezone.utc).date()
-    start_day = date.fromisoformat(START_DATE)
-    existing = load_existing_curve_history()
-    existing_by_date = {snapshot.date: snapshot for snapshot in existing}
-    candidate_days: list[str] = []
-    current = start_day
-    while current <= today:
-        if current.weekday() >= 5:
-            current += timedelta(days=1)
-            continue
-        day_key = current.isoformat()
-        if day_key not in existing_by_date:
-            candidate_days.append(day_key)
-        current += timedelta(days=1)
-
-    snapshots: list[CurveSnapshot] = list(existing_by_date.values())
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_map = {executor.submit(parse_curve_for_day, day): day for day in candidate_days}
-        for future in as_completed(future_map):
-            snapshot = future.result()
-            if snapshot:
-                snapshots.append(snapshot)
-
-    deduped = {}
-    for snapshot in snapshots:
-        deduped[snapshot.date] = snapshot
-    return [deduped[key] for key in sorted(deduped)]
-
-
-def load_existing_curve_history() -> list[CurveSnapshot]:
-    output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
-    if not output_path.exists():
-        return []
-    try:
-        text = output_path.read_text(encoding="utf-8").strip()
-        prefix = "window.marketVixData = "
-        suffix = ";"
-        payload = json.loads(text[len(prefix) : -len(suffix)])
-    except Exception:
-        return []
-
-    raw_history = payload.get("curve", {}).get("curveHistory", []) or []
     snapshots: list[CurveSnapshot] = []
-    for item in raw_history:
-        date_key = item.get("date")
-        contracts = item.get("contracts") or []
-        if not date_key or not contracts:
+    checked = 0
+    current = today
+    while checked < 20 and len(snapshots) < 2:
+        if current.weekday() >= 5:
+            current -= timedelta(days=1)
+            checked += 1
             continue
-        parsed_contracts = []
-        for contract in contracts:
-            try:
-                parsed_contracts.append(
-                    CurveContract(
-                        symbol=str(contract["symbol"]),
-                        expiration=str(contract["expiration"]),
-                        label=str(contract["label"]),
-                        price=round(float(contract["price"]), 4),
-                    )
-                )
-            except Exception:
-                parsed_contracts = []
-                break
-        if parsed_contracts:
-            snapshots.append(CurveSnapshot(date=date_key, contracts=parsed_contracts))
+        snapshot = parse_curve_for_day(current.isoformat())
+        if snapshot:
+            snapshots.append(snapshot)
+        current -= timedelta(days=1)
+        checked += 1
+    snapshots.sort(key=lambda item: item.date)
     return snapshots
 
 
@@ -267,25 +216,6 @@ def build_curve_payload(curves: list[CurveSnapshot], spot_item: dict[str, object
     spot_values = spot_item.get("values") or []
     spot_lookup = build_spot_lookup(list(spot_dates), list(spot_values))
 
-    history_dates: list[str] = []
-    spot_series: list[float | None] = []
-    m1_series: list[float | None] = []
-    m2_series: list[float | None] = []
-    premium_m1_spot: list[float | None] = []
-    premium_m2_m1: list[float | None] = []
-
-    for snapshot in curves:
-        history_dates.append(snapshot.date)
-        spot_value = find_latest_spot_value(spot_lookup, list(spot_dates), snapshot.date)
-        m1 = snapshot.contracts[0].price if snapshot.contracts else None
-        m2 = snapshot.contracts[1].price if len(snapshot.contracts) > 1 else None
-
-        spot_series.append(spot_value)
-        m1_series.append(m1)
-        m2_series.append(m2)
-        premium_m1_spot.append(round(((m1 / spot_value) - 1) * 100, 2) if m1 and spot_value else None)
-        premium_m2_m1.append(round(((m2 / m1) - 1) * 100, 2) if m1 and m2 else None)
-
     latest_spot = find_latest_spot_value(spot_lookup, list(spot_dates), latest.date)
     latest_m1 = latest.contracts[0].price if latest.contracts else None
     latest_m2 = latest.contracts[1].price if len(latest.contracts) > 1 else None
@@ -304,14 +234,8 @@ def build_curve_payload(curves: list[CurveSnapshot], spot_item: dict[str, object
         "expiries": [contract.label for contract in latest.contracts],
         "latestCurve": [contract.price for contract in latest.contracts],
         "previousCurve": previous_curve_values,
-        "historyDates": history_dates,
-        "metrics": {
-            "spot": spot_series,
-            "m1": m1_series,
-            "m2": m2_series,
-            "m1SpotPremiumPct": premium_m1_spot,
-            "m2M1PremiumPct": premium_m2_m1,
-        },
+        "historyDates": [],
+        "metrics": {},
         "regime": {
             "label": regime_label,
             "m1SpotPremiumPct": m1_spot_premium,
@@ -328,21 +252,6 @@ def build_curve_payload(curves: list[CurveSnapshot], spot_item: dict[str, object
                 "price": contract.price,
             }
             for contract in latest.contracts
-        ],
-        "curveHistory": [
-            {
-                "date": snapshot.date,
-                "contracts": [
-                    {
-                        "symbol": contract.symbol,
-                        "expiration": contract.expiration,
-                        "label": contract.label,
-                        "price": contract.price,
-                    }
-                    for contract in snapshot.contracts
-                ],
-            }
-            for snapshot in curves
         ],
     }
 
@@ -379,7 +288,7 @@ def build_snapshot_cards(vix_family: dict[str, dict[str, object]], curve_payload
 
 def main() -> None:
     vix_family = {meta["key"]: parse_vix_family_item(meta) for meta in VIX_FAMILY}
-    curves = fetch_curve_history()
+    curves = fetch_latest_curves()
     curve_payload = build_curve_payload(curves, vix_family["vix"])
 
     latest_dates = [item.get("latestDate") for item in vix_family.values() if item.get("latestDate")]
