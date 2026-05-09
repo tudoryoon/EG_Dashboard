@@ -172,7 +172,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:metals:silver": "#94a3b8",
   "macro:metals:copper": "#b45309",
 };
-const MARKET_PRICE_EMA_OPTIONS = [5, 10, 20, 60, 120, 200];
+const MARKET_PRICE_EMA_OPTIONS = [10, 20, 60, 120, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
   { key: "nasdaq100", label: "NASDAQ 100" },
@@ -191,7 +191,7 @@ const state = {
   marketPriceRange: marketPriceData.defaultRange ?? "max",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
-  marketTrendEmas: [20, 60, 200],
+  marketTrendEmas: [10, 60, 120],
   marketTrendCustomStart: "",
   marketTrendCustomEnd: "",
   marketVixMetricsRange: marketVixData.defaultRange ?? "1y",
@@ -759,29 +759,25 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
         label: `EMA ${period}`,
         data: emaFull.slice(startIndex, sliceEnd),
         borderColor:
-          period === 5
+          period === 10
             ? "#dc2626"
-            : period === 10
-              ? "#f97316"
-              : period === 20
+            : period === 20
+              ? "#d4a017"
+              : period === 60
                 ? "#2563eb"
-                : period === 60
-                  ? "#7c3aed"
-                  : period === 120
-                    ? "#0f766e"
-                    : "#111827",
+                : period === 120
+                  ? "#16a34a"
+                  : "#7c3aed",
         backgroundColor:
-          period === 5
+          period === 10
             ? "#dc2626"
-            : period === 10
-              ? "#f97316"
-              : period === 20
+            : period === 20
+              ? "#d4a017"
+              : period === 60
                 ? "#2563eb"
-                : period === 60
-                  ? "#7c3aed"
-                  : period === 120
-                    ? "#0f766e"
-                    : "#111827",
+                : period === 120
+                  ? "#16a34a"
+                  : "#7c3aed",
         borderWidth: period >= 120 ? 2.6 : 2.1,
         tension: 0.12,
         pointRadius: 0,
@@ -796,10 +792,9 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
       {
         label: item.label,
         data: priceValues,
-        borderColor: "#4a4a46",
-        backgroundColor: "#4a4a46",
+        borderColor: "#111827",
+        backgroundColor: "#111827",
         borderWidth: 3,
-        borderDash: [8, 6],
         tension: 0.08,
         pointRadius: 0,
         pointHoverRadius: 4,
