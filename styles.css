@@ -2079,6 +2079,9 @@ h1 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
+  max-height: 860px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .market-rs-card {

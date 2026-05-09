@@ -3481,8 +3481,8 @@ function renderMarketRsOverview() {
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh" ? " active" : ""}" data-rs-filter="newHigh">RS New High</button>
   `;
   const tableSortRows = sortMarketRsTableRows(rows);
-  const leaderCards = rows
-    .slice(0, 12)
+  const leaderRows = state.rsFilter === "newHigh" ? rows : rows.slice(0, 12);
+  const leaderCards = leaderRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
       return `
