@@ -179,7 +179,7 @@ const MARKET_PRICE_TREND_INDEX_OPTIONS = [
 ];
 
 const state = {
-  tab: "DailyBriefing",
+  tab: "Market",
   marketView: "Overview",
   bigTechView: "M7",
   semisView: "MemorySpot",
@@ -5151,7 +5151,7 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500와 NASDAQ 100의 일별 지수와 EMA(5, 10, 20, 60, 120, 200)를 1980-01-01 이후 기준으로 확인합니다.</p>
+            <p>S&P 500? NASDAQ 100? ?? ??? EMA(10, 20, 60, 120, 200)? 1980-01-01 ?? ???? ?????.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
@@ -5193,6 +5193,16 @@ function renderMarketOverview() {
         <div class="market-trend-meta">
           <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
           <span>Selected EMAs overlay on the raw index line</span>
+        </div>
+        <div class="market-trend-legend">
+          <span class="market-trend-legend-item">
+            <span class="market-trend-legend-swatch market-trend-legend-swatch-weak"></span>
+            약세: EMA 10 &lt; EMA 60
+          </span>
+          <span class="market-trend-legend-item">
+            <span class="market-trend-legend-swatch market-trend-legend-swatch-full"></span>
+            완전 역배열: EMA 10 &lt; EMA 60 &lt; EMA 120
+          </span>
         </div>
         <div class="us-price-chart-wrap">
           <canvas data-market-trend="ema"></canvas>
