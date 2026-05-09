@@ -7,7 +7,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-START_DATE = "1997-01-01"
+START_DATE = "1980-01-01"
 SYMBOLS = [
     {"key": "sp500", "symbol": "^GSPC", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
     {"key": "nasdaq100", "symbol": "^NDX", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},

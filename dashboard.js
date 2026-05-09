@@ -192,6 +192,8 @@ const state = {
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendEmas: [20, 60, 200],
+  marketTrendCustomStart: "",
+  marketTrendCustomEnd: "",
   marketVixMetricsRange: marketVixData.defaultRange ?? "1y",
   marketVixMetricsCustomStart: "",
   marketVixMetricsCustomEnd: "",
@@ -723,7 +725,7 @@ function getMarketTrendBounds() {
   };
 }
 
-function buildMarketTrendChartPayload(rangeKey, indexKey) {
+function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", customEnd = "") {
   const trendStart = "2000-01-01";
   const item = marketPriceData?.items?.[indexKey];
   if (!item?.dates?.length || !item?.values?.length) {
@@ -741,17 +743,21 @@ function buildMarketTrendChartPayload(rangeKey, indexKey) {
   }
 
   const latestDate = fullLabels[fullLabels.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, trendStart);
+  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, trendStart);
+  const startDate = customStart || derivedStartDate;
+  const endDate = customEnd || latestDate;
   const startIndex = Math.max(0, fullLabels.findIndex((label) => label >= startDate));
-  const labels = fullLabels.slice(startIndex);
-  const priceValues = fullValues.slice(startIndex);
+  const endIndex = fullLabels.findIndex((label) => label > endDate);
+  const sliceEnd = endIndex === -1 ? fullLabels.length : Math.max(startIndex + 1, endIndex);
+  const labels = fullLabels.slice(startIndex, sliceEnd);
+  const priceValues = fullValues.slice(startIndex, sliceEnd);
   const emaDatasets = (state.marketTrendEmas ?? [])
     .filter((period) => MARKET_PRICE_EMA_OPTIONS.includes(period))
     .map((period) => {
       const emaFull = calculateEmaSeries(fullValues, period);
       return {
         label: `EMA ${period}`,
-        data: emaFull.slice(startIndex),
+        data: emaFull.slice(startIndex, sliceEnd),
         borderColor:
           period === 5
             ? "#dc2626"
@@ -804,12 +810,12 @@ function buildMarketTrendChartPayload(rangeKey, indexKey) {
   };
 }
 
-function createMarketTrendChart(canvas, rangeKey, indexKey) {
+function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", customEnd = "") {
   if (typeof Chart === "undefined" || !canvas) {
     return;
   }
 
-  const payload = buildMarketTrendChartPayload(rangeKey, indexKey);
+  const payload = buildMarketTrendChartPayload(rangeKey, indexKey, customStart, customEnd);
   const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
@@ -4959,6 +4965,8 @@ function renderMarketOverview() {
 
   const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
   const marketTrendBounds = getMarketTrendBounds();
+  const marketTrendStartValue = state.marketTrendCustomStart || "";
+  const marketTrendEndValue = state.marketTrendCustomEnd || "";
   const marketTrendRangeMarkup = (marketPriceData.ranges ?? [])
     .map(
       (range) => `
@@ -5071,11 +5079,37 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500와 NASDAQ 100의 일별 지수와 EMA(5, 10, 20, 60, 120, 200)를 2000-01-01 이후 기준으로 확인합니다.</p>
+            <p>S&P 500와 NASDAQ 100의 일별 지수와 EMA(5, 10, 20, 60, 120, 200)를 1980-01-01 이후 기준으로 확인합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-market-trend-start
+              min="${marketTrendBounds.min}"
+              max="${marketTrendBounds.max}"
+              value="${marketTrendStartValue}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-market-trend-end
+              min="${marketTrendBounds.min}"
+              max="${marketTrendBounds.max}"
+              value="${marketTrendEndValue}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-market-trend-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-market-trend-reset>Reset</button>
           </div>
         </div>
         <div class="total-series-row total-series-row-left">
@@ -5178,6 +5212,8 @@ function renderMarketOverview() {
   usOverviewRoot.querySelectorAll("[data-market-trend-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.marketTrendRange = button.dataset.marketTrendRange || "3y";
+      state.marketTrendCustomStart = "";
+      state.marketTrendCustomEnd = "";
       render();
     });
   });
@@ -5208,6 +5244,32 @@ function renderMarketOverview() {
       render();
     });
   });
+
+  const marketTrendStartInput = usOverviewRoot.querySelector("[data-market-trend-start]");
+  const marketTrendEndInput = usOverviewRoot.querySelector("[data-market-trend-end]");
+  const marketTrendApplyButton = usOverviewRoot.querySelector("[data-market-trend-apply]");
+  const marketTrendResetButton = usOverviewRoot.querySelector("[data-market-trend-reset]");
+
+  if (marketTrendApplyButton && marketTrendStartInput && marketTrendEndInput) {
+    marketTrendApplyButton.addEventListener("click", () => {
+      const startValue = marketTrendStartInput.value || "";
+      const endValue = marketTrendEndInput.value || "";
+      if (startValue && endValue && startValue > endValue) {
+        return;
+      }
+      state.marketTrendCustomStart = startValue;
+      state.marketTrendCustomEnd = endValue;
+      render();
+    });
+  }
+
+  if (marketTrendResetButton) {
+    marketTrendResetButton.addEventListener("click", () => {
+      state.marketTrendCustomStart = "";
+      state.marketTrendCustomEnd = "";
+      render();
+    });
+  }
 
   usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -5286,7 +5348,13 @@ function renderMarketOverview() {
 
   const trendCanvas = usOverviewRoot.querySelector('[data-market-trend="ema"]');
   if (trendCanvas) {
-    createMarketTrendChart(trendCanvas, state.marketTrendRange, state.marketTrendIndex);
+    createMarketTrendChart(
+      trendCanvas,
+      state.marketTrendRange,
+      state.marketTrendIndex,
+      state.marketTrendCustomStart,
+      state.marketTrendCustomEnd,
+    );
   }
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
