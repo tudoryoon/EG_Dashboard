@@ -799,6 +799,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
         borderColor: "#4a4a46",
         backgroundColor: "#4a4a46",
         borderWidth: 3,
+        borderDash: [8, 6],
         tension: 0.08,
         pointRadius: 0,
         pointHoverRadius: 4,
@@ -840,7 +841,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       const ema120 = payload.datasets[ema120DatasetIndex]?.data ?? [];
       let segmentStart = null;
 
-      const drawSegment = (startIndex, endIndex) => {
+      const drawSegment = (startIndex, endIndex, fillStyle) => {
         if (startIndex === null || endIndex < startIndex) {
           return;
         }
@@ -850,29 +851,46 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
             ? chartArea.right
             : (xScale.getPixelForValue(endIndex) + xScale.getPixelForValue(endIndex + 1)) / 2;
         ctx.save();
-        ctx.fillStyle = "rgba(248, 113, 113, 0.10)";
+        ctx.fillStyle = fillStyle;
         ctx.fillRect(startX, chartArea.top, endX - startX, chartArea.bottom - chartArea.top);
         ctx.restore();
       };
 
+      let weakBearStart = null;
       for (let index = 0; index < payload.labels.length; index += 1) {
-        const isBearish =
+        const isFullBearish =
           Number.isFinite(ema10[index]) &&
           Number.isFinite(ema60[index]) &&
           Number.isFinite(ema120[index]) &&
           Number(ema10[index]) < Number(ema60[index]) &&
           Number(ema60[index]) < Number(ema120[index]);
+        const isWeakBearish =
+          Number.isFinite(ema10[index]) &&
+          Number.isFinite(ema60[index]) &&
+          Number(ema10[index]) < Number(ema60[index]);
 
-        if (isBearish && segmentStart === null) {
+        if (isFullBearish && segmentStart === null) {
           segmentStart = index;
-        } else if (!isBearish && segmentStart !== null) {
-          drawSegment(segmentStart, index - 1);
+        } else if (!isFullBearish && segmentStart !== null) {
+          drawSegment(segmentStart, index - 1, "rgba(239, 68, 68, 0.11)");
           segmentStart = null;
+        }
+
+        const weakOnly = isWeakBearish && !isFullBearish;
+        if (weakOnly && weakBearStart === null) {
+          weakBearStart = index;
+        } else if (!weakOnly && weakBearStart !== null) {
+          drawSegment(weakBearStart, index - 1, "rgba(248, 113, 113, 0.05)");
+          weakBearStart = null;
         }
       }
 
       if (segmentStart !== null) {
-        drawSegment(segmentStart, payload.labels.length - 1);
+        drawSegment(segmentStart, payload.labels.length - 1, "rgba(239, 68, 68, 0.11)");
+      }
+
+      if (weakBearStart !== null) {
+        drawSegment(weakBearStart, payload.labels.length - 1, "rgba(248, 113, 113, 0.05)");
       }
     },
   };
