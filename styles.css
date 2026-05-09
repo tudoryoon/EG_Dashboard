@@ -1354,6 +1354,20 @@ h1 {
   margin: 14px 0 10px;
 }
 
+.total-series-row-left {
+  justify-content: flex-start;
+}
+
+.market-trend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .total-date-row {
   display: flex;
   flex-wrap: wrap;

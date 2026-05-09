@@ -172,6 +172,11 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:metals:silver": "#94a3b8",
   "macro:metals:copper": "#b45309",
 };
+const MARKET_PRICE_EMA_OPTIONS = [5, 10, 20, 60, 120, 200];
+const MARKET_PRICE_TREND_INDEX_OPTIONS = [
+  { key: "sp500", label: "S&P 500" },
+  { key: "nasdaq100", label: "NASDAQ 100" },
+];
 
 const state = {
   tab: "DailyBriefing",
@@ -184,6 +189,9 @@ const state = {
   sort: "marketCapDesc",
   m7PriceRange: m7PriceData.defaultRange ?? "max",
   marketPriceRange: marketPriceData.defaultRange ?? "max",
+  marketTrendRange: "3y",
+  marketTrendIndex: "sp500",
+  marketTrendEmas: [20, 60, 200],
   marketVixMetricsRange: marketVixData.defaultRange ?? "1y",
   marketVixMetricsCustomStart: "",
   marketVixMetricsCustomEnd: "",
@@ -675,6 +683,199 @@ function createM7RelativeChart(canvas, rangeKey) {
 
 function createMarketRelativeChart(canvas, rangeKey) {
   createRelativePriceChart(canvas, marketPriceData, rangeKey);
+}
+
+function calculateEmaSeries(values, period) {
+  if (!Array.isArray(values) || !values.length || !Number.isFinite(period) || period <= 1) {
+    return values?.slice?.() ?? [];
+  }
+  const multiplier = 2 / (period + 1);
+  const result = [];
+  let ema = null;
+  values.forEach((value, index) => {
+    if (!Number.isFinite(value)) {
+      result.push(null);
+      return;
+    }
+    if (ema === null) {
+      const seedWindow = values.slice(Math.max(0, index - period + 1), index + 1).filter((item) => Number.isFinite(item));
+      if (seedWindow.length < Math.min(period, index + 1)) {
+        result.push(null);
+        return;
+      }
+      ema = seedWindow.reduce((sum, item) => sum + item, 0) / seedWindow.length;
+      result.push(Number(ema.toFixed(2)));
+      return;
+    }
+    ema = value * multiplier + ema * (1 - multiplier);
+    result.push(Number(ema.toFixed(2)));
+  });
+  return result;
+}
+
+function getMarketTrendBounds() {
+  const trendStart = "2000-01-01";
+  const items = ["sp500", "nasdaq100"].map((key) => marketPriceData?.items?.[key]).filter(Boolean);
+  const dates = [...new Set(items.flatMap((item) => item.dates ?? []).filter((date) => date >= trendStart))].sort();
+  return {
+    min: dates[0] ?? trendStart,
+    max: dates[dates.length - 1] ?? "",
+  };
+}
+
+function buildMarketTrendChartPayload(rangeKey, indexKey) {
+  const trendStart = "2000-01-01";
+  const item = marketPriceData?.items?.[indexKey];
+  if (!item?.dates?.length || !item?.values?.length) {
+    return { labels: [], datasets: [], item: null };
+  }
+
+  const firstUsableIndex = Math.max(
+    0,
+    (item.dates ?? []).findIndex((label) => label >= trendStart),
+  );
+  const fullLabels = (item.dates ?? []).slice(firstUsableIndex);
+  const fullValues = (item.values ?? []).slice(firstUsableIndex);
+  if (!fullLabels.length || !fullValues.length) {
+    return { labels: [], datasets: [], item };
+  }
+
+  const latestDate = fullLabels[fullLabels.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, trendStart);
+  const startIndex = Math.max(0, fullLabels.findIndex((label) => label >= startDate));
+  const labels = fullLabels.slice(startIndex);
+  const priceValues = fullValues.slice(startIndex);
+  const emaDatasets = (state.marketTrendEmas ?? [])
+    .filter((period) => MARKET_PRICE_EMA_OPTIONS.includes(period))
+    .map((period) => {
+      const emaFull = calculateEmaSeries(fullValues, period);
+      return {
+        label: `EMA ${period}`,
+        data: emaFull.slice(startIndex),
+        borderColor:
+          period === 5
+            ? "#dc2626"
+            : period === 10
+              ? "#f97316"
+              : period === 20
+                ? "#2563eb"
+                : period === 60
+                  ? "#7c3aed"
+                  : period === 120
+                    ? "#0f766e"
+                    : "#111827",
+        backgroundColor:
+          period === 5
+            ? "#dc2626"
+            : period === 10
+              ? "#f97316"
+              : period === 20
+                ? "#2563eb"
+                : period === 60
+                  ? "#7c3aed"
+                  : period === 120
+                    ? "#0f766e"
+                    : "#111827",
+        borderWidth: period >= 120 ? 2.6 : 2.1,
+        tension: 0.12,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        spanGaps: false,
+      };
+    });
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: item.label,
+        data: priceValues,
+        borderColor: "#4a4a46",
+        backgroundColor: "#4a4a46",
+        borderWidth: 3,
+        tension: 0.08,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        spanGaps: false,
+      },
+      ...emaDatasets,
+    ],
+    item,
+  };
+}
+
+function createMarketTrendChart(canvas, rangeKey, indexKey) {
+  if (typeof Chart === "undefined" || !canvas) {
+    return;
+  }
+
+  const payload = buildMarketTrendChartPayload(rangeKey, indexKey);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const yMin = Math.floor(minValue * 0.97);
+  const yMax = Math.ceil(maxValue * 1.03);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatUsStockPrice(Number(context.parsed.y), 2)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0).map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatUsStockPrice(Number(value), Number(value) >= 1000 ? 0 : 2),
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function formatMacroValue(value, formatterKey) {
@@ -4757,6 +4958,39 @@ function renderMarketOverview() {
     .join("");
 
   const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const marketTrendBounds = getMarketTrendBounds();
+  const marketTrendRangeMarkup = (marketPriceData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketTrendRange === range.key ? " active" : ""}"
+          data-market-trend-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+  const marketTrendIndexMarkup = MARKET_PRICE_TREND_INDEX_OPTIONS.map(
+    (item) => `
+      <button
+        type="button"
+        class="total-series-chip${state.marketTrendIndex === item.key ? " active" : ""}"
+        data-market-trend-index="${item.key}"
+      >
+        ${item.label}
+      </button>`,
+  ).join("");
+  const marketTrendEmaMarkup = MARKET_PRICE_EMA_OPTIONS.map(
+    (period) => `
+      <button
+        type="button"
+        class="total-series-chip${(state.marketTrendEmas ?? []).includes(period) ? " active" : ""}"
+        data-market-trend-ema="${period}"
+      >
+        EMA ${period}
+      </button>`,
+  ).join("");
   const totalBounds = getTotalDashboardBounds();
   const totalStartValue = state.totalDashboardCustomStart || "";
   const totalEndValue = state.totalDashboardCustomEnd || "";
@@ -4833,6 +5067,31 @@ function renderMarketOverview() {
     .join("");
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Index Trend & EMA</h2>
+            <p>S&P 500와 NASDAQ 100의 일별 지수와 EMA(5, 10, 20, 60, 120, 200)를 2000-01-01 이후 기준으로 확인합니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${marketTrendRangeMarkup}</div>
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="total-series-row total-series-row-left">
+          ${marketTrendIndexMarkup}
+        </div>
+        <div class="total-series-row total-series-row-left">
+          ${marketTrendEmaMarkup}
+        </div>
+        <div class="market-trend-meta">
+          <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
+          <span>Selected EMAs overlay on the raw index line</span>
+        </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-trend="ema"></canvas>
+        </div>
+      </section>
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
@@ -4916,6 +5175,40 @@ function renderMarketOverview() {
     });
   });
 
+  usOverviewRoot.querySelectorAll("[data-market-trend-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketTrendRange = button.dataset.marketTrendRange || "3y";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketTrendIndex = button.dataset.marketTrendIndex || "sp500";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-ema]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const period = Number(button.dataset.marketTrendEma);
+      if (!Number.isFinite(period)) {
+        return;
+      }
+      const current = new Set(state.marketTrendEmas ?? []);
+      if (current.has(period)) {
+        if (current.size === 1) {
+          return;
+        }
+        current.delete(period);
+      } else {
+        current.add(period);
+      }
+      state.marketTrendEmas = [...current].sort((a, b) => a - b);
+      render();
+    });
+  });
+
   usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
     button.addEventListener("click", () => {
       const panelKey = button.dataset.marketMacroPanel;
@@ -4989,6 +5282,11 @@ function renderMarketOverview() {
   const totalCanvas = usOverviewRoot.querySelector('[data-market-total="overview"]');
   if (totalCanvas) {
     createTotalDashboardChart(totalCanvas, state.totalDashboardRange);
+  }
+
+  const trendCanvas = usOverviewRoot.querySelector('[data-market-trend="ema"]');
+  if (trendCanvas) {
+    createMarketTrendChart(trendCanvas, state.marketTrendRange, state.marketTrendIndex);
   }
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
