@@ -716,7 +716,7 @@ function calculateEmaSeries(values, period) {
 }
 
 function getMarketTrendBounds() {
-  const trendStart = "2000-01-01";
+  const trendStart = marketPriceData?.startDate ?? "1980-01-01";
   const items = ["sp500", "nasdaq100"].map((key) => marketPriceData?.items?.[key]).filter(Boolean);
   const dates = [...new Set(items.flatMap((item) => item.dates ?? []).filter((date) => date >= trendStart))].sort();
   return {
@@ -726,7 +726,7 @@ function getMarketTrendBounds() {
 }
 
 function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", customEnd = "") {
-  const trendStart = "2000-01-01";
+  const trendStart = marketPriceData?.startDate ?? "1980-01-01";
   const item = marketPriceData?.items?.[indexKey];
   if (!item?.dates?.length || !item?.values?.length) {
     return { labels: [], datasets: [], item: null };
@@ -821,6 +821,61 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const yMin = Math.floor(minValue * 0.97);
   const yMax = Math.ceil(maxValue * 1.03);
+  const ema10DatasetIndex = payload.datasets.findIndex((dataset) => dataset.label === "EMA 10");
+  const ema60DatasetIndex = payload.datasets.findIndex((dataset) => dataset.label === "EMA 60");
+  const ema120DatasetIndex = payload.datasets.findIndex((dataset) => dataset.label === "EMA 120");
+  const bearBackgroundPlugin = {
+    id: "marketTrendBearBackground",
+    beforeDatasetsDraw(chart) {
+      if (ema10DatasetIndex === -1 || ema60DatasetIndex === -1 || ema120DatasetIndex === -1) {
+        return;
+      }
+      const { ctx, chartArea, scales } = chart;
+      const xScale = scales.x;
+      if (!ctx || !chartArea || !xScale) {
+        return;
+      }
+      const ema10 = payload.datasets[ema10DatasetIndex]?.data ?? [];
+      const ema60 = payload.datasets[ema60DatasetIndex]?.data ?? [];
+      const ema120 = payload.datasets[ema120DatasetIndex]?.data ?? [];
+      let segmentStart = null;
+
+      const drawSegment = (startIndex, endIndex) => {
+        if (startIndex === null || endIndex < startIndex) {
+          return;
+        }
+        const startX = startIndex <= 0 ? chartArea.left : (xScale.getPixelForValue(startIndex - 1) + xScale.getPixelForValue(startIndex)) / 2;
+        const endX =
+          endIndex >= payload.labels.length - 1
+            ? chartArea.right
+            : (xScale.getPixelForValue(endIndex) + xScale.getPixelForValue(endIndex + 1)) / 2;
+        ctx.save();
+        ctx.fillStyle = "rgba(248, 113, 113, 0.10)";
+        ctx.fillRect(startX, chartArea.top, endX - startX, chartArea.bottom - chartArea.top);
+        ctx.restore();
+      };
+
+      for (let index = 0; index < payload.labels.length; index += 1) {
+        const isBearish =
+          Number.isFinite(ema10[index]) &&
+          Number.isFinite(ema60[index]) &&
+          Number.isFinite(ema120[index]) &&
+          Number(ema10[index]) < Number(ema60[index]) &&
+          Number(ema60[index]) < Number(ema120[index]);
+
+        if (isBearish && segmentStart === null) {
+          segmentStart = index;
+        } else if (!isBearish && segmentStart !== null) {
+          drawSegment(segmentStart, index - 1);
+          segmentStart = null;
+        }
+      }
+
+      if (segmentStart !== null) {
+        drawSegment(segmentStart, payload.labels.length - 1);
+      }
+    },
+  };
 
   const chart = new Chart(canvas, {
     type: "line",
@@ -828,6 +883,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       labels: payload.labels,
       datasets: payload.datasets,
     },
+    plugins: [bearBackgroundPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
