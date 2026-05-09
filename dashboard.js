@@ -751,6 +751,11 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   const sliceEnd = endIndex === -1 ? fullLabels.length : Math.max(startIndex + 1, endIndex);
   const labels = fullLabels.slice(startIndex, sliceEnd);
   const priceValues = fullValues.slice(startIndex, sliceEnd);
+  const emaReferenceSeries = {
+    10: calculateEmaSeries(fullValues, 10).slice(startIndex, sliceEnd),
+    60: calculateEmaSeries(fullValues, 60).slice(startIndex, sliceEnd),
+    120: calculateEmaSeries(fullValues, 120).slice(startIndex, sliceEnd),
+  };
   const emaDatasets = (state.marketTrendEmas ?? [])
     .filter((period) => MARKET_PRICE_EMA_OPTIONS.includes(period))
     .map((period) => {
@@ -803,6 +808,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
       ...emaDatasets,
     ],
     item,
+    emaReferenceSeries,
   };
 }
 
@@ -817,23 +823,20 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const yMin = Math.floor(minValue * 0.97);
   const yMax = Math.ceil(maxValue * 1.03);
-  const ema10DatasetIndex = payload.datasets.findIndex((dataset) => dataset.label === "EMA 10");
-  const ema60DatasetIndex = payload.datasets.findIndex((dataset) => dataset.label === "EMA 60");
-  const ema120DatasetIndex = payload.datasets.findIndex((dataset) => dataset.label === "EMA 120");
   const bearBackgroundPlugin = {
     id: "marketTrendBearBackground",
     beforeDatasetsDraw(chart) {
-      if (ema10DatasetIndex === -1 || ema60DatasetIndex === -1 || ema120DatasetIndex === -1) {
-        return;
-      }
       const { ctx, chartArea, scales } = chart;
       const xScale = scales.x;
       if (!ctx || !chartArea || !xScale) {
         return;
       }
-      const ema10 = payload.datasets[ema10DatasetIndex]?.data ?? [];
-      const ema60 = payload.datasets[ema60DatasetIndex]?.data ?? [];
-      const ema120 = payload.datasets[ema120DatasetIndex]?.data ?? [];
+      const ema10 = payload.emaReferenceSeries?.[10] ?? [];
+      const ema60 = payload.emaReferenceSeries?.[60] ?? [];
+      const ema120 = payload.emaReferenceSeries?.[120] ?? [];
+      if (!ema10.length || !ema60.length || !ema120.length) {
+        return;
+      }
       let segmentStart = null;
 
       const drawSegment = (startIndex, endIndex, fillStyle) => {
@@ -875,17 +878,17 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
         if (weakOnly && weakBearStart === null) {
           weakBearStart = index;
         } else if (!weakOnly && weakBearStart !== null) {
-          drawSegment(weakBearStart, index - 1, "rgba(248, 113, 113, 0.05)");
+          drawSegment(weakBearStart, index - 1, "rgba(248, 113, 113, 0.09)");
           weakBearStart = null;
         }
       }
 
       if (segmentStart !== null) {
-        drawSegment(segmentStart, payload.labels.length - 1, "rgba(239, 68, 68, 0.11)");
+        drawSegment(segmentStart, payload.labels.length - 1, "rgba(239, 68, 68, 0.16)");
       }
 
       if (weakBearStart !== null) {
-        drawSegment(weakBearStart, payload.labels.length - 1, "rgba(248, 113, 113, 0.05)");
+        drawSegment(weakBearStart, payload.labels.length - 1, "rgba(248, 113, 113, 0.09)");
       }
     },
   };
