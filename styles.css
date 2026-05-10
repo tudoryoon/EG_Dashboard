@@ -1368,6 +1368,39 @@ h1 {
   font-size: 0.82rem;
 }
 
+.market-trend-gap-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.market-trend-gap-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(70, 70, 66, 0.12);
+  border-radius: 999px;
+  background: #f7f7f4;
+  color: #4f4f49;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.market-trend-gap-pill strong {
+  color: #252521;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-trend-gap-pill.positive strong {
+  color: #047857;
+}
+
+.market-trend-gap-pill.negative strong {
+  color: #b91c1c;
+}
+
 .market-trend-legend {
   display: flex;
   flex-wrap: wrap;

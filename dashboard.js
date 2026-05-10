@@ -751,12 +751,9 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   const sliceEnd = endIndex === -1 ? fullLabels.length : Math.max(startIndex + 1, endIndex);
   const labels = fullLabels.slice(startIndex, sliceEnd);
   const priceValues = fullValues.slice(startIndex, sliceEnd);
-  const emaReferenceSeries = {
-    10: calculateEmaSeries(fullValues, 10).slice(startIndex, sliceEnd),
-    60: calculateEmaSeries(fullValues, 60).slice(startIndex, sliceEnd),
-    120: calculateEmaSeries(fullValues, 120).slice(startIndex, sliceEnd),
-    200: calculateEmaSeries(fullValues, 200).slice(startIndex, sliceEnd),
-  };
+  const emaReferenceSeries = Object.fromEntries(
+    MARKET_PRICE_EMA_OPTIONS.map((period) => [period, calculateEmaSeries(fullValues, period).slice(startIndex, sliceEnd)]),
+  );
   const emaDatasets = (state.marketTrendEmas ?? [])
     .filter((period) => MARKET_PRICE_EMA_OPTIONS.includes(period))
     .map((period) => {
@@ -811,6 +808,52 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
     item,
     emaReferenceSeries,
   };
+}
+
+function calculateMarketTrendGap(indexValue, emaValue) {
+  if (!Number.isFinite(indexValue) || !Number.isFinite(emaValue) || emaValue === 0) {
+    return null;
+  }
+  return (indexValue / emaValue - 1) * 100;
+}
+
+function formatMarketTrendGap(value) {
+  if (value === null || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return formatSignedPercent(Number(value));
+}
+
+function buildMarketTrendGapSummary() {
+  const payload = buildMarketTrendChartPayload(
+    state.marketTrendRange,
+    state.marketTrendIndex,
+    state.marketTrendCustomStart,
+    state.marketTrendCustomEnd,
+  );
+  const indexValues = payload.datasets?.[0]?.data ?? [];
+  let latestIndex = -1;
+  for (let index = indexValues.length - 1; index >= 0; index -= 1) {
+    if (Number.isFinite(indexValues[index])) {
+      latestIndex = index;
+      break;
+    }
+  }
+  if (latestIndex === -1) {
+    return [];
+  }
+  const latestIndexValue = Number(indexValues[latestIndex]);
+  return MARKET_PRICE_EMA_OPTIONS.map((period) => {
+    const emaValue = Number(payload.emaReferenceSeries?.[period]?.[latestIndex]);
+    const gap = calculateMarketTrendGap(latestIndexValue, emaValue);
+    return {
+      period,
+      gap,
+      emaValue,
+      indexValue: latestIndexValue,
+      date: payload.labels?.[latestIndex] ?? "",
+    };
+  });
 }
 
 function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", customEnd = "") {
@@ -942,7 +985,17 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
           enabled: true,
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
-            label: (context) => `${context.dataset.label}: ${formatUsStockPrice(Number(context.parsed.y), 2)}`,
+            label: (context) => {
+              const value = Number(context.parsed.y);
+              const baseText = `${context.dataset.label}: ${formatUsStockPrice(value, 2)}`;
+              const emaMatch = String(context.dataset.label ?? "").match(/^EMA\s+(\d+)/);
+              if (!emaMatch) {
+                return baseText;
+              }
+              const indexValue = Number(payload.datasets?.[0]?.data?.[context.dataIndex]);
+              const gap = calculateMarketTrendGap(indexValue, value);
+              return `${baseText} / Index gap ${formatMarketTrendGap(gap)}`;
+            },
           },
         },
       },
@@ -5093,6 +5146,16 @@ function renderMarketOverview() {
         EMA ${period}
       </button>`,
   ).join("");
+  const marketTrendGapMarkup = buildMarketTrendGapSummary()
+    .map((item) => {
+      const gapClass = item.gap === null ? "neutral" : Number(item.gap) >= 0 ? "positive" : "negative";
+      return `
+        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${formatUsStockPrice(item.indexValue, 2)} / EMA ${item.period} ${formatUsStockPrice(item.emaValue, 2)}">
+          <span>EMA ${item.period}</span>
+          <strong>${formatMarketTrendGap(item.gap)}</strong>
+        </span>`;
+    })
+    .join("");
   const totalBounds = getTotalDashboardBounds();
   const totalStartValue = state.totalDashboardCustomStart || "";
   const totalEndValue = state.totalDashboardCustomEnd || "";
@@ -5214,7 +5277,10 @@ function renderMarketOverview() {
         </div>
         <div class="market-trend-meta">
           <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
-          <span>Selected EMAs overlay on the raw index line</span>
+          <span>Gap = Index / EMA - 1</span>
+        </div>
+        <div class="market-trend-gap-row">
+          ${marketTrendGapMarkup}
         </div>
         <div class="market-trend-legend">
           <span class="market-trend-legend-item">
