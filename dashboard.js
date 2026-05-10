@@ -228,6 +228,7 @@ const state = {
   rsSelectedTicker: "",
   rsFilter: "newHigh",
   rsMarketCapRange: "all",
+  rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
   macroIndicatorKey: "",
@@ -3671,6 +3672,26 @@ function sortMarketRsTableRows(rows) {
   });
 }
 
+function sortMarketRsLeaderRows(rows) {
+  const sortKey = state.rsLeaderSort ?? "rs";
+  return [...rows].sort((left, right) => {
+    if (sortKey === "marketCapDesc" || sortKey === "marketCapAsc") {
+      const leftCap = Number(left.marketCap);
+      const rightCap = Number(right.marketCap);
+      if (Number.isFinite(leftCap) && Number.isFinite(rightCap) && leftCap !== rightCap) {
+        return sortKey === "marketCapAsc" ? leftCap - rightCap : rightCap - leftCap;
+      }
+    }
+
+    const leftScore = getMarketRsUniverseScore(left, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+    const rightScore = getMarketRsUniverseScore(right, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+    if (rightScore !== leftScore) {
+      return rightScore - leftScore;
+    }
+    return String(left.ticker ?? "").localeCompare(String(right.ticker ?? ""));
+  });
+}
+
 function renderMarketRsSortHeader(label, sortKey) {
   const active = state.rsTableSortKey === sortKey;
   const arrow = !active ? "" : state.rsTableSortDirection === "asc" ? " ↑" : " ↓";
@@ -3867,8 +3888,24 @@ function renderMarketRsOverview() {
       >${range.label}</button>
     `,
   ).join("");
+  const leaderSortChips = [
+    { key: "rs", label: "RS" },
+    { key: "marketCapDesc", label: "Market Cap ↓" },
+    { key: "marketCapAsc", label: "Market Cap ↑" },
+  ]
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.rsLeaderSort === item.key ? " active" : ""}"
+          data-rs-leader-sort="${item.key}"
+        >${item.label}</button>
+      `,
+    )
+    .join("");
   const tableSortRows = sortMarketRsTableRows(rows);
-  const leaderRows = state.rsFilter === "newHigh" ? rows : rows.slice(0, 12);
+  const sortedLeaderRows = sortMarketRsLeaderRows(rows);
+  const leaderRows = state.rsFilter === "newHigh" ? sortedLeaderRows : sortedLeaderRows.slice(0, 12);
   const leaderCards = leaderRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -3959,6 +3996,7 @@ function renderMarketRsOverview() {
               <h2>RS Leaders</h2>
               <p>${getMarketRsUniverseLabel(state.rsUniverse)} universe leaders by RS Rating.</p>
             </div>
+            <div class="market-rs-chip-row">${leaderSortChips}</div>
           </div>
           <div class="market-rs-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
         </article>
@@ -4055,6 +4093,12 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-market-cap]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsMarketCapRange = button.dataset.rsMarketCap || "all";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-leader-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsLeaderSort = button.dataset.rsLeaderSort || "rs";
       render();
     });
   });
