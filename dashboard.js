@@ -755,6 +755,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
     10: calculateEmaSeries(fullValues, 10).slice(startIndex, sliceEnd),
     60: calculateEmaSeries(fullValues, 60).slice(startIndex, sliceEnd),
     120: calculateEmaSeries(fullValues, 120).slice(startIndex, sliceEnd),
+    200: calculateEmaSeries(fullValues, 200).slice(startIndex, sliceEnd),
   };
   const emaDatasets = (state.marketTrendEmas ?? [])
     .filter((period) => MARKET_PRICE_EMA_OPTIONS.includes(period))
@@ -834,7 +835,8 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       const ema10 = payload.emaReferenceSeries?.[10] ?? [];
       const ema60 = payload.emaReferenceSeries?.[60] ?? [];
       const ema120 = payload.emaReferenceSeries?.[120] ?? [];
-      if (!ema10.length || !ema60.length || !ema120.length) {
+      const ema200 = payload.emaReferenceSeries?.[200] ?? [];
+      if (!ema10.length || !ema60.length || !ema120.length || !ema200.length) {
         return;
       }
       let segmentStart = null;
@@ -855,6 +857,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       };
 
       let weakBearStart = null;
+      let fullBullStart = null;
       for (let index = 0; index < payload.labels.length; index += 1) {
         const isFullBearish =
           Number.isFinite(ema10[index]) &&
@@ -866,6 +869,21 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
           Number.isFinite(ema10[index]) &&
           Number.isFinite(ema60[index]) &&
           Number(ema10[index]) < Number(ema60[index]);
+        const isFullBullish =
+          Number.isFinite(ema10[index]) &&
+          Number.isFinite(ema60[index]) &&
+          Number.isFinite(ema120[index]) &&
+          Number.isFinite(ema200[index]) &&
+          Number(ema10[index]) > Number(ema60[index]) &&
+          Number(ema60[index]) > Number(ema120[index]) &&
+          Number(ema120[index]) > Number(ema200[index]);
+
+        if (isFullBullish && fullBullStart === null) {
+          fullBullStart = index;
+        } else if (!isFullBullish && fullBullStart !== null) {
+          drawSegment(fullBullStart, index - 1, "rgba(107, 114, 128, 0.10)");
+          fullBullStart = null;
+        }
 
         if (isFullBearish && segmentStart === null) {
           segmentStart = index;
@@ -889,6 +907,10 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
 
       if (weakBearStart !== null) {
         drawSegment(weakBearStart, payload.labels.length - 1, "rgba(96, 165, 250, 0.11)");
+      }
+
+      if (fullBullStart !== null) {
+        drawSegment(fullBullStart, payload.labels.length - 1, "rgba(107, 114, 128, 0.10)");
       }
     },
   };
@@ -5202,6 +5224,10 @@ function renderMarketOverview() {
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-full"></span>
             EMA 10 &lt; EMA 60 &lt; EMA 120
+          </span>
+          <span class="market-trend-legend-item">
+            <span class="market-trend-legend-swatch market-trend-legend-swatch-bull"></span>
+            EMA 10 &gt; EMA 60 &gt; EMA 120 &gt; EMA 200
           </span>
         </div>
         <div class="us-price-chart-wrap">

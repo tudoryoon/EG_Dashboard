@@ -1399,6 +1399,10 @@ h1 {
   background: rgba(239, 68, 68, 0.16);
 }
 
+.market-trend-legend-swatch-bull {
+  background: rgba(107, 114, 128, 0.1);
+}
+
 .total-date-row {
   display: flex;
   flex-wrap: wrap;
