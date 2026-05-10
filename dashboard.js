@@ -177,6 +177,13 @@ const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
   { key: "nasdaq100", label: "NASDAQ 100" },
 ];
+const MARKET_RS_CAP_RANGES = [
+  { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
+  { key: "200m-1b", label: "$200M-$1B", min: 200_000_000, max: 1_000_000_000 },
+  { key: "1b-10b", label: "$1B-$10B", min: 1_000_000_000, max: 10_000_000_000 },
+  { key: "10b-100b", label: "$10B-$100B", min: 10_000_000_000, max: 100_000_000_000 },
+  { key: "100b-plus", label: "$100B+", min: 100_000_000_000, max: Number.POSITIVE_INFINITY },
+];
 
 const state = {
   tab: "Market",
@@ -220,6 +227,7 @@ const state = {
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
   rsFilter: "newHigh",
+  rsMarketCapRange: "all",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
   macroIndicatorKey: "",
@@ -3533,10 +3541,26 @@ function getMarketRsHistoryRatings(history, universeKey) {
   return history.rsRatingAll ?? history.rsRating ?? [];
 }
 
+function getMarketRsCapRangeMeta(key) {
+  return MARKET_RS_CAP_RANGES.find((range) => range.key === key) ?? MARKET_RS_CAP_RANGES[0];
+}
+
+function matchesMarketRsCapRange(row) {
+  const range = getMarketRsCapRangeMeta(state.rsMarketCapRange);
+  const marketCap = Number(row.marketCap);
+  if (!Number.isFinite(marketCap)) {
+    return false;
+  }
+  return marketCap >= range.min && marketCap < range.max;
+}
+
 function getVisibleMarketRsRows() {
   const query = (state.query ?? "").trim().toLowerCase();
   return (marketRsData.rows ?? [])
     .filter((row) => {
+      if (!matchesMarketRsCapRange(row)) {
+        return false;
+      }
       if (state.rsUniverse === "sp500" && !row.memberships?.sp500) {
         return false;
       }
@@ -3834,6 +3858,15 @@ function renderMarketRsOverview() {
     <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh" ? " active" : ""}" data-rs-filter="newHigh">RS New High</button>
   `;
+  const marketCapChips = MARKET_RS_CAP_RANGES.map(
+    (range) => `
+      <button
+        type="button"
+        class="market-rs-chip${state.rsMarketCapRange === range.key ? " active" : ""}"
+        data-rs-market-cap="${range.key}"
+      >${range.label}</button>
+    `,
+  ).join("");
   const tableSortRows = sortMarketRsTableRows(rows);
   const leaderRows = state.rsFilter === "newHigh" ? rows : rows.slice(0, 12);
   const leaderCards = leaderRows
@@ -3912,6 +3945,10 @@ function renderMarketRsOverview() {
             <span class="market-rs-control-label">Filter</span>
             <div class="market-rs-chip-row">${filterChips}</div>
           </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Market Cap</span>
+            <div class="market-rs-chip-row">${marketCapChips}</div>
+          </div>
         </div>
       </article>
 
@@ -3971,7 +4008,7 @@ function renderMarketRsOverview() {
         <div class="us-section-head">
           <div>
             <h2>Full RS Table</h2>
-            <p>Search from the top bar, then click any row to inspect the stock-level daily RS trend.</p>
+            <p>Search from the top bar, filter by market-cap range, then click any row to inspect the stock-level daily RS trend.</p>
           </div>
         </div>
         <div class="market-rs-table-wrap">
@@ -4012,6 +4049,12 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsFilter = button.dataset.rsFilter;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-market-cap]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsMarketCapRange = button.dataset.rsMarketCap || "all";
       render();
     });
   });
