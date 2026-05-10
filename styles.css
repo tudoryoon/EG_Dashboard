@@ -2150,6 +2150,33 @@ h1 {
   color: #fff;
 }
 
+.market-rs-cap-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.market-rs-cap-custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.market-rs-cap-custom input {
+  width: 118px;
+  border: 1px solid rgba(70, 70, 66, 0.18);
+  border-radius: 12px;
+  background: #fff;
+  padding: 9px 10px;
+  color: var(--ink);
+  font: inherit;
+}
+
 .market-rs-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.95fr);

@@ -228,6 +228,8 @@ const state = {
   rsSelectedTicker: "",
   rsFilter: "newHigh",
   rsMarketCapRange: "all",
+  rsCustomMarketCapMin: "",
+  rsCustomMarketCapMax: "",
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
@@ -3546,12 +3548,40 @@ function getMarketRsCapRangeMeta(key) {
   return MARKET_RS_CAP_RANGES.find((range) => range.key === key) ?? MARKET_RS_CAP_RANGES[0];
 }
 
+function parseMarketCapInput(value) {
+  const text = String(value ?? "").trim().replace(/[$,\s]/g, "").toLowerCase();
+  if (!text) {
+    return null;
+  }
+  const match = text.match(/^(\d+(?:\.\d+)?)([mbt])?$/);
+  if (!match) {
+    return null;
+  }
+  const numeric = Number(match[1]);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+  const multiplier = match[2] === "t" ? 1_000_000_000_000 : match[2] === "b" ? 1_000_000_000 : match[2] === "m" ? 1_000_000 : 1;
+  return numeric * multiplier;
+}
+
 function matchesMarketRsCapRange(row) {
-  const range = getMarketRsCapRangeMeta(state.rsMarketCapRange);
   const marketCap = Number(row.marketCap);
   if (!Number.isFinite(marketCap)) {
     return false;
   }
+  const customMin = parseMarketCapInput(state.rsCustomMarketCapMin);
+  const customMax = parseMarketCapInput(state.rsCustomMarketCapMax);
+  if (customMin !== null && marketCap < customMin) {
+    return false;
+  }
+  if (customMax !== null && marketCap > customMax) {
+    return false;
+  }
+  if (customMin !== null || customMax !== null) {
+    return true;
+  }
+  const range = getMarketRsCapRangeMeta(state.rsMarketCapRange);
   return marketCap >= range.min && marketCap < range.max;
 }
 
@@ -3985,6 +4015,18 @@ function renderMarketRsOverview() {
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Market Cap</span>
             <div class="market-rs-chip-row">${marketCapChips}</div>
+            <div class="market-rs-cap-custom">
+              <label>
+                <span>Min</span>
+                <input type="text" inputmode="decimal" placeholder="ex. 5B" value="${state.rsCustomMarketCapMin}" data-rs-market-cap-min />
+              </label>
+              <label>
+                <span>Max</span>
+                <input type="text" inputmode="decimal" placeholder="optional" value="${state.rsCustomMarketCapMax}" data-rs-market-cap-max />
+              </label>
+              <button type="button" class="total-date-button" data-rs-market-cap-apply>Apply</button>
+              <button type="button" class="total-date-button total-date-button-secondary" data-rs-market-cap-clear>Clear</button>
+            </div>
           </div>
         </div>
       </article>
@@ -4093,9 +4135,30 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-market-cap]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsMarketCapRange = button.dataset.rsMarketCap || "all";
+      state.rsCustomMarketCapMin = "";
+      state.rsCustomMarketCapMax = "";
       render();
     });
   });
+  const rsMarketCapMinInput = usOverviewRoot.querySelector("[data-rs-market-cap-min]");
+  const rsMarketCapMaxInput = usOverviewRoot.querySelector("[data-rs-market-cap-max]");
+  const rsMarketCapApplyButton = usOverviewRoot.querySelector("[data-rs-market-cap-apply]");
+  const rsMarketCapClearButton = usOverviewRoot.querySelector("[data-rs-market-cap-clear]");
+  if (rsMarketCapApplyButton && rsMarketCapMinInput && rsMarketCapMaxInput) {
+    rsMarketCapApplyButton.addEventListener("click", () => {
+      state.rsCustomMarketCapMin = rsMarketCapMinInput.value.trim();
+      state.rsCustomMarketCapMax = rsMarketCapMaxInput.value.trim();
+      render();
+    });
+  }
+  if (rsMarketCapClearButton) {
+    rsMarketCapClearButton.addEventListener("click", () => {
+      state.rsCustomMarketCapMin = "";
+      state.rsCustomMarketCapMax = "";
+      state.rsMarketCapRange = "all";
+      render();
+    });
+  }
   usOverviewRoot.querySelectorAll("[data-rs-leader-sort]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsLeaderSort = button.dataset.rsLeaderSort || "rs";
