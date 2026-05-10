@@ -994,7 +994,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
               }
               const indexValue = Number(payload.datasets?.[0]?.data?.[context.dataIndex]);
               const gap = calculateMarketTrendGap(indexValue, value);
-              return `${baseText} / Index gap ${formatMarketTrendGap(gap)}`;
+              return `${baseText} / ${formatMarketTrendGap(gap)}`;
             },
           },
         },
