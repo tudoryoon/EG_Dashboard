@@ -878,7 +878,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
         if (weakOnly && weakBearStart === null) {
           weakBearStart = index;
         } else if (!weakOnly && weakBearStart !== null) {
-          drawSegment(weakBearStart, index - 1, "rgba(248, 113, 113, 0.09)");
+          drawSegment(weakBearStart, index - 1, "rgba(96, 165, 250, 0.11)");
           weakBearStart = null;
         }
       }
@@ -888,7 +888,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       }
 
       if (weakBearStart !== null) {
-        drawSegment(weakBearStart, payload.labels.length - 1, "rgba(248, 113, 113, 0.09)");
+        drawSegment(weakBearStart, payload.labels.length - 1, "rgba(96, 165, 250, 0.11)");
       }
     },
   };
