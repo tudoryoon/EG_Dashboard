@@ -1232,6 +1232,19 @@ h1 {
   font-size: 0.82rem;
 }
 
+.macro-ko-label {
+  display: inline-flex;
+  margin-left: 6px;
+  color: #4f4f49;
+  font-style: normal;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.macro-ko-label-title {
+  font-size: 0.82rem;
+}
+
 .macro-snapshot-stat strong,
 .macro-pending-state strong {
   display: block;
@@ -1245,6 +1258,16 @@ h1 {
   margin-top: 6px;
   color: #66665f;
   font-size: 0.78rem;
+}
+
+.macro-ko-note,
+.macro-ko-chart-note {
+  color: #4f4f49;
+  line-height: 1.45;
+}
+
+.macro-clean-copy + p {
+  display: none;
 }
 
 .macro-coverage-table-wrap {
@@ -1311,6 +1334,17 @@ h1 {
   margin-top: 18px;
 }
 
+.macro-release-chart-wrap {
+  height: 260px;
+  margin: 14px 0 10px;
+}
+
+.macro-release-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 260px;
+}
+
 .macro-release-head h3 {
   margin: 0;
   font-size: 1rem;
@@ -1345,6 +1379,18 @@ h1 {
   display: block;
   width: 100%;
   height: 300px;
+}
+
+.macro-series-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.macro-series-chip span {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.78rem;
 }
 
 .total-series-row {

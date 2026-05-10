@@ -2108,6 +2108,108 @@ function getSelectedMacroSeries(indicator = getSelectedMacroIndicator()) {
   return indicator.series.find((series) => series.key === state.macroSeriesKey) ?? indicator.series[0] ?? null;
 }
 
+const macroKoreanLabels = {
+  employment: "고용보고서",
+  payems: "비농업 고용",
+  unrate: "실업률",
+  ahe: "평균 시간당 임금",
+  cpi: "소비자물가",
+  headline_cpi: "헤드라인 CPI",
+  core_cpi: "근원 CPI",
+  pce: "PCE 물가",
+  headline_pce: "헤드라인 PCE",
+  core_pce: "근원 PCE",
+  ppi: "생산자물가",
+  final_demand_ppi: "최종수요 PPI",
+  core_ppi: "근원 PPI",
+  retail_sales: "소매판매",
+  retail_sales_total: "소매판매",
+  ism_services: "ISM 서비스업",
+  services_pmi: "서비스업 PMI",
+  services_prices: "서비스업 가격",
+  services_employment: "서비스업 고용",
+  services_new_orders: "서비스업 신규주문",
+  ism_manufacturing: "ISM 제조업",
+  manufacturing_pmi: "제조업 PMI",
+  manufacturing_new_orders: "제조업 신규주문",
+  manufacturing_prices: "제조업 지불가격",
+  jolts: "구인·이직",
+  job_openings: "구인건수",
+  quits_rate: "자발적 퇴사율",
+  hires: "채용건수",
+  durable_goods: "내구재 주문",
+  durable_orders: "내구재 주문",
+  core_capital_goods: "핵심 자본재 주문",
+  housing: "주택",
+  housing_starts: "주택착공",
+  building_permits: "건축허가",
+};
+
+const macroKoreanNotes = {
+  payems: "월간 고용 증가폭입니다. 노동시장 체력과 소비 여력을 같이 봅니다.",
+  unrate: "경제활동인구 중 일자리를 찾는 실업자 비율입니다.",
+  ahe: "임금 상승 압력입니다. 서비스 물가와 연준 정책에 중요합니다.",
+  headline_cpi: "가계가 체감하는 전체 소비자물가 상승률입니다.",
+  core_cpi: "에너지와 식품을 제외한 기조 물가 압력입니다.",
+  headline_pce: "연준이 선호하는 개인소비지출 물가입니다.",
+  core_pce: "연준이 가장 중요하게 보는 기조 인플레이션입니다.",
+  final_demand_ppi: "기업 판매가격 압력입니다. CPI보다 앞서 움직일 때가 많습니다.",
+  core_ppi: "변동성이 큰 항목을 제외한 생산자물가 압력입니다.",
+  retail_sales_total: "미국 소비 강도를 보여주는 월간 소매판매입니다.",
+  services_pmi: "서비스업 경기 확장·수축을 보여주는 지수입니다.",
+  services_prices: "서비스업 기업들이 느끼는 가격 압력입니다.",
+  services_employment: "서비스업 고용 분위기입니다.",
+  services_new_orders: "서비스업 신규 수요의 선행 신호입니다.",
+  manufacturing_pmi: "제조업 경기 확장·수축을 보여주는 지수입니다.",
+  manufacturing_new_orders: "제조업 신규 수요의 선행 신호입니다.",
+  manufacturing_prices: "제조업 원가·가격 압력입니다.",
+  job_openings: "기업의 구인 수요입니다. 노동시장 과열 여부를 봅니다.",
+  quits_rate: "근로자가 자발적으로 이직·퇴사하는 비율입니다.",
+  hires: "기업의 실제 채용 규모입니다.",
+  durable_orders: "내구재 신규 주문으로 기업투자와 수요를 봅니다.",
+  core_capital_goods: "방산·항공 제외 설비투자 선행지표입니다.",
+  housing_starts: "실제 착공된 주택 수로 금리 민감 수요를 봅니다.",
+  building_permits: "향후 착공 가능성을 보여주는 선행 주택지표입니다.",
+};
+
+function getMacroKoreanLabel(entry) {
+  return macroKoreanLabels[entry?.key] ?? "";
+}
+
+function getMacroKoreanNote(entry) {
+  return macroKoreanNotes[entry?.key] ?? "";
+}
+
+function getMacroSeriesChartKind(series) {
+  if (!series) {
+    return "level";
+  }
+  if (series.key === "payems") {
+    return "mom_change";
+  }
+  if (["unrate", "quits_rate"].includes(series.key)) {
+    return "level";
+  }
+  if (
+    series.key.includes("pmi") ||
+    series.key.includes("services_") ||
+    series.key.includes("manufacturing_")
+  ) {
+    return "level";
+  }
+  return "yoy";
+}
+
+function getMacroChartKindLabel(kind) {
+  if (kind === "yoy") {
+    return "YoY %";
+  }
+  if (kind === "mom_change") {
+    return "MoM change";
+  }
+  return "Level";
+}
+
 function formatMacroIndicatorValue(unit, value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -2167,11 +2269,77 @@ function formatMacroReleaseSurpriseText(release) {
   return `vs cons ${release.surprise}`;
 }
 
+function formatMacroChartValue(kind, unit, value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  if (kind === "yoy") {
+    return formatMacroChangePercent(value);
+  }
+  if (kind === "mom_change") {
+    return formatMacroDeltaValue(unit, value);
+  }
+  return formatMacroIndicatorValue(unit, value);
+}
+
+function formatMacroReleaseNumber(unit, value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (unit === "percent") {
+    return `${numeric.toFixed(2)}%`;
+  }
+  if (unit === "thousands") {
+    return `${(numeric / 1000).toFixed(0)}K`;
+  }
+  if (unit === "millions") {
+    return `${(numeric / 1000000).toFixed(2)}M`;
+  }
+  return formatMacroIndicatorValue(unit, numeric);
+}
+
+function getMacroReleaseConsensusValue(row) {
+  const actual = Number(row?.actualValue);
+  const surprise = Number(row?.surpriseValue);
+  if (!Number.isFinite(actual) || !Number.isFinite(surprise)) {
+    return null;
+  }
+  return actual - surprise;
+}
+
+function getMacroDerivedValues(series, kind) {
+  const values = series?.values ?? [];
+  return values.map((value, index) => {
+    const current = Number(value);
+    if (!Number.isFinite(current)) {
+      return null;
+    }
+    if (kind === "yoy") {
+      const base = Number(values[index - 12]);
+      if (!Number.isFinite(base) || base === 0) {
+        return null;
+      }
+      return Number((((current / base) - 1) * 100).toFixed(2));
+    }
+    if (kind === "mom_change") {
+      const previous = Number(values[index - 1]);
+      if (!Number.isFinite(previous)) {
+        return null;
+      }
+      return Number((current - previous).toFixed(2));
+    }
+    return current;
+  });
+}
+
 function buildMacroChartPayload(indicator, series, mode) {
   if (!indicator || !series) {
-    return { labels: [], values: [] };
+    return { labels: [], values: [], kind: "level", viewLabel: "Level" };
   }
   const startMonth = mode === "common" ? macroIndicatorsData.commonStartMonth ?? indicator.commonStartMonth : indicator.availableStartMonth ?? indicator.startMonth;
+  const kind = getMacroSeriesChartKind(series);
+  const derivedValues = getMacroDerivedValues(series, kind);
   const labels = [];
   const values = [];
   (series.dates ?? []).forEach((dateText, index) => {
@@ -2179,9 +2347,9 @@ function buildMacroChartPayload(indicator, series, mode) {
       return;
     }
     labels.push(dateText);
-    values.push(series.values?.[index] ?? null);
+    values.push(derivedValues[index] ?? null);
   });
-  return { labels, values };
+  return { labels, values, kind, viewLabel: getMacroChartKindLabel(kind) };
 }
 
 function createMacroIndicatorChart(canvas, indicator, series, mode) {
@@ -2197,7 +2365,7 @@ function createMacroIndicatorChart(canvas, indicator, series, mode) {
       labels: payload.labels,
       datasets: [
         {
-          label: series.label,
+          label: `${series.label} ${payload.viewLabel}`,
           data: payload.values,
           borderColor: series.color ?? "#111827",
           backgroundColor: series.color ?? "#111827",
@@ -2228,7 +2396,7 @@ function createMacroIndicatorChart(canvas, indicator, series, mode) {
         tooltip: {
           callbacks: {
             title: (items) => formatMonthLabel(items[0]?.label ?? ""),
-            label: (context) => `${series.label}: ${formatMacroIndicatorValue(series.unit, context.parsed.y)}`,
+            label: (context) => `${series.label}: ${formatMacroChartValue(payload.kind, series.unit, context.parsed.y)}`,
           },
         },
       },
@@ -2246,9 +2414,117 @@ function createMacroIndicatorChart(canvas, indicator, series, mode) {
         y: {
           ticks: {
             color: "#8d8d86",
-            callback: (value) => formatMacroIndicatorValue(series.unit, Number(value)),
+            callback: (value) => formatMacroChartValue(payload.kind, series.unit, Number(value)),
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMacroReleaseChart(canvas, series) {
+  if (typeof Chart === "undefined" || !canvas || !series) {
+    return;
+  }
+  const rows = (series.releaseHistory ?? [])
+    .filter((row) => Number.isFinite(Number(row.actualValue)) && Number.isFinite(Number(getMacroReleaseConsensusValue(row))))
+    .slice(-12);
+  if (!rows.length) {
+    return;
+  }
+  const labels = rows.map((row) => row.reference ?? row.releaseDate ?? "-");
+  const unit = rows.at(-1)?.unit ?? series.unit;
+  const actualValues = rows.map((row) => Number(row.actualValue));
+  const consensusValues = rows.map((row) => getMacroReleaseConsensusValue(row));
+  const surpriseValues = rows.map((row) => Number(row.surpriseValue));
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "Actual",
+          data: actualValues,
+          backgroundColor: "rgba(36, 36, 33, 0.82)",
+          borderRadius: 4,
+          yAxisID: "y",
+        },
+        {
+          type: "bar",
+          label: "Consensus",
+          data: consensusValues,
+          backgroundColor: "rgba(37, 99, 235, 0.42)",
+          borderRadius: 4,
+          yAxisID: "y",
+        },
+        {
+          type: "line",
+          label: "Surprise",
+          data: surpriseValues,
+          borderColor: "#d93025",
+          backgroundColor: "#d93025",
+          borderWidth: 2.4,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0.18,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatMacroReleaseNumber(unit, context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            maxRotation: 35,
+            minRotation: 0,
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          position: "left",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatMacroReleaseNumber(unit, value),
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        y1: {
+          position: "right",
+          ticks: {
+            color: "#d93025",
+            callback: (value) => formatMacroReleaseNumber(unit, value),
+          },
+          grid: { drawOnChartArea: false },
           border: { color: "#d8d8d2" },
         },
       },
@@ -5706,13 +5982,24 @@ function renderMarketMacroOverview() {
   const snapshotMarkup = indicators
     .map((entry) => {
       const latestLabel = entry.latestMonth ? formatMonthLabel(entry.latestMonth) : entry.statusNote ?? "manual/source pending";
+      const entryKoLabel = getMacroKoreanLabel(entry);
       const seriesMarkup = (entry.series ?? [])
         .map((item) => {
           const latestRelease = item.latestRelease ?? null;
+          const itemKoLabel = getMacroKoreanLabel(item);
+          const itemKoNote = getMacroKoreanNote(item);
+          const chartKind = getMacroSeriesChartKind(item);
+          const primaryValue =
+            chartKind === "yoy"
+              ? formatMacroChangePercent(item.yoyPct)
+              : chartKind === "mom_change"
+                ? formatMacroDeltaValue(item.unit, item.deltaValue)
+                : formatMacroIndicatorValue(item.unit, item.latestValue);
+          const primaryLabel = getMacroChartKindLabel(chartKind);
           if (!item.latestDate || !Number.isFinite(Number(item.latestValue))) {
             return `
               <div class="macro-snapshot-stat">
-                <span>${item.label}</span>
+                <span>${item.label}${itemKoLabel ? `<em class="macro-ko-label">${itemKoLabel}</em>` : ""}</span>
                 <strong>Pending</strong>
                 <small>${entry.statusNote ?? "manual/source pending"}</small>
               </div>
@@ -5720,10 +6007,12 @@ function renderMarketMacroOverview() {
           }
           return `
             <div class="macro-snapshot-stat">
-              <span>${item.label}</span>
-              <strong>${formatMacroIndicatorValue(item.unit, item.latestValue)}</strong>
+              <span>${item.label}${itemKoLabel ? `<em class="macro-ko-label">${itemKoLabel}</em>` : ""}</span>
+              <strong>${primaryValue}</strong>
+              <small>${primaryLabel} focus | raw ${formatMacroIndicatorValue(item.unit, item.latestValue)}</small>
               <small>MoM ${formatMacroChangePercent(item.momPct)} | YoY ${formatMacroChangePercent(item.yoyPct)}</small>
-              <small>${latestRelease ? `${formatMonthLabel(latestRelease.releaseDate.slice(0, 7))} ${formatMacroReleaseSurpriseText(latestRelease)}` : "consensus pending"}</small>
+              <small>${latestRelease ? `Actual ${latestRelease.actual ?? "-"} / Cons ${latestRelease.consensus ?? "-"} / Surprise ${latestRelease.surprise ?? "-"}` : "consensus pending"}</small>
+              ${itemKoNote ? `<small class="macro-ko-note">${itemKoNote}</small>` : ""}
             </div>
           `;
         })
@@ -5732,7 +6021,7 @@ function renderMarketMacroOverview() {
         <article class="macro-snapshot-card">
           <div class="macro-snapshot-head">
             <div>
-              <h3>${entry.title}</h3>
+              <h3>${entry.title}${entryKoLabel ? `<em class="macro-ko-label macro-ko-label-title">${entryKoLabel}</em>` : ""}</h3>
               <p>${entry.category}</p>
             </div>
             <span class="macro-status-pill ${entry.status === "manual" ? "manual" : "auto"}">${entry.status === "manual" ? "Manual" : "Auto"}</span>
@@ -5771,52 +6060,62 @@ function renderMarketMacroOverview() {
     .join("");
 
   const indicatorOptions = indicators
-    .map((entry) => `<option value="${entry.key}"${entry.key === indicator?.key ? " selected" : ""}>${entry.title}</option>`)
+    .map((entry) => {
+      const koLabel = getMacroKoreanLabel(entry);
+      return `<option value="${entry.key}"${entry.key === indicator?.key ? " selected" : ""}>${entry.title}${koLabel ? ` (${koLabel})` : ""}</option>`;
+    })
     .join("");
 
   const seriesChips = (indicator?.series ?? [])
     .map(
-      (item) => `
-        <button
-          type="button"
-          class="market-rs-chip${item.key === series?.key ? " active" : ""}"
-          data-macro-series="${item.key}"
-        >${item.label}</button>
-      `,
+      (item) => {
+        const koLabel = getMacroKoreanLabel(item);
+        return `
+          <button
+            type="button"
+            class="market-rs-chip macro-series-chip${item.key === series?.key ? " active" : ""}"
+            data-macro-series="${item.key}"
+          >${item.label}${koLabel ? `<span>${koLabel}</span>` : ""}</button>
+        `;
+      },
     )
     .join("");
+
+  const selectedChartKind = getMacroSeriesChartKind(series);
+  const selectedKoLabel = getMacroKoreanLabel(series);
+  const selectedKoNote = getMacroKoreanNote(series);
 
   const chartMetaMarkup =
     indicator && series
       ? `
         <div class="macro-chart-metrics">
           <div class="market-rs-metric">
-            <span>Latest</span>
-            <strong>${formatMacroIndicatorValue(series.unit, series.latestValue)}</strong>
-          </div>
-          <div class="market-rs-metric">
-            <span>Previous</span>
-            <strong>${formatMacroIndicatorValue(series.unit, series.previousValue)}</strong>
-          </div>
-          <div class="market-rs-metric">
-            <span>Delta</span>
-            <strong>${formatMacroDeltaValue(series.unit, series.deltaValue)}</strong>
-          </div>
-          <div class="market-rs-metric">
-            <span>MoM</span>
-            <strong>${formatMacroChangePercent(series.momPct)}</strong>
+            <span>Chart View</span>
+            <strong>${getMacroChartKindLabel(selectedChartKind)}</strong>
           </div>
           <div class="market-rs-metric">
             <span>YoY</span>
             <strong>${formatMacroChangePercent(series.yoyPct)}</strong>
           </div>
           <div class="market-rs-metric">
-            <span>Coverage</span>
-            <strong>${state.macroHistoryMode === "common" ? "2010-04+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
+            <span>MoM</span>
+            <strong>${formatMacroChangePercent(series.momPct)}</strong>
           </div>
           <div class="market-rs-metric">
-            <span>Latest Surprise</span>
+            <span>Actual</span>
+            <strong>${series.latestRelease?.actual ?? formatMacroIndicatorValue(series.unit, series.latestValue)}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Consensus</span>
+            <strong>${series.latestRelease?.consensus ?? "-"}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Surprise</span>
             <strong>${series.latestRelease?.surprise ?? "-"}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Coverage</span>
+            <strong>${state.macroHistoryMode === "common" ? "2010-04+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
           </div>
         </div>
       `
@@ -5853,14 +6152,18 @@ function renderMarketMacroOverview() {
           <canvas data-macro-indicator-chart></canvas>
         </div>
         <p class="market-rs-chart-caption">
-          ${indicator?.title ?? "-"} / ${series?.label ?? "-"} / ${state.macroHistoryMode === "common" ? "2010-04+ common view" : "full history"}
+          ${indicator?.title ?? "-"} / ${series?.label ?? "-"}${selectedKoLabel ? ` (${selectedKoLabel})` : ""} / ${getMacroChartKindLabel(selectedChartKind)} / ${state.macroHistoryMode === "common" ? "2010-04+ common view" : "full history"}
         </p>
+        ${selectedKoNote ? `<p class="macro-ko-chart-note">${selectedKoNote}</p>` : ""}
         <div class="macro-release-table-wrap">
           <div class="us-section-head macro-release-head">
             <div>
-              <h3>Release Surprise History</h3>
+              <h3>Actual vs Consensus</h3>
               <p>2025-01 이후 actual / consensus / previous / surprise 기록입니다.</p>
             </div>
+          </div>
+          <div class="macro-release-chart-wrap">
+            <canvas data-macro-release-chart></canvas>
           </div>
           <table class="macro-coverage-table macro-release-table">
             <thead>
@@ -5884,6 +6187,7 @@ function renderMarketMacroOverview() {
         <div class="us-section-head">
           <div>
             <h2>Historical Chart</h2>
+            <p class="macro-clean-copy">CPI, PCE, PPI처럼 추세가 중요한 지표는 YoY 중심으로 보고, 실업률과 PMI처럼 레벨이 중요한 지표는 레벨로 봅니다.</p>
             <p>개별 지표는 각 지표별 전체 기간 또는 공통 시작월 2010-04 이후 구간으로 볼 수 있습니다.</p>
           </div>
         </div>
@@ -5912,6 +6216,7 @@ function renderMarketMacroOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Latest Macro Snapshot</h2>
+            <p class="macro-clean-copy">최신 발표월 기준 YoY/MoM, 실제치, 컨센서스, 서프라이즈를 빠르게 확인합니다.</p>
             <p>미국 투자자들이 매달 확인하는 핵심 매크로 지표 10개를 최신 발표월 기준으로 빠르게 확인합니다.</p>
           </div>
           <div class="us-price-controls">
@@ -5926,6 +6231,7 @@ function renderMarketMacroOverview() {
           <div class="us-section-head">
             <div>
               <h2>Release Coverage</h2>
+              <p class="macro-clean-copy">사용 가능 시작월, 데이터 소스, 자동/수동 업데이트 상태를 확인합니다.</p>
               <p>사용 가능 시작월, 데이터 소스, 자동/수동 업데이트 상태를 한 번에 확인합니다.</p>
             </div>
           </div>
@@ -5948,6 +6254,7 @@ function renderMarketMacroOverview() {
           <div class="us-section-head">
             <div>
               <h2>Category Grouping</h2>
+              <p class="macro-clean-copy">인플레이션, 노동, 수요, 경기순환, 금리민감 지표로 묶었습니다.</p>
               <p>인플레이션, 노동, 수요, 경기순환, 금리민감도로 매크로 지표를 묶었습니다.</p>
             </div>
           </div>
@@ -5982,6 +6289,10 @@ function renderMarketMacroOverview() {
     const canvas = usOverviewRoot.querySelector("[data-macro-indicator-chart]");
     if (canvas) {
       createMacroIndicatorChart(canvas, indicator, series, state.macroHistoryMode);
+    }
+    const releaseCanvas = usOverviewRoot.querySelector("[data-macro-release-chart]");
+    if (releaseCanvas) {
+      createMacroReleaseChart(releaseCanvas, series);
     }
   }
 }
