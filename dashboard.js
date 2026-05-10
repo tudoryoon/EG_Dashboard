@@ -2308,6 +2308,36 @@ function getMacroReleaseConsensusValue(row) {
   return actual - surprise;
 }
 
+function getMacroReleaseBasis(series, release = series?.latestRelease) {
+  const reference = String(release?.reference ?? "").toLowerCase();
+  if (reference.includes("yoy") || reference.includes("year")) {
+    return "YoY";
+  }
+  if (reference.includes("mom") || reference.includes("month")) {
+    return "MoM";
+  }
+  if (
+    [
+      "ahe",
+      "headline_cpi",
+      "core_cpi",
+      "headline_pce",
+      "core_pce",
+      "final_demand_ppi",
+      "core_ppi",
+      "retail_sales",
+      "durable_goods_orders",
+      "core_capex_orders",
+    ].includes(series?.key)
+  ) {
+    return "MoM";
+  }
+  if (series?.key === "payems") {
+    return "Monthly change";
+  }
+  return "Level";
+}
+
 function getMacroDerivedValues(series, kind) {
   const values = series?.values ?? [];
   return values.map((value, index) => {
@@ -2438,6 +2468,7 @@ function createMacroReleaseChart(canvas, series) {
   }
   const labels = rows.map((row) => row.reference ?? row.releaseDate ?? "-");
   const unit = rows.at(-1)?.unit ?? series.unit;
+  const basis = getMacroReleaseBasis(series, rows.at(-1));
   const actualValues = rows.map((row) => Number(row.actualValue));
   const consensusValues = rows.map((row) => getMacroReleaseConsensusValue(row));
   const surpriseValues = rows.map((row) => Number(row.surpriseValue));
@@ -2449,7 +2480,7 @@ function createMacroReleaseChart(canvas, series) {
       datasets: [
         {
           type: "bar",
-          label: "Actual",
+          label: `Actual (${basis})`,
           data: actualValues,
           backgroundColor: "rgba(36, 36, 33, 0.82)",
           borderRadius: 4,
@@ -2457,7 +2488,7 @@ function createMacroReleaseChart(canvas, series) {
         },
         {
           type: "bar",
-          label: "Consensus",
+          label: `Consensus (${basis})`,
           data: consensusValues,
           backgroundColor: "rgba(37, 99, 235, 0.42)",
           borderRadius: 4,
@@ -6011,6 +6042,7 @@ function renderMarketMacroOverview() {
               <strong>${primaryValue}</strong>
               <small>${primaryLabel} focus | raw ${formatMacroIndicatorValue(item.unit, item.latestValue)}</small>
               <small>MoM ${formatMacroChangePercent(item.momPct)} | YoY ${formatMacroChangePercent(item.yoyPct)}</small>
+              <small>${latestRelease ? `Released ${latestRelease.releaseDate ?? "-"} | ${getMacroReleaseBasis(item, latestRelease)}` : "release date pending"}</small>
               <small>${latestRelease ? `Actual ${latestRelease.actual ?? "-"} / Cons ${latestRelease.consensus ?? "-"} / Surprise ${latestRelease.surprise ?? "-"}` : "consensus pending"}</small>
               ${itemKoNote ? `<small class="macro-ko-note">${itemKoNote}</small>` : ""}
             </div>
@@ -6084,6 +6116,7 @@ function renderMarketMacroOverview() {
   const selectedChartKind = getMacroSeriesChartKind(series);
   const selectedKoLabel = getMacroKoreanLabel(series);
   const selectedKoNote = getMacroKoreanNote(series);
+  const selectedReleaseBasis = getMacroReleaseBasis(series);
 
   const chartMetaMarkup =
     indicator && series
@@ -6114,6 +6147,14 @@ function renderMarketMacroOverview() {
             <strong>${series.latestRelease?.surprise ?? "-"}</strong>
           </div>
           <div class="market-rs-metric">
+            <span>Release Date</span>
+            <strong>${series.latestRelease?.releaseDate ?? "-"}</strong>
+          </div>
+          <div class="market-rs-metric">
+            <span>Release Basis</span>
+            <strong>${selectedReleaseBasis}</strong>
+          </div>
+          <div class="market-rs-metric">
             <span>Coverage</span>
             <strong>${state.macroHistoryMode === "common" ? "2010-04+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
           </div>
@@ -6132,6 +6173,7 @@ function renderMarketMacroOverview() {
           <td>${row.actual ?? "-"}</td>
           <td>${row.consensus ?? "-"}</td>
           <td>${row.previous ?? "-"}</td>
+          <td>${getMacroReleaseBasis(series, row)}</td>
           <td>${row.surprise ?? "-"}</td>
         </tr>
       `,
@@ -6159,7 +6201,7 @@ function renderMarketMacroOverview() {
           <div class="us-section-head macro-release-head">
             <div>
               <h3>Actual vs Consensus</h3>
-              <p>2025-01 이후 actual / consensus / previous / surprise 기록입니다.</p>
+              <p>Release basis: ${selectedReleaseBasis}. CPI/PCE/PPI 같은 물가지표 발표 서프라이즈는 시장에서 MoM 컨센서스를 특히 크게 봅니다.</p>
             </div>
           </div>
           <div class="macro-release-chart-wrap">
@@ -6173,10 +6215,11 @@ function renderMarketMacroOverview() {
                 <th>Actual</th>
                 <th>Cons</th>
                 <th>Prev</th>
+                <th>Basis</th>
                 <th>Surprise</th>
               </tr>
             </thead>
-            <tbody>${releaseRows || '<tr><td colspan="6">Release history pending.</td></tr>'}</tbody>
+            <tbody>${releaseRows || '<tr><td colspan="7">Release history pending.</td></tr>'}</tbody>
           </table>
         </div>
       `;
