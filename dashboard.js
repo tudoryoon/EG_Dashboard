@@ -3665,8 +3665,6 @@ function getMarketRsTableSortValue(row, sortKey) {
       return row.rsPeriods?.["3m"] ?? Number.NEGATIVE_INFINITY;
     case "rs6m":
       return row.rsPeriods?.["6m"] ?? Number.NEGATIVE_INFINITY;
-    case "rs12m":
-      return row.rsPeriods?.["12m"] ?? Number.NEGATIVE_INFINITY;
     case "gap52w":
       return row.distanceTo52wHighPct ?? Number.POSITIVE_INFINITY;
     case "rsNewHigh":
@@ -3976,7 +3974,6 @@ function renderMarketRsOverview() {
           <td>${formatRsNumber(row.rsPeriods?.["1m"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["3m"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["6m"])}</td>
-          <td>${formatRsNumber(row.rsPeriods?.["12m"])}</td>
           <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
           <td>${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? "Yes" : "-"}</td>
         </tr>
@@ -4102,7 +4099,6 @@ function renderMarketRsOverview() {
                 <th>${renderMarketRsSortHeader("RS_1M", "rs1m")}</th>
                 <th>${renderMarketRsSortHeader("RS_3M", "rs3m")}</th>
                 <th>${renderMarketRsSortHeader("RS_6M", "rs6m")}</th>
-                <th>${renderMarketRsSortHeader("RS_12M", "rs12m")}</th>
                 <th>${renderMarketRsSortHeader("52W Gap", "gap52w")}</th>
                 <th>${renderMarketRsSortHeader("RS NH", "rsNewHigh")}</th>
               </tr>
@@ -6941,7 +6937,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "RS") {
-      summaryText.textContent = "StockEasy-style RS leaderboard with RS_1M, RS_3M, RS_6M, RS_12M and searchable daily trend";
+      summaryText.textContent = "StockEasy-style RS leaderboard with RS_1M, RS_3M, RS_6M and searchable daily trend";
       return;
     }
     return;
