@@ -3604,14 +3604,14 @@ function getMarketRsTableSortValue(row, sortKey) {
       return row.marketCap ?? Number.NEGATIVE_INFINITY;
     case "rs":
       return getMarketRsUniverseScore(row, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
-    case "1m":
-      return row.returns?.["1m"] ?? Number.NEGATIVE_INFINITY;
-    case "3m":
-      return row.returns?.["3m"] ?? Number.NEGATIVE_INFINITY;
-    case "6m":
-      return row.returns?.["6m"] ?? Number.NEGATIVE_INFINITY;
-    case "12m":
-      return row.returns?.["12m"] ?? Number.NEGATIVE_INFINITY;
+    case "rs1m":
+      return row.rsPeriods?.["1m"] ?? Number.NEGATIVE_INFINITY;
+    case "rs3m":
+      return row.rsPeriods?.["3m"] ?? Number.NEGATIVE_INFINITY;
+    case "rs6m":
+      return row.rsPeriods?.["6m"] ?? Number.NEGATIVE_INFINITY;
+    case "rs12m":
+      return row.rsPeriods?.["12m"] ?? Number.NEGATIVE_INFINITY;
     case "gap52w":
       return row.distanceTo52wHighPct ?? Number.POSITIVE_INFINITY;
     case "rsNewHigh":
@@ -3852,12 +3852,12 @@ function renderMarketRsOverview() {
           <p class="market-rs-card-name">${row.name}</p>
           <p class="market-rs-card-cap">${formatMarketCapCompact(row.marketCap)}</p>
           <div class="market-rs-card-meta">
-            <span>1M</span>
-            <strong>${formatRsPercent(row.returns?.["1m"])}</strong>
+            <span>RS_1M</span>
+            <strong>${formatRsNumber(row.rsPeriods?.["1m"])}</strong>
           </div>
           <div class="market-rs-card-meta">
-            <span>12M</span>
-            <strong>${formatRsPercent(row.returns?.["12m"])}</strong>
+            <span>RS_3M</span>
+            <strong>${formatRsNumber(row.rsPeriods?.["3m"])}</strong>
           </div>
           ${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? '<div class="market-rs-flag">RS New High</div>' : ""}
         </button>
@@ -3873,10 +3873,10 @@ function renderMarketRsOverview() {
           <td>${row.name}</td>
           <td>${formatMarketCapCompact(row.marketCap)}</td>
           <td>${formatRsNumber(score)}</td>
-          <td>${formatRsPercent(row.returns?.["1m"])}</td>
-          <td>${formatRsPercent(row.returns?.["3m"])}</td>
-          <td>${formatRsPercent(row.returns?.["6m"])}</td>
-          <td>${formatRsPercent(row.returns?.["12m"])}</td>
+          <td>${formatRsNumber(row.rsPeriods?.["1m"])}</td>
+          <td>${formatRsNumber(row.rsPeriods?.["3m"])}</td>
+          <td>${formatRsNumber(row.rsPeriods?.["6m"])}</td>
+          <td>${formatRsNumber(row.rsPeriods?.["12m"])}</td>
           <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
           <td>${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? "Yes" : "-"}</td>
         </tr>
@@ -3944,16 +3944,20 @@ function renderMarketRsOverview() {
               <strong>${formatMarketCapCompact(selected?.marketCap)}</strong>
             </div>
             <div class="market-rs-metric">
-              <span>1M</span>
-              <strong>${formatRsPercent(selected?.returns?.["1m"])}</strong>
+              <span>RS_1M</span>
+              <strong>${formatRsNumber(selected?.rsPeriods?.["1m"])}</strong>
             </div>
             <div class="market-rs-metric">
-              <span>3M</span>
-              <strong>${formatRsPercent(selected?.returns?.["3m"])}</strong>
+              <span>RS_3M</span>
+              <strong>${formatRsNumber(selected?.rsPeriods?.["3m"])}</strong>
             </div>
             <div class="market-rs-metric">
-              <span>12M</span>
-              <strong>${formatRsPercent(selected?.returns?.["12m"])}</strong>
+              <span>RS_6M</span>
+              <strong>${formatRsNumber(selected?.rsPeriods?.["6m"])}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>RS_12M</span>
+              <strong>${formatRsNumber(selected?.rsPeriods?.["12m"])}</strong>
             </div>
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
@@ -3978,10 +3982,10 @@ function renderMarketRsOverview() {
                 <th>${renderMarketRsSortHeader("Name", "name")}</th>
                 <th>${renderMarketRsSortHeader("Market Cap", "marketCap")}</th>
                 <th>${renderMarketRsSortHeader("RS", "rs")}</th>
-                <th>${renderMarketRsSortHeader("1M", "1m")}</th>
-                <th>${renderMarketRsSortHeader("3M", "3m")}</th>
-                <th>${renderMarketRsSortHeader("6M", "6m")}</th>
-                <th>${renderMarketRsSortHeader("12M", "12m")}</th>
+                <th>${renderMarketRsSortHeader("RS_1M", "rs1m")}</th>
+                <th>${renderMarketRsSortHeader("RS_3M", "rs3m")}</th>
+                <th>${renderMarketRsSortHeader("RS_6M", "rs6m")}</th>
+                <th>${renderMarketRsSortHeader("RS_12M", "rs12m")}</th>
                 <th>${renderMarketRsSortHeader("52W Gap", "gap52w")}</th>
                 <th>${renderMarketRsSortHeader("RS NH", "rsNewHigh")}</th>
               </tr>
@@ -6787,7 +6791,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "RS") {
-      summaryText.textContent = "IBD-style RS rating leaderboard and searchable stock-level daily RS trend";
+      summaryText.textContent = "StockEasy-style RS leaderboard with RS_1M, RS_3M, RS_6M, RS_12M and searchable daily trend";
       return;
     }
     return;

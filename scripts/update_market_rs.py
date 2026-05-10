@@ -19,6 +19,7 @@ WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "3y"
 BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
+MIN_MARKET_CAP_USD = 200_000_000
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
 BATCH_SIZE = int(os.getenv("MARKET_RS_BATCH_SIZE", "15"))
 BATCH_SLEEP = float(os.getenv("MARKET_RS_BATCH_SLEEP", "0.6"))
@@ -332,20 +333,16 @@ def cross_sectional_percentile(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
-    r_0_1w = close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)
-    r_1w_1m = close_frame.shift(LOOKBACKS["1w"]).div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
-    r_1m_3m = close_frame.shift(LOOKBACKS["1m"]).div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
-    r_3m_6m = close_frame.shift(LOOKBACKS["3m"]).div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
-    r_6m_9m = close_frame.shift(LOOKBACKS["6m"]).div(close_frame.shift(LOOKBACKS["9m"])).sub(1)
-    r_9m_12m = close_frame.shift(LOOKBACKS["9m"]).div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
+    r_1m = close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
+    r_3m = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
+    r_6m = close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
+    r_12m = close_frame.div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
 
     weighted_components = [
-        (cross_sectional_percentile(r_0_1w), 0.10),
-        (cross_sectional_percentile(r_1w_1m), 0.20),
-        (cross_sectional_percentile(r_1m_3m), 0.30),
-        (cross_sectional_percentile(r_3m_6m), 0.20),
-        (cross_sectional_percentile(r_6m_9m), 0.10),
-        (cross_sectional_percentile(r_9m_12m), 0.10),
+        (r_1m, 0.20),
+        (r_3m, 0.40),
+        (r_6m, 0.20),
+        (r_12m, 0.20),
     ]
 
     weighted_sum = pd.DataFrame(0.0, index=close_frame.index, columns=close_frame.columns)
@@ -356,6 +353,15 @@ def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
         weight_sum = weight_sum.add(component.notna().astype(float).mul(weight), fill_value=0)
 
     return weighted_sum.div(weight_sum.where(weight_sum > 0))
+
+
+def build_period_rs_ratings(close_frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    return {
+        "1m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)),
+        "3m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)),
+        "6m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)),
+        "12m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["12m"])).sub(1)),
+    }
 
 
 def compute_return(series: pd.Series, periods: int) -> float | None:
@@ -410,8 +416,34 @@ def build_payload(
     benchmark = adjusted_close_frame[BENCHMARK_SYMBOL].dropna()
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
+    market_caps: dict[str, int] = {}
+    eligible_tickers: list[str] = []
+    for _, member in universe.iterrows():
+        ticker = str(member["ticker"])
+        shares_outstanding = shares_cache.get(ticker)
+        if not shares_outstanding or ticker not in stock_raw_close.columns:
+            continue
+        raw_prices = stock_raw_close[ticker].dropna()
+        if raw_prices.empty:
+            continue
+        latest_price = float(raw_prices.iloc[-1])
+        if not math.isfinite(latest_price) or latest_price <= 0:
+            continue
+        market_cap = round(latest_price * int(shares_outstanding))
+        if market_cap <= MIN_MARKET_CAP_USD:
+            continue
+        market_caps[ticker] = market_cap
+        eligible_tickers.append(ticker)
+
+    universe = universe[universe["ticker"].isin(eligible_tickers)].copy().reset_index(drop=True)
+    stock_adjusted_close = stock_adjusted_close[[ticker for ticker in eligible_tickers if ticker in stock_adjusted_close.columns]]
+    stock_raw_close = stock_raw_close[[ticker for ticker in eligible_tickers if ticker in stock_raw_close.columns]]
+    if stock_adjusted_close.empty or stock_raw_close.empty:
+        raise RuntimeError("No RS universe members passed the market-cap filter.")
+
     rs_raw = build_rs_raw(stock_adjusted_close)
     rs_rating_all = percentile_to_rating(rs_raw)
+    period_rs_ratings_all = build_period_rs_ratings(stock_adjusted_close)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
@@ -463,9 +495,9 @@ def build_payload(
                     shares_outstanding = None
             except Exception:
                 shares_outstanding = None
-        market_cap = None
-        if shares_outstanding and shares_outstanding > 0:
-            market_cap = round(float(current_price) * int(shares_outstanding))
+        market_cap = market_caps.get(ticker)
+        if market_cap is None or market_cap <= MIN_MARKET_CAP_USD:
+            continue
         rs_rating_sp500_frame = rs_ratings_by_universe.get("sp500", pd.DataFrame())
         rs_rating_nasdaq100_frame = rs_ratings_by_universe.get("nasdaq100", pd.DataFrame())
         rs_rating_dowjones_frame = rs_ratings_by_universe.get("dowjones", pd.DataFrame())
@@ -502,6 +534,12 @@ def build_payload(
             "rsRatingNasdaq100": nullable_int(rs_ratings_by_universe.get("nasdaq100", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingDowjones": nullable_int(rs_ratings_by_universe.get("dowjones", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingRussell2000": nullable_int(rs_ratings_by_universe.get("russell2000", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
+            "rsPeriods": {
+                "1m": nullable_int(period_rs_ratings_all["1m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
+                "3m": nullable_int(period_rs_ratings_all["3m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
+                "6m": nullable_int(period_rs_ratings_all["6m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
+                "12m": nullable_int(period_rs_ratings_all["12m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
+            },
             "returns": {
                 "1m": compute_return(performance_series, LOOKBACKS["1m"]),
                 "3m": compute_return(performance_series, LOOKBACKS["3m"]),
@@ -572,8 +610,10 @@ def build_payload(
             "russell2000": {"label": "Russell 2000", "color": COLOR_BY_UNIVERSE["russell2000"]},
         },
         "scoring": {
-            "label": "IBD-style RS Rating",
-            "description": "Weighted relative strength score using interval returns across 0-1W 10%, 1W-1M 20%, 1M-3M 30%, 3M-6M 20%, 6M-9M 10%, and 9M-12M 10%, then converted into a daily 1-99 percentile ranking.",
+            "label": "StockEasy-style RS Rating",
+            "description": "Weighted raw returns using 1M 20%, 3M 40%, 6M 20%, and 12M 20%, then converted into a daily 1-99 percentile ranking. Names with market cap at or below $200M are excluded.",
+            "minMarketCapUsd": MIN_MARKET_CAP_USD,
+            "weights": {"1m": 0.20, "3m": 0.40, "6m": 0.20, "12m": 0.20},
         },
         "rows": rows,
         "histories": histories,

@@ -13,7 +13,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `Market > Breadth`
   - embedded Stockbee breadth monitor
 - `Market > RS`
-  - IBD-style RS leaderboard, search, and stock-level daily RS trend
+  - StockEasy-style RS leaderboard, period RS table, search, and stock-level daily RS trend
 - `Big Tech > M7`
   - M7 relative price chart and quarterly earnings cards
 - `Big Tech > Cloud`
