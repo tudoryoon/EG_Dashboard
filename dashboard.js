@@ -172,6 +172,10 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:metals:gold": "#d4a017",
   "macro:metals:silver": "#94a3b8",
   "macro:metals:copper": "#b45309",
+  "macro:strategic:uranium": "#16a34a",
+  "macro:strategic:rare_earths": "#7c3aed",
+  "macro:strategic:iron_ore": "#b45309",
+  "macro:strategic:lng_jkm": "#2563eb",
 };
 const MARKET_PRICE_EMA_OPTIONS = [10, 20, 60, 120, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
@@ -6271,6 +6275,7 @@ function renderMarketFxCommoditiesOverview() {
     { key: "dxy", canvas: "dxy", className: "" },
     { key: "energy", canvas: "energy", className: "" },
     { key: "metals", canvas: "metals", className: "" },
+    { key: "strategic", canvas: "strategic", className: "macro-panel-wide" },
   ]
     .map(({ key, canvas, className }) => {
       const panel = getMarketMacroPanel(key);
@@ -6318,7 +6323,7 @@ function renderMarketFxCommoditiesOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>FX & Commodities</h2>
-            <p>Dollar index, crude oil, and metals dashboard. Metals are normalized for cleaner cross-asset comparison.</p>
+            <p>Dollar index, crude oil, metals, and strategic commodity proxies. Normalized panels compare cross-asset momentum cleanly.</p>
           </div>
           <div class="us-price-controls">
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
@@ -6346,7 +6351,7 @@ function renderMarketFxCommoditiesOverview() {
     });
   });
 
-  ["dxy", "energy", "metals"].forEach((panelKey) => {
+  ["dxy", "energy", "metals", "strategic"].forEach((panelKey) => {
     const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
     if (canvas) {
       createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));
@@ -7293,7 +7298,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "FxCommodities") {
-      summaryText.textContent = "FX & Commodities dashboard for dollar, crude oil, gold, silver, and copper";
+      summaryText.textContent = "FX & Commodities dashboard for dollar, energy, metals, uranium, rare earths, iron ore, and LNG proxies";
       return;
     }
     if (state.marketView === "Macro") {

@@ -35,6 +35,10 @@ YAHOO_SERIES = {
     "gold": ("GC=F", "Gold", "#d97706"),
     "silver": ("SI=F", "Silver", "#6b7280"),
     "copper": ("HG=F", "Copper", "#b45309"),
+    "uranium": ("URA", "Uranium Miners ETF", "#16a34a"),
+    "rare_earths": ("REMX", "Rare Earths ETF", "#7c3aed"),
+    "iron_ore": ("TIO=F", "Iron Ore 62% Fe", "#b45309"),
+    "lng_jkm": ("JKM=F", "JKM LNG", "#2563eb"),
 }
 
 
@@ -210,6 +214,10 @@ def main() -> None:
     gold_dates, gold_values = parse_yahoo_series("GC=F")
     silver_dates, silver_values = parse_yahoo_series("SI=F")
     copper_dates, copper_values = parse_yahoo_series("HG=F")
+    uranium_dates, uranium_values = parse_yahoo_series("URA")
+    rare_earth_dates, rare_earth_values = parse_yahoo_series("REMX")
+    iron_ore_dates, iron_ore_values = parse_yahoo_series("TIO=F")
+    lng_jkm_dates, lng_jkm_values = parse_yahoo_series("JKM=F")
 
     panels = {
         "rates": {
@@ -255,6 +263,20 @@ def main() -> None:
                 "gold": build_series_item("Gold", "#d97706", gold_dates, gold_values),
                 "silver": build_series_item("Silver", "#6b7280", silver_dates, silver_values),
                 "copper": build_series_item("Copper", "#b45309", copper_dates, copper_values),
+            },
+        },
+        "strategic": {
+            "title": "Uranium / Rare Earths / Iron Ore / LNG",
+            "subtitle": "Daily market proxies normalized to 100. Uranium and rare earths use liquid ETF proxies; iron ore and JKM LNG use futures closes.",
+            "source": "Yahoo Finance",
+            "mode": "normalized",
+            "yAxisLabel": "Start = 100",
+            "formatter": "number1",
+            "series": {
+                "uranium": build_series_item("Uranium proxy (URA)", "#16a34a", uranium_dates, uranium_values),
+                "rare_earths": build_series_item("Rare earths proxy (REMX)", "#7c3aed", rare_earth_dates, rare_earth_values),
+                "iron_ore": build_series_item("Iron ore 62% Fe (TIO)", "#b45309", iron_ore_dates, iron_ore_values),
+                "lng_jkm": build_series_item("JKM LNG (JKM)", "#2563eb", lng_jkm_dates, lng_jkm_values),
             },
         },
     }
