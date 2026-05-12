@@ -56,6 +56,16 @@ INDICATORS: list[dict[str, Any]] = [
         "series": [
             SeriesConfig("headline_cpi", "Headline CPI", "CPIAUCSL", "index", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-inflation-rate-mom-final/5128770", "percent"),
             SeriesConfig("core_cpi", "Core CPI", "CPILFESL", "index", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/united-states-core-inflation-rate-mom-final/13516542", "percent"),
+            SeriesConfig("food_cpi", "Food", "CPIUFDSL", "index", "#16a34a"),
+            SeriesConfig("energy_cpi", "Energy", "CPIENGSL", "index", "#f97316"),
+            SeriesConfig("shelter_cpi", "Shelter", "CUSR0000SAH1", "index", "#2563eb"),
+            SeriesConfig("rent_cpi", "Rent of Primary Residence", "CUSR0000SEHA", "index", "#06b6d4"),
+            SeriesConfig("oer_cpi", "Owners' Equivalent Rent", "CUSR0000SEHC", "index", "#7c3aed"),
+            SeriesConfig("transport_services_cpi", "Transportation Services", "CUSR0000SAS4", "index", "#b45309"),
+            SeriesConfig("medical_services_cpi", "Medical Care Services", "CUSR0000SAM2", "index", "#ec4899"),
+            SeriesConfig("new_vehicles_cpi", "New Vehicles", "CUSR0000SETA01", "index", "#64748b"),
+            SeriesConfig("used_cars_cpi", "Used Cars & Trucks", "CUSR0000SETA02", "index", "#8b5cf6"),
+            SeriesConfig("apparel_cpi", "Apparel", "CPIAPPSL", "index", "#0f766e"),
         ],
     },
     {
@@ -201,10 +211,11 @@ def fetch_text(url: str) -> str:
 
 
 def fred_csv_urls(series_id: str, start_month: str) -> list[str]:
-    return [
-        f"{FRED_GATEWAY_BASE}{series_id}",
-        f"{FRED_GRAPH_BASE}{series_id}&cosd={start_month}-01",
-    ]
+    fred_graph_url = f"{FRED_GRAPH_BASE}{series_id}&cosd={start_month}-01"
+    fred_gateway_url = f"{FRED_GATEWAY_BASE}{series_id}"
+    if series_id in {"CPIAUCSL", "CPILFESL"}:
+        return [fred_graph_url, fred_gateway_url]
+    return [fred_gateway_url, fred_graph_url]
 
 
 def month_key(date_text: str) -> str:
@@ -221,7 +232,7 @@ def parse_fred_series(series_id: str, start_month: str) -> dict[str, Any]:
             points = []
             for row in reader:
                 lower_row = {str(key).lower(): value for key, value in row.items()}
-                date_text = (row.get("DATE") or lower_row.get("yyyymmdd") or "").strip()
+                date_text = (row.get("DATE") or lower_row.get("observation_date") or lower_row.get("yyyymmdd") or "").strip()
                 value = (row.get(series_id) or lower_row.get(series_id.lower()) or "").strip()
                 if not date_text or value in {"", "."}:
                     continue
