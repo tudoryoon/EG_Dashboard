@@ -246,14 +246,7 @@ const state = {
   macroDashboardRange: "5y",
   macroDashboardSelection: [
     "policy:fed_funds",
-    "rates:us2y",
-    "rates:us10y",
-    "rates:us30y",
-    "policy:real_10y",
     "market:sp500",
-    "indicator:headline_cpi_yoy",
-    "indicator:final_demand_ppi_yoy",
-    "indicator:unrate",
   ],
   memorySpotRanges: {},
 };
@@ -2850,7 +2843,7 @@ function createMacroDashboardChart(canvas, rangeKey) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (value) => (selectedTickSet.has(value) ? formatDateAxisLabel(payload.labels[value], rangeKey) : ""),
+            callback: (value) => (selectedTickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
           },
           border: { color: "#d8d8d2" },
         },
