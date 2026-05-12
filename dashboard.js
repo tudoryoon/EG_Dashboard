@@ -80,6 +80,7 @@ const bigTechSubtabMeta = {
 
 const marketSubtabMeta = {
   Overview: { label: "Price" },
+  FxCommodities: { label: "FX & Commodities" },
   Macro: { label: "Macro" },
   VIX: { label: "VIX" },
   Breadth: { label: "Breadth" },
@@ -5553,8 +5554,7 @@ function renderMarketOverview() {
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
-  const rangeMarkup = rangeSource
+  const rangeMarkup = ((marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [])
     .map(
       (range) => `
         <button
@@ -5641,51 +5641,6 @@ function renderMarketOverview() {
           ${range.label}
         </button>`,
     )
-    .join("");
-  const macroPanels = [
-    { key: "rates", canvas: "rates", className: "macro-panel-wide" },
-    { key: "dxy", canvas: "dxy", className: "" },
-    { key: "energy", canvas: "energy", className: "" },
-    { key: "metals", canvas: "metals", className: "" },
-  ]
-    .map(({ key, canvas, className }) => {
-      const panel = getMarketMacroPanel(key);
-      if (!panel) {
-        return "";
-      }
-      return `
-        <article class="cloud-panel macro-panel ${className}">
-          <div class="us-panel-head">
-            <div>
-              <h3>${panel.title}</h3>
-              <p>${panel.subtitle}</p>
-            </div>
-            <div class="m7-range-row">
-              ${rangeSource
-                .map(
-                  (range) => `
-                    <button
-                      type="button"
-                      class="m7-range-chip${getMarketMacroRange(key) === range.key ? " active" : ""}"
-                      data-market-macro-range="${range.key}"
-                      data-market-macro-panel="${key}"
-                    >
-                      ${range.label}
-                    </button>`,
-                )
-                .join("")}
-            </div>
-          </div>
-          <div class="macro-panel-meta">
-            <span>${panel.source ?? ""}</span>
-            <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
-          </div>
-          <div class="macro-chart-wrap">
-            <canvas data-market-macro="${canvas}"></canvas>
-          </div>
-        </article>
-      `;
-    })
     .join("");
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
@@ -5804,20 +5759,6 @@ function renderMarketOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>Macro Dashboard</h2>
-            <p>Daily macro dashboard for US and Japan rates, dollar, energy, and metals. Metals are normalized for cleaner cross-asset comparison.</p>
-          </div>
-          <div class="us-price-controls">
-            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
-          </div>
-        </div>
-        <div class="macro-panel-grid">
-          ${macroPanels}
-        </div>
-      </section>
-      <section class="us-panel us-price-panel">
-        <div class="us-section-head us-price-head">
-          <div>
             <h2>Market Relative Performance</h2>
             <p>Daily close normalized to 100 at the selected start date. Max begins ${marketPriceData.startDate ?? "2017-01-01"}.</p>
           </div>
@@ -5902,21 +5843,6 @@ function renderMarketOverview() {
     });
   }
 
-  usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const panelKey = button.dataset.marketMacroPanel;
-      const rangeKey = button.dataset.marketMacroRange || marketMacroData.defaultRange || "max";
-      if (!panelKey) {
-        return;
-      }
-      state.marketMacroRanges = {
-        ...state.marketMacroRanges,
-        [panelKey]: rangeKey,
-      };
-      render();
-    });
-  });
-
   usOverviewRoot.querySelectorAll("[data-total-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.totalDashboardRange = button.dataset.totalRange || "3y";
@@ -5992,12 +5918,6 @@ function renderMarketOverview() {
   if (relativeCanvas) {
     createMarketRelativeChart(relativeCanvas, state.marketPriceRange);
   }
-  ["rates", "dxy", "energy", "metals"].forEach((panelKey) => {
-    const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
-    if (canvas) {
-      createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));
-    }
-  });
 }
 
 function renderMarketMacroOverview() {
@@ -6338,6 +6258,100 @@ function renderMarketMacroOverview() {
       createMacroReleaseChart(releaseCanvas, series);
     }
   }
+}
+
+function renderMarketFxCommoditiesOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
+  const marketUpdatedAt = marketMacroData.updatedAt || marketPriceData.updatedAt || "-";
+  const macroPanels = [
+    { key: "dxy", canvas: "dxy", className: "" },
+    { key: "energy", canvas: "energy", className: "" },
+    { key: "metals", canvas: "metals", className: "" },
+  ]
+    .map(({ key, canvas, className }) => {
+      const panel = getMarketMacroPanel(key);
+      if (!panel) {
+        return "";
+      }
+      return `
+        <article class="cloud-panel macro-panel ${className}">
+          <div class="us-panel-head">
+            <div>
+              <h3>${panel.title}</h3>
+              <p>${panel.subtitle}</p>
+            </div>
+            <div class="m7-range-row">
+              ${rangeSource
+                .map(
+                  (range) => `
+                    <button
+                      type="button"
+                      class="m7-range-chip${getMarketMacroRange(key) === range.key ? " active" : ""}"
+                      data-market-macro-range="${range.key}"
+                      data-market-macro-panel="${key}"
+                    >
+                      ${range.label}
+                    </button>`,
+                )
+                .join("")}
+            </div>
+          </div>
+          <div class="macro-panel-meta">
+            <span>${panel.source ?? ""}</span>
+            <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
+          </div>
+          <div class="macro-chart-wrap">
+            <canvas data-market-macro="${canvas}"></canvas>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>FX & Commodities</h2>
+            <p>Dollar index, crude oil, and metals dashboard. Metals are normalized for cleaner cross-asset comparison.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="macro-panel-grid">
+          ${macroPanels}
+        </div>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroPanel;
+      const rangeKey = button.dataset.marketMacroRange || marketMacroData.defaultRange || "max";
+      if (!panelKey) {
+        return;
+      }
+      state.marketMacroRanges = {
+        ...state.marketMacroRanges,
+        [panelKey]: rangeKey,
+      };
+      render();
+    });
+  });
+
+  ["dxy", "energy", "metals"].forEach((panelKey) => {
+    const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
+    if (canvas) {
+      createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));
+    }
+  });
 }
 
 function renderMarketVixOverview() {
@@ -7275,7 +7289,11 @@ function renderSectors() {
 function renderSummary(list) {
   if (state.tab === "Market") {
     if (state.marketView === "Overview") {
-      summaryText.textContent = "Price dashboard for major indexes, rates, dollar, energy, and metals";
+      summaryText.textContent = "Price dashboard for major indexes and cross-asset total dashboard";
+      return;
+    }
+    if (state.marketView === "FxCommodities") {
+      summaryText.textContent = "FX & Commodities dashboard for dollar, crude oil, gold, silver, and copper";
       return;
     }
     if (state.marketView === "Macro") {
@@ -7467,6 +7485,10 @@ function render() {
     renderSummary([]);
     if (state.marketView === "Overview") {
       renderMarketOverview();
+      return;
+    }
+    if (state.marketView === "FxCommodities") {
+      renderMarketFxCommoditiesOverview();
       return;
     }
     if (state.marketView === "Macro") {
