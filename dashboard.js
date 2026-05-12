@@ -160,6 +160,9 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "market:dowjones": "#6b7280",
   "market:russell2000": "#8b5cf6",
   "market:smh": "#dc2626",
+  "macro:policy:fed_funds": "#111827",
+  "macro:policy:inflation_5y": "#f97316",
+  "macro:policy:real_10y": "#dc2626",
   "macro:rates:us2y": "#0f766e",
   "macro:rates:us10y": "#14b8a6",
   "macro:rates:us30y": "#06b6d4",
@@ -241,6 +244,18 @@ const state = {
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
+  macroDashboardRange: "5y",
+  macroDashboardSelection: [
+    "policy:fed_funds",
+    "rates:us2y",
+    "rates:us10y",
+    "rates:us30y",
+    "policy:real_10y",
+    "market:sp500",
+    "indicator:headline_cpi_yoy",
+    "indicator:final_demand_ppi_yoy",
+    "indicator:unrate",
+  ],
   memorySpotRanges: {},
 };
 
@@ -2567,6 +2582,310 @@ function createMacroReleaseChart(canvas, series) {
     },
   });
 
+  charts.push(chart);
+}
+
+function getMacroDashboardSeriesByKey(seriesKey) {
+  for (const indicator of macroIndicatorsData.indicators ?? []) {
+    const found = (indicator.series ?? []).find((series) => series.key === seriesKey);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+
+function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color }) {
+  const series = getMacroDashboardSeriesByKey(seriesKey);
+  if (!series?.dates?.length) {
+    return null;
+  }
+  const values = getMacroDerivedValues(series, kind);
+  const dates = [];
+  const cleanValues = [];
+  (series.dates ?? []).forEach((dateText, index) => {
+    const value = values[index];
+    if (!Number.isFinite(Number(value))) {
+      return;
+    }
+    dates.push(dateText.length === 7 ? `${dateText}-01` : dateText);
+    cleanValues.push(Number(value));
+  });
+  return {
+    key,
+    label,
+    dates,
+    values: cleanValues,
+    color,
+    axis: "percent",
+    formatter: kind === "mom_change" ? "number1" : "percent2",
+    normalize: false,
+    dash: [4, 4],
+  };
+}
+
+function getMacroDashboardItems() {
+  const policySeries = marketMacroData?.panels?.policy?.series ?? {};
+  const rateSeries = marketMacroData?.panels?.rates?.series ?? {};
+  const marketItems = marketPriceData?.items ?? {};
+  const metalSeries = marketMacroData?.panels?.metals?.series ?? {};
+  const energySeries = marketMacroData?.panels?.energy?.series ?? {};
+
+  const maybeItems = [
+    policySeries.fed_funds && {
+      key: "policy:fed_funds",
+      label: "Fed Funds",
+      dates: policySeries.fed_funds.dates ?? [],
+      values: policySeries.fed_funds.values ?? [],
+      color: "#111827",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+    },
+    rateSeries.us2y && {
+      key: "rates:us2y",
+      label: "US 2Y",
+      dates: rateSeries.us2y.dates ?? [],
+      values: rateSeries.us2y.values ?? [],
+      color: "#0f766e",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+    },
+    rateSeries.us10y && {
+      key: "rates:us10y",
+      label: "US 10Y",
+      dates: rateSeries.us10y.dates ?? [],
+      values: rateSeries.us10y.values ?? [],
+      color: "#14b8a6",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+    },
+    rateSeries.us30y && {
+      key: "rates:us30y",
+      label: "US 30Y",
+      dates: rateSeries.us30y.dates ?? [],
+      values: rateSeries.us30y.values ?? [],
+      color: "#06b6d4",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+    },
+    policySeries.real_10y && {
+      key: "policy:real_10y",
+      label: "Real 10Y",
+      dates: policySeries.real_10y.dates ?? [],
+      values: policySeries.real_10y.values ?? [],
+      color: "#dc2626",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+      dash: [6, 4],
+    },
+    marketItems.sp500 && {
+      key: "market:sp500",
+      label: "S&P 500",
+      dates: marketItems.sp500.dates ?? [],
+      values: marketItems.sp500.values ?? [],
+      color: "#111827",
+      axis: "index",
+      formatter: "number1",
+      normalize: true,
+    },
+    energySeries.wti && {
+      key: "commodity:wti",
+      label: "WTI",
+      dates: energySeries.wti.dates ?? [],
+      values: energySeries.wti.values ?? [],
+      color: "#16a34a",
+      axis: "index",
+      formatter: "dollar1",
+      normalize: true,
+    },
+    metalSeries.gold && {
+      key: "commodity:gold",
+      label: "Gold",
+      dates: metalSeries.gold.dates ?? [],
+      values: metalSeries.gold.values ?? [],
+      color: "#d4a017",
+      axis: "index",
+      formatter: "dollar1",
+      normalize: true,
+    },
+    metalSeries.copper && {
+      key: "commodity:copper",
+      label: "Copper",
+      dates: metalSeries.copper.dates ?? [],
+      values: metalSeries.copper.values ?? [],
+      color: "#b45309",
+      axis: "index",
+      formatter: "dollar1",
+      normalize: true,
+    },
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:headline_cpi_yoy",
+      label: "CPI YoY",
+      seriesKey: "headline_cpi",
+      kind: "yoy",
+      color: "#7c3aed",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:final_demand_ppi_yoy",
+      label: "PPI YoY",
+      seriesKey: "final_demand_ppi",
+      kind: "yoy",
+      color: "#f97316",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:unrate",
+      label: "Unemployment",
+      seriesKey: "unrate",
+      kind: "level",
+      color: "#2563eb",
+    }),
+  ];
+
+  return maybeItems.filter(Boolean);
+}
+
+function buildMacroDashboardChartPayload(rangeKey) {
+  const selectedKeys = new Set(state.macroDashboardSelection ?? []);
+  const items = getMacroDashboardItems().filter((item) => selectedKeys.has(item.key));
+  const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, "2003-01-01");
+  const labels = allDates.filter((date) => date >= startDate);
+  const datasets = items.map((item) => {
+    const dateIndex = new Map();
+    item.dates.forEach((date, index) => dateIndex.set(date, index));
+    const baseDate = labels.find((date) => dateIndex.has(date) && Number.isFinite(Number(item.values[dateIndex.get(date)])));
+    const baseValue = baseDate ? Number(item.values[dateIndex.get(baseDate)]) : null;
+    const data = labels.map((date) => {
+      const index = dateIndex.get(date);
+      if (index === undefined) {
+        return null;
+      }
+      const value = Number(item.values[index]);
+      if (!Number.isFinite(value)) {
+        return null;
+      }
+      if (!item.normalize) {
+        return value;
+      }
+      if (!Number.isFinite(baseValue) || baseValue === 0) {
+        return null;
+      }
+      return Number(((value / baseValue) * 100).toFixed(2));
+    });
+    return {
+      label: item.label,
+      data,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: item.axis === "index" ? 2.6 : 2.2,
+      borderDash: item.dash ?? [],
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+      yAxisID: item.axis === "percent" ? "yPercent" : "y",
+      formatter: item.formatter,
+      normalize: item.normalize,
+    };
+  });
+  return { labels, datasets };
+}
+
+function createMacroDashboardChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined" || !canvas) {
+    return;
+  }
+  const payload = buildMacroDashboardChartPayload(rangeKey);
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => {
+              const dataset = context.dataset;
+              const suffix = dataset.normalize ? " (Start=100)" : "";
+              return `${dataset.label}: ${formatMacroValue(context.parsed.y, dataset.normalize ? "number1" : dataset.formatter)}${suffix}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (selectedTickSet.has(value) ? formatDateAxisLabel(payload.labels[value], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          position: "left",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => Number(value).toFixed(0),
+          },
+          title: {
+            display: true,
+            text: "Price / Commodity Start = 100",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yPercent: {
+          position: "right",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${Number(value).toFixed(1)}%`,
+          },
+          title: {
+            display: true,
+            text: "Rates / Inflation / Labor",
+            color: "#8d8d86",
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
   charts.push(chart);
 }
 
@@ -6147,9 +6466,56 @@ function renderMarketMacroOverview() {
           </table>
         </div>
       `;
+  const macroDashboardItems = getMacroDashboardItems();
+  const macroDashboardRangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
+  const macroDashboardRangeMarkup = macroDashboardRangeSource
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.macroDashboardRange === range.key ? " active" : ""}"
+          data-macro-dashboard-range="${range.key}"
+        >${range.label}</button>
+      `,
+    )
+    .join("");
+  const macroDashboardSelectorMarkup = macroDashboardItems
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="market-rs-chip macro-dashboard-chip${state.macroDashboardSelection.includes(item.key) ? " active" : ""}"
+          data-macro-dashboard-series="${item.key}"
+        >
+          <span class="macro-series-dot" style="background:${item.color}"></span>
+          ${item.label}
+        </button>
+      `,
+    )
+    .join("");
 
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
+      <section class="us-panel macro-panel macro-dashboard-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Macro Total Dashboard</h2>
+            <p class="macro-clean-copy">미국 기준금리, 명목금리, 실질금리, S&P500, 인플레, 고용, 원자재를 한 그래프에서 비교합니다.</p>
+            <p>Rates and macro indicators use the right axis; S&P500 and commodities are normalized to 100 on the left axis.</p>
+          </div>
+          <div class="m7-range-row">${macroDashboardRangeMarkup}</div>
+        </div>
+        <div class="macro-dashboard-note">
+          <span>실질금리 = US 10Y - 5Y 기대 인플레이션(T5YIE)</span>
+          <span>좌측축: 주식/원자재 Start=100</span>
+          <span>우측축: 금리/인플레/고용률 %</span>
+        </div>
+        <div class="total-series-row total-series-row-left macro-dashboard-series-row">${macroDashboardSelectorMarkup}</div>
+        <div class="macro-dashboard-chart-wrap">
+          <canvas data-macro-dashboard-chart></canvas>
+        </div>
+      </section>
+
       <section class="us-panel macro-panel">
         <div class="us-section-head">
           <div>
@@ -6251,6 +6617,35 @@ function renderMarketMacroOverview() {
       render();
     });
   });
+
+  usOverviewRoot.querySelectorAll("[data-macro-dashboard-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.macroDashboardRange = button.dataset.macroDashboardRange || "5y";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-macro-dashboard-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.macroDashboardSeries;
+      if (!key) {
+        return;
+      }
+      const selected = new Set(state.macroDashboardSelection);
+      if (selected.has(key)) {
+        selected.delete(key);
+      } else {
+        selected.add(key);
+      }
+      state.macroDashboardSelection = [...selected];
+      render();
+    });
+  });
+
+  const macroDashboardCanvas = usOverviewRoot.querySelector("[data-macro-dashboard-chart]");
+  if (macroDashboardCanvas) {
+    createMacroDashboardChart(macroDashboardCanvas, state.macroDashboardRange);
+  }
 
   if (indicator?.status !== "manual" && series?.dates?.length) {
     const canvas = usOverviewRoot.querySelector("[data-macro-indicator-chart]");

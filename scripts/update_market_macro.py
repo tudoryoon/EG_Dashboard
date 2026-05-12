@@ -12,6 +12,8 @@ from urllib.request import Request, urlopen
 
 
 START_DATE = "1997-01-01"
+FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
+FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 RANGES = [
     {"key": "1m", "label": "1M"},
     {"key": "3m", "label": "3M"},
@@ -54,6 +56,13 @@ def fetch_json(url: str) -> dict:
 
 def fred_csv_url(series_id: str) -> str:
     return f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+
+
+def fred_csv_urls(series_id: str) -> list[str]:
+    return [
+        f"{FRED_GATEWAY_BASE}{series_id}",
+        f"{FRED_GRAPH_BASE}{series_id}&cosd={START_DATE}",
+    ]
 
 
 def yahoo_chart_url(symbol: str) -> str:
@@ -179,6 +188,49 @@ def parse_yahoo_series(symbol: str) -> tuple[list[str], list[float]]:
     return dates, values
 
 
+def parse_fred_series(series_id: str) -> tuple[list[str], list[float]]:
+    last_error: Exception | None = None
+    for url in fred_csv_urls(series_id):
+        try:
+            reader = csv.DictReader(fetch_text(url).splitlines())
+            dates: list[str] = []
+            values: list[float] = []
+            for row in reader:
+                lower_row = {str(key).lower(): value for key, value in row.items()}
+                raw_date = (row.get("DATE") or lower_row.get("yyyymmdd") or "").strip()
+                raw_value = (row.get(series_id) or lower_row.get(series_id.lower()) or "").strip()
+                if not raw_date or raw_value in {"", "."}:
+                    continue
+                if len(raw_date) == 8 and raw_date.isdigit():
+                    date_key = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
+                else:
+                    date_key = raw_date[:10]
+                if date_key < START_DATE:
+                    continue
+                dates.append(date_key)
+                values.append(round(float(raw_value), 4))
+            if dates:
+                return dates, values
+        except Exception as error:  # pragma: no cover - network variability
+            last_error = error
+    if last_error:
+        raise last_error
+    return [], []
+
+
+def build_spread_series(
+    first_dates: list[str],
+    first_values: list[float],
+    second_dates: list[str],
+    second_values: list[float],
+) -> tuple[list[str], list[float]]:
+    first_by_date = dict(zip(first_dates, first_values))
+    second_by_date = dict(zip(second_dates, second_values))
+    dates = sorted(set(first_by_date) & set(second_by_date))
+    values = [round(first_by_date[date] - second_by_date[date], 4) for date in dates]
+    return dates, values
+
+
 def build_series_item(
     label: str,
     color: str,
@@ -207,6 +259,14 @@ def main() -> None:
     rates_series["jp2y"] = build_series_item("Japan 2Y", "#111827", *japan_series["jp2y"], [6, 4])
     rates_series["jp10y"] = build_series_item("Japan 10Y", "#2563eb", *japan_series["jp10y"], [6, 4])
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
+    fed_funds_dates, fed_funds_values = parse_fred_series("DFF")
+    inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
+    real_10y_dates, real_10y_values = build_spread_series(
+        us_series["us10y"][0],
+        us_series["us10y"][1],
+        inflation_5y_dates,
+        inflation_5y_values,
+    )
 
     dxy_dates, dxy_values = parse_yahoo_series("DX-Y.NYB")
     wti_dates, wti_values = parse_yahoo_series("CL=F")
@@ -220,6 +280,19 @@ def main() -> None:
     lng_jkm_dates, lng_jkm_values = parse_yahoo_series("JKM=F")
 
     panels = {
+        "policy": {
+            "title": "Policy Rate / Real Rate",
+            "subtitle": "Effective Fed Funds Rate, 5Y breakeven inflation, and US 10Y minus 5Y breakeven inflation.",
+            "source": "FRED / US Treasury",
+            "mode": "raw",
+            "yAxisLabel": "%",
+            "formatter": "percent2",
+            "series": {
+                "fed_funds": build_series_item("Fed Funds Rate", "#111827", fed_funds_dates, fed_funds_values),
+                "inflation_5y": build_series_item("5Y Inflation Expectation", "#f97316", inflation_5y_dates, inflation_5y_values),
+                "real_10y": build_series_item("Real 10Y (10Y - 5Y Inflation Exp.)", "#dc2626", real_10y_dates, real_10y_values),
+            },
+        },
         "rates": {
             "title": "US & Japan Sovereign Yields",
             "subtitle": "Daily 2Y / 10Y / 30Y. US Treasury from Treasury XML, Japan JGB from JBTS.",

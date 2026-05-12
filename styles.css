@@ -1393,6 +1393,52 @@ h1 {
   font-size: 0.78rem;
 }
 
+.macro-dashboard-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbf8 100%);
+}
+
+.macro-dashboard-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.macro-dashboard-note span {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.macro-dashboard-series-row {
+  margin-top: 12px;
+}
+
+.macro-dashboard-chip {
+  gap: 7px;
+}
+
+.macro-series-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.macro-dashboard-chart-wrap {
+  height: 390px;
+  margin-top: 12px;
+}
+
+.macro-dashboard-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 390px;
+}
+
 .total-series-row {
   display: flex;
   flex-wrap: wrap;
