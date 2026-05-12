@@ -176,7 +176,6 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:metals:silver": "#94a3b8",
   "macro:metals:copper": "#b45309",
   "macro:strategic:uranium": "#16a34a",
-  "macro:strategic:rare_earths": "#7c3aed",
   "macro:strategic:iron_ore": "#b45309",
   "macro:strategic:lng_jkm": "#2563eb",
 };
@@ -6718,7 +6717,7 @@ function renderMarketFxCommoditiesOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>FX & Commodities</h2>
-            <p>Dollar index, crude oil, metals, and strategic commodity proxies. Normalized panels compare cross-asset momentum cleanly.</p>
+            <p>Dollar index, crude oil, metals, and strategic commodity prices. Normalized panels compare cross-asset momentum cleanly.</p>
           </div>
           <div class="us-price-controls">
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
@@ -7693,7 +7692,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "FxCommodities") {
-      summaryText.textContent = "FX & Commodities dashboard for dollar, energy, metals, uranium, rare earths, iron ore, and LNG proxies";
+      summaryText.textContent = "FX & Commodities dashboard for dollar, energy, metals, uranium spot, iron ore, and LNG futures";
       return;
     }
     if (state.marketView === "Macro") {
