@@ -70,6 +70,7 @@ const primaryTabMeta = {
   Semis: { label: "Semis" },
   Infra: { label: "Infra" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
+  DataTrend: { label: "Data Trend" },
 };
 
 const bigTechSubtabMeta = {
@@ -7578,7 +7579,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -7598,6 +7599,11 @@ function renderSubtabs() {
   subtabSwitch.innerHTML = "";
   let entries = [];
   let activeKey = "";
+
+  if (state.tab === "DataTrend") {
+    subtabSwitch.classList.add("hidden");
+    return;
+  }
 
   if (state.tab === "Market") {
     entries = Object.entries(marketSubtabMeta);
@@ -7737,6 +7743,11 @@ function renderSummary(list) {
     return;
   }
 
+  if (state.tab === "DataTrend") {
+    summaryText.textContent = "X and Reddit keyword mention trend dashboard workspace";
+    return;
+  }
+
   summaryText.textContent = `${primaryTabMeta.Taiwan.label} ${list.length} companies`;
 
   const avgYoY =
@@ -7828,6 +7839,15 @@ function render() {
   renderSubtabs();
   renderCurrencies();
   renderSectors();
+
+  if (state.tab === "DataTrend") {
+    renderSummary([]);
+    renderPlaceholderOverview(
+      "Data Trend Dashboard",
+      "X와 Reddit에서 특정 키워드가 얼마나 자주 언급되는지 추적하는 영역입니다. 다음 단계에서 키워드 목록, 수집 소스, 일별/주별 집계 방식, 감성/급증률 지표를 붙이면 됩니다.",
+    );
+    return;
+  }
 
   if (state.tab === "BigTech" && state.bigTechView === "M7") {
     renderSummary([]);

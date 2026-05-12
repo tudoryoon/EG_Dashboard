@@ -194,6 +194,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(63, 63, 58, 0.18);
 }
 
+.country-button.is-data-trend {
+  border-color: #f1d179;
+  background: linear-gradient(180deg, #fff8db, #ffef9f);
+  color: #7a4d00;
+}
+
+.country-button.is-data-trend.active {
+  border-color: #c88700;
+  background: linear-gradient(135deg, #ffd84d, #f0a800);
+  color: #242421;
+  box-shadow: 0 14px 28px rgba(240, 168, 0, 0.2);
+}
+
 .currency-button {
   min-width: 58px;
   padding: 0 16px;
