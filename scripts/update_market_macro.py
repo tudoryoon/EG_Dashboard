@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 
 START_DATE = "1965-01-01"
+FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 WORLD_BANK_PINK_SHEET_URL = (
@@ -45,6 +46,11 @@ YAHOO_SERIES = {
     "copper": ("HG=F", "Copper", "#b45309"),
     "iron_ore": ("TIO=F", "Iron Ore 62% Fe", "#b45309"),
     "lng_jkm": ("JKM=F", "JKM LNG", "#2563eb"),
+    "corn": ("ZC=F", "Corn", "#f59e0b"),
+    "soybeans": ("ZS=F", "Soybeans", "#16a34a"),
+    "wheat_hrw": ("KE=F", "Wheat HRW", "#dc2626"),
+    "wheat_srw": ("ZW=F", "Wheat SRW", "#7c3aed"),
+    "sugar": ("SB=F", "Raw Sugar", "#0f766e"),
 }
 
 
@@ -300,6 +306,15 @@ def build_series_item(
     return item
 
 
+def filter_series_start(
+    dates: list[str],
+    values: list[float],
+    start_date: str,
+) -> tuple[list[str], list[float]]:
+    filtered = [(date, value) for date, value in zip(dates, values) if date >= start_date]
+    return [date for date, _ in filtered], [value for _, value in filtered]
+
+
 def main() -> None:
     us_series = parse_us_treasury_yields()
     japan_series = parse_japan_yields()
@@ -331,6 +346,16 @@ def main() -> None:
     uranium_dates, uranium_values = parse_fred_series("PURANUSDM")
     iron_ore_dates, iron_ore_values = parse_yahoo_series("TIO=F")
     lng_jkm_dates, lng_jkm_values = parse_yahoo_series("JKM=F")
+    corn_dates, corn_values = parse_yahoo_series("ZC=F")
+    soybeans_dates, soybeans_values = parse_yahoo_series("ZS=F")
+    wheat_hrw_dates, wheat_hrw_values = parse_yahoo_series("KE=F")
+    wheat_srw_dates, wheat_srw_values = parse_yahoo_series("ZW=F")
+    sugar_dates, sugar_values = parse_yahoo_series("SB=F")
+    corn_dates, corn_values = filter_series_start(corn_dates, corn_values, FOOD_START_DATE)
+    soybeans_dates, soybeans_values = filter_series_start(soybeans_dates, soybeans_values, FOOD_START_DATE)
+    wheat_hrw_dates, wheat_hrw_values = filter_series_start(wheat_hrw_dates, wheat_hrw_values, FOOD_START_DATE)
+    wheat_srw_dates, wheat_srw_values = filter_series_start(wheat_srw_dates, wheat_srw_values, FOOD_START_DATE)
+    sugar_dates, sugar_values = filter_series_start(sugar_dates, sugar_values, FOOD_START_DATE)
 
     panels = {
         "policy": {
@@ -402,6 +427,21 @@ def main() -> None:
                 "uranium": build_series_item("Uranium U3O8 spot", "#16a34a", uranium_dates, uranium_values),
                 "iron_ore": build_series_item("Iron ore 62% Fe (TIO)", "#b45309", iron_ore_dates, iron_ore_values),
                 "lng_jkm": build_series_item("JKM LNG (JKM)", "#2563eb", lng_jkm_dates, lng_jkm_values),
+            },
+        },
+        "food": {
+            "title": "Food Dashboard",
+            "subtitle": "Core agricultural futures from 2001-01-01: corn, soybeans, HRW wheat, SRW wheat, and raw sugar. Normalized to 100 for cross-commodity comparison.",
+            "source": "Yahoo Finance futures",
+            "mode": "normalized",
+            "yAxisLabel": "Start = 100",
+            "formatter": "number1",
+            "series": {
+                "corn": build_series_item("Corn", "#f59e0b", corn_dates, corn_values),
+                "soybeans": build_series_item("Soybeans", "#16a34a", soybeans_dates, soybeans_values),
+                "wheat_hrw": build_series_item("Wheat HRW", "#dc2626", wheat_hrw_dates, wheat_hrw_values),
+                "wheat_srw": build_series_item("Wheat SRW", "#7c3aed", wheat_srw_dates, wheat_srw_values),
+                "sugar": build_series_item("Raw Sugar", "#0f766e", sugar_dates, sugar_values),
             },
         },
     }
