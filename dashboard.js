@@ -1603,6 +1603,7 @@ function getTotalDashboardSeriesItems() {
 
   Object.entries(marketMacroData?.panels ?? {}).forEach(([panelKey, panel]) => {
     Object.entries(panel.series ?? {}).forEach(([seriesKey, item]) => {
+      const isPercentSeries = panelKey === "rates" || panelKey === "policy";
       items.push({
         key: `macro:${panelKey}:${seriesKey}`,
         group: panel.title,
@@ -1612,7 +1613,7 @@ function getTotalDashboardSeriesItems() {
         values: item.values ?? [],
         formatter: panel.formatter ?? "number1",
         rawLabel: item.name,
-        isRate: panelKey === "rates",
+        isRate: isPercentSeries,
       });
     });
   });
@@ -1803,7 +1804,7 @@ function createTotalDashboardChart(canvas, rangeKey) {
           },
           title: {
             display: hasRightAxis,
-            text: "Yield (%)",
+            text: "Rate / Inflation (%)",
             color: "#8d8d86",
           },
           grid: { drawOnChartArea: false },
