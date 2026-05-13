@@ -2490,6 +2490,10 @@ function getMacroDerivedValues(series, kind) {
       return null;
     }
     if (kind === "yoy") {
+      const officialYoy = Number(series?.yoyValues?.[index]);
+      if (Number.isFinite(officialYoy)) {
+        return Number(officialYoy.toFixed(2));
+      }
       const base = Number(values[index - 12]);
       if (!Number.isFinite(base) || base === 0) {
         return null;

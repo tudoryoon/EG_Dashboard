@@ -16,6 +16,15 @@ OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "macro-indicators-d
 COMMON_START_MONTH = "2010-04"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
+BLS_TIMESERIES_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
+BLS_CPI_FALLBACKS = {
+    "CPIAUCSL": "CUSR0000SA0",
+    "CPILFESL": "CUSR0000SA0L1E",
+}
+BLS_CPI_OFFICIAL_YOY = {
+    "CPIAUCSL": "CUUR0000SA0",
+    "CPILFESL": "CUUR0000SA0L1E",
+}
 
 
 @dataclass(frozen=True)
@@ -255,6 +264,89 @@ def parse_fred_series(series_id: str, start_month: str) -> dict[str, Any]:
     }
 
 
+def parse_bls_series(series_id: str, start_year: int, end_year: int) -> dict[str, Any]:
+    response = requests.post(
+        BLS_TIMESERIES_URL,
+        json={"seriesid": [series_id], "startyear": str(start_year), "endyear": str(end_year)},
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=20,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if payload.get("status") != "REQUEST_SUCCEEDED":
+        raise RuntimeError(f"BLS request failed for {series_id}: {payload.get('message')}")
+
+    rows = ((payload.get("Results") or {}).get("series") or [{}])[0].get("data") or []
+    points = []
+    for row in rows:
+        period = str(row.get("period") or "")
+        value = row.get("value")
+        if not period.startswith("M") or value in {"-", "", None}:
+            continue
+        month = f"{row.get('year')}-{period[1:]}"
+        points.append({"date": month, "value": float(value)})
+    points.sort(key=lambda item: item["date"])
+    return {
+        "dates": [point["date"] for point in points],
+        "values": [point["value"] for point in points],
+    }
+
+
+def parse_bls_series_range(series_id: str, start_year: int, end_year: int) -> dict[str, Any]:
+    merged: dict[str, float] = {}
+    chunk_start = start_year
+    while chunk_start <= end_year:
+        chunk_end = min(chunk_start + 19, end_year)
+        chunk = parse_bls_series(series_id, chunk_start, chunk_end)
+        merged.update(dict(zip(chunk["dates"], chunk["values"])))
+        chunk_start = chunk_end + 1
+
+    months = sorted(merged)
+    return {
+        "dates": months,
+        "values": [merged[month] for month in months],
+    }
+
+
+def merge_latest_bls_fallback(parsed: dict[str, Any], source_id: str) -> dict[str, Any]:
+    bls_series_id = BLS_CPI_FALLBACKS.get(source_id)
+    if not bls_series_id:
+        return parsed
+
+    current_year = datetime.now(timezone.utc).year
+    bls = parse_bls_series(bls_series_id, current_year - 1, current_year)
+    by_month = dict(zip(parsed.get("dates", []), parsed.get("values", [])))
+    for month, value in zip(bls["dates"], bls["values"]):
+        by_month[month] = value
+
+    months = sorted(month for month in by_month if month >= parsed.get("dates", [""])[0])
+    return {
+        "dates": months,
+        "values": [by_month[month] for month in months],
+    }
+
+
+def build_bls_official_yoy_values(dates: list[str], source_id: str) -> list[float | None] | None:
+    bls_series_id = BLS_CPI_OFFICIAL_YOY.get(source_id)
+    if not bls_series_id or not dates:
+        return None
+
+    start_year = int(dates[0][:4]) - 1
+    current_year = datetime.now(timezone.utc).year
+    bls = parse_bls_series_range(bls_series_id, start_year, current_year)
+    by_month = dict(zip(bls["dates"], bls["values"]))
+    yoy_values: list[float | None] = []
+    for month in dates:
+        previous_month = f"{int(month[:4]) - 1}-{month[5:7]}"
+        current_value = by_month.get(month)
+        previous_value = by_month.get(previous_month)
+        if current_value is None or previous_value in {None, 0}:
+            yoy_values.append(None)
+        else:
+            yoy_values.append(safe_round(((current_value / previous_value) - 1) * 100, 2))
+    return yoy_values
+
+
 def safe_round(value: float | None, digits: int = 2) -> float | None:
     if value is None:
         return None
@@ -436,9 +528,14 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
         existing_series = series_by_key.get(series.key, {})
         try:
             parsed = parse_fred_series(series.source_id, config["startMonth"])
+            parsed = merge_latest_bls_fallback(parsed, series.source_id)
             release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
             latest_release = release_history[-1] if release_history else None
             snapshot = compute_snapshot(parsed["dates"], parsed["values"])
+            official_yoy_values = build_bls_official_yoy_values(parsed["dates"], series.source_id)
+            if official_yoy_values:
+                latest_official_yoy = next((value for value in reversed(official_yoy_values) if value is not None), None)
+                snapshot["yoyPct"] = latest_official_yoy
             payload_series = {
                 "key": series.key,
                 "label": series.label,
@@ -452,6 +549,8 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                 "latestRelease": latest_release,
                 **snapshot,
             }
+            if official_yoy_values:
+                payload_series["yoyValues"] = official_yoy_values
         except Exception as error:  # pragma: no cover - network variability
             if existing_series:
                 payload_series = {
