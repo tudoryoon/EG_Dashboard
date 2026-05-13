@@ -25,6 +25,33 @@ BLS_CPI_OFFICIAL_YOY = {
     "CPIAUCSL": "CUUR0000SA0",
     "CPILFESL": "CUUR0000SA0L1E",
 }
+BLS_DIRECT_SERIES = {"WPSFD4", "WPSFD49104"}
+MANUAL_RELEASE_OVERRIDES = {
+    "final_demand_ppi": {
+        "releaseDate": "2026-05-13",
+        "time": "18:00",
+        "reference": "PPI MoM Apr",
+        "actual": "1.4%",
+        "actualValue": 1.4,
+        "previous": "0.7%",
+        "consensus": "0.5%",
+        "surprise": "+0.90%p",
+        "surpriseValue": 0.9,
+        "unit": "percent",
+    },
+    "core_ppi": {
+        "releaseDate": "2026-05-13",
+        "time": "18:00",
+        "reference": "Core PPI MoM Apr",
+        "actual": "1.0%",
+        "actualValue": 1.0,
+        "previous": "0.2%",
+        "consensus": "0.3%",
+        "surprise": "+0.70%p",
+        "surpriseValue": 0.7,
+        "unit": "percent",
+    },
+}
 
 
 @dataclass(frozen=True)
@@ -99,8 +126,8 @@ INDICATORS: list[dict[str, Any]] = [
         "sourceUrl": "https://fred.stlouisfed.org/",
         "status": "auto",
         "series": [
-            SeriesConfig("final_demand_ppi", "Final Demand PPI", "PPIFIS", "index", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-ppi-mom/13516126", "percent"),
-            SeriesConfig("core_ppi", "Core PPI", "PPIFES", "index", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/united-states-core-producer-prices-mom/13516228", "percent"),
+            SeriesConfig("final_demand_ppi", "Final Demand PPI", "WPSFD4", "index", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-ppi-mom/13516126", "percent"),
+            SeriesConfig("core_ppi", "Core PPI", "WPSFD49104", "index", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/united-states-core-producer-prices-mom/13516228", "percent"),
         ],
     },
     {
@@ -308,6 +335,12 @@ def parse_bls_series_range(series_id: str, start_year: int, end_year: int) -> di
     }
 
 
+def parse_series_data(series_id: str, start_month: str) -> dict[str, Any]:
+    if series_id in BLS_DIRECT_SERIES:
+        return parse_bls_series_range(series_id, int(start_month[:4]), datetime.now(timezone.utc).year)
+    return parse_fred_series(series_id, start_month)
+
+
 def merge_latest_bls_fallback(parsed: dict[str, Any], source_id: str) -> dict[str, Any]:
     bls_series_id = BLS_CPI_FALLBACKS.get(source_id)
     if not bls_series_id:
@@ -498,6 +531,22 @@ def parse_moneycontrol_release_history(url: str, release_unit: str | None) -> li
     return sorted(deduped.values(), key=lambda item: item["releaseDate"])
 
 
+def apply_manual_release_override(series_key: str, release_history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    override = MANUAL_RELEASE_OVERRIDES.get(series_key)
+    if not override:
+        return release_history
+    filtered = [
+        row
+        for row in release_history
+        if not (
+            row.get("releaseDate") == override["releaseDate"]
+            and row.get("reference") == override["reference"]
+        )
+    ]
+    filtered.append(override)
+    return sorted(filtered, key=lambda item: item["releaseDate"])
+
+
 def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str, Any] | None = None) -> dict[str, Any]:
     indicator_series: list[dict[str, Any]] = []
     latest_months: list[str] = []
@@ -527,9 +576,10 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
 
         existing_series = series_by_key.get(series.key, {})
         try:
-            parsed = parse_fred_series(series.source_id, config["startMonth"])
+            parsed = parse_series_data(series.source_id, config["startMonth"])
             parsed = merge_latest_bls_fallback(parsed, series.source_id)
             release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
+            release_history = apply_manual_release_override(series.key, release_history)
             latest_release = release_history[-1] if release_history else None
             snapshot = compute_snapshot(parsed["dates"], parsed["values"])
             official_yoy_values = build_bls_official_yoy_values(parsed["dates"], series.source_id)
