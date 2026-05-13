@@ -1825,18 +1825,80 @@ function getMarketMacroRange(panelKey) {
   return state.marketMacroRanges?.[panelKey] ?? marketMacroData.defaultRange ?? "max";
 }
 
+function buildDailyDateLabels(startDate, endDate) {
+  const labels = [];
+  const cursor = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(end.getTime())) {
+    return labels;
+  }
+  while (cursor <= end) {
+    labels.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return labels;
+}
+
 function buildMarketMacroChartPayload(panel, rangeKey) {
   const seriesEntries = Object.entries(panel?.series ?? {});
-  const allDates = [...new Set(seriesEntries.flatMap(([, item]) => item.dates ?? []))].sort();
-  if (!allDates.length) {
+  const rawAllDates = [...new Set(seriesEntries.flatMap(([, item]) => item.dates ?? []))].sort();
+  if (!rawAllDates.length) {
     return { labels: [], datasets: [], mode: panel?.mode ?? "raw" };
   }
 
+  const allDates = panel?.fillMissing === "forward"
+    ? buildDailyDateLabels(rawAllDates[0], rawAllDates[rawAllDates.length - 1])
+    : rawAllDates;
   const latestDate = allDates[allDates.length - 1];
   const startDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "2017-01-01");
   const selectedLabels = allDates.filter((label) => label >= startDate);
 
   const datasets = seriesEntries.map(([key, item]) => {
+    if (panel?.fillMissing === "forward") {
+      const sourceDates = item.dates ?? [];
+      const sourceValues = item.values ?? [];
+      let sourceIndex = 0;
+      let carriedValue = null;
+      const rawData = selectedLabels.map((label) => {
+        while (sourceIndex < sourceDates.length && sourceDates[sourceIndex] <= label) {
+          const nextValue = sourceValues[sourceIndex];
+          if (Number.isFinite(nextValue)) {
+            carriedValue = nextValue;
+          }
+          sourceIndex += 1;
+        }
+        return Number.isFinite(carriedValue) ? Number(carriedValue) : null;
+      });
+      const baseValue = rawData.find((value) => Number.isFinite(value));
+      const data = rawData.map((pointValue) => {
+        if (!Number.isFinite(pointValue)) {
+          return null;
+        }
+        if (panel.mode === "normalized") {
+          if (!Number.isFinite(baseValue)) {
+            return null;
+          }
+          return Number(((pointValue / baseValue) * 100).toFixed(2));
+        }
+        return Number(pointValue);
+      });
+
+      return {
+        key,
+        label: item.name,
+        data,
+        borderColor: item.color,
+        backgroundColor: item.color,
+        borderWidth: 2.4,
+        tension: 0,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
+        spanGaps: false,
+        borderDash: item.dash ?? [],
+      };
+    }
+
     const dateIndex = new Map();
     (item.dates ?? []).forEach((date, index) => {
       dateIndex.set(date, index);

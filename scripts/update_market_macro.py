@@ -430,9 +430,10 @@ def main() -> None:
         },
         "strategic": {
             "title": "Uranium / Iron Ore / LNG",
-            "subtitle": "Actual commodity price series normalized to 100. Uranium uses monthly U3O8 spot; iron ore and JKM LNG use futures closes. Rare earth ETF proxy removed pending a licensed spot/futures source.",
+            "subtitle": "Actual commodity price series normalized to 100. Uranium uses monthly U3O8 spot and is carried forward between monthly prints; iron ore and JKM LNG use futures closes. Rare earth ETF proxy removed pending a licensed spot/futures source.",
             "source": "FRED / Yahoo Finance",
             "mode": "normalized",
+            "fillMissing": "forward",
             "yAxisLabel": "Start = 100",
             "formatter": "number1",
             "series": {
