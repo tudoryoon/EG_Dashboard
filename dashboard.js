@@ -2049,6 +2049,23 @@ function formatRevenue(company) {
   return `${meta.label}${value.toFixed(meta.decimals)}${meta.suffix}`;
 }
 
+function revenueCurrencyRatio(company) {
+  if (state.currency === "NTD") {
+    return 1;
+  }
+  const ntdValue = Number(company.currency?.NTD);
+  const selectedValue = Number(company.currency?.[state.currency]);
+  if (!Number.isFinite(ntdValue) || !Number.isFinite(selectedValue) || ntdValue === 0) {
+    return 1;
+  }
+  return selectedValue / ntdValue;
+}
+
+function convertRevenueSeries(company, values) {
+  const ratio = revenueCurrencyRatio(company);
+  return (values ?? []).map((value) => (value === null || value === undefined ? null : Number((Number(value) * ratio).toFixed(6))));
+}
+
 function formatMarketCap(company) {
   const meta = currencyMeta[state.currency];
   const value = company.marketCap?.[state.currency];
@@ -7472,7 +7489,7 @@ function createRevenueChart(canvas, company) {
     return;
   }
 
-  const axisSeries = buildSeriesForAxis(company.bars, company.month);
+  const axisSeries = buildSeriesForAxis(convertRevenueSeries(company, company.bars), company.month);
   const yoySeries = buildSeriesForAxis(company.yoyLine, company.month);
   const momSeries = buildSeriesForAxis(company.momLine, company.month);
 
@@ -7903,6 +7920,7 @@ function renderCards(list) {
     const fragment = cardTemplate.content.cloneNode(true);
     fragment.querySelector(".company-name").textContent = company.name;
     fragment.querySelector(".revenue-value").textContent = formatMarketCap(company);
+    fragment.querySelector(".latest-revenue-value").textContent = formatRevenue(company);
 
     const momNode = fragment.querySelector(".mom-value");
     momNode.textContent = formatDelta(company.mom);
@@ -7918,10 +7936,11 @@ function renderCards(list) {
 
     fragment.querySelector(".reporting-month").textContent = company.month;
     const metricCaptions = fragment.querySelectorAll(".metric-caption span");
-    if (metricCaptions.length >= 4) {
+    if (metricCaptions.length >= 5) {
       metricCaptions[1].textContent = "Market Cap";
-      metricCaptions[2].textContent = "MoM";
-      metricCaptions[3].textContent = "YoY";
+      metricCaptions[2].textContent = "Revenue";
+      metricCaptions[3].textContent = "MoM";
+      metricCaptions[4].textContent = "YoY";
     }
     fragment.querySelector(".sector-pill").textContent = company.sector;
     fragment.querySelector(".chart-panel .axis-caption").textContent = "Monthly revenue and growth trend";

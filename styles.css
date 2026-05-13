@@ -2071,6 +2071,19 @@ h1 {
   font-weight: 700;
 }
 
+.latest-revenue-value {
+  font-size: 1rem;
+  line-height: 1.1;
+  color: #5f5f59;
+  font-weight: 700;
+}
+
+.latest-revenue-value::before {
+  content: "Rev ";
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .delta {
   font-size: 1.05rem;
   font-weight: 700;
