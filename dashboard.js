@@ -219,6 +219,12 @@ const state = {
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
   ),
+  marketMacroSelections: Object.fromEntries(
+    Object.entries(marketMacroData?.panels ?? {}).map(([panelKey, panel]) => [
+      panelKey,
+      Object.keys(panel?.series ?? {}),
+    ]),
+  ),
   totalDashboardRange: "3y",
   totalDashboardSelection: [
     "market:sp500",
@@ -1076,6 +1082,8 @@ function formatMacroValue(value, formatterKey) {
   switch (formatterKey) {
     case "percent2":
       return `${Number(value).toFixed(2)}%`;
+    case "dollar2":
+      return `$${Number(value).toFixed(2)}`;
     case "dollar1":
       return `$${Number(value).toFixed(1)}`;
     case "number1":
@@ -1825,6 +1833,14 @@ function getMarketMacroRange(panelKey) {
   return state.marketMacroRanges?.[panelKey] ?? marketMacroData.defaultRange ?? "max";
 }
 
+function getMarketMacroSelection(panelKey) {
+  const selected = state.marketMacroSelections?.[panelKey];
+  if (Array.isArray(selected) && selected.length) {
+    return selected;
+  }
+  return Object.keys(getMarketMacroPanel(panelKey)?.series ?? {});
+}
+
 function buildDailyDateLabels(startDate, endDate) {
   const labels = [];
   const cursor = new Date(`${startDate}T00:00:00Z`);
@@ -1839,8 +1855,9 @@ function buildDailyDateLabels(startDate, endDate) {
   return labels;
 }
 
-function buildMarketMacroChartPayload(panel, rangeKey) {
-  const seriesEntries = Object.entries(panel?.series ?? {});
+function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null) {
+  const selectedSet = selectedKeys?.length ? new Set(selectedKeys) : null;
+  const seriesEntries = Object.entries(panel?.series ?? {}).filter(([key]) => !selectedSet || selectedSet.has(key));
   const rawAllDates = [...new Set(seriesEntries.flatMap(([, item]) => item.dates ?? []))].sort();
   if (!rawAllDates.length) {
     return { labels: [], datasets: [], mode: panel?.mode ?? "raw" };
@@ -1954,7 +1971,7 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
     return;
   }
 
-  const payload = buildMarketMacroChartPayload(panel, rangeKey);
+  const payload = buildMarketMacroChartPayload(panel, rangeKey, getMarketMacroSelection(panelKey));
   const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
@@ -6870,7 +6887,7 @@ function renderMarketFxCommoditiesOverview() {
   const macroPanels = [
     { key: "dxy", canvas: "dxy", className: "" },
     { key: "energy", canvas: "energy", className: "" },
-    { key: "natural_gas", canvas: "natural-gas", className: "" },
+    { key: "natural_gas", canvas: "natural_gas", className: "" },
     { key: "metals", canvas: "metals", className: "" },
     { key: "strategic", canvas: "strategic", className: "macro-panel-wide" },
     { key: "food", canvas: "food", className: "macro-panel-wide" },
@@ -6880,6 +6897,21 @@ function renderMarketFxCommoditiesOverview() {
       if (!panel) {
         return "";
       }
+      const selectedSeries = new Set(getMarketMacroSelection(key));
+      const seriesChips = Object.entries(panel.series ?? {})
+        .map(
+          ([seriesKey, item]) => `
+            <button
+              type="button"
+              class="m7-range-chip macro-dashboard-chip${selectedSeries.has(seriesKey) ? " active" : ""}"
+              data-market-macro-series="${seriesKey}"
+              data-market-macro-panel="${key}"
+            >
+              <i class="macro-series-dot" style="background:${item.color}"></i>
+              ${item.name}
+            </button>`,
+        )
+        .join("");
       return `
         <article class="cloud-panel macro-panel ${className}">
           <div class="us-panel-head">
@@ -6906,6 +6938,9 @@ function renderMarketFxCommoditiesOverview() {
           <div class="macro-panel-meta">
             <span>${panel.source ?? ""}</span>
             <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
+          </div>
+          <div class="market-macro-series-row">
+            ${seriesChips}
           </div>
           <div class="macro-chart-wrap">
             <canvas data-market-macro="${canvas}"></canvas>
@@ -6944,6 +6979,30 @@ function renderMarketFxCommoditiesOverview() {
       state.marketMacroRanges = {
         ...state.marketMacroRanges,
         [panelKey]: rangeKey,
+      };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroPanel;
+      const seriesKey = button.dataset.marketMacroSeries;
+      if (!panelKey || !seriesKey) {
+        return;
+      }
+      const selected = new Set(getMarketMacroSelection(panelKey));
+      if (selected.has(seriesKey)) {
+        if (selected.size <= 1) {
+          return;
+        }
+        selected.delete(seriesKey);
+      } else {
+        selected.add(seriesKey);
+      }
+      state.marketMacroSelections = {
+        ...state.marketMacroSelections,
+        [panelKey]: [...selected],
       };
       render();
     });
