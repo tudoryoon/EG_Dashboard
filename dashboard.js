@@ -246,6 +246,8 @@ const state = {
   macroSeriesKey: "",
   macroHistoryMode: "common",
   macroDashboardRange: "5y",
+  macroDashboardCustomStart: "",
+  macroDashboardCustomEnd: "",
   macroDashboardSelection: [
     "policy:fed_funds",
     "market:sp500",
@@ -345,6 +347,17 @@ function formatMonthLabel(monthText) {
     return monthText;
   }
   return `${year.slice(2)}/${month}`;
+}
+
+function toDateKey(dateText) {
+  if (!dateText) {
+    return "";
+  }
+  return dateText.length === 7 ? `${dateText}-01` : dateText;
+}
+
+function toDateInputValue(dateText) {
+  return toDateKey(dateText);
 }
 
 function formatRangeAxisDate(dateText, rangeKey) {
@@ -2773,16 +2786,28 @@ function getMacroDashboardItems() {
   return maybeItems.filter(Boolean);
 }
 
+function getMacroDashboardBounds() {
+  const selectedKeys = new Set(state.macroDashboardSelection ?? []);
+  const items = getMacroDashboardItems().filter((item) => selectedKeys.has(item.key));
+  const allDates = [...new Set(items.flatMap((item) => item.dates))].sort((a, b) => toDateKey(a).localeCompare(toDateKey(b)));
+  return {
+    min: toDateInputValue(allDates[0] ?? ""),
+    max: toDateInputValue(allDates[allDates.length - 1] ?? ""),
+  };
+}
+
 function buildMacroDashboardChartPayload(rangeKey) {
   const selectedKeys = new Set(state.macroDashboardSelection ?? []);
   const items = getMacroDashboardItems().filter((item) => selectedKeys.has(item.key));
-  const allDates = [...new Set(items.flatMap((item) => item.dates))].sort();
+  const allDates = [...new Set(items.flatMap((item) => item.dates))].sort((a, b) => toDateKey(a).localeCompare(toDateKey(b)));
   if (!allDates.length) {
     return { labels: [], datasets: [] };
   }
-  const latestDate = allDates[allDates.length - 1];
+  const latestDate = toDateKey(allDates[allDates.length - 1]);
   const startDate = shiftDateByRange(latestDate, rangeKey, "2003-01-01");
-  const labels = allDates.filter((date) => date >= startDate);
+  const customStart = state.macroDashboardCustomStart || startDate;
+  const customEnd = state.macroDashboardCustomEnd || latestDate;
+  const labels = allDates.filter((date) => toDateKey(date) >= toDateKey(customStart) && toDateKey(date) <= toDateKey(customEnd));
   const datasets = items.map((item) => {
     const dateIndex = new Map();
     item.dates.forEach((date, index) => dateIndex.set(date, index));
@@ -6492,6 +6517,9 @@ function renderMarketMacroOverview() {
       `;
   const macroDashboardItems = getMacroDashboardItems();
   const macroDashboardRangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
+  const macroDashboardBounds = getMacroDashboardBounds();
+  const macroDashboardStartValue = state.macroDashboardCustomStart || "";
+  const macroDashboardEndValue = state.macroDashboardCustomEnd || "";
   const macroDashboardRangeMarkup = macroDashboardRangeSource
     .map(
       (range) => `
@@ -6533,6 +6561,32 @@ function renderMarketMacroOverview() {
           <span>실질금리 = US 5Y - 5Y 기대 인플레이션(T5YIE)</span>
           <span>좌측축: 주식/원자재 Start=100</span>
           <span>우측축: 금리/인플레/고용률 %</span>
+        </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-macro-dashboard-start
+              min="${macroDashboardBounds.min}"
+              max="${macroDashboardBounds.max}"
+              value="${macroDashboardStartValue}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-macro-dashboard-end
+              min="${macroDashboardBounds.min}"
+              max="${macroDashboardBounds.max}"
+              value="${macroDashboardEndValue}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-macro-dashboard-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-macro-dashboard-reset>Reset</button>
+          </div>
         </div>
         <div class="total-series-row total-series-row-left macro-dashboard-series-row">${macroDashboardSelectorMarkup}</div>
         <div class="macro-dashboard-chart-wrap">
@@ -6645,6 +6699,8 @@ function renderMarketMacroOverview() {
   usOverviewRoot.querySelectorAll("[data-macro-dashboard-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.macroDashboardRange = button.dataset.macroDashboardRange || "5y";
+      state.macroDashboardCustomStart = "";
+      state.macroDashboardCustomEnd = "";
       render();
     });
   });
@@ -6665,6 +6721,32 @@ function renderMarketMacroOverview() {
       render();
     });
   });
+
+  const macroDashboardStartInput = usOverviewRoot.querySelector("[data-macro-dashboard-start]");
+  const macroDashboardEndInput = usOverviewRoot.querySelector("[data-macro-dashboard-end]");
+  const macroDashboardApplyButton = usOverviewRoot.querySelector("[data-macro-dashboard-apply]");
+  const macroDashboardResetButton = usOverviewRoot.querySelector("[data-macro-dashboard-reset]");
+
+  if (macroDashboardApplyButton && macroDashboardStartInput && macroDashboardEndInput) {
+    macroDashboardApplyButton.addEventListener("click", () => {
+      const startValue = macroDashboardStartInput.value || "";
+      const endValue = macroDashboardEndInput.value || "";
+      if (startValue && endValue && startValue > endValue) {
+        return;
+      }
+      state.macroDashboardCustomStart = startValue;
+      state.macroDashboardCustomEnd = endValue;
+      render();
+    });
+  }
+
+  if (macroDashboardResetButton) {
+    macroDashboardResetButton.addEventListener("click", () => {
+      state.macroDashboardCustomStart = "";
+      state.macroDashboardCustomEnd = "";
+      render();
+    });
+  }
 
   const macroDashboardCanvas = usOverviewRoot.querySelector("[data-macro-dashboard-chart]");
   if (macroDashboardCanvas) {
