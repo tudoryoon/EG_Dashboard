@@ -174,12 +174,16 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:dxy:dxy": "#7c3aed",
   "macro:energy:wti": "#16a34a",
   "macro:energy:brent": "#65a30d",
+  "macro:energy:dubai": "#f97316",
+  "macro:natural_gas:henry_hub": "#0f766e",
+  "macro:natural_gas:lng_jkm": "#2563eb",
   "macro:metals:gold": "#d4a017",
   "macro:metals:silver": "#94a3b8",
   "macro:metals:copper": "#b45309",
   "macro:strategic:uranium": "#16a34a",
   "macro:strategic:iron_ore": "#b45309",
-  "macro:strategic:lng_jkm": "#2563eb",
+  "macro:strategic:nickel": "#64748b",
+  "macro:strategic:zinc": "#0ea5e9",
 };
 const MARKET_PRICE_EMA_OPTIONS = [10, 20, 60, 120, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
@@ -6929,9 +6933,7 @@ function renderMarketFxCommoditiesOverview() {
             </button>`,
         )
         .join("");
-      const customDateMarkup =
-        key === "fx_dashboard"
-          ? `
+      const customDateMarkup = `
             <div class="total-date-row market-macro-date-row">
               <label class="total-date-field">
                 Start
@@ -6946,8 +6948,7 @@ function renderMarketFxCommoditiesOverview() {
                 <button type="button" class="total-date-button total-date-button-secondary" data-market-macro-custom-reset="${key}">Reset</button>
               </div>
             </div>
-          `
-          : "";
+          `;
       return `
         <article class="cloud-panel macro-panel ${className}">
           <div class="us-panel-head">

@@ -221,10 +221,15 @@ def parse_world_bank_monthly_prices() -> dict[str, tuple[list[str], list[float]]
     worksheet = workbook["Monthly Prices"]
     code_row = next(worksheet.iter_rows(min_row=7, max_row=7, values_only=True))
     target_columns = {
+        "brent": "CRUDE_BRENT",
+        "dubai": "CRUDE_DUBAI",
         "wti": "CRUDE_WTI",
         "gold": "GOLD",
         "silver": "SILVER",
         "copper": "COPPER",
+        "iron_ore": "IRON_ORE",
+        "nickel": "NICKEL",
+        "zinc": "Zinc",
     }
     column_index = {
         key: code_row.index(code)
@@ -354,12 +359,15 @@ def main() -> None:
     long_commodity_series = parse_world_bank_monthly_prices()
     wti_dates, wti_values = parse_yahoo_series("CL=F")
     brent_dates, brent_values = parse_yahoo_series("BZ=F")
+    dubai_dates, dubai_values = long_commodity_series["dubai"]
     henry_hub_dates, henry_hub_values = parse_fred_series("DHHNGSP")
     gold_dates, gold_values = parse_yahoo_series("GC=F")
     silver_dates, silver_values = parse_yahoo_series("SI=F")
     copper_dates, copper_values = parse_yahoo_series("HG=F")
     uranium_dates, uranium_values = parse_fred_series("PURANUSDM")
     iron_ore_dates, iron_ore_values = parse_yahoo_series("TIO=F")
+    nickel_dates, nickel_values = long_commodity_series["nickel"]
+    zinc_dates, zinc_values = long_commodity_series["zinc"]
     lng_jkm_dates, lng_jkm_values = parse_yahoo_series("JKM=F")
     corn_dates, corn_values = parse_yahoo_series("ZC=F")
     soybeans_dates, soybeans_values = parse_yahoo_series("ZS=F")
@@ -424,26 +432,29 @@ def main() -> None:
             },
         },
         "energy": {
-            "title": "WTI & Brent",
-            "subtitle": "Daily front-month futures closes.",
-            "source": "Yahoo Finance",
+            "title": "Crude Oil",
+            "subtitle": "WTI and Brent use daily front-month futures closes. Dubai uses World Bank Pink Sheet monthly spot and is carried forward between monthly prints.",
+            "source": "Yahoo Finance / World Bank Pink Sheet",
             "mode": "raw",
+            "fillMissing": "forward",
             "yAxisLabel": "$ / bbl",
             "formatter": "dollar1",
             "series": {
                 "wti": build_series_item("WTI", "#7c3aed", wti_dates, wti_values),
                 "brent": build_series_item("Brent", "#2563eb", brent_dates, brent_values),
+                "dubai": build_series_item("Dubai", "#f97316", dubai_dates, dubai_values),
             },
         },
         "natural_gas": {
-            "title": "Henry Hub 천연가스",
-            "subtitle": "미국 Henry Hub 천연가스 spot 가격입니다. 단위는 달러/MMBtu이며 EIA 데이터를 FRED 경유로 가져옵니다.",
-            "source": "FRED / EIA",
+            "title": "Natural Gas / LNG",
+            "subtitle": "Henry Hub spot from FRED/EIA and JKM LNG futures close from Yahoo Finance.",
+            "source": "FRED / EIA / Yahoo Finance",
             "mode": "raw",
             "yAxisLabel": "$ / MMBtu",
             "formatter": "dollar2",
             "series": {
                 "henry_hub": build_series_item("Henry Hub", "#0f766e", henry_hub_dates, henry_hub_values),
+                "lng_jkm": build_series_item("JKM LNG", "#2563eb", lng_jkm_dates, lng_jkm_values),
             },
         },
         "metals": {
@@ -460,9 +471,9 @@ def main() -> None:
             },
         },
         "strategic": {
-            "title": "Uranium / Iron Ore / LNG",
-            "subtitle": "Actual commodity price series normalized to 100. Uranium uses monthly U3O8 spot and is carried forward between monthly prints; iron ore and JKM LNG use futures closes. Rare earth ETF proxy removed pending a licensed spot/futures source.",
-            "source": "FRED / Yahoo Finance",
+            "title": "Strategic Metals",
+            "subtitle": "Actual commodity price series normalized to 100. Uranium, nickel, and zinc use public monthly spot/reference series and are carried forward between monthly prints; iron ore uses futures closes. Lithium and tungsten are held out until a stable public spot/futures source is confirmed.",
+            "source": "FRED / Yahoo Finance / World Bank Pink Sheet",
             "mode": "normalized",
             "fillMissing": "forward",
             "yAxisLabel": "Start = 100",
@@ -470,7 +481,8 @@ def main() -> None:
             "series": {
                 "uranium": build_series_item("Uranium U3O8 spot", "#16a34a", uranium_dates, uranium_values),
                 "iron_ore": build_series_item("Iron ore 62% Fe (TIO)", "#b45309", iron_ore_dates, iron_ore_values),
-                "lng_jkm": build_series_item("JKM LNG (JKM)", "#2563eb", lng_jkm_dates, lng_jkm_values),
+                "nickel": build_series_item("Nickel", "#64748b", nickel_dates, nickel_values),
+                "zinc": build_series_item("Zinc", "#0ea5e9", zinc_dates, zinc_values),
             },
         },
         "food": {
@@ -506,9 +518,14 @@ def main() -> None:
             "source": "World Bank Pink Sheet monthly prices",
             "series": {
                 "wti": build_series_item("WTI", "#16a34a", *long_commodity_series["wti"]),
+                "brent": build_series_item("Brent", "#2563eb", *long_commodity_series["brent"]),
+                "dubai": build_series_item("Dubai", "#f97316", *long_commodity_series["dubai"]),
                 "gold": build_series_item("Gold", "#d97706", *long_commodity_series["gold"]),
                 "silver": build_series_item("Silver", "#6b7280", *long_commodity_series["silver"]),
                 "copper": build_series_item("Copper", "#b45309", *long_commodity_series["copper"]),
+                "iron_ore": build_series_item("Iron Ore", "#b45309", *long_commodity_series["iron_ore"]),
+                "nickel": build_series_item("Nickel", "#64748b", *long_commodity_series["nickel"]),
+                "zinc": build_series_item("Zinc", "#0ea5e9", *long_commodity_series["zinc"]),
             },
         },
         "panels": panels,
