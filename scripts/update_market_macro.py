@@ -26,6 +26,7 @@ RANGES = [
 
 US_TREASURY_SERIES = {
     "us2y": ("US 2Y", "#111827"),
+    "us5y": ("US 5Y", "#0f766e"),
     "us10y": ("US 10Y", "#2563eb"),
     "us30y": ("US 30Y", "#dc2626"),
 }
@@ -74,7 +75,7 @@ def yahoo_chart_url(symbol: str) -> str:
 
 
 def parse_us_treasury_yields() -> dict[str, tuple[list[str], list[float]]]:
-    series = {key: ([], []) for key in ("us2y", "us10y", "us30y")}
+    series = {key: ([], []) for key in ("us2y", "us5y", "us10y", "us30y")}
     ns = {
         "atom": "http://www.w3.org/2005/Atom",
         "d": "http://schemas.microsoft.com/ado/2007/08/dataservices",
@@ -98,7 +99,12 @@ def parse_us_treasury_yields() -> dict[str, tuple[list[str], list[float]]]:
             date_key = raw_date.split("T", 1)[0]
             if date_key < START_DATE:
                 continue
-            for key, field_name in {"us2y": "BC_2YEAR", "us10y": "BC_10YEAR", "us30y": "BC_30YEAR"}.items():
+            for key, field_name in {
+                "us2y": "BC_2YEAR",
+                "us5y": "BC_5YEAR",
+                "us10y": "BC_10YEAR",
+                "us30y": "BC_30YEAR",
+            }.items():
                 raw_value = properties.findtext(f"d:{field_name}", default="", namespaces=ns).strip()
                 if raw_value in {"", "N/A"}:
                     continue
@@ -259,12 +265,14 @@ def main() -> None:
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
     fed_funds_dates, fed_funds_values = parse_fred_series("DFF")
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
-    real_10y_dates, real_10y_values = build_spread_series(
-        us_series["us10y"][0],
-        us_series["us10y"][1],
+    real_5y_dates, real_5y_values = build_spread_series(
+        us_series["us5y"][0],
+        us_series["us5y"][1],
         inflation_5y_dates,
         inflation_5y_values,
     )
+    if not real_5y_dates:
+        real_5y_dates, real_5y_values = parse_fred_series("DFII5")
 
     dxy_dates, dxy_values = parse_yahoo_series("DX-Y.NYB")
     wti_dates, wti_values = parse_yahoo_series("CL=F")
@@ -279,7 +287,7 @@ def main() -> None:
     panels = {
         "policy": {
             "title": "Policy Rate / Real Rate",
-            "subtitle": "Effective Fed Funds Rate, 5Y breakeven inflation, and US 10Y minus 5Y breakeven inflation.",
+            "subtitle": "Effective Fed Funds Rate, 5Y breakeven inflation, and US 5Y minus 5Y breakeven inflation.",
             "source": "FRED / US Treasury",
             "mode": "raw",
             "yAxisLabel": "%",
@@ -287,7 +295,7 @@ def main() -> None:
             "series": {
                 "fed_funds": build_series_item("Fed Funds Rate", "#111827", fed_funds_dates, fed_funds_values),
                 "inflation_5y": build_series_item("5Y Inflation Expectation", "#f97316", inflation_5y_dates, inflation_5y_values),
-                "real_10y": build_series_item("Real 10Y (10Y - 5Y Inflation Exp.)", "#dc2626", real_10y_dates, real_10y_values),
+                "real_5y": build_series_item("Real 5Y (5Y - 5Y Inflation Exp.)", "#dc2626", real_5y_dates, real_5y_values),
             },
         },
         "rates": {

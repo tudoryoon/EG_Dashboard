@@ -81,8 +81,8 @@ const bigTechSubtabMeta = {
 
 const marketSubtabMeta = {
   Overview: { label: "Price" },
-  FxCommodities: { label: "FX & Commodities" },
   Macro: { label: "Macro" },
+  FxCommodities: { label: "FX & Commodities" },
   VIX: { label: "VIX" },
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
@@ -163,8 +163,9 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "market:smh": "#dc2626",
   "macro:policy:fed_funds": "#111827",
   "macro:policy:inflation_5y": "#f97316",
-  "macro:policy:real_10y": "#dc2626",
+  "macro:policy:real_5y": "#dc2626",
   "macro:rates:us2y": "#0f766e",
+  "macro:rates:us5y": "#22c55e",
   "macro:rates:us10y": "#14b8a6",
   "macro:rates:us30y": "#06b6d4",
   "macro:rates:jp2y": "#f59e0b",
@@ -2645,6 +2646,16 @@ function getMacroDashboardItems() {
   const energySeries = marketMacroData?.panels?.energy?.series ?? {};
 
   const maybeItems = [
+    marketItems.sp500 && {
+      key: "market:sp500",
+      label: "S&P 500",
+      dates: marketItems.sp500.dates ?? [],
+      values: marketItems.sp500.values ?? [],
+      color: "#111827",
+      axis: "index",
+      formatter: "number1",
+      normalize: true,
+    },
     policySeries.fed_funds && {
       key: "policy:fed_funds",
       label: "Fed Funds",
@@ -2661,6 +2672,16 @@ function getMacroDashboardItems() {
       dates: rateSeries.us2y.dates ?? [],
       values: rateSeries.us2y.values ?? [],
       color: "#0f766e",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+    },
+    rateSeries.us5y && {
+      key: "rates:us5y",
+      label: "US 5Y",
+      dates: rateSeries.us5y.dates ?? [],
+      values: rateSeries.us5y.values ?? [],
+      color: "#22c55e",
       axis: "percent",
       formatter: "percent2",
       normalize: false,
@@ -2685,26 +2706,16 @@ function getMacroDashboardItems() {
       formatter: "percent2",
       normalize: false,
     },
-    policySeries.real_10y && {
-      key: "policy:real_10y",
-      label: "Real 10Y",
-      dates: policySeries.real_10y.dates ?? [],
-      values: policySeries.real_10y.values ?? [],
+    policySeries.real_5y && {
+      key: "policy:real_5y",
+      label: "Real 5Y",
+      dates: policySeries.real_5y.dates ?? [],
+      values: policySeries.real_5y.values ?? [],
       color: "#dc2626",
       axis: "percent",
       formatter: "percent2",
       normalize: false,
       dash: [6, 4],
-    },
-    marketItems.sp500 && {
-      key: "market:sp500",
-      label: "S&P 500",
-      dates: marketItems.sp500.dates ?? [],
-      values: marketItems.sp500.values ?? [],
-      color: "#111827",
-      axis: "index",
-      formatter: "number1",
-      normalize: true,
     },
     energySeries.wti && {
       key: "commodity:wti",
@@ -6519,7 +6530,7 @@ function renderMarketMacroOverview() {
           <div class="m7-range-row">${macroDashboardRangeMarkup}</div>
         </div>
         <div class="macro-dashboard-note">
-          <span>실질금리 = US 10Y - 5Y 기대 인플레이션(T5YIE)</span>
+          <span>실질금리 = US 5Y - 5Y 기대 인플레이션(T5YIE)</span>
           <span>좌측축: 주식/원자재 Start=100</span>
           <span>우측축: 금리/인플레/고용률 %</span>
         </div>
