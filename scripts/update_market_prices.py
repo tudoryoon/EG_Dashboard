@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-START_DATE = "1980-01-01"
+START_DATE = "1965-01-01"
 SYMBOLS = [
     {"key": "sp500", "symbol": "^GSPC", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
     {"key": "nasdaq100", "symbol": "^NDX", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
@@ -46,7 +46,7 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
     for timestamp, close in zip(timestamps, closes):
         if close is None:
             continue
-        dates.append(datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%d"))
+        dates.append((datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=timestamp)).strftime("%Y-%m-%d"))
         values.append(round(float(close), 4))
 
     filtered = [(day, value) for day, value in zip(dates, values) if day >= START_DATE]

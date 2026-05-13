@@ -4,14 +4,14 @@ import csv
 import html
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree as ET
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
-START_DATE = "1997-01-01"
+START_DATE = "1965-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 RANGES = [
@@ -184,7 +184,7 @@ def parse_yahoo_series(symbol: str) -> tuple[list[str], list[float]]:
     for timestamp, close in zip(timestamps, closes):
         if close is None:
             continue
-        date_key = datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%d")
+        date_key = (datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=timestamp)).strftime("%Y-%m-%d")
         if date_key < START_DATE:
             continue
         dates.append(date_key)
