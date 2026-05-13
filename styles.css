@@ -1437,6 +1437,10 @@ h1 {
   margin-top: 12px;
 }
 
+.market-macro-date-row {
+  margin-top: 12px;
+}
+
 .macro-dashboard-chip {
   gap: 7px;
 }

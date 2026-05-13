@@ -219,6 +219,7 @@ const state = {
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
   ),
+  marketMacroCustomRanges: {},
   marketMacroSelections: Object.fromEntries(
     Object.entries(marketMacroData?.panels ?? {}).map(([panelKey, panel]) => [
       panelKey,
@@ -1841,6 +1842,10 @@ function getMarketMacroSelection(panelKey) {
   return Object.keys(getMarketMacroPanel(panelKey)?.series ?? {});
 }
 
+function getMarketMacroCustomRange(panelKey) {
+  return state.marketMacroCustomRanges?.[panelKey] ?? { start: "", end: "" };
+}
+
 function buildDailyDateLabels(startDate, endDate) {
   const labels = [];
   const cursor = new Date(`${startDate}T00:00:00Z`);
@@ -1855,7 +1860,7 @@ function buildDailyDateLabels(startDate, endDate) {
   return labels;
 }
 
-function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null) {
+function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null, customRange = null) {
   const selectedSet = selectedKeys?.length ? new Set(selectedKeys) : null;
   const seriesEntries = Object.entries(panel?.series ?? {}).filter(([key]) => !selectedSet || selectedSet.has(key));
   const rawAllDates = [...new Set(seriesEntries.flatMap(([, item]) => item.dates ?? []))].sort();
@@ -1867,8 +1872,10 @@ function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null) {
     ? buildDailyDateLabels(rawAllDates[0], rawAllDates[rawAllDates.length - 1])
     : rawAllDates;
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "2017-01-01");
-  const selectedLabels = allDates.filter((label) => label >= startDate);
+  const customStart = customRange?.start || "";
+  const customEnd = customRange?.end || "";
+  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "2017-01-01");
+  const selectedLabels = allDates.filter((label) => label >= startDate && (!customEnd || label <= customEnd));
 
   const datasets = seriesEntries.map(([key, item]) => {
     if (panel?.fillMissing === "forward") {
@@ -1971,7 +1978,12 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
     return;
   }
 
-  const payload = buildMarketMacroChartPayload(panel, rangeKey, getMarketMacroSelection(panelKey));
+  const payload = buildMarketMacroChartPayload(
+    panel,
+    rangeKey,
+    getMarketMacroSelection(panelKey),
+    getMarketMacroCustomRange(panelKey),
+  );
   const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
@@ -6889,7 +6901,7 @@ function renderMarketFxCommoditiesOverview() {
   const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
   const marketUpdatedAt = marketMacroData.updatedAt || marketPriceData.updatedAt || "-";
   const macroPanels = [
-    { key: "dxy", canvas: "dxy", className: "" },
+    { key: "fx_dashboard", canvas: "fx_dashboard", className: "macro-panel-wide" },
     { key: "energy", canvas: "energy", className: "" },
     { key: "natural_gas", canvas: "natural_gas", className: "" },
     { key: "metals", canvas: "metals", className: "" },
@@ -6902,6 +6914,7 @@ function renderMarketFxCommoditiesOverview() {
         return "";
       }
       const selectedSeries = new Set(getMarketMacroSelection(key));
+      const customRange = getMarketMacroCustomRange(key);
       const seriesChips = Object.entries(panel.series ?? {})
         .map(
           ([seriesKey, item]) => `
@@ -6916,6 +6929,25 @@ function renderMarketFxCommoditiesOverview() {
             </button>`,
         )
         .join("");
+      const customDateMarkup =
+        key === "fx_dashboard"
+          ? `
+            <div class="total-date-row market-macro-date-row">
+              <label class="total-date-field">
+                Start
+                <input type="date" value="${customRange.start || ""}" data-market-macro-custom-start="${key}">
+              </label>
+              <label class="total-date-field">
+                End
+                <input type="date" value="${customRange.end || ""}" data-market-macro-custom-end="${key}">
+              </label>
+              <div class="total-date-actions">
+                <button type="button" class="total-date-button" data-market-macro-custom-apply="${key}">Apply</button>
+                <button type="button" class="total-date-button total-date-button-secondary" data-market-macro-custom-reset="${key}">Reset</button>
+              </div>
+            </div>
+          `
+          : "";
       return `
         <article class="cloud-panel macro-panel ${className}">
           <div class="us-panel-head">
@@ -6946,6 +6978,7 @@ function renderMarketFxCommoditiesOverview() {
           <div class="market-macro-series-row">
             ${seriesChips}
           </div>
+          ${customDateMarkup}
           <div class="macro-chart-wrap">
             <canvas data-market-macro="${canvas}"></canvas>
           </div>
@@ -6984,6 +7017,45 @@ function renderMarketFxCommoditiesOverview() {
         ...state.marketMacroRanges,
         [panelKey]: rangeKey,
       };
+      state.marketMacroCustomRanges = {
+        ...state.marketMacroCustomRanges,
+        [panelKey]: { start: "", end: "" },
+      };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-custom-apply]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroCustomApply;
+      if (!panelKey) {
+        return;
+      }
+      const startInput = usOverviewRoot.querySelector(`[data-market-macro-custom-start="${panelKey}"]`);
+      const endInput = usOverviewRoot.querySelector(`[data-market-macro-custom-end="${panelKey}"]`);
+      const start = startInput?.value || "";
+      const end = endInput?.value || "";
+      if (start && end && start > end) {
+        return;
+      }
+      state.marketMacroCustomRanges = {
+        ...state.marketMacroCustomRanges,
+        [panelKey]: { start, end },
+      };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-custom-reset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroCustomReset;
+      if (!panelKey) {
+        return;
+      }
+      state.marketMacroCustomRanges = {
+        ...state.marketMacroCustomRanges,
+        [panelKey]: { start: "", end: "" },
+      };
       render();
     });
   });
@@ -7012,7 +7084,7 @@ function renderMarketFxCommoditiesOverview() {
     });
   });
 
-  ["dxy", "energy", "natural_gas", "metals", "strategic", "food"].forEach((panelKey) => {
+  ["fx_dashboard", "energy", "natural_gas", "metals", "strategic", "food"].forEach((panelKey) => {
     const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
     if (canvas) {
       createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));

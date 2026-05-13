@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 
 START_DATE = "1965-01-01"
+FX_START_DATE = "1971-01-01"
 FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
@@ -56,8 +57,14 @@ YAHOO_SERIES = {
 
 def fetch_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(request, timeout=60) as response:  # nosec B310 - fixed public endpoints
-        return response.read().decode("utf-8-sig")
+    last_error: Exception | None = None
+    for _ in range(3):
+        try:
+            with urlopen(request, timeout=60) as response:  # nosec B310 - fixed public endpoints
+                return response.read().decode("utf-8-sig")
+        except Exception as error:  # pragma: no cover - network variability
+            last_error = error
+    raise RuntimeError(f"Failed to fetch {url}") from last_error
 
 
 def fetch_json(url: str) -> dict:
@@ -68,10 +75,10 @@ def fred_csv_url(series_id: str) -> str:
     return f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
 
 
-def fred_csv_urls(series_id: str) -> list[str]:
+def fred_csv_urls(series_id: str, start_date: str = START_DATE) -> list[str]:
     return [
         f"{FRED_GATEWAY_BASE}{series_id}",
-        f"{FRED_GRAPH_BASE}{series_id}&cosd={START_DATE}",
+        f"{FRED_GRAPH_BASE}{series_id}&cosd={start_date}",
     ]
 
 
@@ -245,9 +252,9 @@ def parse_world_bank_monthly_prices() -> dict[str, tuple[list[str], list[float]]
     return series
 
 
-def parse_fred_series(series_id: str) -> tuple[list[str], list[float]]:
+def parse_fred_series(series_id: str, start_date: str = START_DATE) -> tuple[list[str], list[float]]:
     last_error: Exception | None = None
-    for url in fred_csv_urls(series_id):
+    for url in fred_csv_urls(series_id, start_date):
         try:
             reader = csv.DictReader(fetch_text(url).splitlines())
             dates: list[str] = []
@@ -262,7 +269,7 @@ def parse_fred_series(series_id: str) -> tuple[list[str], list[float]]:
                     date_key = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
                 else:
                     date_key = raw_date[:10]
-                if date_key < START_DATE:
+                if date_key < start_date:
                     continue
                 dates.append(date_key)
                 values.append(round(float(raw_value), 4))
@@ -337,6 +344,13 @@ def main() -> None:
         real_5y_dates, real_5y_values = parse_fred_series("DFII5")
 
     dxy_dates, dxy_values = parse_yahoo_series("DX-Y.NYB")
+    dxy_dates, dxy_values = filter_series_start(dxy_dates, dxy_values, FX_START_DATE)
+    jpy_usd_dates, jpy_usd_values = parse_fred_series("DEXJPUS", FX_START_DATE)
+    krw_usd_dates, krw_usd_values = parse_fred_series("DEXKOUS", FX_START_DATE)
+    chf_usd_dates, chf_usd_values = parse_fred_series("DEXSZUS", FX_START_DATE)
+    cny_usd_dates, cny_usd_values = parse_fred_series("DEXCHUS", FX_START_DATE)
+    gbp_usd_dates, gbp_usd_values = parse_fred_series("DEXUSUK", FX_START_DATE)
+    eur_usd_dates, eur_usd_values = parse_fred_series("DEXUSEU", FX_START_DATE)
     long_commodity_series = parse_world_bank_monthly_prices()
     wti_dates, wti_values = parse_yahoo_series("CL=F")
     brent_dates, brent_values = parse_yahoo_series("BZ=F")
@@ -390,6 +404,23 @@ def main() -> None:
             "formatter": "number1",
             "series": {
                 "dxy": build_series_item("Dollar Index", "#111827", dxy_dates, dxy_values),
+            },
+        },
+        "fx_dashboard": {
+            "title": "FX Dashboard",
+            "subtitle": "Dollar Index plus major USD exchange-rate series from 1971-01-01 where available. Each line is normalized to 100 at the selected start date.",
+            "source": "FRED / Yahoo Finance",
+            "mode": "normalized",
+            "yAxisLabel": "Start = 100",
+            "formatter": "number1",
+            "series": {
+                "dxy": build_series_item("Dollar Index", "#111827", dxy_dates, dxy_values),
+                "jpy_usd": build_series_item("JPY/USD", "#dc2626", jpy_usd_dates, jpy_usd_values),
+                "krw_usd": build_series_item("KRW/USD", "#2563eb", krw_usd_dates, krw_usd_values),
+                "chf_usd": build_series_item("CHF/USD", "#16a34a", chf_usd_dates, chf_usd_values),
+                "cny_usd": build_series_item("CNY/USD", "#f97316", cny_usd_dates, cny_usd_values),
+                "gbp_usd": build_series_item("GBP/USD", "#7c3aed", gbp_usd_dates, gbp_usd_values),
+                "eur_usd": build_series_item("EURO/USD", "#0f766e", eur_usd_dates, eur_usd_values),
             },
         },
         "energy": {
