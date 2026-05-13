@@ -340,6 +340,7 @@ def main() -> None:
     long_commodity_series = parse_world_bank_monthly_prices()
     wti_dates, wti_values = parse_yahoo_series("CL=F")
     brent_dates, brent_values = parse_yahoo_series("BZ=F")
+    henry_hub_dates, henry_hub_values = parse_fred_series("DHHNGSP")
     gold_dates, gold_values = parse_yahoo_series("GC=F")
     silver_dates, silver_values = parse_yahoo_series("SI=F")
     copper_dates, copper_values = parse_yahoo_series("HG=F")
@@ -401,6 +402,17 @@ def main() -> None:
             "series": {
                 "wti": build_series_item("WTI", "#7c3aed", wti_dates, wti_values),
                 "brent": build_series_item("Brent", "#2563eb", brent_dates, brent_values),
+            },
+        },
+        "natural_gas": {
+            "title": "Henry Hub 천연가스",
+            "subtitle": "미국 Henry Hub 천연가스 spot 가격입니다. 단위는 달러/MMBtu이며 EIA 데이터를 FRED 경유로 가져옵니다.",
+            "source": "FRED / EIA",
+            "mode": "raw",
+            "yAxisLabel": "$ / MMBtu",
+            "formatter": "dollar2",
+            "series": {
+                "henry_hub": build_series_item("Henry Hub", "#0f766e", henry_hub_dates, henry_hub_values),
             },
         },
         "metals": {

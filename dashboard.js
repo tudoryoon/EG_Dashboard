@@ -6808,6 +6808,7 @@ function renderMarketFxCommoditiesOverview() {
   const macroPanels = [
     { key: "dxy", canvas: "dxy", className: "" },
     { key: "energy", canvas: "energy", className: "" },
+    { key: "natural_gas", canvas: "natural-gas", className: "" },
     { key: "metals", canvas: "metals", className: "" },
     { key: "strategic", canvas: "strategic", className: "macro-panel-wide" },
     { key: "food", canvas: "food", className: "macro-panel-wide" },
@@ -6886,7 +6887,7 @@ function renderMarketFxCommoditiesOverview() {
     });
   });
 
-  ["dxy", "energy", "metals", "strategic", "food"].forEach((panelKey) => {
+  ["dxy", "energy", "natural_gas", "metals", "strategic", "food"].forEach((panelKey) => {
     const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
     if (canvas) {
       createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));
