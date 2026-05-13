@@ -2805,7 +2805,11 @@ function buildMacroDashboardChartPayload(rangeKey) {
     return { labels: [], datasets: [] };
   }
   const latestDate = toDateKey(allDates[allDates.length - 1]);
-  const startDate = shiftDateByRange(latestDate, rangeKey, "2003-01-01");
+  const startDate = shiftDateByRange(
+    latestDate,
+    rangeKey,
+    marketMacroData?.startDate ?? marketPriceData?.startDate ?? "1965-01-01",
+  );
   const customStart = state.macroDashboardCustomStart || startDate;
   const customEnd = state.macroDashboardCustomEnd || latestDate;
   const labels = allDates.filter((date) => toDateKey(date) >= toDateKey(customStart) && toDateKey(date) <= toDateKey(customEnd));
