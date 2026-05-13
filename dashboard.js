@@ -2658,6 +2658,7 @@ function getMacroDashboardItems() {
   const marketItems = marketPriceData?.items ?? {};
   const metalSeries = marketMacroData?.panels?.metals?.series ?? {};
   const energySeries = marketMacroData?.panels?.energy?.series ?? {};
+  const longCommoditySeries = marketMacroData?.longCommodities?.series ?? {};
 
   const maybeItems = [
     marketItems.sp500 && {
@@ -2731,31 +2732,41 @@ function getMacroDashboardItems() {
       normalize: false,
       dash: [6, 4],
     },
-    energySeries.wti && {
+    (longCommoditySeries.wti || energySeries.wti) && {
       key: "commodity:wti",
       label: "WTI",
-      dates: energySeries.wti.dates ?? [],
-      values: energySeries.wti.values ?? [],
+      dates: (longCommoditySeries.wti || energySeries.wti).dates ?? [],
+      values: (longCommoditySeries.wti || energySeries.wti).values ?? [],
       color: "#16a34a",
       axis: "index",
       formatter: "dollar1",
       normalize: true,
     },
-    metalSeries.gold && {
+    (longCommoditySeries.gold || metalSeries.gold) && {
       key: "commodity:gold",
       label: "Gold",
-      dates: metalSeries.gold.dates ?? [],
-      values: metalSeries.gold.values ?? [],
+      dates: (longCommoditySeries.gold || metalSeries.gold).dates ?? [],
+      values: (longCommoditySeries.gold || metalSeries.gold).values ?? [],
       color: "#d4a017",
       axis: "index",
       formatter: "dollar1",
       normalize: true,
     },
-    metalSeries.copper && {
+    (longCommoditySeries.silver || metalSeries.silver) && {
+      key: "commodity:silver",
+      label: "Silver",
+      dates: (longCommoditySeries.silver || metalSeries.silver).dates ?? [],
+      values: (longCommoditySeries.silver || metalSeries.silver).values ?? [],
+      color: "#64748b",
+      axis: "index",
+      formatter: "dollar1",
+      normalize: true,
+    },
+    (longCommoditySeries.copper || metalSeries.copper) && {
       key: "commodity:copper",
       label: "Copper",
-      dates: metalSeries.copper.dates ?? [],
-      values: metalSeries.copper.values ?? [],
+      dates: (longCommoditySeries.copper || metalSeries.copper).dates ?? [],
+      values: (longCommoditySeries.copper || metalSeries.copper).values ?? [],
       color: "#b45309",
       axis: "index",
       formatter: "dollar1",

@@ -4,6 +4,7 @@ import csv
 import html
 import json
 import re
+import tempfile
 from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree as ET
 from pathlib import Path
@@ -14,6 +15,10 @@ from urllib.request import Request, urlopen
 START_DATE = "1965-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
+WORLD_BANK_PINK_SHEET_URL = (
+    "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/"
+    "related/CMO-Historical-Data-Monthly.xlsx"
+)
 RANGES = [
     {"key": "1m", "label": "1M"},
     {"key": "3m", "label": "3M"},
@@ -192,6 +197,48 @@ def parse_yahoo_series(symbol: str) -> tuple[list[str], list[float]]:
     return dates, values
 
 
+def parse_world_bank_monthly_prices() -> dict[str, tuple[list[str], list[float]]]:
+    import openpyxl
+
+    workbook_path = Path(tempfile.gettempdir()) / "CMO-Historical-Data-Monthly.xlsx"
+    workbook_path.write_bytes(
+        urlopen(Request(WORLD_BANK_PINK_SHEET_URL, headers={"User-Agent": "Mozilla/5.0"}), timeout=60).read()
+    )
+    workbook = openpyxl.load_workbook(workbook_path, data_only=True, read_only=True)
+    worksheet = workbook["Monthly Prices"]
+    code_row = next(worksheet.iter_rows(min_row=7, max_row=7, values_only=True))
+    target_columns = {
+        "wti": "CRUDE_WTI",
+        "gold": "GOLD",
+        "silver": "SILVER",
+        "copper": "COPPER",
+    }
+    column_index = {
+        key: code_row.index(code)
+        for key, code in target_columns.items()
+        if code in code_row
+    }
+    series = {key: ([], []) for key in target_columns}
+    for row in worksheet.iter_rows(min_row=8, values_only=True):
+        raw_period = row[0]
+        if not raw_period:
+            continue
+        period = str(raw_period)
+        match = re.match(r"^(\d{4})M(\d{2})$", period)
+        if not match:
+            continue
+        date_key = f"{match.group(1)}-{match.group(2)}-01"
+        if date_key < START_DATE:
+            continue
+        for key, index in column_index.items():
+            value = row[index]
+            if not isinstance(value, (int, float)):
+                continue
+            series[key][0].append(date_key)
+            series[key][1].append(round(float(value), 4))
+    return series
+
+
 def parse_fred_series(series_id: str) -> tuple[list[str], list[float]]:
     last_error: Exception | None = None
     for url in fred_csv_urls(series_id):
@@ -275,6 +322,7 @@ def main() -> None:
         real_5y_dates, real_5y_values = parse_fred_series("DFII5")
 
     dxy_dates, dxy_values = parse_yahoo_series("DX-Y.NYB")
+    long_commodity_series = parse_world_bank_monthly_prices()
     wti_dates, wti_values = parse_yahoo_series("CL=F")
     brent_dates, brent_values = parse_yahoo_series("BZ=F")
     gold_dates, gold_values = parse_yahoo_series("GC=F")
@@ -370,6 +418,15 @@ def main() -> None:
         "startDate": START_DATE,
         "defaultRange": "max",
         "ranges": RANGES,
+        "longCommodities": {
+            "source": "World Bank Pink Sheet monthly prices",
+            "series": {
+                "wti": build_series_item("WTI", "#16a34a", *long_commodity_series["wti"]),
+                "gold": build_series_item("Gold", "#d97706", *long_commodity_series["gold"]),
+                "silver": build_series_item("Silver", "#6b7280", *long_commodity_series["silver"]),
+                "copper": build_series_item("Copper", "#b45309", *long_commodity_series["copper"]),
+            },
+        },
         "panels": panels,
     }
 
