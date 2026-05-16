@@ -2765,6 +2765,28 @@ function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color }
     formatter: kind === "mom_change" ? "number1" : "percent2",
     normalize: false,
     dash: [4, 4],
+    fillForward: true,
+  };
+}
+
+function mergeSeriesPreferRecent(primarySeries, fallbackSeries) {
+  const merged = new Map();
+  (fallbackSeries?.dates ?? []).forEach((date, index) => {
+    const value = Number(fallbackSeries?.values?.[index]);
+    if (date && Number.isFinite(value)) {
+      merged.set(toDateKey(date), value);
+    }
+  });
+  (primarySeries?.dates ?? []).forEach((date, index) => {
+    const value = Number(primarySeries?.values?.[index]);
+    if (date && Number.isFinite(value)) {
+      merged.set(toDateKey(date), value);
+    }
+  });
+  const dates = [...merged.keys()].sort((a, b) => a.localeCompare(b));
+  return {
+    dates,
+    values: dates.map((date) => merged.get(date)),
   };
 }
 
@@ -2848,41 +2870,41 @@ function getMacroDashboardItems() {
       normalize: false,
       dash: [6, 4],
     },
-    (longCommoditySeries.wti || energySeries.wti) && {
+    (energySeries.wti || longCommoditySeries.wti) && {
       key: "commodity:wti",
       label: "WTI",
-      dates: (longCommoditySeries.wti || energySeries.wti).dates ?? [],
-      values: (longCommoditySeries.wti || energySeries.wti).values ?? [],
+      dates: mergeSeriesPreferRecent(energySeries.wti, longCommoditySeries.wti).dates,
+      values: mergeSeriesPreferRecent(energySeries.wti, longCommoditySeries.wti).values,
       color: "#16a34a",
       axis: "index",
       formatter: "dollar1",
       normalize: true,
     },
-    (longCommoditySeries.gold || metalSeries.gold) && {
+    (metalSeries.gold || longCommoditySeries.gold) && {
       key: "commodity:gold",
       label: "Gold",
-      dates: (longCommoditySeries.gold || metalSeries.gold).dates ?? [],
-      values: (longCommoditySeries.gold || metalSeries.gold).values ?? [],
+      dates: mergeSeriesPreferRecent(metalSeries.gold, longCommoditySeries.gold).dates,
+      values: mergeSeriesPreferRecent(metalSeries.gold, longCommoditySeries.gold).values,
       color: "#d4a017",
       axis: "index",
       formatter: "dollar1",
       normalize: true,
     },
-    (longCommoditySeries.silver || metalSeries.silver) && {
+    (metalSeries.silver || longCommoditySeries.silver) && {
       key: "commodity:silver",
       label: "Silver",
-      dates: (longCommoditySeries.silver || metalSeries.silver).dates ?? [],
-      values: (longCommoditySeries.silver || metalSeries.silver).values ?? [],
+      dates: mergeSeriesPreferRecent(metalSeries.silver, longCommoditySeries.silver).dates,
+      values: mergeSeriesPreferRecent(metalSeries.silver, longCommoditySeries.silver).values,
       color: "#64748b",
       axis: "index",
       formatter: "dollar1",
       normalize: true,
     },
-    (longCommoditySeries.copper || metalSeries.copper) && {
+    (metalSeries.copper || longCommoditySeries.copper) && {
       key: "commodity:copper",
       label: "Copper",
-      dates: (longCommoditySeries.copper || metalSeries.copper).dates ?? [],
-      values: (longCommoditySeries.copper || metalSeries.copper).values ?? [],
+      dates: mergeSeriesPreferRecent(metalSeries.copper, longCommoditySeries.copper).dates,
+      values: mergeSeriesPreferRecent(metalSeries.copper, longCommoditySeries.copper).values,
       color: "#b45309",
       axis: "index",
       formatter: "dollar1",
@@ -2945,13 +2967,24 @@ function buildMacroDashboardChartPayload(rangeKey) {
     item.dates.forEach((date, index) => dateIndex.set(date, index));
     const baseDate = labels.find((date) => dateIndex.has(date) && Number.isFinite(Number(item.values[dateIndex.get(date)])));
     const baseValue = baseDate ? Number(item.values[dateIndex.get(baseDate)]) : null;
+    let lastForwardValue = null;
     const data = labels.map((date) => {
       const index = dateIndex.get(date);
       if (index === undefined) {
+        if (item.fillForward && Number.isFinite(lastForwardValue)) {
+          return lastForwardValue;
+        }
         return null;
       }
-      const value = Number(item.values[index]);
+      const rawValue = Number(item.values[index]);
+      const value = Number.isFinite(rawValue) ? rawValue : null;
+      if (item.fillForward && Number.isFinite(value)) {
+        lastForwardValue = value;
+      }
       if (!Number.isFinite(value)) {
+        if (item.fillForward && Number.isFinite(lastForwardValue)) {
+          return lastForwardValue;
+        }
         return null;
       }
       if (!item.normalize) {
