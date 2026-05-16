@@ -2790,6 +2790,16 @@ function mergeSeriesPreferRecent(primarySeries, fallbackSeries) {
   };
 }
 
+function scaleSeriesValues(series, multiplier) {
+  return {
+    dates: series?.dates ?? [],
+    values: (series?.values ?? []).map((value) => {
+      const numberValue = Number(value);
+      return Number.isFinite(numberValue) ? Number((numberValue * multiplier).toFixed(4)) : null;
+    }),
+  };
+}
+
 function getMacroDashboardItems() {
   const policySeries = marketMacroData?.panels?.policy?.series ?? {};
   const rateSeries = marketMacroData?.panels?.rates?.series ?? {};
@@ -2903,8 +2913,8 @@ function getMacroDashboardItems() {
     (metalSeries.copper || longCommoditySeries.copper) && {
       key: "commodity:copper",
       label: "Copper",
-      dates: mergeSeriesPreferRecent(metalSeries.copper, longCommoditySeries.copper).dates,
-      values: mergeSeriesPreferRecent(metalSeries.copper, longCommoditySeries.copper).values,
+      dates: mergeSeriesPreferRecent(scaleSeriesValues(metalSeries.copper, 2204.6226), longCommoditySeries.copper).dates,
+      values: mergeSeriesPreferRecent(scaleSeriesValues(metalSeries.copper, 2204.6226), longCommoditySeries.copper).values,
       color: "#b45309",
       axis: "index",
       formatter: "dollar1",
