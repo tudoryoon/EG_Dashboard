@@ -3,7 +3,7 @@ name: Update Market Briefing
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 21 * * *"
+    - cron: "10 21 * * *"
 
 permissions:
   contents: write

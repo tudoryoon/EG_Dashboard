@@ -3,7 +3,7 @@ name: Update Market Prices
 on:
   workflow_dispatch:
   schedule:
-    - cron: "00 22 * * *"
+    - cron: "40 21 * * *"
 
 permissions:
   contents: write
