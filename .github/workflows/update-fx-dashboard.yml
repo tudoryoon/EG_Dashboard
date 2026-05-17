@@ -1,0 +1,39 @@
+name: Update FX Dashboard
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 22:40 UTC = 07:40 KST. GitHub scheduled runs can be delayed.
+    - cron: "40 22 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-fx-dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh FX dashboard history
+        run: python scripts/update_fx_dashboard.py
+
+      - name: Commit updated FX dashboard history
+        run: |
+          if git diff --quiet -- data/market-macro-data.js; then
+            echo "No FX dashboard changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/market-macro-data.js
+          git commit -m "Update FX dashboard history" || exit 0
+          git pull --rebase origin main
+          git push
