@@ -1,4 +1,4 @@
-name: Update FX Dashboard
+name: Update FX And Commodity Dashboard
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  update-fx-dashboard:
+  update-fx-and-commodity-dashboard:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -22,18 +22,20 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh FX dashboard history
-        run: python scripts/update_fx_dashboard.py
+      - name: Refresh FX and commodity dashboard history
+        run: |
+          python scripts/update_fx_dashboard.py
+          python scripts/update_commodity_dashboards.py
 
-      - name: Commit updated FX dashboard history
+      - name: Commit updated FX and commodity dashboard history
         run: |
           if git diff --quiet -- data/market-macro-data.js; then
-            echo "No FX dashboard changes detected."
+            echo "No FX or commodity dashboard changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/market-macro-data.js
-          git commit -m "Update FX dashboard history" || exit 0
+          git commit -m "Update FX and commodity dashboard history" || exit 0
           git pull --rebase origin main
           git push

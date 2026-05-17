@@ -56,8 +56,8 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `/.github/workflows/update-fx-dashboard.yml`
   - runs daily
   - scheduled at `22:40 UTC` / `07:40 KST`
-  - updates the FX panel inside `data/market-macro-data.js`
-  - sources: Yahoo Finance daily FX with existing historical data preserved
+  - updates the FX and commodity panels inside `data/market-macro-data.js`
+  - sources: Yahoo Finance daily FX/futures with existing historical data preserved
 
 - `/.github/workflows/update-memory-spot.yml`
   - runs daily
