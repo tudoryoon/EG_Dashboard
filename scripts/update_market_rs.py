@@ -118,10 +118,50 @@ def read_ishares_holdings_csv(url: str) -> pd.DataFrame:
     lines = text.splitlines()
     header_index = next((index for index, line in enumerate(lines) if line.startswith("Ticker,")), None)
     if header_index is None:
+        fallback = read_existing_universe("russell2000")
+        if not fallback.empty:
+            print("Unable to locate IWM holdings CSV header; using existing Russell 2000 membership snapshot.")
+            return fallback
         raise RuntimeError("Unable to locate IWM holdings CSV header.")
     payload = "\n".join(lines[header_index:])
     frame = pd.read_csv(StringIO(payload))
     return frame[frame["Asset Class"].fillna("").eq("Equity")].copy()
+
+
+def load_existing_payload() -> dict:
+    if not OUTPUT_PATH.exists():
+        return {}
+    text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+    prefix = "window.marketRsData = "
+    if text.startswith(prefix):
+        text = text[len(prefix):]
+    if text.endswith(";"):
+        text = text[:-1]
+    try:
+        return json.loads(text)
+    except Exception:
+        return {}
+
+
+def read_existing_universe(universe_key: str) -> pd.DataFrame:
+    rows = []
+    for row in load_existing_payload().get("rows", []):
+        memberships = row.get("memberships") or {}
+        if not memberships.get(universe_key):
+            continue
+        ticker = normalize_ticker(row.get("ticker"))
+        if not ticker or is_terminal_symbol(ticker):
+            continue
+        rows.append(
+            {
+                "Ticker": ticker,
+                "Name": row.get("name") or ticker,
+                "Asset Class": "Equity",
+            }
+        )
+    if not rows:
+        return pd.DataFrame(columns=["Ticker", "Name", "Asset Class"])
+    return pd.DataFrame(rows).drop_duplicates(subset=["Ticker"])
 
 
 def fetch_universe_frame() -> pd.DataFrame:
