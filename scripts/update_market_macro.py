@@ -327,6 +327,19 @@ def filter_series_start(
     return [date for date, _ in filtered], [value for _, value in filtered]
 
 
+def merge_series_prefer_recent(
+    primary: tuple[list[str], list[float]],
+    fallback: tuple[list[str], list[float]],
+) -> tuple[list[str], list[float]]:
+    merged: dict[str, float] = {}
+    for date, value in zip(fallback[0], fallback[1]):
+        merged[date] = value
+    for date, value in zip(primary[0], primary[1]):
+        merged[date] = value
+    dates = sorted(merged)
+    return dates, [merged[date] for date in dates]
+
+
 def main() -> None:
     us_series = parse_us_treasury_yields()
     japan_series = parse_japan_yields()
@@ -379,6 +392,10 @@ def main() -> None:
     wheat_hrw_dates, wheat_hrw_values = filter_series_start(wheat_hrw_dates, wheat_hrw_values, FOOD_START_DATE)
     wheat_srw_dates, wheat_srw_values = filter_series_start(wheat_srw_dates, wheat_srw_values, FOOD_START_DATE)
     sugar_dates, sugar_values = filter_series_start(sugar_dates, sugar_values, FOOD_START_DATE)
+    wti_dates, wti_values = merge_series_prefer_recent(
+        (wti_dates, wti_values),
+        long_commodity_series["wti"],
+    )
 
     panels = {
         "policy": {
@@ -433,7 +450,7 @@ def main() -> None:
         },
         "energy": {
             "title": "Crude Oil",
-            "subtitle": "WTI and Brent use daily front-month futures closes. Dubai uses World Bank Pink Sheet monthly spot and is carried forward between monthly prints.",
+            "subtitle": "WTI combines World Bank monthly spot history from 1982 with daily front-month futures from Yahoo Finance where available. Brent uses daily futures, while Dubai uses World Bank monthly spot.",
             "source": "Yahoo Finance / World Bank Pink Sheet",
             "mode": "raw",
             "fillMissing": "forward",
