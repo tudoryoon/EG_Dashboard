@@ -300,6 +300,19 @@ def build_spread_series(
     return dates, values
 
 
+def build_policy_rate_series() -> tuple[list[str], list[float]]:
+    fedfunds_dates, fedfunds_values = parse_fred_series("FEDFUNDS")
+    target_dates, target_values = parse_fred_series("DFEDTAR")
+    target_upper_dates, target_upper_values = parse_fred_series("DFEDTARU")
+    return merge_series_prefer_recent(
+        (target_upper_dates, target_upper_values),
+        merge_series_prefer_recent(
+            (target_dates, target_values),
+            (fedfunds_dates, fedfunds_values),
+        ),
+    )
+
+
 def build_series_item(
     label: str,
     color: str,
@@ -350,7 +363,7 @@ def main() -> None:
     rates_series["jp2y"] = build_series_item("Japan 2Y", "#111827", *japan_series["jp2y"], [6, 4])
     rates_series["jp10y"] = build_series_item("Japan 10Y", "#2563eb", *japan_series["jp10y"], [6, 4])
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
-    fed_funds_dates, fed_funds_values = parse_fred_series("DFF")
+    fed_funds_dates, fed_funds_values = build_policy_rate_series()
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
     real_5y_dates, real_5y_values = build_spread_series(
         us_series["us5y"][0],
@@ -400,13 +413,13 @@ def main() -> None:
     panels = {
         "policy": {
             "title": "Policy Rate / Real Rate",
-            "subtitle": "Effective Fed Funds Rate, 5Y breakeven inflation, and US 5Y minus 5Y breakeven inflation.",
+            "subtitle": "Fed policy-rate proxy uses monthly effective Fed Funds before 1982, the Fed Funds Target Rate from 1982 to 2008, and the target-range upper bound after 2008. 5Y breakeven inflation starts in 2003.",
             "source": "FRED / US Treasury",
             "mode": "raw",
             "yAxisLabel": "%",
             "formatter": "percent2",
             "series": {
-                "fed_funds": build_series_item("Fed Funds Rate", "#111827", fed_funds_dates, fed_funds_values),
+                "fed_funds": build_series_item("Fed Policy Rate", "#111827", fed_funds_dates, fed_funds_values),
                 "inflation_5y": build_series_item("5Y Inflation Expectation", "#f97316", inflation_5y_dates, inflation_5y_values),
                 "real_5y": build_series_item("Real 5Y (5Y - 5Y Inflation Exp.)", "#dc2626", real_5y_dates, real_5y_values),
             },
