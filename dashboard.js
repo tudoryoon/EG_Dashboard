@@ -1633,6 +1633,7 @@ function getTotalDashboardSeriesItems() {
         formatter: panel.formatter ?? "number1",
         rawLabel: item.name,
         isRate: isPercentSeries,
+        fillForward: item.fillForward === true || panel.fillMissing === "forward",
       });
     });
   });
@@ -1691,6 +1692,7 @@ function getTotalDashboardSeriesItems() {
       formatter: item.formatter,
       rawLabel: item.label,
       isRate: true,
+      fillForward: item.fillForward === true,
     });
   });
 
@@ -1737,14 +1739,23 @@ function buildTotalDashboardPayload(rangeKey) {
     const baseDate = selectedLabels.find((label) => dateIndex.has(label));
     const baseIndex = baseDate ? dateIndex.get(baseDate) : null;
     const baseValue = baseIndex !== null && baseIndex !== undefined ? item.values[baseIndex] : null;
+    let carriedRawValue = null;
 
     const data = selectedLabels.map((label) => {
       const pointIndex = dateIndex.get(label);
-      if (pointIndex === undefined) {
-        return null;
+      const pointValue = pointIndex === undefined ? null : item.values[pointIndex];
+      if (Number.isFinite(pointValue) && item.fillForward) {
+        carriedRawValue = pointValue;
       }
-      const pointValue = item.values[pointIndex];
       if (!Number.isFinite(pointValue)) {
+        if (item.fillForward && Number.isFinite(carriedRawValue)) {
+          if (item.isRate) {
+            return carriedRawValue;
+          }
+          if (Number.isFinite(baseValue)) {
+            return Number(((carriedRawValue / baseValue) * 100).toFixed(2));
+          }
+        }
         return null;
       }
       if (item.isRate) {
@@ -1755,6 +1766,18 @@ function buildTotalDashboardPayload(rangeKey) {
       }
       return Number(((pointValue / baseValue) * 100).toFixed(2));
     });
+    carriedRawValue = null;
+    const rawDisplayValues = selectedLabels.map((label) => {
+      const pointIndex = dateIndex.get(label);
+      const pointValue = pointIndex === undefined ? null : item.values[pointIndex];
+      if (Number.isFinite(pointValue)) {
+        if (item.fillForward) {
+          carriedRawValue = pointValue;
+        }
+        return pointValue;
+      }
+      return item.fillForward && Number.isFinite(carriedRawValue) ? carriedRawValue : null;
+    });
 
     return {
       key: item.key,
@@ -1762,6 +1785,7 @@ function buildTotalDashboardPayload(rangeKey) {
       data,
       rawDates: item.dates,
       rawValues: item.values,
+      rawDisplayValues,
       rawFormatter: item.formatter,
       borderColor: item.color,
       backgroundColor: item.color,
@@ -1827,15 +1851,15 @@ function createTotalDashboardChart(canvas, rangeKey) {
             label: (context) => {
               const dataset = context.dataset;
               const chartIndex = context.dataIndex;
-              const rawDate = payload.labels[chartIndex];
-              const rawValueIndex = dataset.rawDates?.indexOf(rawDate);
-              const rawValue = rawValueIndex >= 0 ? dataset.rawValues?.[rawValueIndex] : null;
+              const rawValue = dataset.rawDisplayValues?.[chartIndex] ?? null;
               const rawText = Number.isFinite(rawValue) ? formatMacroValue(rawValue, dataset.rawFormatter) : "-";
               if (dataset.isRate) {
                 return `${dataset.label}: ${rawText}`;
               }
               const normalized = context.parsed.y;
-              return `${dataset.label}: ${normalized.toFixed(1)} | raw ${rawText}`;
+              return Number.isFinite(normalized)
+                ? `${dataset.label}: ${normalized.toFixed(1)} | raw ${rawText}`
+                : `${dataset.label}: - | raw ${rawText}`;
             },
           },
         },
