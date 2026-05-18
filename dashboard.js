@@ -1964,7 +1964,7 @@ function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null, cust
       pointRadius: 0,
       pointHoverRadius: 4,
       pointHitRadius: 10,
-      spanGaps: panel.mode === "normalized",
+      spanGaps: panel.mode === "normalized" || panel.connectGaps === true,
       borderDash: item.dash ?? [],
     };
   });

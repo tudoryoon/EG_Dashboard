@@ -453,7 +453,7 @@ def main() -> None:
             "subtitle": "WTI combines World Bank monthly spot history from 1982 with daily front-month futures from Yahoo Finance where available. Brent uses daily futures, while Dubai uses World Bank monthly spot.",
             "source": "Yahoo Finance / World Bank Pink Sheet",
             "mode": "raw",
-            "fillMissing": "forward",
+            "connectGaps": True,
             "yAxisLabel": "$ / bbl",
             "formatter": "dollar1",
             "series": {
