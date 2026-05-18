@@ -184,6 +184,12 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:strategic:iron_ore": "#b45309",
   "macro:strategic:nickel": "#64748b",
   "macro:strategic:zinc": "#0ea5e9",
+  "indicator:headline_cpi_yoy": "#7c3aed",
+  "indicator:core_cpi_yoy": "#db2777",
+  "indicator:headline_pce_yoy": "#0f766e",
+  "indicator:core_pce_yoy": "#14b8a6",
+  "indicator:final_demand_ppi_yoy": "#f97316",
+  "indicator:core_ppi_yoy": "#dc2626",
 };
 const MARKET_PRICE_EMA_OPTIONS = [10, 20, 60, 120, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
@@ -1628,6 +1634,63 @@ function getTotalDashboardSeriesItems() {
         rawLabel: item.name,
         isRate: isPercentSeries,
       });
+    });
+  });
+
+  [
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:headline_cpi_yoy",
+      label: "CPI YoY",
+      seriesKey: "headline_cpi",
+      kind: "yoy",
+      color: "#7c3aed",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:core_cpi_yoy",
+      label: "Core CPI YoY",
+      seriesKey: "core_cpi",
+      kind: "yoy",
+      color: "#db2777",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:headline_pce_yoy",
+      label: "PCE YoY",
+      seriesKey: "headline_pce",
+      kind: "yoy",
+      color: "#0f766e",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:core_pce_yoy",
+      label: "Core PCE YoY",
+      seriesKey: "core_pce",
+      kind: "yoy",
+      color: "#14b8a6",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:final_demand_ppi_yoy",
+      label: "PPI YoY",
+      seriesKey: "final_demand_ppi",
+      kind: "yoy",
+      color: "#f97316",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:core_ppi_yoy",
+      label: "Core PPI YoY",
+      seriesKey: "core_ppi",
+      kind: "yoy",
+      color: "#dc2626",
+    }),
+  ].filter(Boolean).forEach((item) => {
+    items.push({
+      key: item.key,
+      group: "Macro Indicators",
+      label: item.label,
+      color: item.color,
+      dates: item.dates,
+      values: item.values,
+      formatter: item.formatter,
+      rawLabel: item.label,
+      isRate: true,
     });
   });
 
