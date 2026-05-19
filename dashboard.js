@@ -4064,6 +4064,64 @@ function getBriefingOverviewColor(item, rangeKey) {
   return "#eef0eb";
 }
 
+function getRotationScoreColor(score) {
+  if (!Number.isFinite(Number(score))) {
+    return "#eef0eb";
+  }
+  const numeric = Number(score);
+  const magnitude = Math.min(Math.abs(numeric), 18);
+  const strength = magnitude / 18;
+  if (numeric > 0) {
+    return `hsl(150, ${48 + strength * 22}%, ${95 - strength * 24}%)`;
+  }
+  if (numeric < 0) {
+    return `hsl(8, ${56 + strength * 18}%, ${95 - strength * 22}%)`;
+  }
+  return "#eef0eb";
+}
+
+function getRotationClassLabel(classification) {
+  const labels = {
+    Leading: "Leading",
+    Improving: "Improving",
+    Weakening: "Weakening",
+    Lagging: "Lagging",
+  };
+  return labels[classification] ?? "Neutral";
+}
+
+function getRotationClassKorean(classification) {
+  const labels = {
+    Leading: "주도",
+    Improving: "개선",
+    Weakening: "둔화",
+    Lagging: "소외",
+  };
+  return labels[classification] ?? "중립";
+}
+
+function renderRotationCandidateList(items, emptyText) {
+  if (!items?.length) {
+    return `<p class="market-rs-empty">${emptyText}</p>`;
+  }
+  return items
+    .map(
+      (item) => `
+        <article class="briefing-rotation-name">
+          <div>
+            <strong>${item.label}</strong>
+            <span>${item.sectorLabel}</span>
+          </div>
+          <div class="briefing-rotation-name-stats">
+            <b>${formatSignedPercent(item.score)}</b>
+            <span>1M ${formatSignedPercent(item.excessReturns?.["1m"])}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
 function getBriefingOverviewSizeClass(items, item) {
   if (!item) {
     return "cap-sm";
@@ -4262,6 +4320,77 @@ function renderMarketBriefingOverview() {
     })
     .join("");
 
+  const rotationSignal = briefing.rotationSignal ?? {};
+  const rotationSectors = rotationSignal.sectors ?? [];
+  const rotationWeightsText = (rotationSignal.weights ?? [])
+    .map((item) => `${item.label} ${Math.round(Number(item.weight) * 100)}%`)
+    .join(" · ");
+  const rotationSectorMarkup = rotationSectors
+    .slice(0, 12)
+    .map(
+      (sector) => `
+        <article
+          class="briefing-rotation-sector is-${String(sector.classification ?? "neutral").toLowerCase()}"
+          style="background:${getRotationScoreColor(sector.score)}"
+        >
+          <div class="briefing-rotation-sector-head">
+            <strong>${sector.label}</strong>
+            <span>${getRotationClassKorean(sector.classification)}</span>
+          </div>
+          <b>${formatSignedPercent(sector.score)}</b>
+          <div class="briefing-rotation-sector-metrics">
+            <span>1M ${formatSignedPercent(sector.excessReturns?.["1m"])}</span>
+            <span>3M ${formatSignedPercent(sector.excessReturns?.["3m"])}</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+  const rotationQuadrantMarkup = ["Leading", "Improving", "Weakening", "Lagging"]
+    .map((classification) => {
+      const sectors = rotationSectors.filter((sector) => sector.classification === classification);
+      return `
+        <article class="briefing-rotation-quadrant is-${classification.toLowerCase()}">
+          <div class="briefing-rotation-quadrant-head">
+            <strong>${getRotationClassLabel(classification)}</strong>
+            <span>${getRotationClassKorean(classification)}</span>
+          </div>
+          <p>${sectors.slice(0, 5).map((sector) => sector.label).join(" · ") || "해당 섹터 없음"}</p>
+        </article>
+      `;
+    })
+    .join("");
+  const rotationCandidates = rotationSignal.candidates ?? {};
+  const rotationCandidateMarkup = `
+    <article class="briefing-rotation-candidate-card">
+      <div class="briefing-rotation-candidate-head">
+        <strong>Buy Watch</strong>
+        <span>섹터와 종목 모두 QQQ 대비 강세</span>
+      </div>
+      <div class="briefing-rotation-name-list">
+        ${renderRotationCandidateList(rotationCandidates.buyWatch, "아직 뚜렷한 편입 후보가 없습니다.")}
+      </div>
+    </article>
+    <article class="briefing-rotation-candidate-card">
+      <div class="briefing-rotation-candidate-head">
+        <strong>Early Rotation</strong>
+        <span>단기 개선, 중기 회복 초입</span>
+      </div>
+      <div class="briefing-rotation-name-list">
+        ${renderRotationCandidateList(rotationCandidates.earlyRotation, "초기 로테이션 후보가 없습니다.")}
+      </div>
+    </article>
+    <article class="briefing-rotation-candidate-card">
+      <div class="briefing-rotation-candidate-head">
+        <strong>Trim Watch</strong>
+        <span>QQQ 대비 약세 전환 경계</span>
+      </div>
+      <div class="briefing-rotation-name-list">
+        ${renderRotationCandidateList(rotationCandidates.trimWatch, "축소 경계 후보가 없습니다.")}
+      </div>
+    </article>
+  `;
+
   const newsMarkup = (briefing.majorNews ?? [])
     .map(
       (item) => `
@@ -4340,6 +4469,24 @@ function renderMarketBriefingOverview() {
           </div>
         </div>
         <div class="briefing-index-grid">${indexMarkup}</div>
+      </article>
+
+      <article class="us-panel briefing-rotation-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Rotation Signal</h2>
+            <p>Daily Briefing 종목군을 NASDAQ 100 (QQQ) 대비 초과수익률로 비교해 포트 편입 후보와 약화 후보를 추적합니다.</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">Benchmark ${rotationSignal.benchmark?.label ?? "QQQ"}</span>
+            <span class="market-rs-pill">${rotationWeightsText}</span>
+          </div>
+        </div>
+        <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
+        <div class="briefing-rotation-bottom">
+          <div class="briefing-rotation-quadrants">${rotationQuadrantMarkup}</div>
+          <div class="briefing-rotation-candidates">${rotationCandidateMarkup}</div>
+        </div>
       </article>
 
       <article class="us-panel briefing-total-map-panel">

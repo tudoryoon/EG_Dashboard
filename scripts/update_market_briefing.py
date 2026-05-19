@@ -19,8 +19,15 @@ import yfinance as yf
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-data.js"
 USER_AGENT = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "2y"
-BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT"]
+BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 USD_PER_KRW_SYMBOL = "KRW=X"
+ROTATION_BENCHMARK_SYMBOL = "QQQ"
+ROTATION_WEIGHTS = {
+    "1w": 0.20,
+    "1m": 0.35,
+    "3m": 0.30,
+    "6m": 0.15,
+}
 MAP_RANGE_PERIODS = {
     "1d": 1,
     "1w": 5,
@@ -695,11 +702,12 @@ def compute_ytd_return(series: pd.Series) -> float | None:
     return round((current / base - 1) * 100, 2)
 
 
-def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str]:
+def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object]]:
     companies = [item | {"sectorKey": sector["key"], "sectorLabel": sector["label"]} for sector in SECTOR_GROUPS for item in sector["items"]]
     symbols = sorted({company["ticker"] for company in companies} | set(BENCHMARK_SYMBOLS) | {USD_PER_KRW_SYMBOL})
     close_frame = fetch_price_frame(symbols)
     latest_date = close_frame.index.max().strftime("%Y-%m-%d")
+    rotation_benchmark = build_rotation_benchmark(close_frame)
 
     fx_usd_per_krw = None
     if USD_PER_KRW_SYMBOL in close_frame.columns:
@@ -747,7 +755,7 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         }
         snapshots.append(snapshot)
         by_ticker[symbol] = snapshot
-    return snapshots, by_ticker, latest_date
+    return snapshots, by_ticker, latest_date, rotation_benchmark
 
 
 def build_sector_panels(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -759,6 +767,219 @@ def build_sector_panels(snapshots: list[dict[str, object]]) -> list[dict[str, ob
             item["tileClass"] = tile_class_for_rank(index)
         panels.append({"key": sector["key"], "label": sector["label"], "items": items})
     return panels
+
+
+def safe_float(value: object) -> float | None:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(numeric):
+        return None
+    return numeric
+
+
+def build_rotation_benchmark(close_frame: pd.DataFrame) -> dict[str, object]:
+    series = (
+        close_frame[ROTATION_BENCHMARK_SYMBOL].dropna()
+        if ROTATION_BENCHMARK_SYMBOL in close_frame.columns
+        else pd.Series(dtype=float)
+    )
+    returns = {key: None for key in MAP_RANGE_LABELS}
+    price = previous_close = day_change_pct = None
+    if len(series) >= 2:
+        price = float(series.iloc[-1])
+        previous_close = float(series.iloc[-2])
+        if previous_close:
+            day_change_pct = round((price / previous_close - 1) * 100, 2)
+    if not series.empty:
+        returns.update({key: compute_period_return(series, periods) for key, periods in MAP_RANGE_PERIODS.items()})
+        returns["1d"] = day_change_pct
+        returns["ytd"] = compute_ytd_return(series)
+    return {
+        "ticker": ROTATION_BENCHMARK_SYMBOL,
+        "label": "NASDAQ 100 (QQQ)",
+        "price": round(price, 2) if price is not None else None,
+        "returns": returns,
+    }
+
+
+def compute_rotation_score(excess: dict[str, float | None]) -> float | None:
+    total = 0.0
+    used_weight = 0.0
+    for key, weight in ROTATION_WEIGHTS.items():
+        value = safe_float(excess.get(key))
+        if value is None:
+            continue
+        total += value * weight
+        used_weight += weight
+    if used_weight == 0:
+        return None
+    return round(total / used_weight, 2)
+
+
+def classify_rotation(excess: dict[str, float | None]) -> str:
+    one_month = safe_float(excess.get("1m"))
+    three_month = safe_float(excess.get("3m"))
+    if one_month is not None and one_month > 0 and three_month is not None and three_month > 0:
+        return "Leading"
+    if one_month is not None and one_month > 0:
+        return "Improving"
+    if three_month is not None and three_month > 0:
+        return "Weakening"
+    return "Lagging"
+
+
+def item_excess_returns(item: dict[str, object], benchmark_returns: dict[str, object]) -> dict[str, float | None]:
+    output: dict[str, float | None] = {}
+    item_returns = item.get("overviewReturns") or {}
+    for key in ROTATION_WEIGHTS:
+        item_return = safe_float(item_returns.get(key) if isinstance(item_returns, dict) else None)
+        benchmark_return = safe_float(benchmark_returns.get(key))
+        output[key] = round(item_return - benchmark_return, 2) if item_return is not None and benchmark_return is not None else None
+    return output
+
+
+def build_rotation_signal(
+    snapshots: list[dict[str, object]],
+    sector_panels: list[dict[str, object]],
+    benchmark: dict[str, object],
+) -> dict[str, object]:
+    benchmark_returns = benchmark.get("returns") if isinstance(benchmark.get("returns"), dict) else {}
+    enriched_items = []
+    for item in snapshots:
+        excess = item_excess_returns(item, benchmark_returns)
+        score = compute_rotation_score(excess)
+        enriched_items.append(
+            {
+                **item,
+                "excessReturns": excess,
+                "rotationScore": score,
+            }
+        )
+
+    enriched_by_ticker = {item["ticker"]: item for item in enriched_items}
+    sectors = []
+    for sector in sector_panels:
+        items = [enriched_by_ticker[item["ticker"]] for item in sector.get("items", []) if item["ticker"] in enriched_by_ticker]
+        excess_by_range: dict[str, float | None] = {}
+        for key in ROTATION_WEIGHTS:
+            numerator = 0.0
+            denominator = 0.0
+            equal_weight_values = []
+            for item in items:
+                value = safe_float(item.get("excessReturns", {}).get(key))
+                if value is None:
+                    continue
+                weight = safe_float(item.get("marketCapUsd")) or 0.0
+                if weight > 0:
+                    numerator += value * weight
+                    denominator += weight
+                equal_weight_values.append(value)
+            if denominator > 0:
+                excess_by_range[key] = round(numerator / denominator, 2)
+            elif equal_weight_values:
+                excess_by_range[key] = round(sum(equal_weight_values) / len(equal_weight_values), 2)
+            else:
+                excess_by_range[key] = None
+
+        score = compute_rotation_score(excess_by_range)
+        classification = classify_rotation(excess_by_range)
+        ranked_items = sorted(
+            [item for item in items if item.get("rotationScore") is not None],
+            key=lambda item: float(item["rotationScore"]),
+            reverse=True,
+        )
+        sectors.append(
+            {
+                "key": sector["key"],
+                "label": sector["label"],
+                "score": score,
+                "classification": classification,
+                "excessReturns": excess_by_range,
+                "top": [
+                    {
+                        "ticker": item["ticker"],
+                        "label": item["label"],
+                        "name": item["name"],
+                        "score": item["rotationScore"],
+                        "excessReturns": item["excessReturns"],
+                    }
+                    for item in ranked_items[:3]
+                ],
+                "bottom": [
+                    {
+                        "ticker": item["ticker"],
+                        "label": item["label"],
+                        "name": item["name"],
+                        "score": item["rotationScore"],
+                        "excessReturns": item["excessReturns"],
+                    }
+                    for item in list(reversed(ranked_items[-3:]))
+                ],
+            }
+        )
+
+    sectors.sort(key=lambda sector: safe_float(sector.get("score")) if safe_float(sector.get("score")) is not None else -999, reverse=True)
+
+    def candidate_view(item: dict[str, object]) -> dict[str, object]:
+        return {
+            "ticker": item["ticker"],
+            "label": item["label"],
+            "name": item["name"],
+            "sectorLabel": item["sectorLabel"],
+            "score": item["rotationScore"],
+            "excessReturns": item["excessReturns"],
+            "marketCapUsd": item.get("marketCapUsd"),
+        }
+
+    leading_sector_keys = {sector["key"] for sector in sectors if sector["classification"] in {"Leading", "Improving"}}
+    weak_sector_keys = {sector["key"] for sector in sectors if sector["classification"] in {"Weakening", "Lagging"}}
+    buy_watch = sorted(
+        [
+            item
+            for item in enriched_items
+            if item.get("sectorKey") in leading_sector_keys
+            and safe_float(item.get("rotationScore")) is not None
+            and all((safe_float(item["excessReturns"].get(key)) or -999) > 0 for key in ("1w", "1m", "3m"))
+        ],
+        key=lambda item: float(item["rotationScore"]),
+        reverse=True,
+    )[:8]
+    early_rotation = sorted(
+        [
+            item
+            for item in enriched_items
+            if safe_float(item.get("rotationScore")) is not None
+            and (safe_float(item["excessReturns"].get("1w")) or -999) > 0
+            and (safe_float(item["excessReturns"].get("1m")) or -999) > 0
+            and (safe_float(item["excessReturns"].get("3m")) or 999) <= 0
+        ],
+        key=lambda item: float(item["rotationScore"]),
+        reverse=True,
+    )[:8]
+    trim_watch = sorted(
+        [
+            item
+            for item in enriched_items
+            if item.get("sectorKey") in weak_sector_keys
+            and safe_float(item.get("rotationScore")) is not None
+            and (safe_float(item["excessReturns"].get("1w")) or 999) < 0
+            and (safe_float(item["excessReturns"].get("1m")) or 999) < 0
+        ],
+        key=lambda item: float(item["rotationScore"]),
+    )[:8]
+
+    return {
+        "benchmark": benchmark,
+        "weights": [{"key": key, "label": MAP_RANGE_LABELS[key], "weight": weight} for key, weight in ROTATION_WEIGHTS.items()],
+        "sectors": sectors,
+        "candidates": {
+            "buyWatch": [candidate_view(item) for item in buy_watch],
+            "earlyRotation": [candidate_view(item) for item in early_rotation],
+            "trimWatch": [candidate_view(item) for item in trim_watch],
+        },
+    }
 
 
 def build_major_news() -> list[dict[str, object]]:
@@ -828,10 +1049,11 @@ def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
 
 
 def build_payload() -> dict[str, object]:
-    snapshots, _, latest_date = build_company_snapshots()
+    snapshots, _, latest_date, rotation_benchmark = build_company_snapshots()
     major_news = build_major_news()
     movers = build_movers(snapshots)
     sector_panels = build_sector_panels(snapshots)
+    rotation_signal = build_rotation_signal(snapshots, sector_panels, rotation_benchmark)
     return {
         "updatedAt": latest_date,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -842,6 +1064,7 @@ def build_payload() -> dict[str, object]:
         },
         "mapRanges": [{"key": key, "label": label} for key, label in MAP_RANGE_LABELS.items()],
         "sectorPanels": sector_panels,
+        "rotationSignal": rotation_signal,
         "majorNews": major_news,
         "movers": movers,
     }
