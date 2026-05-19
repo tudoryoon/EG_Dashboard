@@ -205,7 +205,7 @@ const MARKET_RS_CAP_RANGES = [
 ];
 
 const state = {
-  tab: "Market",
+  tab: "DailyBriefing",
   marketView: "Overview",
   bigTechView: "M7",
   semisView: "MemorySpot",
