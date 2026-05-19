@@ -368,6 +368,13 @@ h1 {
     linear-gradient(180deg, #fcfcfa, #f3f4ee);
 }
 
+.briefing-rotation-formula {
+  margin-top: 6px !important;
+  color: #3f4f45 !important;
+  font-size: 0.9rem !important;
+  font-weight: 700;
+}
+
 .briefing-rotation-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

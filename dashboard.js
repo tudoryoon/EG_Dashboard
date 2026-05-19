@@ -4345,9 +4345,6 @@ function renderMarketBriefingOverview() {
 
   const rotationSignal = briefing.rotationSignal ?? {};
   const rotationSectors = rotationSignal.sectors ?? [];
-  const rotationWeightsText = (rotationSignal.weights ?? [])
-    .map((item) => `${item.label} ${Math.round(Number(item.weight) * 100)}%`)
-    .join(" · ");
   const rotationSectorMarkup = rotationSectors
     .slice(0, 12)
     .map(
@@ -4500,10 +4497,10 @@ function renderMarketBriefingOverview() {
           <div>
             <h2>Rotation Signal</h2>
             <p>Daily Briefing 종목군을 NASDAQ 100 (QQQ) 대비 초과수익률로 비교해 포트 편입 후보와 약화 후보를 추적합니다.</p>
+            <p class="briefing-rotation-formula">Score = QQQ 대비 초과수익률 가중합: 1D 20% · 1W 40% · 2W 20% · 1M 20%</p>
           </div>
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">Benchmark ${rotationSignal.benchmark?.label ?? "QQQ"}</span>
-            <span class="market-rs-pill">${rotationWeightsText}</span>
           </div>
         </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
