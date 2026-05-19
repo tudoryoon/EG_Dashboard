@@ -23,14 +23,15 @@ BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
 ROTATION_WEIGHTS = {
-    "1w": 0.20,
-    "1m": 0.35,
-    "3m": 0.30,
-    "6m": 0.15,
+    "1d": 0.20,
+    "1w": 0.40,
+    "2w": 0.20,
+    "1m": 0.20,
 }
 MAP_RANGE_PERIODS = {
     "1d": 1,
     "1w": 5,
+    "2w": 10,
     "1m": 21,
     "3m": 63,
     "6m": 126,
@@ -39,6 +40,7 @@ MAP_RANGE_PERIODS = {
 MAP_RANGE_LABELS = {
     "1d": "1D",
     "1w": "1W",
+    "2w": "2W",
     "1m": "1M",
     "3m": "3M",
     "6m": "6M",
@@ -819,13 +821,16 @@ def compute_rotation_score(excess: dict[str, float | None]) -> float | None:
 
 
 def classify_rotation(excess: dict[str, float | None]) -> str:
+    one_week = safe_float(excess.get("1w"))
+    two_week = safe_float(excess.get("2w"))
     one_month = safe_float(excess.get("1m"))
-    three_month = safe_float(excess.get("3m"))
-    if one_month is not None and one_month > 0 and three_month is not None and three_month > 0:
+    if one_week is not None and one_week > 0 and one_month is not None and one_month > 0:
         return "Leading"
-    if one_month is not None and one_month > 0:
+    if one_week is not None and one_week > 0:
         return "Improving"
-    if three_month is not None and three_month > 0:
+    if one_month is not None and one_month > 0:
+        return "Weakening"
+    if two_week is not None and two_week > 0:
         return "Weakening"
     return "Lagging"
 
@@ -941,7 +946,7 @@ def build_rotation_signal(
             for item in enriched_items
             if item.get("sectorKey") in leading_sector_keys
             and safe_float(item.get("rotationScore")) is not None
-            and all((safe_float(item["excessReturns"].get(key)) or -999) > 0 for key in ("1w", "1m", "3m"))
+            and all((safe_float(item["excessReturns"].get(key)) or -999) > 0 for key in ("1d", "1w", "1m"))
         ],
         key=lambda item: float(item["rotationScore"]),
         reverse=True,
@@ -951,9 +956,9 @@ def build_rotation_signal(
             item
             for item in enriched_items
             if safe_float(item.get("rotationScore")) is not None
+            and (safe_float(item["excessReturns"].get("1d")) or -999) > 0
             and (safe_float(item["excessReturns"].get("1w")) or -999) > 0
-            and (safe_float(item["excessReturns"].get("1m")) or -999) > 0
-            and (safe_float(item["excessReturns"].get("3m")) or 999) <= 0
+            and (safe_float(item["excessReturns"].get("1m")) or 999) <= 0
         ],
         key=lambda item: float(item["rotationScore"]),
         reverse=True,
@@ -964,8 +969,8 @@ def build_rotation_signal(
             for item in enriched_items
             if item.get("sectorKey") in weak_sector_keys
             and safe_float(item.get("rotationScore")) is not None
+            and (safe_float(item["excessReturns"].get("1d")) or 999) < 0
             and (safe_float(item["excessReturns"].get("1w")) or 999) < 0
-            and (safe_float(item["excessReturns"].get("1m")) or 999) < 0
         ],
         key=lambda item: float(item["rotationScore"]),
     )[:8]

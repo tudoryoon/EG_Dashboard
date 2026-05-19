@@ -4100,6 +4100,20 @@ function getRotationClassKorean(classification) {
   return labels[classification] ?? "중립";
 }
 
+function getSignedValueClass(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "";
+  }
+  if (numeric > 0) {
+    return "is-positive";
+  }
+  if (numeric < 0) {
+    return "is-negative";
+  }
+  return "";
+}
+
 function renderRotationCandidateList(items, emptyText) {
   if (!items?.length) {
     return `<p class="market-rs-empty">${emptyText}</p>`;
@@ -4113,8 +4127,8 @@ function renderRotationCandidateList(items, emptyText) {
             <span>${item.sectorLabel}</span>
           </div>
           <div class="briefing-rotation-name-stats">
-            <b>${formatSignedPercent(item.score)}</b>
-            <span>1M ${formatSignedPercent(item.excessReturns?.["1m"])}</span>
+            <b class="${getSignedValueClass(item.score)}">${formatSignedPercent(item.score)}</b>
+            <span class="${getSignedValueClass(item.excessReturns?.["1w"])}">1W ${formatSignedPercent(item.excessReturns?.["1w"])}</span>
           </div>
         </article>
       `,
@@ -4337,10 +4351,11 @@ function renderMarketBriefingOverview() {
             <strong>${sector.label}</strong>
             <span>${getRotationClassKorean(sector.classification)}</span>
           </div>
-          <b>${formatSignedPercent(sector.score)}</b>
+          <b class="${getSignedValueClass(sector.score)}">${formatSignedPercent(sector.score)}</b>
           <div class="briefing-rotation-sector-metrics">
-            <span>1M ${formatSignedPercent(sector.excessReturns?.["1m"])}</span>
-            <span>3M ${formatSignedPercent(sector.excessReturns?.["3m"])}</span>
+            <span class="${getSignedValueClass(sector.excessReturns?.["1w"])}">1W ${formatSignedPercent(sector.excessReturns?.["1w"])}</span>
+            <span class="${getSignedValueClass(sector.excessReturns?.["2w"])}">2W ${formatSignedPercent(sector.excessReturns?.["2w"])}</span>
+            <span class="${getSignedValueClass(sector.excessReturns?.["1m"])}">1M ${formatSignedPercent(sector.excessReturns?.["1m"])}</span>
           </div>
         </article>
       `,

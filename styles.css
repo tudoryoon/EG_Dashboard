@@ -426,6 +426,14 @@ h1 {
   color: #a63b2b;
 }
 
+.briefing-rotation-panel .is-positive {
+  color: #137047 !important;
+}
+
+.briefing-rotation-panel .is-negative {
+  color: #b42318 !important;
+}
+
 .briefing-rotation-bottom {
   display: grid;
   grid-template-columns: 0.9fr 1.4fr;
