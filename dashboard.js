@@ -3963,6 +3963,15 @@ function formatSignedPercent(value) {
   return `${sign}${numeric.toFixed(2)}%`;
 }
 
+function formatSignedScore(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}`;
+}
+
 function formatBriefingIndexValue(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -4127,7 +4136,7 @@ function renderRotationCandidateList(items, emptyText) {
             <span>${item.sectorLabel}</span>
           </div>
           <div class="briefing-rotation-name-stats">
-            <b class="${getSignedValueClass(item.score)}">${formatSignedPercent(item.score)}</b>
+            <b class="${getSignedValueClass(item.score)}">Score ${formatSignedScore(item.score)}</b>
             <span class="${getSignedValueClass(item.excessReturns?.["1w"])}">1W ${formatSignedPercent(item.excessReturns?.["1w"])}</span>
           </div>
         </article>
@@ -4351,7 +4360,7 @@ function renderMarketBriefingOverview() {
             <strong>${sector.label}</strong>
             <span>${getRotationClassKorean(sector.classification)}</span>
           </div>
-          <b class="${getSignedValueClass(sector.score)}">${formatSignedPercent(sector.score)}</b>
+          <b class="${getSignedValueClass(sector.score)}">Score ${formatSignedScore(sector.score)}</b>
           <div class="briefing-rotation-sector-metrics">
             <span class="${getSignedValueClass(sector.excessReturns?.["1w"])}">1W ${formatSignedPercent(sector.excessReturns?.["1w"])}</span>
             <span class="${getSignedValueClass(sector.excessReturns?.["2w"])}">2W ${formatSignedPercent(sector.excessReturns?.["2w"])}</span>
