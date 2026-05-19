@@ -158,6 +158,7 @@ SECTOR_GROUPS = [
             {"ticker": "NET", "label": "NET US", "name": "Cloudflare", "query": "Cloudflare stock"},
             {"ticker": "CRWD", "label": "CRWD US", "name": "CrowdStrike", "query": "CrowdStrike stock"},
             {"ticker": "PANW", "label": "PANW US", "name": "Palo Alto Networks", "query": "Palo Alto Networks stock"},
+            {"ticker": "FTNT", "label": "FTNT US", "name": "Fortinet", "query": "Fortinet stock"},
             {"ticker": "ZS", "label": "ZS US", "name": "Zscaler", "query": "Zscaler stock"},
         ],
     },
