@@ -4034,6 +4034,7 @@ function getBriefingIndexReturn(item, rangeKey) {
 
   const periodMap = {
     "1w": 5,
+    "2w": 10,
     "1m": 21,
     "3m": 63,
     "6m": 126,
