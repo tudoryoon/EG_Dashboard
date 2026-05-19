@@ -475,6 +475,16 @@ h1 {
   line-height: 1.45;
 }
 
+.briefing-rotation-rule {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(28, 28, 26, 0.07);
+  padding: 4px 8px;
+  color: #4d4d47;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .briefing-rotation-name-list {
   display: grid;
   gap: 7px;

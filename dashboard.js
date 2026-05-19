@@ -4110,6 +4110,16 @@ function getRotationClassKorean(classification) {
   return labels[classification] ?? "중립";
 }
 
+function getRotationClassRule(classification) {
+  const rules = {
+    Leading: "1W > 0, 1M > 0",
+    Improving: "1W > 0, 1M <= 0",
+    Weakening: "1W <= 0, 1M 또는 2W > 0",
+    Lagging: "그 외",
+  };
+  return rules[classification] ?? "";
+}
+
 function getSignedValueClass(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -4377,6 +4387,7 @@ function renderMarketBriefingOverview() {
             <strong>${getRotationClassLabel(classification)}</strong>
             <span>${getRotationClassKorean(classification)}</span>
           </div>
+          <span class="briefing-rotation-rule">${getRotationClassRule(classification)}</span>
           <p>${sectors.slice(0, 5).map((sector) => sector.label).join(" · ") || "해당 섹터 없음"}</p>
         </article>
       `;
