@@ -882,7 +882,9 @@ def build_rotation_signal(
                     denominator += weight
                 equal_weight_values.append(value)
             if denominator > 0:
-                excess_by_range[key] = round(numerator / denominator, 2)
+                cap_weighted = numerator / denominator
+                equal_weighted = sum(equal_weight_values) / len(equal_weight_values) if equal_weight_values else cap_weighted
+                excess_by_range[key] = round((cap_weighted * 0.5) + (equal_weighted * 0.5), 2)
             elif equal_weight_values:
                 excess_by_range[key] = round(sum(equal_weight_values) / len(equal_weight_values), 2)
             else:

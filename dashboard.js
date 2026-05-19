@@ -4388,7 +4388,7 @@ function renderMarketBriefingOverview() {
             <span>${getRotationClassKorean(classification)}</span>
           </div>
           <span class="briefing-rotation-rule">${getRotationClassRule(classification)}</span>
-          <p>${sectors.slice(0, 5).map((sector) => sector.label).join(" · ") || "해당 섹터 없음"}</p>
+          <p>${sectors.map((sector) => sector.label).join(" · ") || "해당 섹터 없음"}</p>
         </article>
       `;
     })
@@ -4509,7 +4509,7 @@ function renderMarketBriefingOverview() {
           <div>
             <h2>Rotation Signal</h2>
             <p>Daily Briefing 종목군을 NASDAQ 100 (QQQ) 대비 초과수익률로 비교해 포트 편입 후보와 약화 후보를 추적합니다.</p>
-            <p class="briefing-rotation-formula">Score = QQQ 대비 초과수익률 가중합: 1D 20% · 1W 40% · 2W 20% · 1M 20%</p>
+            <p class="briefing-rotation-formula">Score = QQQ 대비 초과수익률 가중합: 1D 20% · 1W 40% · 2W 20% · 1M 20%. 섹터 수익률은 시총가중 50% + 동일가중 50% 혼합.</p>
           </div>
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">Benchmark ${rotationSignal.benchmark?.label ?? "QQQ"}</span>
