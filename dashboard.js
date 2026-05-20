@@ -4221,6 +4221,72 @@ function createInfraFuelChart(canvas) {
   charts.push(chart);
 }
 
+function createInfraFuelHistoryChart(canvas) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+  const item =
+    (infraGridData.items ?? []).find((candidate) => candidate.key === "caiso" && (candidate.fuelHistory ?? []).length) ??
+    (infraGridData.items ?? []).find((candidate) => (candidate.fuelHistory ?? []).length);
+  if (!item) {
+    return;
+  }
+
+  const history = item.fuelHistory ?? [];
+  const fuelLabels = Object.keys(infraGridData.fuelColors ?? {}).filter((fuel) =>
+    history.some((point) => Number.isFinite(Number(point.shares?.[fuel]))),
+  );
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: history.map((point) => formatInfraTime(point.time)),
+      datasets: fuelLabels.map((fuel) => ({
+        label: fuel,
+        data: history.map((point) => Number(point.shares?.[fuel] ?? 0)),
+        borderColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
+        backgroundColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.28,
+        fill: false,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => `${item.label} ${items[0]?.label ?? ""}`,
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#77736b", maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+          border: { color: "#dedbd2" },
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { color: "#77736b", callback: (value) => `${value}%` },
+          grid: { color: "rgba(40, 40, 36, 0.10)" },
+          border: { color: "#dedbd2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
 function renderInfraOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -4326,6 +4392,15 @@ function renderInfraOverview() {
             </div>
             <div class="memory-chart-wrap"><canvas data-infra-grid="fuel"></canvas></div>
           </article>
+          <article class="memory-panel infra-history-panel">
+            <div class="memory-panel-head">
+              <div>
+                <h3>Hourly Fuel Mix Share</h3>
+                <p>CAISO available history first; falls back to the first ISO with fuel history.</p>
+              </div>
+            </div>
+            <div class="memory-chart-wrap"><canvas data-infra-grid="fuel-history"></canvas></div>
+          </article>
         </div>
       </section>
     </section>
@@ -4333,11 +4408,15 @@ function renderInfraOverview() {
 
   const loadCanvas = usOverviewRoot.querySelector("[data-infra-grid='load']");
   const fuelCanvas = usOverviewRoot.querySelector("[data-infra-grid='fuel']");
+  const fuelHistoryCanvas = usOverviewRoot.querySelector("[data-infra-grid='fuel-history']");
   if (loadCanvas) {
     createInfraLoadChart(loadCanvas);
   }
   if (fuelCanvas) {
     createInfraFuelChart(fuelCanvas);
+  }
+  if (fuelHistoryCanvas) {
+    createInfraFuelHistoryChart(fuelHistoryCanvas);
   }
 }
 

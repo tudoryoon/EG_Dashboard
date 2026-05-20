@@ -11,6 +11,7 @@ import pandas as pd
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "infra-grid-status-data.js"
 LOOKBACK_DAYS = 2
+FUEL_HISTORY_POINTS = 24
 
 ISO_CONFIG = [
     {"key": "caiso", "class": "CAISO", "label": "CAISO", "region": "California"},
@@ -155,6 +156,30 @@ def normalize_fuel_mix(record: dict[str, Any]) -> tuple[list[dict[str, float | s
     return rows, renewable_share
 
 
+def build_fuel_history(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    if frame.empty:
+        return []
+
+    history: list[dict[str, Any]] = []
+    for _, row in frame.tail(FUEL_HISTORY_POINTS).iterrows():
+        record = row.to_dict()
+        fuel_mix, _ = normalize_fuel_mix(record)
+        time_value = record.get("Time") or record.get("Interval End") or record.get("Interval Start")
+        if not fuel_mix or not time_value:
+            continue
+        history.append(
+            {
+                "time": isoformat_value(time_value),
+                "shares": {
+                    fuel["label"]: fuel["sharePct"]
+                    for fuel in fuel_mix
+                    if fuel["sharePct"] is not None
+                },
+            }
+        )
+    return history
+
+
 def build_iso_item(gridstatus_module: Any, config: dict[str, str]) -> dict[str, Any]:
     item: dict[str, Any] = {
         "key": config["key"],
@@ -165,6 +190,7 @@ def build_iso_item(gridstatus_module: Any, config: dict[str, str]) -> dict[str, 
         "loadTime": "",
         "fuelTime": "",
         "fuelMix": [],
+        "fuelHistory": [],
         "renewableSharePct": None,
         "topFuel": "",
         "error": "",
@@ -197,6 +223,7 @@ def build_iso_item(gridstatus_module: Any, config: dict[str, str]) -> dict[str, 
         fuel_record = fuel_frame.iloc[-1].to_dict()
         fuel_mix, renewable_share = normalize_fuel_mix(fuel_record)
         item["fuelMix"] = fuel_mix
+        item["fuelHistory"] = build_fuel_history(fuel_frame)
         item["renewableSharePct"] = renewable_share
         item["fuelTime"] = isoformat_value(fuel_record.get("Time") or fuel_record.get("Interval End"))
         item["topFuel"] = fuel_mix[0]["label"] if fuel_mix else ""
