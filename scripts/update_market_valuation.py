@@ -3,7 +3,9 @@ from __future__ import annotations
 import io
 import json
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 import pandas as pd
 import requests
@@ -15,6 +17,7 @@ SHILLER_PAGE_URL = "https://shillerdata.com/"
 YALE_FALLBACK_URL = "http://www.econ.yale.edu/~shiller/data/ie_data.xls"
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-valuation-data.js"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
+SP500_SYMBOL = "^GSPC"
 
 
 def discover_shiller_download_url() -> str:
@@ -67,6 +70,71 @@ def clean_number(value: object) -> float | None:
     return round(numeric, 4)
 
 
+def yahoo_chart_url(symbol: str) -> str:
+    encoded = quote(symbol, safe="")
+    period1 = int(datetime.fromisoformat(f"{START_DATE}T00:00:00+00:00").timestamp())
+    period2 = int(datetime.now(timezone.utc).timestamp())
+    return (
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}"
+        f"?period1={period1}&period2={period2}&interval=1d&includeAdjustedClose=true&events=div%2Csplits"
+    )
+
+
+def fetch_daily_sp500() -> list[dict[str, float | str]]:
+    response = requests.get(yahoo_chart_url(SP500_SYMBOL), headers=HEADERS, timeout=60)
+    response.raise_for_status()
+    result = response.json()["chart"]["result"][0]
+    timestamps = result.get("timestamp") or []
+    quote_data = (result.get("indicators") or {}).get("quote") or [{}]
+    adjclose_data = (result.get("indicators") or {}).get("adjclose") or [{}]
+    closes = adjclose_data[0].get("adjclose") or quote_data[0].get("close") or []
+
+    rows: list[dict[str, float | str]] = []
+    for timestamp, close in zip(timestamps, closes):
+        if close is None:
+            continue
+        date = (datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=timestamp)).strftime("%Y-%m-%d")
+        if date < START_DATE:
+            continue
+        rows.append({"date": date, "sp500Close": round(float(close), 4)})
+    return rows
+
+
+def build_daily_cape_proxy(
+    shiller_rows: list[dict[str, float | str | None]],
+    daily_sp500_rows: list[dict[str, float | str]],
+) -> list[dict[str, float | str]]:
+    monthly_rows = [
+        row
+        for row in shiller_rows
+        if row.get("date") and row.get("cape") is not None and row.get("sp500") is not None
+    ]
+    if not monthly_rows or not daily_sp500_rows:
+        return []
+
+    proxy_rows: list[dict[str, float | str]] = []
+    month_index = 0
+    active_month = monthly_rows[month_index]
+    for daily_row in daily_sp500_rows:
+        daily_date = str(daily_row["date"])
+        while month_index + 1 < len(monthly_rows) and str(monthly_rows[month_index + 1]["date"]) <= daily_date:
+            month_index += 1
+            active_month = monthly_rows[month_index]
+
+        monthly_cape = float(active_month["cape"])
+        monthly_sp500 = float(active_month["sp500"])
+        daily_sp500 = float(daily_row["sp500Close"])
+        if monthly_sp500 == 0:
+            continue
+        proxy_rows.append(
+            {
+                "date": daily_date,
+                "value": round(monthly_cape * daily_sp500 / monthly_sp500, 4),
+            }
+        )
+    return proxy_rows
+
+
 def build_payload() -> dict[str, object]:
     source_url = discover_shiller_download_url()
     excel_bytes = fetch_excel_bytes(source_url)
@@ -94,8 +162,10 @@ def build_payload() -> dict[str, object]:
         )
 
     dates = [row["date"] for row in rows]
+    daily_sp500_rows = fetch_daily_sp500()
+    daily_cape_proxy = build_daily_cape_proxy(rows, daily_sp500_rows)
     payload = {
-        "updatedAt": dates[-1] if dates else "",
+        "updatedAt": daily_cape_proxy[-1]["date"] if daily_cape_proxy else (dates[-1] if dates else ""),
         "startDate": START_DATE,
         "defaultRange": "max",
         "source": {
@@ -103,6 +173,7 @@ def build_payload() -> dict[str, object]:
             "url": source_url,
             "page": SHILLER_PAGE_URL,
             "frequency": "Monthly",
+            "dailyProxy": "Estimated with Yahoo Finance daily S&P 500 close and the latest available monthly Shiller CAPE denominator.",
         },
         "ranges": [
             {"key": "1m", "label": "1M"},
@@ -121,6 +192,15 @@ def build_payload() -> dict[str, object]:
                 "formatter": "number1",
                 "dates": dates,
                 "values": [row["cape"] for row in rows],
+            },
+            "dailyCapeProxy": {
+                "label": "Daily CAPE Proxy",
+                "color": "#f97316",
+                "axis": "left",
+                "formatter": "number1",
+                "estimated": True,
+                "dates": [row["date"] for row in daily_cape_proxy],
+                "values": [row["value"] for row in daily_cape_proxy],
             },
             "trCape": {
                 "label": "Total Return CAPE",

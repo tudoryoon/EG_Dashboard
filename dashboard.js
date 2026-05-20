@@ -242,7 +242,7 @@ const state = {
   marketValuationRange: marketValuationData.defaultRange ?? "max",
   marketValuationCustomStart: "",
   marketValuationCustomEnd: "",
-  marketValuationSelection: ["cape", "sp500"],
+  marketValuationSelection: ["cape", "dailyCapeProxy", "sp500"],
   totalDashboardRange: "3y",
   totalDashboardSelection: [
     "market:sp500",
@@ -7853,7 +7853,7 @@ function renderMarketValuationOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Valuation Dashboard</h2>
-            <p>Robert Shiller CAPE data from 1981-01-01. CAPE series use the left axis, while S&P 500 price series use Start = 100 on the right axis.</p>
+            <p>Robert Shiller CAPE data from 1981-01-01. Official Shiller CAPE is monthly; Daily CAPE Proxy is an estimate using daily S&amp;P 500 close and the latest monthly CAPE denominator.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
@@ -7895,6 +7895,7 @@ function renderMarketValuationOverview() {
         <div class="market-trend-meta">
           <span>Source: ${marketValuationData.source?.name ?? "Shiller data"}</span>
           <span>${marketValuationData.source?.frequency ?? "Monthly"} data</span>
+          <span>Daily CAPE Proxy = estimated, not official Shiller daily data</span>
         </div>
         <div class="us-price-chart-wrap">
           <canvas data-market-valuation="overview"></canvas>
