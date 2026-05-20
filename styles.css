@@ -181,17 +181,30 @@ h1 {
   box-shadow: 0 14px 28px rgba(217, 48, 37, 0.18);
 }
 
-.country-button.is-daily-briefing {
+.country-button.is-us {
   border-color: #d7d7d0;
   background: linear-gradient(180deg, #f1f1ed, #e6e6e0);
   color: #3f3f3a;
 }
 
-.country-button.is-daily-briefing.active {
+.country-button.is-us.active {
   border-color: #4e4e49;
   background: linear-gradient(135deg, #6a6a64, #3f3f3a);
   color: #fbfbf8;
   box-shadow: 0 14px 28px rgba(63, 63, 58, 0.18);
+}
+
+.country-button.is-korea {
+  border-color: #cfe0ef;
+  background: linear-gradient(180deg, #f4f9ff, #e8f2fb);
+  color: #174a76;
+}
+
+.country-button.is-korea.active {
+  border-color: #1f5f96;
+  background: linear-gradient(135deg, #2f80c3, #174a76);
+  color: #f8fbff;
+  box-shadow: 0 14px 28px rgba(31, 95, 150, 0.18);
 }
 
 .country-button.is-data-trend {

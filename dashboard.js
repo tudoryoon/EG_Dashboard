@@ -67,7 +67,8 @@ const gpuCloudRuntime = {
 };
 
 const primaryTabMeta = {
-  DailyBriefing: { label: "Daily Briefing" },
+  US: { label: "US" },
+  Korea: { label: "Korea" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
@@ -209,7 +210,7 @@ const MARKET_RS_CAP_RANGES = [
 ];
 
 const state = {
-  tab: "DailyBriefing",
+  tab: "US",
   marketView: "Overview",
   bigTechView: "M7",
   semisView: "MemorySpot",
@@ -5045,7 +5046,7 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>Rotation Signal</h2>
-            <p>Daily Briefing 종목군을 NASDAQ 100 (QQQ) 대비 초과수익률로 비교해 포트 편입 후보와 약화 후보를 추적합니다.</p>
+            <p>US 브리핑 종목군을 NASDAQ 100 (QQQ) 대비 초과수익률로 비교해 포트 편입 후보와 약화 후보를 추적합니다.</p>
             <p class="briefing-rotation-formula">Score = QQQ 대비 초과수익률 가중합: 1D 20% · 1W 40% · 2W 20% · 1M 20%. 섹터 수익률은 시총가중 50% + 동일가중 50% 혼합.</p>
           </div>
           <div class="market-rs-summary-pills">
@@ -9112,7 +9113,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "US" ? " is-us" : ""}${tabKey === "Korea" ? " is-korea" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -9270,8 +9271,13 @@ function renderSummary(list) {
     return;
   }
 
-  if (state.tab === "DailyBriefing") {
-    summaryText.textContent = "Daily market briefing with curated heatmap, key headlines, and Korean mover notes";
+  if (state.tab === "US") {
+    summaryText.textContent = "US daily market briefing with curated heatmap, key headlines, and Korean mover notes";
+    return;
+  }
+
+  if (state.tab === "Korea") {
+    summaryText.textContent = "Korea market briefing workspace";
     return;
   }
 
@@ -9406,9 +9412,18 @@ function render() {
     return;
   }
 
-  if (state.tab === "DailyBriefing") {
+  if (state.tab === "US") {
     renderSummary([]);
     renderMarketBriefingOverview();
+    return;
+  }
+
+  if (state.tab === "Korea") {
+    renderSummary([]);
+    renderPlaceholderOverview(
+      "Korea Market Briefing",
+      "한국 시장 브리핑 데이터를 붙일 별도 탭입니다. 지수, 섹터 맵, 주요 뉴스, 급등락 종목을 이 영역에 추가하면 됩니다.",
+    );
     return;
   }
 
