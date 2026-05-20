@@ -45,6 +45,7 @@ const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cad
 const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
+const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
 const memorySpotRuntime = {
   loading: false,
   loaded: false,
@@ -276,6 +277,8 @@ const state = {
     "market:sp500",
   ],
   memorySpotRanges: {},
+  ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
+  ornnGpuRange: ornnGpuIndexData.defaultRange ?? "3m",
 };
 
 const charts = [];
@@ -5985,6 +5988,114 @@ function buildGpuAlignedSeriesData(labels, sourceLabels, sourceValues) {
   });
 }
 
+function getOrnnGpuSeriesEntries() {
+  return Object.entries(ornnGpuIndexData?.series ?? {});
+}
+
+function getActiveOrnnGpuSeries() {
+  return ornnGpuIndexData?.series?.[state.ornnGpuKey] ?? getOrnnGpuSeriesEntries()[0]?.[1] ?? null;
+}
+
+function getOrnnGpuRangeConfig() {
+  return (ornnGpuIndexData.ranges ?? []).find((range) => range.key === state.ornnGpuRange)
+    ?? (ornnGpuIndexData.ranges ?? [])[0]
+    ?? { key: "3m", label: "3M", days: 90 };
+}
+
+function buildOrnnGpuChartPayload(series) {
+  const dates = series?.dates ?? [];
+  const values = series?.values ?? [];
+  const range = getOrnnGpuRangeConfig();
+  const rangeDays = Number(range.days) || 90;
+  const startIndex = Math.max(0, dates.length - rangeDays);
+  return {
+    labels: dates.slice(startIndex),
+    datasets: [
+      {
+        label: series?.label ?? "GPU Index",
+        data: values.slice(startIndex),
+        borderColor: series?.color ?? "#111827",
+        backgroundColor: "rgba(17, 24, 39, 0.05)",
+        borderWidth: 2.8,
+        tension: 0.22,
+        fill: true,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
+        spanGaps: true,
+      },
+    ],
+  };
+}
+
+function createOrnnGpuIndexChart(canvas, series) {
+  if (typeof Chart === "undefined" || !series) {
+    return;
+  }
+
+  const payload = buildOrnnGpuChartPayload(series);
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 5;
+  const yMin = Math.max(0, Math.floor(minValue * 0.9 * 10) / 10);
+  const yMax = Math.ceil(maxValue * 1.1 * 10) / 10;
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, state.ornnGpuRange, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: payload,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatGpuCloudValue(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => {
+              if (!selectedTickSet.has(value)) {
+                return "";
+              }
+              const label = payload.labels[value];
+              return label ? formatRangeAxisDate(label, state.ornnGpuRange) : "";
+            },
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => formatGpuCloudValue(value), maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function renderGpuCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -6019,6 +6130,33 @@ function renderGpuCloudOverview() {
   const semiSeries = getGpuSemiAnalysisSeries();
   const semiSpotSeries = getGpuSemiAnalysisSpotSeries();
   const mergedLabels = buildGpuMergedLabels([semiSeries, semiSpotSeries]);
+  const ornnSeriesEntries = getOrnnGpuSeriesEntries();
+  const activeOrnnSeries = getActiveOrnnGpuSeries();
+  const ornnGpuTabsMarkup = ornnSeriesEntries
+    .map(
+      ([key, item]) => `
+        <button
+          type="button"
+          class="total-series-chip${state.ornnGpuKey === key ? " active" : ""}"
+          data-ornn-gpu="${key}"
+        >
+          <span class="total-series-dot" style="background:${item.color}"></span>
+          ${item.label}
+        </button>`,
+    )
+    .join("");
+  const ornnRangeMarkup = (ornnGpuIndexData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.ornnGpuRange === range.key ? " active" : ""}"
+          data-ornn-gpu-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
 
   usOverviewRoot.innerHTML = `
     <section class="memory-overview">
@@ -6096,6 +6234,36 @@ function renderGpuCloudOverview() {
           </div>
         </article>
       </section>
+      <section class="memory-panel-grid memory-panel-grid-wide">
+        <article class="memory-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>Ornn Compute Price Index</h3>
+              <p>GPU rental spot index from dashboard.ornnai.com. Use the chip selector to switch hardware.</p>
+            </div>
+            <div class="m7-range-row">${ornnRangeMarkup}</div>
+          </div>
+          <div class="total-series-row total-series-row-left">
+            ${ornnGpuTabsMarkup}
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${ornnGpuIndexData.source?.name ?? "Ornn Compute Price Index"}</span>
+            <span>${activeOrnnSeries?.latestDate ?? "-"} ${Number.isFinite(activeOrnnSeries?.latestValue) ? `| ${formatGpuCloudValue(activeOrnnSeries.latestValue)}` : ""}</span>
+            <span>${formatGpuCloudChange(activeOrnnSeries?.latestChangePct)}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Active GPU</span>
+            <span class="memory-stat-value">${activeOrnnSeries?.apiName ?? activeOrnnSeries?.label ?? "-"}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Source</span>
+            <span class="memory-stat-value">dashboard.ornnai.com public index API</span>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-ornn-gpu-index="overview"></canvas>
+          </div>
+        </article>
+      </section>
     </section>
   `;
 
@@ -6125,6 +6293,25 @@ function renderGpuCloudOverview() {
       ],
       (value) => `$${Number(value).toFixed(2)}`,
     );
+  }
+
+  usOverviewRoot.querySelectorAll("[data-ornn-gpu]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.ornnGpuKey = button.dataset.ornnGpu || state.ornnGpuKey;
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-ornn-gpu-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.ornnGpuRange = button.dataset.ornnGpuRange || state.ornnGpuRange;
+      render();
+    });
+  });
+
+  const ornnCanvas = usOverviewRoot.querySelector('[data-ornn-gpu-index="overview"]');
+  if (ornnCanvas && activeOrnnSeries) {
+    createOrnnGpuIndexChart(ornnCanvas, activeOrnnSeries);
   }
 }
 

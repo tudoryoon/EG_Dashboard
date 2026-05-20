@@ -1,0 +1,38 @@
+name: Update Ornn GPU Index
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 22 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-ornn-gpu-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh Ornn GPU index history
+        run: python scripts/update_ornn_gpu_index.py
+
+      - name: Commit updated Ornn GPU index history
+        run: |
+          if git diff --quiet -- data/ornn-gpu-index-data.js; then
+            echo "No Ornn GPU index changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ornn-gpu-index-data.js
+          git commit -m "Update Ornn GPU index history" || exit 0
+          git pull --rebase origin main
+          git push

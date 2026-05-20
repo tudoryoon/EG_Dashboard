@@ -25,7 +25,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `Semis > Memory Spot`
   - DRAM and NAND spot dashboard
 - `Semis > GPU Rental Price`
-  - SemiAnalysis-focused GPU rental dashboard
+  - existing SemiAnalysis-focused GPU rental dashboard plus Ornn Compute Price Index section
 - `Taiwan`
   - monthly revenue company cards
 
@@ -66,6 +66,12 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - scheduled at `22:20 UTC` / `07:20 KST`
   - updates `data/memory-spot-history.js`
 
+- `/.github/workflows/update-ornn-gpu-index.yml`
+  - runs daily
+  - scheduled at `22:30 UTC` / `07:30 KST`
+  - updates `data/ornn-gpu-index-data.js`
+  - source: Ornn public Compute Price Index API behind `dashboard.ornnai.com`
+
 - `/.github/workflows/update-macro-data.yml`
   - runs daily at `16:30 UTC`
   - updates `data/macro-indicators-data.js`
@@ -92,7 +98,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 
 - `GPU Rental Price`
   - source files: `data/gpu-cloud-data.js`, `data/gpu-cloud-history.js`
-  - not currently on a scheduled GitHub Action
+  - legacy SemiAnalysis / public-offer section is maintained manually unless a stable public feed is available
 
 - `ISM Services / ISM Manufacturing`
   - currently shown inside `Market > Macro`
@@ -111,6 +117,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `scripts/update_market_briefing.py`
 - `scripts/update_market_rs.py`
 - `scripts/update_memory_spot.py`
+- `scripts/update_ornn_gpu_index.py`
 - `scripts/update_macro_data.py`
 
 ## Deployment
