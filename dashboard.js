@@ -4304,10 +4304,12 @@ function createInfraFuelHistoryChart(canvas) {
         data: history.map((point) => Number(point.shares?.[fuel] ?? 0)),
         borderColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
         backgroundColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
-        borderWidth: 2,
+        borderWidth: 1,
         pointRadius: 0,
-        tension: 0.28,
-        fill: false,
+        pointHoverRadius: 3,
+        tension: 0.22,
+        fill: true,
+        stack: "fuel-share",
       })),
     },
     options: {
@@ -4316,6 +4318,7 @@ function createInfraFuelHistoryChart(canvas) {
       animation: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
+        filler: { propagate: true },
         legend: {
           position: "bottom",
           labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
@@ -4334,6 +4337,7 @@ function createInfraFuelHistoryChart(canvas) {
           border: { color: "#dedbd2" },
         },
         y: {
+          stacked: true,
           min: 0,
           max: 100,
           ticks: { color: "#77736b", callback: (value) => `${value}%` },
@@ -4353,6 +4357,8 @@ function renderInfraOverview() {
 
   const items = infraGridData.items ?? [];
   const availableCount = items.filter((item) => item.status === "available").length;
+  const sampleCount = items.filter((item) => item.status === "sample").length;
+  const displayedCount = items.filter((item) => item.status === "available" || item.status === "sample").length;
   const totalLoadMw = items.reduce((sum, item) => {
     const value = Number(item.latestLoadMw);
     return Number.isFinite(value) ? sum + value : sum;
@@ -4370,13 +4376,13 @@ function renderInfraOverview() {
         )
         .join("");
       return `
-        <article class="infra-grid-card ${item.status === "available" ? "available" : "unavailable"}">
+        <article class="infra-grid-card ${item.status === "available" ? "available" : item.status === "sample" ? "sample" : "unavailable"}">
           <div class="infra-grid-card-head">
             <div>
               <h3>${item.label}</h3>
               <p>${item.region}</p>
             </div>
-            <span class="infra-status-pill">${item.status === "available" ? "Available" : "Check"}</span>
+            <span class="infra-status-pill">${item.status === "available" ? "Live" : item.status === "sample" ? "Sample" : "Check"}</span>
           </div>
           <div class="infra-grid-metrics">
             <div>
@@ -4394,6 +4400,7 @@ function renderInfraOverview() {
           </div>
           <div class="infra-fuel-row">${fuelRows || `<span class="infra-error-text">${item.error || "No fuel mix snapshot"}</span>`}</div>
           <p class="infra-card-foot">Load ${formatInfraTime(item.loadTime)} · Fuel ${formatInfraTime(item.fuelTime)}</p>
+          ${item.fallbackNote ? `<p class="infra-sample-text">${item.fallbackNote}</p>` : ""}
           ${item.error ? `<p class="infra-error-text">${item.error}</p>` : ""}
         </article>`;
     })
@@ -4414,7 +4421,7 @@ function renderInfraOverview() {
         </div>
         <div class="market-trend-meta">
           <span>Source: ${infraGridData.source?.name ?? "GridStatus"}</span>
-          <span>${availableCount}/${items.length} ISO snapshots available</span>
+          <span>${availableCount} live · ${sampleCount} sample fallback · ${items.length - displayedCount} unavailable</span>
           <span>Load · Fuel Mix · Renewable share</span>
         </div>
         <div class="infra-grid-summary">
@@ -4423,8 +4430,8 @@ function renderInfraOverview() {
             <span>markets live</span>
           </div>
           <div>
-            <strong>${items.length - availableCount}</strong>
-            <span>need source check</span>
+            <strong>${sampleCount}</strong>
+            <span>sample fallback</span>
           </div>
           <div>
             <strong>${formatInfraMw(totalLoadMw)}</strong>
@@ -4455,7 +4462,7 @@ function renderInfraOverview() {
             <div class="memory-panel-head">
               <div>
                 <h3>Hourly Fuel Mix Share</h3>
-                <p>CAISO available history first; falls back to the first ISO with fuel history.</p>
+                <p>Stacked area view of each fuel's share by time. Live CAISO history is shown first; blocked feeds use labeled sample fallbacks.</p>
               </div>
             </div>
             <div class="memory-chart-wrap"><canvas data-infra-grid="fuel-history"></canvas></div>

@@ -54,6 +54,51 @@ FUEL_COLORS = {
     "Other": "#a3a3a3",
 }
 
+FALLBACK_GRID_SNAPSHOTS = {
+    "ercot": {
+        "loadMw": 58500.0,
+        "topFuel": "Natural Gas",
+        "renewableSharePct": 31.0,
+        "shares": {
+            "Natural Gas": 46.0,
+            "Wind": 24.0,
+            "Solar": 7.0,
+            "Coal": 13.0,
+            "Nuclear": 8.0,
+            "Other": 2.0,
+        },
+        "note": "Fallback sample shown because ERCOT public dashboard blocks automated fetches in this workflow.",
+    },
+    "pjm": {
+        "loadMw": 86000.0,
+        "topFuel": "Natural Gas",
+        "renewableSharePct": 5.0,
+        "shares": {
+            "Natural Gas": 43.0,
+            "Nuclear": 32.0,
+            "Coal": 18.0,
+            "Wind": 3.0,
+            "Hydro": 2.0,
+            "Other": 2.0,
+        },
+        "note": "Fallback sample shown because PJM live GridStatus access requires PJM_API_KEY.",
+    },
+    "spp": {
+        "loadMw": 33000.0,
+        "topFuel": "Wind",
+        "renewableSharePct": 47.0,
+        "shares": {
+            "Wind": 45.0,
+            "Natural Gas": 31.0,
+            "Coal": 18.0,
+            "Hydro": 2.0,
+            "Solar": 2.0,
+            "Other": 2.0,
+        },
+        "note": "Fallback sample shown because SPP portal data is intermittent in automated runs.",
+    },
+}
+
 FUEL_ALIASES = {
     "Gas": "Natural Gas",
     "Natural Gas": "Natural Gas",
@@ -177,7 +222,94 @@ def build_fuel_history(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 },
             }
         )
+    return pad_short_history(history)
+
+
+def pad_short_history(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not history or len(history) >= FUEL_HISTORY_POINTS:
+        return history
+
+    first_time = pd.Timestamp(history[0]["time"]).to_pydatetime()
+    seed_shares = history[0]["shares"]
+    missing_count = FUEL_HISTORY_POINTS - len(history)
+    padding = []
+    for index in range(missing_count):
+        time_value = first_time - timedelta(minutes=5 * (missing_count - index))
+        padding.append({"time": time_value.isoformat(), "shares": seed_shares})
+    return padding + history
+
+
+def build_fallback_history(shares: dict[str, float], as_of: datetime) -> list[dict[str, Any]]:
+    history = []
+    labels = list(shares)
+    for index in range(FUEL_HISTORY_POINTS):
+        time_value = as_of - timedelta(minutes=5 * (FUEL_HISTORY_POINTS - 1 - index))
+        adjusted = {}
+        for label in labels:
+            base = float(shares[label])
+            wave = ((index % 6) - 2.5) * 0.25
+            if label in {"Wind", "Solar", "Battery"}:
+                adjusted[label] = max(0.0, base + wave)
+            elif label in {"Natural Gas", "Coal"}:
+                adjusted[label] = max(0.0, base - wave * 0.55)
+            else:
+                adjusted[label] = max(0.0, base)
+        total = sum(adjusted.values())
+        normalized = {
+            label: round((value / total) * 100, 1)
+            for label, value in adjusted.items()
+            if total > 0
+        }
+        history.append({"time": time_value.isoformat(), "shares": normalized})
     return history
+
+
+def build_fallback_iso_item(config: dict[str, str], reason: str) -> dict[str, Any]:
+    fallback = FALLBACK_GRID_SNAPSHOTS.get(config["key"])
+    if not fallback:
+        return {
+            "key": config["key"],
+            "label": config["label"],
+            "region": config["region"],
+            "status": "unavailable",
+            "latestLoadMw": None,
+            "loadTime": "",
+            "fuelTime": "",
+            "fuelMix": [],
+            "fuelHistory": [],
+            "renewableSharePct": None,
+            "topFuel": "",
+            "error": reason,
+        }
+
+    as_of = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    load_mw = float(fallback["loadMw"])
+    fuel_mix = []
+    for label, share in fallback["shares"].items():
+        fuel_mix.append(
+            {
+                "label": label,
+                "valueMw": round(load_mw * float(share) / 100, 1),
+                "sharePct": round(float(share), 1),
+                "color": FUEL_COLORS.get(label, FUEL_COLORS["Other"]),
+            }
+        )
+
+    return {
+        "key": config["key"],
+        "label": config["label"],
+        "region": config["region"],
+        "status": "sample",
+        "latestLoadMw": load_mw,
+        "loadTime": as_of.isoformat(),
+        "fuelTime": as_of.isoformat(),
+        "fuelMix": fuel_mix,
+        "fuelHistory": build_fallback_history(fallback["shares"], as_of),
+        "renewableSharePct": fallback["renewableSharePct"],
+        "topFuel": fallback["topFuel"],
+        "error": reason,
+        "fallbackNote": fallback["note"],
+    }
 
 
 def build_iso_item(gridstatus_module: Any, config: dict[str, str]) -> dict[str, Any]:
@@ -197,8 +329,7 @@ def build_iso_item(gridstatus_module: Any, config: dict[str, str]) -> dict[str, 
     }
 
     if config.get("skipReason"):
-        item["error"] = config["skipReason"]
-        return item
+        return build_fallback_iso_item(config, config["skipReason"])
 
     try:
         iso_class = getattr(gridstatus_module, config["class"])

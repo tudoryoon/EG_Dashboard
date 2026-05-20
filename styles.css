@@ -1348,6 +1348,11 @@ h1 {
   opacity: 0.86;
 }
 
+.infra-grid-card.sample {
+  border-color: #d8cba7;
+  background: linear-gradient(180deg, #fffdf6, #faf6e8);
+}
+
 .infra-grid-card-head {
   display: flex;
   align-items: flex-start;
@@ -1380,6 +1385,12 @@ h1 {
 .infra-grid-card.unavailable .infra-status-pill {
   background: #efede6;
   color: var(--muted);
+}
+
+.infra-grid-card.sample .infra-status-pill {
+  border-color: #d5b95f;
+  background: #fff2b8;
+  color: #7a5a00;
 }
 
 .infra-grid-metrics {
@@ -1429,13 +1440,20 @@ h1 {
 }
 
 .infra-card-foot,
-.infra-error-text {
+.infra-error-text,
+.infra-sample-text {
   color: var(--muted);
   font-size: 12px;
 }
 
 .infra-error-text {
   margin-top: 10px;
+  line-height: 1.45;
+}
+
+.infra-sample-text {
+  margin-top: 10px;
+  color: #7a5a00;
   line-height: 1.45;
 }
 
