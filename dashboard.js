@@ -18,6 +18,7 @@ const capexDashboardData = window.capexDashboardData ?? {
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
+const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
   updatedAt: "",
   generatedAt: "",
@@ -82,6 +83,7 @@ const bigTechSubtabMeta = {
 const marketSubtabMeta = {
   Overview: { label: "Price" },
   Macro: { label: "Macro" },
+  Valuation: { label: "Valuation" },
   FxCommodities: { label: "FX & Commodities" },
   VIX: { label: "VIX" },
   Breadth: { label: "Breadth" },
@@ -236,6 +238,10 @@ const state = {
       Object.keys(panel?.series ?? {}),
     ]),
   ),
+  marketValuationRange: marketValuationData.defaultRange ?? "max",
+  marketValuationCustomStart: "",
+  marketValuationCustomEnd: "",
+  marketValuationSelection: ["cape", "sp500"],
   totalDashboardRange: "3y",
   totalDashboardSelection: [
     "market:sp500",
@@ -2157,6 +2163,211 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
             color: "#8d8d86",
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function getMarketValuationSelection() {
+  const selected = state.marketValuationSelection;
+  if (Array.isArray(selected) && selected.length) {
+    return selected.filter((key) => marketValuationData?.series?.[key]);
+  }
+  return Object.keys(marketValuationData?.series ?? {});
+}
+
+function getMarketValuationBounds() {
+  const dates = Object.values(marketValuationData?.series ?? {})
+    .flatMap((item) => item?.dates ?? [])
+    .filter(Boolean)
+    .sort();
+  return {
+    min: dates[0] ?? marketValuationData?.startDate ?? "1981-01-01",
+    max: dates[dates.length - 1] ?? marketValuationData?.updatedAt ?? "",
+  };
+}
+
+function formatValuationValue(value, formatter = "number1") {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  if (formatter === "index") {
+    return numeric.toFixed(1);
+  }
+  return numeric.toFixed(1);
+}
+
+function buildMarketValuationChartPayload(rangeKey) {
+  const selectedSet = new Set(getMarketValuationSelection());
+  const entries = Object.entries(marketValuationData?.series ?? {}).filter(([key]) => selectedSet.has(key));
+  const allDates = [...new Set(entries.flatMap(([, item]) => item?.dates ?? []))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const customStart = state.marketValuationCustomStart || "";
+  const customEnd = state.marketValuationCustomEnd || "";
+  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketValuationData?.startDate ?? "1981-01-01");
+  const endDate = customEnd || latestDate;
+  const selectedLabels = allDates.filter((label) => label >= startDate && label <= endDate);
+
+  const datasets = entries.map(([key, item]) => {
+    const dateIndex = new Map();
+    (item.dates ?? []).forEach((date, index) => {
+      dateIndex.set(date, index);
+    });
+    const baseDate = selectedLabels.find((label) => dateIndex.has(label) && Number.isFinite(Number(item.values?.[dateIndex.get(label)])));
+    const baseValue = baseDate ? Number(item.values?.[dateIndex.get(baseDate)]) : null;
+    const normalize = item.normalize === true;
+    const data = selectedLabels.map((label) => {
+      const pointIndex = dateIndex.get(label);
+      if (pointIndex === undefined) {
+        return null;
+      }
+      const pointValue = Number(item.values?.[pointIndex]);
+      if (!Number.isFinite(pointValue)) {
+        return null;
+      }
+      if (normalize) {
+        if (!Number.isFinite(baseValue) || baseValue === 0) {
+          return null;
+        }
+        return Number(((pointValue / baseValue) * 100).toFixed(2));
+      }
+      return Number(pointValue.toFixed(4));
+    });
+
+    return {
+      key,
+      label: item.label,
+      data,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: item.axis === "right" ? 2.6 : 2.8,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+      yAxisID: item.axis === "right" ? "y1" : "y",
+      formatter: item.formatter ?? "number1",
+      normalize,
+    };
+  });
+
+  return { labels: selectedLabels, datasets };
+}
+
+function createMarketValuationChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildMarketValuationChartPayload(rangeKey);
+  const leftValues = payload.datasets
+    .filter((dataset) => dataset.yAxisID !== "y1")
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const rightValues = payload.datasets
+    .filter((dataset) => dataset.yAxisID === "y1")
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const leftMin = leftValues.length ? Math.min(...leftValues) : 0;
+  const leftMax = leftValues.length ? Math.max(...leftValues) : 50;
+  const leftPadding = Math.max((leftMax - leftMin) * 0.12, 1);
+  const rightMin = rightValues.length ? Math.min(...rightValues) : 80;
+  const rightMax = rightValues.length ? Math.max(...rightValues) : 140;
+  const rightPadding = Math.max((rightMax - rightMin) * 0.12, 5);
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => {
+              const suffix = context.dataset.normalize ? " (Start=100)" : "";
+              return `${context.dataset.label}: ${formatValuationValue(context.parsed.y, context.dataset.formatter)}${suffix}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => {
+              if (!selectedTickSet.has(value)) {
+                return "";
+              }
+              return formatRangeAxisDate(payload.labels[value], rangeKey);
+            },
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: Math.max(0, leftMin - leftPadding),
+          max: leftMax + leftPadding,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatValuationValue(value, "number1"),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: "CAPE ratio",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        y1: {
+          position: "right",
+          min: Math.max(0, rightMin - rightPadding),
+          max: rightMax + rightPadding,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatValuationValue(value, "index"),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: rightValues.length > 0,
+            text: "Index Start = 100",
+            color: "#8d8d86",
+          },
+          grid: { drawOnChartArea: false },
           border: { color: "#d8d8d2" },
         },
       },
@@ -7403,6 +7614,160 @@ function renderMarketFxCommoditiesOverview() {
   });
 }
 
+function renderMarketValuationOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const bounds = getMarketValuationBounds();
+  const selected = new Set(getMarketValuationSelection());
+  const rangeMarkup = (marketValuationData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketValuationRange === range.key ? " active" : ""}"
+          data-market-valuation-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+  const seriesMarkup = Object.entries(marketValuationData?.series ?? {})
+    .map(
+      ([key, item]) => `
+        <button
+          type="button"
+          class="total-series-chip${selected.has(key) ? " active" : ""}"
+          data-market-valuation-series="${key}"
+        >
+          <span class="total-series-dot" style="background:${item.color}"></span>
+          ${item.label}
+        </button>`,
+    )
+    .join("");
+  const snapshotMarkup = Object.entries(marketValuationData?.series ?? {})
+    .map(([key, item]) => {
+      const lastIndex = (item.values ?? []).findLastIndex((value) => Number.isFinite(Number(value)));
+      const latestValue = lastIndex >= 0 ? Number(item.values[lastIndex]) : null;
+      const latestDate = lastIndex >= 0 ? item.dates?.[lastIndex] : "";
+      return `
+        <article class="vix-snapshot-card">
+          <span class="vix-snapshot-label">${item.label}</span>
+          <strong class="vix-snapshot-value">${formatValuationValue(latestValue, item.formatter)}</strong>
+          <span class="vix-snapshot-date">${latestDate || "-"}</span>
+        </article>`;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Valuation Dashboard</h2>
+            <p>Robert Shiller CAPE data from 1981-01-01. CAPE series use the left axis, while S&P 500 price series use Start = 100 on the right axis.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">Updated ${marketValuationData.updatedAt || "-"}</div>
+          </div>
+        </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-market-valuation-start
+              min="${bounds.min}"
+              max="${bounds.max}"
+              value="${state.marketValuationCustomStart || ""}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-market-valuation-end
+              min="${bounds.min}"
+              max="${bounds.max}"
+              value="${state.marketValuationCustomEnd || ""}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-market-valuation-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-market-valuation-reset>Reset</button>
+          </div>
+        </div>
+        <div class="total-series-row">
+          ${seriesMarkup}
+        </div>
+        <div class="vix-snapshot-grid">
+          ${snapshotMarkup}
+        </div>
+        <div class="market-trend-meta">
+          <span>Source: ${marketValuationData.source?.name ?? "Shiller data"}</span>
+          <span>${marketValuationData.source?.frequency ?? "Monthly"} data</span>
+        </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-valuation="overview"></canvas>
+        </div>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-market-valuation-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketValuationRange = button.dataset.marketValuationRange || marketValuationData.defaultRange || "max";
+      state.marketValuationCustomStart = "";
+      state.marketValuationCustomEnd = "";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelector("[data-market-valuation-apply]")?.addEventListener("click", () => {
+    const start = usOverviewRoot.querySelector("[data-market-valuation-start]")?.value || "";
+    const end = usOverviewRoot.querySelector("[data-market-valuation-end]")?.value || "";
+    if (start && end && start > end) {
+      return;
+    }
+    state.marketValuationCustomStart = start;
+    state.marketValuationCustomEnd = end;
+    render();
+  });
+
+  usOverviewRoot.querySelector("[data-market-valuation-reset]")?.addEventListener("click", () => {
+    state.marketValuationCustomStart = "";
+    state.marketValuationCustomEnd = "";
+    render();
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-valuation-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const seriesKey = button.dataset.marketValuationSeries;
+      if (!seriesKey) {
+        return;
+      }
+      const next = new Set(getMarketValuationSelection());
+      if (next.has(seriesKey)) {
+        if (next.size <= 1) {
+          return;
+        }
+        next.delete(seriesKey);
+      } else {
+        next.add(seriesKey);
+      }
+      state.marketValuationSelection = [...next];
+      render();
+    });
+  });
+
+  const canvas = usOverviewRoot.querySelector("[data-market-valuation='overview']");
+  if (canvas) {
+    createMarketValuationChart(canvas, state.marketValuationRange);
+  }
+}
+
 function renderMarketVixOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -8354,6 +8719,10 @@ function renderSummary(list) {
       summaryText.textContent = "US monthly macro dashboard with snapshot, coverage, categories, and history";
       return;
     }
+    if (state.marketView === "Valuation") {
+      summaryText.textContent = "Long-term valuation dashboard using Shiller CAPE and S&P 500 monthly data";
+      return;
+    }
     if (state.marketView === "VIX") {
       summaryText.textContent = "2018-01-01 이후 수집 가능한 VIX family history와 최신 CBOE settlement curve";
       return;
@@ -8563,6 +8932,10 @@ function render() {
     }
     if (state.marketView === "Macro") {
       renderMarketMacroOverview();
+      return;
+    }
+    if (state.marketView === "Valuation") {
+      renderMarketValuationOverview();
       return;
     }
     if (state.marketView === "VIX") {

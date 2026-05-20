@@ -10,6 +10,8 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - total dashboard, rates / dollar / energy / metals price dashboard, and market relative performance
 - `Market > Macro`
   - US monthly macro snapshot, release coverage, category grouping, and historical chart
+- `Market > Valuation`
+  - Shiller CAPE, Total Return CAPE, and S&P 500 monthly valuation history from 1981
 - `Market > Breadth`
   - embedded Stockbee breadth monitor
 - `Market > RS`
@@ -50,8 +52,8 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `/.github/workflows/update-market-prices.yml`
   - runs daily
   - scheduled at `21:40 UTC` / `06:40 KST`
-  - updates `data/market-price-data.js` and `data/market-macro-data.js`
-  - sources: Yahoo Finance and public macro/market pages
+  - updates `data/market-price-data.js`, `data/market-macro-data.js`, `data/market-vix-data.js`, and `data/market-valuation-data.js`
+  - sources: Yahoo Finance, public macro/market pages, CBOE/Yahoo VIX references, and Robert Shiller/Yale valuation data
 
 - `/.github/workflows/update-fx-dashboard.yml`
   - runs daily
@@ -105,6 +107,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `scripts/update_m7_prices.py`
 - `scripts/update_market_prices.py`
 - `scripts/update_market_macro.py`
+- `scripts/update_market_valuation.py`
 - `scripts/update_market_briefing.py`
 - `scripts/update_market_rs.py`
 - `scripts/update_memory_spot.py`
@@ -114,4 +117,4 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 
 - push to `main` -> GitHub Pages deploy
 - the header `Updated ... KST` is fetched from the latest `main` commit time
-- the default landing tab is `Market`
+- the default landing tab is `Daily Briefing`
