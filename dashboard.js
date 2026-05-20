@@ -67,8 +67,7 @@ const gpuCloudRuntime = {
 };
 
 const primaryTabMeta = {
-  US: { label: "US" },
-  Korea: { label: "Korea" },
+  DailyBriefing: { label: "Daily Briefing" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
@@ -96,6 +95,11 @@ const marketSubtabMeta = {
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
   GPUCloud: { label: "GPU Rental Price" },
+};
+
+const dailyBriefingSubtabMeta = {
+  US: { label: "US" },
+  Korea: { label: "Korea" },
 };
 const MARKET_BREADTH_SOURCE_URL = "https://stockbee.blogspot.com/p/mm.html";
 const MARKET_BREADTH_SHEET_URL =
@@ -210,7 +214,8 @@ const MARKET_RS_CAP_RANGES = [
 ];
 
 const state = {
-  tab: "US",
+  tab: "DailyBriefing",
+  dailyBriefingView: "US",
   marketView: "Overview",
   bigTechView: "M7",
   semisView: "MemorySpot",
@@ -4086,6 +4091,10 @@ function renderCloudOverview() {
 }
 
 function renderPlaceholderOverview(title, description) {
+  const resolvedDescription =
+    title === "Korea Market Briefing"
+      ? "Korea market briefing workspace. Add KOSPI/KOSDAQ indexes, sector map, key headlines, and movers here."
+      : description;
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
@@ -4093,7 +4102,7 @@ function renderPlaceholderOverview(title, description) {
     <section class="placeholder-overview">
       <article class="placeholder-panel">
         <h2>${title}</h2>
-        <p>${description}</p>
+        <p>${resolvedDescription}</p>
       </article>
     </section>
   `;
@@ -9113,7 +9122,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "US" ? " is-us" : ""}${tabKey === "Korea" ? " is-korea" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -9139,7 +9148,10 @@ function renderSubtabs() {
     return;
   }
 
-  if (state.tab === "Market") {
+  if (state.tab === "DailyBriefing") {
+    entries = Object.entries(dailyBriefingSubtabMeta);
+    activeKey = state.dailyBriefingView;
+  } else if (state.tab === "Market") {
     entries = Object.entries(marketSubtabMeta);
     activeKey = state.marketView;
   } else if (state.tab === "BigTech") {
@@ -9161,7 +9173,9 @@ function renderSubtabs() {
     button.className = `subtab-chip${activeKey === viewKey ? " active" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
-      if (state.tab === "Market") {
+      if (state.tab === "DailyBriefing") {
+        state.dailyBriefingView = viewKey;
+      } else if (state.tab === "Market") {
         state.marketView = viewKey;
         if (viewKey === "RS") {
           state.query = "";
@@ -9271,13 +9285,11 @@ function renderSummary(list) {
     return;
   }
 
-  if (state.tab === "US") {
-    summaryText.textContent = "US daily market briefing with curated heatmap, key headlines, and Korean mover notes";
-    return;
-  }
-
-  if (state.tab === "Korea") {
-    summaryText.textContent = "Korea market briefing workspace";
+  if (state.tab === "DailyBriefing") {
+    summaryText.textContent =
+      state.dailyBriefingView === "US"
+        ? "US daily market briefing with curated heatmap, key headlines, and Korean mover notes"
+        : "Korea market briefing workspace";
     return;
   }
 
@@ -9412,13 +9424,13 @@ function render() {
     return;
   }
 
-  if (state.tab === "US") {
+  if (state.tab === "DailyBriefing" && state.dailyBriefingView === "US") {
     renderSummary([]);
     renderMarketBriefingOverview();
     return;
   }
 
-  if (state.tab === "Korea") {
+  if (state.tab === "DailyBriefing" && state.dailyBriefingView === "Korea") {
     renderSummary([]);
     renderPlaceholderOverview(
       "Korea Market Briefing",
