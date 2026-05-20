@@ -101,6 +101,55 @@ const dailyBriefingSubtabMeta = {
   US: { label: "US" },
   Korea: { label: "Korea" },
 };
+
+const koreaBriefingMock = {
+  updatedAt: "Sample layout",
+  indexes: [
+    { label: "KOSPI", value: 2868.4, changePct: 0.72 },
+    { label: "KOSDAQ", value: 872.1, changePct: -0.34 },
+    { label: "KOSPI 200", value: 389.6, changePct: 0.61 },
+    { label: "KRW/USD", value: 1348.2, changePct: -0.18 },
+  ],
+  sectors: [
+    {
+      label: "Semiconductors",
+      items: [
+        { ticker: "005930", label: "Samsung Elec.", price: 81200, changePct: 1.35, marketCapT: 485, tileClass: "xl" },
+        { ticker: "000660", label: "SK hynix", price: 196500, changePct: 2.48, marketCapT: 143, tileClass: "lg" },
+        { ticker: "042700", label: "Hanmi Semi", price: 167200, changePct: -1.12, marketCapT: 16, tileClass: "md" },
+        { ticker: "064350", label: "Hyundai Rotem", price: 42800, changePct: 0.54, marketCapT: 4.7, tileClass: "sm" },
+      ],
+    },
+    {
+      label: "Autos",
+      items: [
+        { ticker: "005380", label: "Hyundai Motor", price: 248000, changePct: 0.86, marketCapT: 52, tileClass: "lg" },
+        { ticker: "000270", label: "Kia", price: 116800, changePct: -0.42, marketCapT: 46, tileClass: "lg" },
+        { ticker: "012330", label: "Hyundai Mobis", price: 231500, changePct: 0.24, marketCapT: 22, tileClass: "md" },
+        { ticker: "161390", label: "Hankook Tire", price: 49800, changePct: 1.08, marketCapT: 6.2, tileClass: "sm" },
+      ],
+    },
+    {
+      label: "Financials",
+      items: [
+        { ticker: "105560", label: "KB Financial", price: 82100, changePct: 1.16, marketCapT: 32, tileClass: "lg" },
+        { ticker: "055550", label: "Shinhan Financial", price: 48650, changePct: 0.38, marketCapT: 25, tileClass: "md" },
+        { ticker: "086790", label: "Hana Financial", price: 61200, changePct: -0.76, marketCapT: 18, tileClass: "md" },
+        { ticker: "316140", label: "Woori Financial", price: 14960, changePct: 0.12, marketCapT: 11, tileClass: "sm" },
+      ],
+    },
+  ],
+  news: [
+    { bucket: "Macro", title: "KRW and rates remain the first cross-check for foreign flow.", source: "Sample" },
+    { bucket: "AI", title: "Memory names keep the Korea watchlist centered on AI capex momentum.", source: "Sample" },
+    { bucket: "Policy", title: "Corporate value-up and buyback headlines stay relevant for banks and autos.", source: "Sample" },
+  ],
+  movers: [
+    { label: "SK hynix", sectorLabel: "Semiconductors", changePct: 2.48, price: 196500, note: "AI memory beta leads the sample board." },
+    { label: "Hanmi Semi", sectorLabel: "Semiconductors", changePct: -1.12, price: 167200, note: "High-multiple semi equipment cools off in the mock screen." },
+    { label: "KB Financial", sectorLabel: "Financials", changePct: 1.16, price: 82100, note: "Value-up and capital return theme keeps banks on watch." },
+  ],
+};
 const MARKET_BREADTH_SOURCE_URL = "https://stockbee.blogspot.com/p/mm.html";
 const MARKET_BREADTH_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1O6OhS7ciA8zwfycBfGPbP2fWJnR0pn2UUvFZVDP9jpE/pubhtml?widget=true&headers=false";
@@ -5112,6 +5161,189 @@ function renderMarketBriefingOverview() {
   });
 }
 
+function formatKoreaPrice(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 0 })} KRW`;
+}
+
+function formatKoreaMarketCap(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toFixed(Number(value) >= 10 ? 0 : 1)}T KRW`;
+}
+
+function getKoreaHeatmapColor(changePct) {
+  const change = Number(changePct);
+  if (!Number.isFinite(change)) {
+    return "#eef0eb";
+  }
+  const strength = Math.min(Math.abs(change), 4) / 4;
+  if (change > 0) {
+    return `hsl(145, ${50 + strength * 18}%, ${96 - strength * 20}%)`;
+  }
+  if (change < 0) {
+    return `hsl(6, ${58 + strength * 16}%, ${96 - strength * 20}%)`;
+  }
+  return "#eef0eb";
+}
+
+function renderKoreaBriefingOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const indexMarkup = koreaBriefingMock.indexes
+    .map((item) => {
+      const changeClass = Number(item.changePct) > 0 ? "is-up" : Number(item.changePct) < 0 ? "is-down" : "";
+      return `
+        <article class="briefing-index-card ${changeClass}">
+          <div class="briefing-index-head">
+            <span class="briefing-index-label">${item.label}</span>
+            <span class="briefing-index-date">mock</span>
+          </div>
+          <strong class="briefing-index-value">${Number(item.value).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</strong>
+          <div class="briefing-index-change-row">
+            <span class="briefing-index-change">${formatSignedPercent(item.changePct)}</span>
+            <span class="briefing-index-caption">sample day</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const sectorMarkup = koreaBriefingMock.sectors
+    .map((sector) => {
+      const tiles = sector.items
+        .map((item) => {
+          const changeClass = Number(item.changePct) > 0 ? "is-up" : Number(item.changePct) < 0 ? "is-down" : "";
+          return `
+            <article
+              class="briefing-tile ${item.tileClass ?? "sm"} ${changeClass}"
+              style="background:${getKoreaHeatmapColor(item.changePct)}"
+              title="${item.label} / ${formatSignedPercent(item.changePct)}"
+            >
+              <span class="briefing-tile-ticker">${item.ticker}</span>
+              <strong class="briefing-tile-name">${item.label}</strong>
+              <span class="briefing-tile-cap">${formatKoreaMarketCap(item.marketCapT)}</span>
+              <span class="briefing-tile-change">${formatSignedPercent(item.changePct)}</span>
+            </article>
+          `;
+        })
+        .join("");
+      return `
+        <article class="us-panel briefing-sector-panel">
+          <div class="us-section-head">
+            <div>
+              <h3>${sector.label}</h3>
+              <p>${sector.items.length} sample names</p>
+            </div>
+          </div>
+          <div class="briefing-heatmap-grid">${tiles}</div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const newsMarkup = koreaBriefingMock.news
+    .map(
+      (item) => `
+        <article class="briefing-news-card">
+          <span class="briefing-news-bucket">${item.bucket}</span>
+          <strong>${item.title}</strong>
+          <div class="briefing-news-meta">
+            <span>${item.source}</span>
+            <span>layout sample</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
+  const moversMarkup = koreaBriefingMock.movers
+    .map((item) => {
+      const directionClass = Number(item.changePct) >= 0 ? "is-up" : "is-down";
+      return `
+        <article class="briefing-mover-card ${directionClass}">
+          <div class="briefing-mover-head">
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.sectorLabel}</p>
+            </div>
+            <div class="briefing-mover-stats">
+              <strong>${formatSignedPercent(item.changePct)}</strong>
+              <span>${formatKoreaPrice(item.price)}</span>
+            </div>
+          </div>
+          <p class="briefing-mover-cap">Representative sample</p>
+          <div class="briefing-mover-summary">
+            <span>${item.note}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-briefing-overview korea-briefing-overview">
+      <article class="us-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Korea Market Briefing</h2>
+            <p>Draft layout using sample Korea names. Data is mocked so we can evaluate the screen structure first.</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">${koreaBriefingMock.updatedAt}</span>
+            <span class="market-rs-pill">3 sectors</span>
+            <span class="market-rs-pill">12 names</span>
+          </div>
+        </div>
+        <div class="briefing-legend">
+          <span>Green = up</span>
+          <span>Red = down</span>
+          <span>Tile size = rough market cap</span>
+        </div>
+      </article>
+
+      <article class="us-panel briefing-index-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Korea Index Snapshot</h2>
+            <p>KOSPI, KOSDAQ, KOSPI 200, and KRW/USD placeholders for the future live feed.</p>
+          </div>
+        </div>
+        <div class="briefing-index-grid">${indexMarkup}</div>
+      </article>
+
+      <section class="briefing-sector-stack">${sectorMarkup}</section>
+
+      <section class="briefing-news-layout">
+        <article class="us-panel">
+          <div class="us-section-head">
+            <div>
+              <h2>Key Notes</h2>
+              <p>Sample story cards for the Korea briefing rail.</p>
+            </div>
+          </div>
+          <div class="briefing-news-grid">${newsMarkup}</div>
+        </article>
+
+        <article class="us-panel">
+          <div class="us-section-head">
+            <div>
+              <h2>Movers</h2>
+              <p>Representative names to tune card density before wiring live data.</p>
+            </div>
+          </div>
+          <div class="briefing-mover-grid">${moversMarkup}</div>
+        </article>
+      </section>
+    </section>
+  `;
+}
+
 function formatRsNumber(value, digits = 0) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -9427,6 +9659,12 @@ function render() {
   if (state.tab === "DailyBriefing" && state.dailyBriefingView === "US") {
     renderSummary([]);
     renderMarketBriefingOverview();
+    return;
+  }
+
+  if (state.tab === "DailyBriefing" && state.dailyBriefingView === "Korea") {
+    renderSummary([]);
+    renderKoreaBriefingOverview();
     return;
   }
 
