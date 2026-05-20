@@ -46,6 +46,7 @@ const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
+const infraGridData = window.infraGridData ?? { updatedAt: "", source: {}, items: [], fuelColors: {} };
 const memorySpotRuntime = {
   loading: false,
   loaded: false,
@@ -4095,6 +4096,249 @@ function renderPlaceholderOverview(title, description) {
       </article>
     </section>
   `;
+}
+
+function formatInfraMw(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  if (Math.abs(numeric) >= 1000) {
+    return `${(numeric / 1000).toFixed(1)} GW`;
+  }
+  return `${numeric.toFixed(0)} MW`;
+}
+
+function formatInfraTime(value) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return date.toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function createInfraLoadChart(canvas) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+  const available = (infraGridData.items ?? []).filter((item) => Number.isFinite(Number(item.latestLoadMw)));
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: available.map((item) => item.label),
+      datasets: [
+        {
+          label: "Latest Load",
+          data: available.map((item) => Number(item.latestLoadMw)),
+          backgroundColor: "#242521",
+          borderRadius: 10,
+          maxBarThickness: 46,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => `Load: ${formatInfraMw(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#77736b" }, border: { color: "#dedbd2" } },
+        y: {
+          ticks: { color: "#77736b", callback: (value) => formatInfraMw(value) },
+          grid: { color: "rgba(40, 40, 36, 0.10)" },
+          border: { color: "#dedbd2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function createInfraFuelChart(canvas) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+  const available = (infraGridData.items ?? []).filter((item) => (item.fuelMix ?? []).length);
+  const fuelLabels = Object.keys(infraGridData.fuelColors ?? {});
+  const datasets = fuelLabels.map((fuel) => ({
+    label: fuel,
+    data: available.map((item) => {
+      const row = (item.fuelMix ?? []).find((fuelItem) => fuelItem.label === fuel);
+      return Number.isFinite(Number(row?.sharePct)) ? Number(row.sharePct) : 0;
+    }),
+    backgroundColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
+    borderWidth: 0,
+  }));
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: available.map((item) => item.label),
+      datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`,
+          },
+        },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: "#77736b" }, border: { color: "#dedbd2" } },
+        y: {
+          stacked: true,
+          min: 0,
+          max: 100,
+          ticks: { color: "#77736b", callback: (value) => `${value}%` },
+          grid: { color: "rgba(40, 40, 36, 0.10)" },
+          border: { color: "#dedbd2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function renderInfraOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  const items = infraGridData.items ?? [];
+  const availableCount = items.filter((item) => item.status === "available").length;
+  const totalLoadMw = items.reduce((sum, item) => {
+    const value = Number(item.latestLoadMw);
+    return Number.isFinite(value) ? sum + value : sum;
+  }, 0);
+  const cardsMarkup = items
+    .map((item) => {
+      const fuelRows = (item.fuelMix ?? [])
+        .slice(0, 4)
+        .map(
+          (fuel) => `
+            <span class="infra-fuel-chip">
+              <span class="infra-fuel-dot" style="background:${fuel.color}"></span>
+              ${fuel.label} ${Number.isFinite(Number(fuel.sharePct)) ? `${Number(fuel.sharePct).toFixed(1)}%` : "-"}
+            </span>`,
+        )
+        .join("");
+      return `
+        <article class="infra-grid-card ${item.status === "available" ? "available" : "unavailable"}">
+          <div class="infra-grid-card-head">
+            <div>
+              <h3>${item.label}</h3>
+              <p>${item.region}</p>
+            </div>
+            <span class="infra-status-pill">${item.status === "available" ? "Available" : "Check"}</span>
+          </div>
+          <div class="infra-grid-metrics">
+            <div>
+              <span>Latest Load</span>
+              <strong>${formatInfraMw(item.latestLoadMw)}</strong>
+            </div>
+            <div>
+              <span>Renewables</span>
+              <strong>${Number.isFinite(Number(item.renewableSharePct)) ? `${Number(item.renewableSharePct).toFixed(1)}%` : "-"}</strong>
+            </div>
+            <div>
+              <span>Top Fuel</span>
+              <strong>${item.topFuel || "-"}</strong>
+            </div>
+          </div>
+          <div class="infra-fuel-row">${fuelRows || `<span class="infra-error-text">${item.error || "No fuel mix snapshot"}</span>`}</div>
+          <p class="infra-card-foot">Load ${formatInfraTime(item.loadTime)} · Fuel ${formatInfraTime(item.fuelTime)}</p>
+          ${item.error ? `<p class="infra-error-text">${item.error}</p>` : ""}
+        </article>`;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview infra-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>US Grid Status</h2>
+            <p>GridStatus 오픈소스 라이브러리와 각 ISO 공개 피드를 사용한 전력망 스냅샷입니다. GitHub Pages 특성상 실시간 스트리밍이 아니라 업데이트 시점 기준 정적 스냅샷으로 표시됩니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <a class="market-breadth-link" href="${infraGridData.source?.liveUrl ?? "https://www.gridstatus.io/live"}" target="_blank" rel="noreferrer">Open GridStatus Live</a>
+            <div class="us-price-updated">Updated ${formatInfraTime(infraGridData.updatedAt)}</div>
+          </div>
+        </div>
+        <div class="market-trend-meta">
+          <span>Source: ${infraGridData.source?.name ?? "GridStatus"}</span>
+          <span>${availableCount}/${items.length} ISO snapshots available</span>
+          <span>Load · Fuel Mix · Renewable share</span>
+        </div>
+        <div class="infra-grid-summary">
+          <div>
+            <strong>${availableCount}</strong>
+            <span>markets live</span>
+          </div>
+          <div>
+            <strong>${items.length - availableCount}</strong>
+            <span>need source check</span>
+          </div>
+          <div>
+            <strong>${formatInfraMw(totalLoadMw)}</strong>
+            <span>tracked load</span>
+          </div>
+        </div>
+        <div class="infra-card-grid">${cardsMarkup}</div>
+        <div class="market-panel-grid infra-chart-grid">
+          <article class="memory-panel">
+            <div class="memory-panel-head">
+              <div>
+                <h3>Latest Load by ISO</h3>
+                <p>가장 최근 공개 피드 기준 전력 수요입니다.</p>
+              </div>
+            </div>
+            <div class="memory-chart-wrap"><canvas data-infra-grid="load"></canvas></div>
+          </article>
+          <article class="memory-panel">
+            <div class="memory-panel-head">
+              <div>
+                <h3>Fuel Mix Share</h3>
+                <p>양수 값 기준 발전원 비중입니다. 저장장치는 방전이면 양수, 충전이면 음수일 수 있습니다.</p>
+              </div>
+            </div>
+            <div class="memory-chart-wrap"><canvas data-infra-grid="fuel"></canvas></div>
+          </article>
+        </div>
+      </section>
+    </section>
+  `;
+
+  const loadCanvas = usOverviewRoot.querySelector("[data-infra-grid='load']");
+  const fuelCanvas = usOverviewRoot.querySelector("[data-infra-grid='fuel']");
+  if (loadCanvas) {
+    createInfraLoadChart(loadCanvas);
+  }
+  if (fuelCanvas) {
+    createInfraFuelChart(fuelCanvas);
+  }
 }
 
 function renderMarketBreadthOverview() {
@@ -8953,7 +9197,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Infra") {
-    summaryText.textContent = "Infra dashboard workspace";
+    summaryText.textContent = "US power grid status dashboard with load and fuel mix snapshots";
     return;
   }
 
@@ -9105,7 +9349,7 @@ function render() {
 
   if (state.tab === "Infra") {
     renderSummary([]);
-    renderPlaceholderOverview("Infra Dashboard", "전력기기와 인프라 관련 기업/지표를 여기에 모아두는 구조입니다. 이후 전력기기 탭을 이 안에서 세부 주제로 확장하면 됩니다.");
+    renderInfraOverview();
     return;
   }
 

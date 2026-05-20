@@ -11,7 +11,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `Market > Macro`
   - US monthly macro snapshot, release coverage, category grouping, and historical chart
 - `Market > Valuation`
-  - Shiller CAPE, Total Return CAPE, and S&P 500 monthly valuation history from 1981
+  - Shiller CAPE, Daily CAPE Proxy, Total Return CAPE, and S&P 500 valuation history from 1981
 - `Market > Breadth`
   - embedded Stockbee breadth monitor
 - `Market > RS`
@@ -26,6 +26,8 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - DRAM and NAND spot dashboard
 - `Semis > GPU Rental Price`
   - existing SemiAnalysis-focused GPU rental dashboard plus Ornn Compute Price Index section
+- `Infra`
+  - GridStatus-style US power grid snapshot with ISO load and fuel mix panels
 - `Taiwan`
   - monthly revenue company cards
 
@@ -71,6 +73,12 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - scheduled at `22:30 UTC` / `07:30 KST`
   - updates `data/ornn-gpu-index-data.js`
   - source: Ornn public Compute Price Index API behind `dashboard.ornnai.com`
+
+- `/.github/workflows/update-infra-grid-status.yml`
+  - runs daily
+  - scheduled at `23:10 UTC` / `08:10 KST`
+  - updates `data/infra-grid-status-data.js`
+  - source: GridStatus open-source library and ISO public feeds
 
 - `/.github/workflows/update-macro-data.yml`
   - runs daily at `16:30 UTC`
