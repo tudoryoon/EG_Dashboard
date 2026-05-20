@@ -7853,7 +7853,8 @@ function renderMarketValuationOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Valuation Dashboard</h2>
-            <p>Robert Shiller CAPE data from 1981-01-01. Official Shiller CAPE is monthly; Daily CAPE Proxy is an estimate using daily S&amp;P 500 close and the latest monthly CAPE denominator.</p>
+            <p>Shiller CAPE는 현재 S&amp;P 500 가격을 최근 10년 평균 실질 이익으로 나눈 장기 밸류에이션 지표입니다. 경기 사이클에 따른 이익 급등락을 완화해 시장이 장기 이익 대비 비싼지 싼지 확인할 때 씁니다.</p>
+            <p>공식 Shiller CAPE는 월간 데이터입니다. Daily CAPE Proxy는 최신 월간 CAPE 기준에 S&amp;P 500 일간 종가 변화를 반영한 추정치이며, 공식 일간 Shiller 데이터는 아닙니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
@@ -7895,7 +7896,7 @@ function renderMarketValuationOverview() {
         <div class="market-trend-meta">
           <span>Source: ${marketValuationData.source?.name ?? "Shiller data"}</span>
           <span>${marketValuationData.source?.frequency ?? "Monthly"} data</span>
-          <span>Daily CAPE Proxy = estimated, not official Shiller daily data</span>
+          <span>Daily CAPE Proxy = S&amp;P 500 일간 종가 기반 추정치</span>
         </div>
         <div class="us-price-chart-wrap">
           <canvas data-market-valuation="overview"></canvas>
