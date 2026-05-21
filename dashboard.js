@@ -93,6 +93,8 @@ const marketSubtabMeta = {
   RS: { label: "RS" },
 };
 
+const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS"]);
+
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Spot" },
   GPUCloud: { label: "GPU Rental Price" },
@@ -220,21 +222,21 @@ const state = {
   sector: "All",
   query: "",
   sort: "marketCapDesc",
-  m7PriceRange: m7PriceData.defaultRange ?? "max",
-  marketPriceRange: marketPriceData.defaultRange ?? "max",
+  m7PriceRange: "3y",
+  marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendEmas: [10, 60, 120],
   marketTrendCustomStart: "",
   marketTrendCustomEnd: "",
-  marketVixMetricsRange: marketVixData.defaultRange ?? "1y",
+  marketVixMetricsRange: "3y",
   marketVixMetricsCustomStart: "",
   marketVixMetricsCustomEnd: "",
-  marketVixFamilyRange: marketVixData.defaultRange ?? "1y",
+  marketVixFamilyRange: "3y",
   marketVixFamilyCustomStart: "",
   marketVixFamilyCustomEnd: "",
   marketMacroRanges: Object.fromEntries(
-    Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, marketMacroData.defaultRange ?? "max"]),
+    Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, "3y"]),
   ),
   marketMacroCustomRanges: {},
   marketMacroSelections: Object.fromEntries(
@@ -243,7 +245,7 @@ const state = {
       Object.keys(panel?.series ?? {}),
     ]),
   ),
-  marketValuationRange: marketValuationData.defaultRange ?? "max",
+  marketValuationRange: "3y",
   marketValuationCustomStart: "",
   marketValuationCustomEnd: "",
   marketValuationSelection: ["cape", "dailyCapeProxy", "sp500"],
@@ -262,7 +264,7 @@ const state = {
   totalDashboardCustomEnd: "",
   briefingMapRange: "1d",
   rsUniverse: "all",
-  rsHistoryRange: "1y",
+  rsHistoryRange: "3y",
   rsSelectedTicker: "",
   rsFilter: "newHigh",
   rsMarketCapRange: "all",
@@ -274,7 +276,7 @@ const state = {
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
-  macroDashboardRange: "5y",
+  macroDashboardRange: "3y",
   macroDashboardCustomStart: "",
   macroDashboardCustomEnd: "",
   macroDashboardSelection: [
@@ -284,7 +286,7 @@ const state = {
   ],
   memorySpotRanges: {},
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
-  ornnGpuRange: ornnGpuIndexData.defaultRange ?? "3m",
+  ornnGpuRange: "3y",
 };
 
 const charts = [];
@@ -459,6 +461,9 @@ function getRegularTickStep(labels, rangeKey) {
   if (rangeKey === "1y") {
     return { mode: "months", step: 2 };
   }
+  if (rangeKey === "ytd") {
+    return { mode: "months", step: 1 };
+  }
   if (rangeKey === "3y") {
     return { mode: "months", step: 3 };
   }
@@ -594,6 +599,9 @@ function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
   const date = new Date(`${dateText}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) {
     return minStartDate;
+  }
+  if (rangeKey === "ytd") {
+    return `${date.getUTCFullYear()}-01-01`;
   }
 
   const rangeMap = {
@@ -2053,7 +2061,13 @@ function buildDailyDateLabels(startDate, endDate) {
 function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null, customRange = null) {
   const selectedSet = selectedKeys?.length ? new Set(selectedKeys) : null;
   const seriesEntries = Object.entries(panel?.series ?? {}).filter(([key]) => !selectedSet || selectedSet.has(key));
-  const rawAllDates = [...new Set(seriesEntries.flatMap(([, item]) => item.dates ?? []))].sort();
+  const rawAllDates = [
+    ...new Set(
+      seriesEntries.flatMap(([, item]) =>
+        (item.dates ?? []).filter((date, index) => Number.isFinite(Number(item.values?.[index]))),
+      ),
+    ),
+  ].sort();
   if (!rawAllDates.length) {
     return { labels: [], datasets: [], mode: panel?.mode ?? "raw" };
   }
@@ -6055,12 +6069,14 @@ const MEMORY_SPOT_RANGE_OPTIONS = [
   { key: "1m", label: "1M" },
   { key: "3m", label: "3M" },
   { key: "6m", label: "6M" },
+  { key: "ytd", label: "YTD" },
   { key: "1y", label: "1Y" },
+  { key: "3y", label: "3Y" },
   { key: "max", label: "Max" },
 ];
 
 function getMemorySpotRange(targetKey) {
-  return state.memorySpotRanges?.[targetKey] ?? "1y";
+  return state.memorySpotRanges?.[targetKey] ?? "3y";
 }
 
 function buildMemoryChartPayload(labels, datasets, rangeKey) {
@@ -6436,8 +6452,11 @@ function buildOrnnGpuChartPayload(series) {
   const dates = series?.dates ?? [];
   const values = series?.values ?? [];
   const range = getOrnnGpuRangeConfig();
+  const startDate = range.key === "ytd" && dates.length ? shiftDateByRange(dates[dates.length - 1], "ytd", dates[0]) : "";
   const rangeDays = Number(range.days) || 90;
-  const startIndex = Math.max(0, dates.length - rangeDays);
+  const startIndex = startDate
+    ? Math.max(0, dates.findIndex((label) => label >= startDate))
+    : Math.max(0, dates.length - rangeDays);
   return {
     labels: dates.slice(startIndex),
     datasets: [
@@ -7968,7 +7987,7 @@ function renderMarketMacroOverview() {
 
   usOverviewRoot.querySelectorAll("[data-macro-dashboard-range]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.macroDashboardRange = button.dataset.macroDashboardRange || "5y";
+      state.macroDashboardRange = button.dataset.macroDashboardRange || "3y";
       state.macroDashboardCustomStart = "";
       state.macroDashboardCustomEnd = "";
       render();
@@ -8719,7 +8738,7 @@ function renderMarketVixOverview() {
 
   usOverviewRoot.querySelectorAll("[data-market-vix-metrics-range]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.marketVixMetricsRange = button.dataset.marketVixMetricsRange || marketVixData.defaultRange || "1y";
+      state.marketVixMetricsRange = button.dataset.marketVixMetricsRange || marketVixData.defaultRange || "3y";
       state.marketVixMetricsCustomStart = "";
       state.marketVixMetricsCustomEnd = "";
       render();
@@ -8728,7 +8747,7 @@ function renderMarketVixOverview() {
 
   usOverviewRoot.querySelectorAll("[data-market-vix-family-range]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.marketVixFamilyRange = button.dataset.marketVixFamilyRange || marketVixData.defaultRange || "1y";
+      state.marketVixFamilyRange = button.dataset.marketVixFamilyRange || marketVixData.defaultRange || "3y";
       state.marketVixFamilyCustomStart = "";
       state.marketVixFamilyCustomEnd = "";
       render();
@@ -9389,7 +9408,7 @@ function renderSubtabs() {
   entries.forEach(([viewKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `subtab-chip${activeKey === viewKey ? " active" : ""}`;
+    button.className = `subtab-chip${activeKey === viewKey ? " active" : ""}${state.tab === "Market" && accentMarketSubtabs.has(viewKey) ? " is-market-accent" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       if (state.tab === "Market") {

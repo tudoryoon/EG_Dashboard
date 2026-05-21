@@ -88,11 +88,16 @@ def main() -> None:
             "unit": "USD per GPU-hour",
         },
         "defaultGpu": "h100_sxm",
-        "defaultRange": "3m",
+        "defaultRange": "3y",
         "ranges": [
             {"key": "1w", "label": "1W", "days": 7},
             {"key": "1m", "label": "1M", "days": 30},
             {"key": "3m", "label": "3M", "days": 90},
+            {"key": "6m", "label": "6M", "days": 183},
+            {"key": "ytd", "label": "YTD", "days": 366},
+            {"key": "1y", "label": "1Y", "days": 365},
+            {"key": "3y", "label": "3Y", "days": 1095},
+            {"key": "max", "label": "Max", "days": 100000},
         ],
         "series": series,
     }

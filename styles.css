@@ -260,6 +260,18 @@ h1 {
   color: white;
 }
 
+.subtab-chip.is-market-accent {
+  border-color: #b7dfc7;
+  background: #eef9f2;
+  color: #24613b;
+}
+
+.subtab-chip.is-market-accent.active {
+  border-color: #2f7d4e;
+  background: #d8f0e0;
+  color: #18452a;
+}
+
 .summary-row {
   padding: 12px 0 16px;
   color: var(--muted);

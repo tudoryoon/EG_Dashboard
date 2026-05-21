@@ -167,7 +167,7 @@ def build_payload() -> dict[str, object]:
     payload = {
         "updatedAt": daily_cape_proxy[-1]["date"] if daily_cape_proxy else (dates[-1] if dates else ""),
         "startDate": START_DATE,
-        "defaultRange": "max",
+        "defaultRange": "3y",
         "source": {
             "name": "Robert Shiller / Yale Irrational Exuberance data",
             "url": source_url,
@@ -179,6 +179,7 @@ def build_payload() -> dict[str, object]:
             {"key": "1m", "label": "1M"},
             {"key": "3m", "label": "3M"},
             {"key": "6m", "label": "6M"},
+            {"key": "ytd", "label": "YTD"},
             {"key": "1y", "label": "1Y"},
             {"key": "3y", "label": "3Y"},
             {"key": "5y", "label": "5Y"},

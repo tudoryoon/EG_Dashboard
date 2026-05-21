@@ -629,7 +629,9 @@ def build_payload(
             {"key": "1m", "label": "1M"},
             {"key": "3m", "label": "3M"},
             {"key": "6m", "label": "6M"},
+            {"key": "ytd", "label": "YTD"},
             {"key": "1y", "label": "1Y"},
+            {"key": "3y", "label": "3Y"},
             {"key": "max", "label": "Max"},
         ],
         "universes": {

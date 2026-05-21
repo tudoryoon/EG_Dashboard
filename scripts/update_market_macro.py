@@ -28,6 +28,7 @@ RANGES = [
     {"key": "1m", "label": "1M"},
     {"key": "3m", "label": "3M"},
     {"key": "6m", "label": "6M"},
+    {"key": "ytd", "label": "YTD"},
     {"key": "1y", "label": "1Y"},
     {"key": "3y", "label": "3Y"},
     {"key": "5y", "label": "5Y"},
@@ -725,7 +726,7 @@ def main() -> None:
     payload = {
         "updatedAt": max(latest_dates) if latest_dates else "",
         "startDate": START_DATE,
-        "defaultRange": "max",
+        "defaultRange": "3y",
         "ranges": RANGES,
         "longCommodities": {
             "source": "World Bank Pink Sheet monthly prices",
