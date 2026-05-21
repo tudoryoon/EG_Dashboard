@@ -4495,7 +4495,7 @@ function buildInfraMapMarkup(snapshots) {
     <article class="infra-explain-panel infra-map-panel">
       <div>
         <h3>Hub Map</h3>
-        <p>전력 허브는 실제 데이터센터 주소가 아니라, 해당 권역 전력가격 압박을 보는 공개 가격 지점입니다.</p>
+        <p>These are public power-price hubs, not exact data-center addresses. They help locate where grid-price pressure is showing up by region.</p>
       </div>
       <div class="infra-map-canvas" aria-label="US power hub map">
         <div class="infra-map-region west">West</div>
@@ -4516,24 +4516,60 @@ function buildInfraGuideMarkup() {
     <article class="infra-explain-panel">
       <div>
         <h3>How To Read This</h3>
-        <p>데이터센터 수요가 전력망을 압박하면 특정 허브 전력가격이 반복적으로 튀거나 높은 수준에 머무는지 확인합니다.</p>
+        <p>Watch whether AI and data-center demand is showing up as repeated power-price stress in specific grid regions.</p>
       </div>
       <div class="infra-guide-grid">
         <div>
           <strong>Latest</strong>
-          <span>가장 최근 공개된 ICE peak 전력가격입니다. 단위는 $/MWh입니다.</span>
+          <span>Most recent published ICE peak power price. Unit is $/MWh.</span>
         </div>
         <div>
           <strong>1Y Avg</strong>
-          <span>최근 1년 평균과 비교해 현재 가격이 비싼지 봅니다.</span>
+          <span>Recent one-year average used to judge whether the latest price is high or low.</span>
         </div>
         <div>
           <strong>90D Spike</strong>
-          <span>최근 90거래일 중 $100/MWh 이상인 날의 개수입니다.</span>
+          <span>Number of trading days in the last 90 observations with price at or above $100/MWh.</span>
         </div>
         <div>
           <strong>Status</strong>
-          <span>spike가 10일 이상이면 stressed, 4일 이상이면 elevated로 봅니다.</span>
+          <span>Stressed means 10 or more spike days; elevated means 4 or more spike days.</span>
+        </div>
+      </div>
+    </article>`;
+}
+
+function buildInfraInvestmentGuideMarkup() {
+  return `
+    <article class="infra-investment-guide">
+      <div class="infra-investment-head">
+        <h3>Investment Read-Through</h3>
+        <p>This dashboard is not a standalone trading signal. It is a context layer for judging whether the AI infrastructure cycle is moving from GPU scarcity into local power-grid scarcity.</p>
+      </div>
+      <div class="infra-investment-grid">
+        <div>
+          <strong>Repeated price spikes</strong>
+          <span>Recurring $100/MWh days can indicate tighter local supply, transmission congestion, or demand pressure. This can support grid equipment, power generation, and electrical infrastructure themes.</span>
+        </div>
+        <div>
+          <strong>Regional confirmation</strong>
+          <span>If PJM West, Mass Hub, and Indiana rise together, the signal is broader than a single local event. If only one hub jumps, treat it as a local stress clue first.</span>
+        </div>
+        <div>
+          <strong>PJM West matters</strong>
+          <span>PJM West is a broad public proxy for Mid-Atlantic and Northern Virginia power pressure, where data-center load growth is central to the investment debate.</span>
+        </div>
+        <div>
+          <strong>30D max vs Latest</strong>
+          <span>A high 30D max with a low latest price points to event risk. A high 90D spike count points to repeated stress, which is more relevant for structural capex themes.</span>
+        </div>
+        <div>
+          <strong>Cross-check with AI compute</strong>
+          <span>Power-price stress plus rising GPU rental prices suggests the compute cycle is still tight. Power stress plus weak hyperscaler stocks may mean investors are focusing on capex and margin burden.</span>
+        </div>
+        <div>
+          <strong>Keep the caveat</strong>
+          <span>Weather, outages, fuel costs, and congestion can all move power prices. The useful signal is persistence and regional pattern, not one isolated spike.</span>
         </div>
       </div>
     </article>`;
@@ -4625,6 +4661,7 @@ function renderInfraOverview() {
         </div>
         <div class="infra-card-grid">${cardsMarkup}</div>
         <div class="macro-panel-grid infra-chart-grid">${panelMarkup}</div>
+        ${buildInfraInvestmentGuideMarkup()}
       </section>
     </section>
   `;

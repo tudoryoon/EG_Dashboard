@@ -1501,6 +1501,58 @@ h1 {
   background: #dc2626;
 }
 
+.infra-investment-guide {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8f7f2);
+  padding: 18px;
+}
+
+.infra-investment-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+}
+
+.infra-investment-head p {
+  max-width: 920px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.infra-investment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.infra-investment-grid > div {
+  border: 1px solid #e7e4da;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 14px;
+}
+
+.infra-investment-grid strong,
+.infra-investment-grid span {
+  display: block;
+}
+
+.infra-investment-grid strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.infra-investment-grid span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .infra-grid-summary > div {
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -2236,6 +2288,7 @@ h1 {
   .macro-snapshot-grid,
   .macro-chart-metrics,
   .infra-explain-grid,
+  .infra-investment-grid,
   .infra-grid-summary {
     grid-template-columns: 1fr;
   }
