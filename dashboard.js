@@ -6561,31 +6561,7 @@ function renderGpuCloudOverview() {
     hydrateGpuCloudRuntimeFromLocal();
   }
 
-  const featuredItems = (gpuCloudData.dashboard?.featuredKeys ?? [])
-    .map((key) => {
-      const item = getGpuCloudItemByKey(key);
-      const runtime = gpuCloudRuntime.items[key] ?? {};
-      return item
-        ? {
-            ...item,
-            latestValue: runtime.latestValue ?? item.latestValue,
-            latestChangePct: runtime.latestChangePct ?? item.latestChangePct,
-            latestDate: runtime.latestDate ?? null,
-            history: runtime.history ?? item.history ?? [],
-            events: runtime.events ?? [],
-          }
-        : null;
-    })
-    .filter(Boolean);
-
-  const availableDates = Object.values(gpuCloudRuntime.items)
-    .flatMap((item) => (item?.latestDate ? [item.latestDate] : []))
-    .sort();
-  const periodStart = gpuCloudRuntime.labels[0] || "2024-07-11";
-  const periodEnd = gpuCloudRuntime.labels[gpuCloudRuntime.labels.length - 1] || gpuCloudRuntime.updatedAt || periodStart;
   const semiSeries = getGpuSemiAnalysisSeries();
-  const semiSpotSeries = getGpuSemiAnalysisSpotSeries();
-  const mergedLabels = buildGpuMergedLabels([semiSeries, semiSpotSeries]);
   const ornnSeriesEntries = getOrnnGpuSeriesEntries();
   const activeOrnnSeries = getActiveOrnnGpuSeries();
   const ornnGpuTabsMarkup = ornnSeriesEntries
@@ -6642,7 +6618,7 @@ function renderGpuCloudOverview() {
           <span>Public chart approximation</span>
         </div>
       </section>
-      <section class="memory-panel-grid memory-panel-grid-wide">
+      <section class="memory-panel-grid memory-panel-grid-wide gpu-rental-chart-grid">
         <article class="memory-panel">
           <div class="us-panel-head">
             <div>
@@ -6666,31 +6642,6 @@ function renderGpuCloudOverview() {
             <canvas data-gpu-basket="semi-h100-1y"></canvas>
           </div>
         </article>
-        <article class="memory-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${semiSpotSeries?.title ?? "SemiAnalysis H100 Spot Index (Preview)"}</h3>
-              <p>${semiSpotSeries?.subtitle ?? ""}</p>
-            </div>
-          </div>
-          <div class="memory-card-meta gpu-term-meta">
-            <span>${semiSpotSeries?.sourceLabel ?? "SemiAnalysis GPU Pricing Index preview"}</span>
-            <span>${semiSpotSeries?.latestLabel ?? "-"} ${Number.isFinite(semiSpotSeries?.latestValue) ? `· ${formatGpuCloudValue(semiSpotSeries.latestValue)}` : ""}</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Preview low</span>
-            <span class="memory-stat-value">${Number.isFinite(semiSpotSeries?.floor) ? `${formatGpuCloudValue(semiSpotSeries.floor)} · ${semiSpotSeries.floorLabel}` : "N/A"}</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Method</span>
-            <span class="memory-stat-value">${semiSpotSeries?.method ?? ""}</span>
-          </div>
-          <div class="memory-chart-wrap">
-            <canvas data-gpu-basket="semi-h100-spot"></canvas>
-          </div>
-        </article>
-      </section>
-      <section class="memory-panel-grid memory-panel-grid-wide">
         <article class="memory-panel">
           <div class="us-panel-head">
             <div>
@@ -6724,10 +6675,6 @@ function renderGpuCloudOverview() {
   `;
 
   const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-1y"]');
-  const legacySpotPanel = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-spot"]')?.closest(".memory-panel");
-  if (legacySpotPanel) {
-    legacySpotPanel.style.display = "none";
-  }
 
   if (semiCanvas && semiSeries) {
     createGpuLineChart(
