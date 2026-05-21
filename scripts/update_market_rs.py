@@ -72,6 +72,7 @@ COLOR_BY_UNIVERSE = {
     "dowjones": "#8b5cf6",
     "russell2000": "#0f766e",
 }
+RS_WEIGHTS = {"1m": 0.20, "3m": 0.40, "6m": 0.20, "12m": 0.20}
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
 SYMBOL_ALIASES = {
     "CRDA": "CRD-A",
@@ -372,27 +373,17 @@ def cross_sectional_percentile(frame: pd.DataFrame) -> pd.DataFrame:
     return percentile.clip(lower=0, upper=1)
 
 
-def build_rs_raw(close_frame: pd.DataFrame) -> pd.DataFrame:
-    r_1m = close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)
-    r_3m = close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)
-    r_6m = close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)
-    r_12m = close_frame.div(close_frame.shift(LOOKBACKS["12m"])).sub(1)
+def weighted_rs_rating(period_ratings: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    first = next(iter(period_ratings.values()))
+    weighted_sum = pd.DataFrame(0.0, index=first.index, columns=first.columns)
+    weight_sum = pd.DataFrame(0.0, index=first.index, columns=first.columns)
 
-    weighted_components = [
-        (r_1m, 0.20),
-        (r_3m, 0.40),
-        (r_6m, 0.20),
-        (r_12m, 0.20),
-    ]
-
-    weighted_sum = pd.DataFrame(0.0, index=close_frame.index, columns=close_frame.columns)
-    weight_sum = pd.DataFrame(0.0, index=close_frame.index, columns=close_frame.columns)
-
-    for component, weight in weighted_components:
+    for period_key, weight in RS_WEIGHTS.items():
+        component = period_ratings[period_key]
         weighted_sum = weighted_sum.add(component.fillna(0).mul(weight), fill_value=0)
         weight_sum = weight_sum.add(component.notna().astype(float).mul(weight), fill_value=0)
 
-    return weighted_sum.div(weight_sum.where(weight_sum > 0))
+    return weighted_sum.div(weight_sum.where(weight_sum > 0)).round().clip(lower=1, upper=99)
 
 
 def build_period_rs_ratings(close_frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
@@ -481,21 +472,20 @@ def build_payload(
     if stock_adjusted_close.empty or stock_raw_close.empty:
         raise RuntimeError("No RS universe members passed the market-cap filter.")
 
-    rs_raw = build_rs_raw(stock_adjusted_close)
-    rs_rating_all = percentile_to_rating(rs_raw)
     period_rs_ratings_all = build_period_rs_ratings(stock_adjusted_close)
+    rs_rating_all = weighted_rs_rating(period_rs_ratings_all)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
         tickers = [
             ticker
             for ticker in universe.loc[universe[f"member_{key}"], "ticker"].tolist()
-            if ticker in rs_raw.columns
+            if ticker in stock_adjusted_close.columns
         ]
         if not tickers:
             continue
-        subset_raw = rs_raw[tickers]
-        rs_ratings_by_universe[key] = percentile_to_rating(subset_raw)
+        subset_period_ratings = build_period_rs_ratings(stock_adjusted_close[tickers])
+        rs_ratings_by_universe[key] = weighted_rs_rating(subset_period_ratings)
 
     latest_date = rs_rating_all.dropna(how="all").index.max()
     if pd.isna(latest_date):
@@ -651,9 +641,9 @@ def build_payload(
         },
         "scoring": {
             "label": "StockEasy-style RS Rating",
-            "description": "Weighted raw returns using 1M 20%, 3M 40%, 6M 20%, and 12M 20%, then converted into a daily 1-99 percentile ranking. Names with market cap at or below $200M are excluded.",
+            "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. Names with market cap at or below $200M are excluded.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
-            "weights": {"1m": 0.20, "3m": 0.40, "6m": 0.20, "12m": 0.20},
+            "weights": RS_WEIGHTS,
         },
         "rows": rows,
         "histories": histories,
