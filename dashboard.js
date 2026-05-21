@@ -169,6 +169,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:policy:fed_funds": "#e11d48",
   "macro:policy:inflation_5y": "#f97316",
   "macro:policy:real_5y": "#dc2626",
+  "macro:gdp:real_gdp_annualized": "#8b5cf6",
   "macro:rates:us2y": "#0f766e",
   "macro:rates:us5y": "#22c55e",
   "macro:rates:us10y": "#14b8a6",
@@ -249,6 +250,7 @@ const state = {
   totalDashboardSelection: [
     "market:sp500",
     "market:smh",
+    "macro:gdp:real_gdp_annualized",
     "macro:rates:us10y",
     "macro:rates:jp10y",
     "macro:dxy:dxy",
@@ -276,6 +278,7 @@ const state = {
   macroDashboardCustomEnd: "",
   macroDashboardSelection: [
     "policy:fed_funds",
+    "gdp:real_gdp_annualized",
     "market:sp500",
   ],
   memorySpotRanges: {},
@@ -1618,6 +1621,9 @@ function getTotalDashboardSeriesItems() {
   const items = [];
 
   Object.entries(marketPriceData?.items ?? {}).forEach(([key, item]) => {
+    if (key === "dxy") {
+      return;
+    }
     items.push({
       key: `market:${key}`,
       group: "Market",
@@ -1633,7 +1639,10 @@ function getTotalDashboardSeriesItems() {
 
   Object.entries(marketMacroData?.panels ?? {}).forEach(([panelKey, panel]) => {
     Object.entries(panel.series ?? {}).forEach(([seriesKey, item]) => {
-      const isPercentSeries = panelKey === "rates" || panelKey === "policy";
+      if (panelKey === "fx_dashboard" && seriesKey === "dxy") {
+        return;
+      }
+      const isPercentSeries = panelKey === "rates" || panelKey === "policy" || panelKey === "gdp";
       items.push({
         key: `macro:${panelKey}:${seriesKey}`,
         group: panel.title,
@@ -3105,6 +3114,7 @@ function scaleSeriesValues(series, multiplier) {
 
 function getMacroDashboardItems() {
   const policySeries = marketMacroData?.panels?.policy?.series ?? {};
+  const gdpSeries = marketMacroData?.panels?.gdp?.series ?? {};
   const rateSeries = marketMacroData?.panels?.rates?.series ?? {};
   const marketItems = marketPriceData?.items ?? {};
   const metalSeries = marketMacroData?.panels?.metals?.series ?? {};
@@ -3131,6 +3141,17 @@ function getMacroDashboardItems() {
       axis: "percent",
       formatter: "percent2",
       normalize: false,
+    },
+    gdpSeries.real_gdp_annualized && {
+      key: "gdp:real_gdp_annualized",
+      label: "Real GDP QoQ SAAR",
+      dates: gdpSeries.real_gdp_annualized.dates ?? [],
+      values: gdpSeries.real_gdp_annualized.values ?? [],
+      color: "#8b5cf6",
+      axis: "percent",
+      formatter: "percent2",
+      normalize: false,
+      fillForward: true,
     },
     rateSeries.us2y && {
       key: "rates:us2y",

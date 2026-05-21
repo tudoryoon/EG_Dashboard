@@ -13,6 +13,7 @@ from urllib.request import Request, urlopen
 
 
 START_DATE = "1965-01-01"
+GDP_START_DATE = "1981-01-01"
 FX_START_DATE = "1971-01-01"
 FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
@@ -287,6 +288,31 @@ def parse_fred_series(series_id: str, start_date: str = START_DATE) -> tuple[lis
     return [], []
 
 
+def parse_real_gdp_annualized_series() -> tuple[list[str], list[float]]:
+    export_url = "https://govspending.org/api/export/fred/A191RL1Q225SBEA.csv"
+    try:
+        rows = [
+            line
+            for line in fetch_text(export_url).splitlines()
+            if line and not line.startswith("#")
+        ]
+        reader = csv.DictReader(rows)
+        dates: list[str] = []
+        values: list[float] = []
+        for row in reader:
+            date_key = (row.get("date") or row.get("DATE") or "")[:10]
+            raw_value = (row.get("A191RL1Q225SBEA") or "").strip()
+            if date_key < GDP_START_DATE or raw_value in {"", "."}:
+                continue
+            dates.append(date_key)
+            values.append(round(float(raw_value), 4))
+        if len(dates) >= 180:
+            return dates, values
+    except Exception:
+        pass
+    return parse_fred_series("A191RL1Q225SBEA", GDP_START_DATE)
+
+
 def build_spread_series(
     first_dates: list[str],
     first_values: list[float],
@@ -364,6 +390,7 @@ def main() -> None:
     rates_series["jp10y"] = build_series_item("Japan 10Y", "#2563eb", *japan_series["jp10y"], [6, 4])
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
     fed_funds_dates, fed_funds_values = build_policy_rate_series()
+    gdp_dates, gdp_values = parse_real_gdp_annualized_series()
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
     real_5y_dates, real_5y_values = build_spread_series(
         us_series["us5y"][0],
@@ -422,6 +449,22 @@ def main() -> None:
                 "fed_funds": build_series_item("Fed Policy Rate", "#111827", fed_funds_dates, fed_funds_values),
                 "inflation_5y": build_series_item("5Y Inflation Expectation", "#f97316", inflation_5y_dates, inflation_5y_values),
                 "real_5y": build_series_item("Real 5Y (5Y - 5Y Inflation Exp.)", "#dc2626", real_5y_dates, real_5y_values),
+            },
+        },
+        "gdp": {
+            "title": "US GDP",
+            "subtitle": "Quarterly real GDP percent change from preceding period, seasonally adjusted annual rate, from 1981 Q1.",
+            "source": "FRED A191RL1Q225SBEA / BEA",
+            "mode": "raw",
+            "connectGaps": True,
+            "fillMissing": "forward",
+            "yAxisLabel": "Annualized QoQ %",
+            "formatter": "percent2",
+            "series": {
+                "real_gdp_annualized": {
+                    **build_series_item("Real GDP QoQ SAAR", "#8b5cf6", gdp_dates, gdp_values),
+                    "fillForward": True,
+                },
             },
         },
         "rates": {
