@@ -377,7 +377,7 @@ h1 {
 
 .briefing-rotation-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2827,7 +2827,7 @@ h1 {
   }
 
   .briefing-rotation-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .briefing-rotation-bottom,
@@ -2855,6 +2855,12 @@ h1 {
   .briefing-tile.md,
   .briefing-tile.sm {
     grid-column: span 2;
+  }
+}
+
+@media (max-width: 1100px) {
+  .briefing-rotation-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

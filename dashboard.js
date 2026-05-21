@@ -4900,9 +4900,8 @@ function renderMarketBriefingOverview() {
     .join("");
 
   const rotationSignal = briefing.rotationSignal ?? {};
-  const rotationSectors = rotationSignal.sectors ?? [];
+  const rotationSectors = (rotationSignal.sectors ?? []).slice(0, 15);
   const rotationSectorMarkup = rotationSectors
-    .slice(0, 12)
     .map(
       (sector) => `
         <article
