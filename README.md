@@ -35,42 +35,45 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 
 - `/.github/workflows/update-m7-prices.yml`
   - runs daily
-  - scheduled at `22:00 UTC` / `07:00 KST`
+  - scheduled at `22:35 UTC` / `07:35 KST`
   - updates `data/m7-price-data.js`
   - sources: Yahoo Finance
 
+- `/.github/workflows/update-market-critical-morning.yml`
+  - runs daily, with one backup run for GitHub schedule delays
+  - scheduled at `20:25 UTC` / `05:25 KST` and `21:15 UTC` / `06:15 KST`
+  - updates `data/market-briefing-data.js`, `data/market-rs-data.js`, `data/market-price-data.js`, `data/market-macro-data.js`, `data/market-vix-data.js`, and `data/market-valuation-data.js`
+  - covers the pre-07:00 KST market dashboards, including Daily Briefing, Market RS, Market Prices, Macro/Liquidity, VIX, and Valuation
+
 - `/.github/workflows/update-market-briefing.yml`
-  - runs daily
-  - scheduled at `21:10 UTC` / `06:10 KST`
+  - manual fallback via `workflow_dispatch`
   - updates `data/market-briefing-data.js`
   - sources: Yahoo Finance and Google News/public news feeds used by the briefing script
 
 - `/.github/workflows/update-market-rs.yml`
-  - runs daily
-  - scheduled at `21:20 UTC` / `06:20 KST`
+  - manual fallback via `workflow_dispatch`
   - updates `data/market-rs-data.js`
   - sources: Yahoo Finance and constituent tables used by the RS pipeline
 
 - `/.github/workflows/update-market-prices.yml`
-  - runs daily
-  - scheduled at `21:40 UTC` / `06:40 KST`
+  - manual fallback via `workflow_dispatch`
   - updates `data/market-price-data.js`, `data/market-macro-data.js`, `data/market-vix-data.js`, and `data/market-valuation-data.js`
   - sources: Yahoo Finance, public macro/market pages, CBOE/Yahoo VIX references, and Robert Shiller/Yale valuation data
 
 - `/.github/workflows/update-fx-dashboard.yml`
   - runs daily
-  - scheduled at `22:40 UTC` / `07:40 KST`
+  - scheduled at `23:23 UTC` / `08:23 KST`
   - updates the FX and commodity panels inside `data/market-macro-data.js`
   - sources: Yahoo Finance daily FX/futures with existing historical data preserved
 
 - `/.github/workflows/update-memory-spot.yml`
   - runs daily
-  - scheduled at `22:20 UTC` / `07:20 KST`
+  - scheduled at `22:50 UTC` / `07:50 KST`
   - updates `data/memory-spot-history.js`
 
 - `/.github/workflows/update-ornn-gpu-index.yml`
   - runs daily
-  - scheduled at `22:30 UTC` / `07:30 KST`
+  - scheduled at `23:07 UTC` / `08:07 KST`
   - updates `data/ornn-gpu-index-data.js`
   - source: Ornn public Compute Price Index API behind `dashboard.ornnai.com`
 
@@ -81,7 +84,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - source: EIA Wholesale Electricity Market Data / ICE
 
 - `/.github/workflows/update-macro-data.yml`
-  - runs daily at `16:30 UTC`
+  - manual fallback via `workflow_dispatch`
   - updates `data/macro-indicators-data.js`
   - source priority: FRED-compatible CSV endpoints
   - note: scheduled GitHub Actions use UTC and can run a few minutes late
