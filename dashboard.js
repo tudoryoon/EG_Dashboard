@@ -4460,6 +4460,85 @@ function bindInfraControls(panelKeys) {
   });
 }
 
+const INFRA_HUB_MAP_META = {
+  pjm_west: { x: 70, y: 44, label: "PJM West", note: "Mid-Atlantic / NoVA proxy" },
+  indiana: { x: 57, y: 42, label: "Indiana", note: "Midwest / MISO" },
+  mass_hub: { x: 82, y: 31, label: "Mass Hub", note: "New England" },
+  np15: { x: 16, y: 43, label: "NP15", note: "Northern CA" },
+  sp15: { x: 20, y: 59, label: "SP15", note: "Southern CA" },
+  palo_verde: { x: 28, y: 59, label: "Palo Verde", note: "Arizona / Southwest" },
+  mid_c: { x: 20, y: 25, label: "Mid-C", note: "Pacific Northwest" },
+  ercot_north: { x: 50, y: 67, label: "ERCOT North", note: "Texas historical" },
+};
+
+function buildInfraMapMarkup(snapshots) {
+  const markers = snapshots
+    .map((item) => {
+      const meta = INFRA_HUB_MAP_META[item.key];
+      if (!meta) {
+        return "";
+      }
+      return `
+        <button
+          type="button"
+          class="infra-map-marker ${item.status}"
+          style="left:${meta.x}%; top:${meta.y}%"
+          title="${meta.label} / ${meta.note} / ${formatInfraPrice(item.price)}"
+        >
+          <span class="infra-map-dot"></span>
+          <span class="infra-map-label">${meta.label}</span>
+        </button>`;
+    })
+    .join("");
+
+  return `
+    <article class="infra-explain-panel infra-map-panel">
+      <div>
+        <h3>Hub Map</h3>
+        <p>전력 허브는 실제 데이터센터 주소가 아니라, 해당 권역 전력가격 압박을 보는 공개 가격 지점입니다.</p>
+      </div>
+      <div class="infra-map-canvas" aria-label="US power hub map">
+        <div class="infra-map-region west">West</div>
+        <div class="infra-map-region midwest">Midwest</div>
+        <div class="infra-map-region east">East</div>
+        ${markers}
+      </div>
+      <div class="infra-map-legend">
+        <span><i class="normal"></i>normal</span>
+        <span><i class="elevated"></i>elevated</span>
+        <span><i class="stressed"></i>stressed</span>
+      </div>
+    </article>`;
+}
+
+function buildInfraGuideMarkup() {
+  return `
+    <article class="infra-explain-panel">
+      <div>
+        <h3>How To Read This</h3>
+        <p>데이터센터 수요가 전력망을 압박하면 특정 허브 전력가격이 반복적으로 튀거나 높은 수준에 머무는지 확인합니다.</p>
+      </div>
+      <div class="infra-guide-grid">
+        <div>
+          <strong>Latest</strong>
+          <span>가장 최근 공개된 ICE peak 전력가격입니다. 단위는 $/MWh입니다.</span>
+        </div>
+        <div>
+          <strong>1Y Avg</strong>
+          <span>최근 1년 평균과 비교해 현재 가격이 비싼지 봅니다.</span>
+        </div>
+        <div>
+          <strong>90D Spike</strong>
+          <span>최근 90거래일 중 $100/MWh 이상인 날의 개수입니다.</span>
+        </div>
+        <div>
+          <strong>Status</strong>
+          <span>spike가 10일 이상이면 stressed, 4일 이상이면 elevated로 봅니다.</span>
+        </div>
+      </div>
+    </article>`;
+}
+
 function renderInfraOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -4496,7 +4575,7 @@ function renderInfraOverview() {
               <strong>${Number(item.spikeDays90 ?? 0).toFixed(0)}d</strong>
             </div>
           </div>
-          <p class="infra-card-foot">${formatInfraDate(item.date)} ? ${Number.isFinite(Number(item.premiumTo1yPct)) ? `${Number(item.premiumTo1yPct).toFixed(1)}% vs 1Y avg` : "1Y comparison unavailable"}</p>
+          <p class="infra-card-foot">${formatInfraDate(item.date)} / ${Number.isFinite(Number(item.premiumTo1yPct)) ? `${Number(item.premiumTo1yPct).toFixed(1)}% vs 1Y avg` : "1Y comparison unavailable"}</p>
         </article>`,
     )
     .join("");
@@ -4521,6 +4600,10 @@ function renderInfraOverview() {
           <span>Source: ${infraGridData.source?.name ?? "EIA Wholesale Electricity"}</span>
           <span>EIA republishes ICE daily hub prices on a biweekly source cadence</span>
           <span>PJM West is used as the broad public proxy for Northern Virginia grid-price pressure</span>
+        </div>
+        <div class="infra-explain-grid">
+          ${buildInfraGuideMarkup()}
+          ${buildInfraMapMarkup(snapshots)}
         </div>
         <div class="infra-grid-summary">
           <div>
