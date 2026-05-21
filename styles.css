@@ -1218,6 +1218,55 @@ h1 {
   gap: 0;
 }
 
+.memory-spot-contract-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.memory-spot-contract-table {
+  display: grid;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.memory-spot-contract-head,
+.memory-spot-contract-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(130px, 0.6fr) minmax(130px, 0.6fr) minmax(100px, 0.4fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 720px;
+}
+
+.memory-spot-contract-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e2dc;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.memory-spot-contract-row {
+  padding: 11px 0;
+  border-bottom: 1px solid #f0f0eb;
+  font-size: 0.86rem;
+}
+
+.memory-spot-contract-row strong,
+.memory-spot-contract-row small {
+  display: block;
+}
+
+.memory-spot-contract-row strong {
+  color: #20201d;
+}
+
+.memory-spot-contract-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .memory-note-head,
 .memory-note-row {
   grid-template-columns: minmax(0, 1fr) minmax(110px, 0.22fr);

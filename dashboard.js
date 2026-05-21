@@ -6113,6 +6113,21 @@ function formatMemorySpotChange(value) {
   return `${sign}${Number(value).toFixed(2)}%`;
 }
 
+function formatMemoryDollar(value, unit = "USD") {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  return `$${Number(value).toFixed(3)} ${unit}`;
+}
+
+function formatMemoryPremium(value) {
+  if (!Number.isFinite(value)) {
+    return "-";
+  }
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${Number(value).toFixed(1)}%`;
+}
+
 function formatMemoryRangeValue(range) {
   if (!range || !Number.isFinite(range.low) || !Number.isFinite(range.high)) {
     return "-";
@@ -6982,6 +6997,27 @@ function renderMemorySpotOverview() {
         </div>`,
     )
     .join("");
+  const spotContractChecks = memorySpotData.spotContractChecks ?? {};
+  const spotContractRows = (spotContractChecks.rows ?? [])
+    .map(
+      (row) => `
+        <div class="memory-spot-contract-row">
+          <span>
+            <strong>${row.item}</strong>
+            <small>${row.note}</small>
+          </span>
+          <span>
+            <strong>${formatMemoryDollar(row.spotPrice, row.spotUnit)}</strong>
+            <small>${row.spotDate ?? "-"}</small>
+          </span>
+          <span>
+            <strong>${formatMemoryDollar(row.contractPrice, row.contractUnit)}</strong>
+            <small>${row.contractDate ?? "not public"}</small>
+          </span>
+          <span>${formatMemoryPremium(row.premiumPct)}</span>
+        </div>`,
+    )
+    .join("");
 
   const featuredMarkup = featuredItems
     .map(
@@ -7192,6 +7228,27 @@ function renderMemorySpotOverview() {
             ${monthlyWatchRows}
           </div>
         ` : ""}
+      </section>
+      <section class="memory-panel memory-spot-contract-panel">
+        <div class="us-panel-head">
+          <div>
+            <h3>${spotContractChecks.title ?? "Spot vs Contract Dollar Check"}</h3>
+            <p>${spotContractChecks.subtitle ?? ""}</p>
+          </div>
+          <a class="market-breadth-link" href="${spotContractChecks.sourceUrl ?? "https://www.trendforce.com/price/dram/dram_spot"}" target="_blank" rel="noreferrer">
+            ${spotContractChecks.sourceTitle ?? "TrendForce price page"}
+          </a>
+        </div>
+        <div class="memory-spot-contract-table">
+          <div class="memory-spot-contract-head">
+            <span>Item</span>
+            <span>Spot</span>
+            <span>Contract</span>
+            <span>Spot premium</span>
+          </div>
+          ${spotContractRows}
+        </div>
+        <div class="memory-guide-note">${spotContractChecks.note ?? ""}</div>
       </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
         ${basketMarkup}
