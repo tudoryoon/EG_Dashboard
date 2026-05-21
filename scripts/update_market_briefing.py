@@ -111,6 +111,7 @@ SECTOR_GROUPS = [
             {"ticker": "LRCX", "label": "LRCX US", "name": "Lam Research", "query": "Lam Research stock"},
             {"ticker": "AMAT", "label": "AMAT US", "name": "Applied Materials", "query": "Applied Materials stock"},
             {"ticker": "KLAC", "label": "KLAC US", "name": "KLA", "query": "KLA stock"},
+            {"ticker": "TER", "label": "TER US", "name": "Teradyne", "query": "Teradyne stock"},
         ],
     },
     {
