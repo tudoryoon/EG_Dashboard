@@ -3,7 +3,8 @@ name: Update Memory Spot
 on:
   workflow_dispatch:
   schedule:
-    - cron: "20 22 * * *"
+    # 22:50 UTC = 07:50 KST. Non-critical morning follow-up.
+    - cron: "50 22 * * *"
 
 permissions:
   contents: write

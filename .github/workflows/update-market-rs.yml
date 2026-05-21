@@ -2,8 +2,6 @@ name: Update Market RS
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "20 21 * * *"
 
 permissions:
   contents: write

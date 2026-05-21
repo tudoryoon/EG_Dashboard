@@ -3,7 +3,8 @@ name: Update Ornn GPU Index
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 22 * * *"
+    # 23:07 UTC = 08:07 KST. Non-critical morning follow-up.
+    - cron: "07 23 * * *"
 
 permissions:
   contents: write

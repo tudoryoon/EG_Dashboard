@@ -3,7 +3,8 @@ name: Update M7 Prices
 on:
   workflow_dispatch:
   schedule:
-    - cron: "00 22 * * *"
+    # 22:35 UTC = 07:35 KST. Non-critical morning follow-up.
+    - cron: "35 22 * * *"
 
 permissions:
   contents: write
