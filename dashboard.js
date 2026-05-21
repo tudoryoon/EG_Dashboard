@@ -7238,6 +7238,11 @@ function renderMemorySpotOverview() {
           <a class="market-breadth-link" href="${spotContractChecks.sourceUrl ?? "https://www.trendforce.com/price/dram/dram_spot"}" target="_blank" rel="noreferrer">
             ${spotContractChecks.sourceTitle ?? "TrendForce price page"}
           </a>
+          ${spotContractChecks.secondarySourceUrl ? `
+            <a class="market-breadth-link" href="${spotContractChecks.secondarySourceUrl}" target="_blank" rel="noreferrer">
+              ${spotContractChecks.secondarySourceTitle ?? "Secondary source"}
+            </a>
+          ` : ""}
         </div>
         <div class="memory-spot-contract-table">
           <div class="memory-spot-contract-head">
