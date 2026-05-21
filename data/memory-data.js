@@ -155,16 +155,6 @@ window.memoryData = {
         sourceUrl: "https://www.trendforce.com/presscenter/news/20240507-12128.html",
       },
       {
-        period: "2025",
-        date: "2024-05-06",
-        dram: null,
-        nand: null,
-        hbm: { low: 5, high: 10, label: "+5-10%" },
-        basis: "HBM 2025 pricing negotiations; annual price increase guidance, not a quarterly spot series.",
-        sourceTitle: "HBM Prices to Increase by 5-10% in 2025",
-        sourceUrl: "https://www.trendforce.com/presscenter/news/20240506-12125.html",
-      },
-      {
         period: "2Q25",
         date: "2025-03-25",
         dram: { low: -5, high: 0, label: "-5-0%" },

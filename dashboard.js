@@ -6140,17 +6140,20 @@ function createMemoryContractGuideChart(canvas, rows) {
   ];
 
   const chart = new Chart(canvas, {
-    type: "bar",
+    type: "line",
     data: {
       labels,
       datasets: series.map((item) => ({
         label: item.label,
         data: rows.map((row) => getMemoryRangeMidpoint(row[item.key])),
+        tension: 0.25,
+        spanGaps: true,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointHitRadius: 10,
+        borderWidth: 2.6,
         backgroundColor: item.color,
         borderColor: item.color,
-        borderWidth: 1,
-        borderRadius: 6,
-        maxBarThickness: 28,
       })),
     },
     options: {
