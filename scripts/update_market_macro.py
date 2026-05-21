@@ -20,6 +20,10 @@ FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 STREETSTATS_BASE = "https://streetstats.finance"
+FISCALDATA_TGA_URL = (
+    "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/"
+    "operating_cash_balance"
+)
 WORLD_BANK_PINK_SHEET_URL = (
     "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/"
     "related/CMO-Historical-Data-Monthly.xlsx"
@@ -403,6 +407,41 @@ def parse_sofr_iorb_spread_bps() -> tuple[list[str], list[float | None]]:
     return build_daily_forward_series(spread_dates, spread_bps, LIQUIDITY_START_DATE)
 
 
+def parse_tga_daily_balance() -> tuple[list[str], list[float]]:
+    base_url = (
+        f"{FISCALDATA_TGA_URL}"
+        f"?filter=record_date:gte:{LIQUIDITY_START_DATE}"
+        "&fields=record_date,account_type,open_today_bal"
+        "&sort=record_date"
+        "&page[size]=10000"
+    )
+    accepted_types = {
+        "Treasury General Account (TGA)",
+        "Treasury General Account (TGA) Closing Balance",
+    }
+    rows: list[dict[str, str]] = []
+    page = 1
+    while True:
+        payload = fetch_json(f"{base_url}&page[number]={page}")
+        rows.extend(payload.get("data") or [])
+        total_pages = int((payload.get("meta") or {}).get("total-pages") or page)
+        if page >= total_pages:
+            break
+        page += 1
+
+    values_by_date: dict[str, float] = {}
+    for row in rows:
+        account_type = str(row.get("account_type") or "").strip()
+        raw_date = str(row.get("record_date") or "")[:10]
+        raw_value = str(row.get("open_today_bal") or "").strip()
+        if account_type not in accepted_types or not raw_date or raw_value in {"", "null", "."}:
+            continue
+        values_by_date[raw_date] = round(float(raw_value) / 1000, 2)
+
+    dates = sorted(values_by_date)
+    return dates, [values_by_date[date] for date in dates]
+
+
 def build_spread_series(
     first_dates: list[str],
     first_values: list[float],
@@ -492,6 +531,7 @@ def main() -> None:
         LIQUIDITY_START_DATE,
     )
     global_m2_dates, global_m2_values = parse_streetstats_global_m2_proxy()
+    tga_dates, tga_values = parse_tga_daily_balance()
     sofr_iorb_dates, sofr_iorb_values = parse_sofr_iorb_spread_bps()
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
     real_5y_dates, real_5y_values = build_spread_series(
@@ -600,6 +640,18 @@ def main() -> None:
             "formatter": "number1",
             "series": {
                 "sofr_iorb": build_series_item("SOFR - IORB", "#dc2626", sofr_iorb_dates, sofr_iorb_values),
+            },
+        },
+        "liquidity_tga": {
+            "title": "Treasury General Account",
+            "subtitle": "Daily TGA cash balance from the Daily Treasury Statement, shown in USD billions.",
+            "source": "U.S. Treasury FiscalData Daily Treasury Statement",
+            "mode": "raw",
+            "connectGaps": False,
+            "yAxisLabel": "USD bn",
+            "formatter": "number1",
+            "series": {
+                "tga_balance": build_series_item("TGA Balance", "#0f766e", tga_dates, tga_values),
             },
         },
         "liquidity_policy_2y": {

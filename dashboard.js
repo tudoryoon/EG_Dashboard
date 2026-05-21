@@ -8344,9 +8344,10 @@ function renderMarketLiquidityOverview() {
 
   const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
   const marketUpdatedAt = marketMacroData.updatedAt || marketPriceData.updatedAt || "-";
-  const panelKeys = ["liquidity_global_m2", "liquidity_sofr_iorb", "liquidity_policy_2y"];
+  const panelKeys = ["liquidity_global_m2", "liquidity_tga", "liquidity_sofr_iorb", "liquidity_policy_2y"];
   const liquidityPanels = [
     { key: "liquidity_global_m2", canvas: "liquidity_global_m2", className: "macro-panel-wide" },
+    { key: "liquidity_tga", canvas: "liquidity_tga", className: "" },
     { key: "liquidity_sofr_iorb", canvas: "liquidity_sofr_iorb", className: "" },
     { key: "liquidity_policy_2y", canvas: "liquidity_policy_2y", className: "" },
   ]
@@ -8359,7 +8360,7 @@ function renderMarketLiquidityOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Liquidity Dashboard</h2>
-            <p>Global money supply proxy, reserve-market spread, and Fed policy versus the US 2Y yield for daily liquidity monitoring.</p>
+            <p>Global money supply proxy, Treasury cash balance, reserve-market spread, and Fed policy versus the US 2Y yield for daily liquidity monitoring.</p>
           </div>
           <div class="us-price-controls">
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
@@ -9479,7 +9480,7 @@ function renderSummary(list) {
       return;
     }
     if (state.marketView === "Liquidity") {
-      summaryText.textContent = "Daily liquidity dashboard for global M2 proxy, SOFR-IORB spread, and Fed policy versus US 2Y";
+      summaryText.textContent = "Daily liquidity dashboard for global M2 proxy, TGA balance, SOFR-IORB spread, and Fed policy versus US 2Y";
       return;
     }
     if (state.marketView === "Macro") {
