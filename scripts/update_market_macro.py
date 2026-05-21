@@ -481,10 +481,8 @@ def main() -> None:
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
     fed_funds_dates, fed_funds_values = build_policy_rate_series()
     gdp_dates, gdp_values = parse_real_gdp_annualized_series()
-    dff_dates, dff_values = parse_fred_series("DFF", LIQUIDITY_START_DATE)
     liquidity_fed_dates, liquidity_fed_values = build_daily_forward_series(
-        dff_dates,
-        dff_values,
+        *filter_series_start(fed_funds_dates, fed_funds_values, LIQUIDITY_START_DATE),
         LIQUIDITY_START_DATE,
     )
     dgs2_dates, dgs2_values = parse_fred_series("DGS2", LIQUIDITY_START_DATE)
@@ -606,14 +604,14 @@ def main() -> None:
         },
         "liquidity_policy_2y": {
             "title": "Fed Policy vs US 2Y",
-            "subtitle": "Daily effective Fed Funds rate and US 2Y Treasury yield, forward-filled across non-trading days for continuous comparison from 1981-01-01.",
-            "source": "FRED DFF / DGS2",
+            "subtitle": "Step-like Fed policy-rate proxy and US 2Y Treasury yield, forward-filled across non-trading days for continuous comparison from 1981-01-01.",
+            "source": "FRED DFEDTARU / DFEDTAR / FEDFUNDS / DGS2",
             "mode": "raw",
             "connectGaps": False,
             "yAxisLabel": "%",
             "formatter": "percent2",
             "series": {
-                "fed_funds_daily": build_series_item("Fed Funds Effective", "#111827", liquidity_fed_dates, liquidity_fed_values),
+                "fed_policy_rate": build_series_item("Fed Policy Rate", "#111827", liquidity_fed_dates, liquidity_fed_values),
                 "us2y": build_series_item("US 2Y Treasury", "#2563eb", liquidity_us2y_dates, liquidity_us2y_values),
             },
         },
