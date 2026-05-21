@@ -6128,6 +6128,17 @@ function formatMemoryPremium(value) {
   return `${sign}${Number(value).toFixed(1)}%`;
 }
 
+function getMemorySpotCheckValues(row) {
+  const runtime = row.spotKey ? memorySpotRuntime.items[row.spotKey] : null;
+  const spotPrice = Number.isFinite(runtime?.latestValue) ? runtime.latestValue : row.spotPrice;
+  const spotDate = runtime?.latestDate ?? row.spotDate ?? null;
+  const contractPrice = row.contractPrice;
+  const premiumPct = Number.isFinite(spotPrice) && Number.isFinite(contractPrice) && contractPrice !== 0
+    ? ((spotPrice - contractPrice) / contractPrice) * 100
+    : row.premiumPct;
+  return { spotPrice, spotDate, premiumPct };
+}
+
 function formatMemoryRangeValue(range) {
   if (!range || !Number.isFinite(range.low) || !Number.isFinite(range.high)) {
     return "-";
@@ -6999,24 +7010,25 @@ function renderMemorySpotOverview() {
     .join("");
   const spotContractChecks = memorySpotData.spotContractChecks ?? {};
   const spotContractRows = (spotContractChecks.rows ?? [])
-    .map(
-      (row) => `
+    .map((row) => {
+      const check = getMemorySpotCheckValues(row);
+      return `
         <div class="memory-spot-contract-row">
           <span>
             <strong>${row.item}</strong>
             <small>${row.note}</small>
           </span>
           <span>
-            <strong>${formatMemoryDollar(row.spotPrice, row.spotUnit)}</strong>
-            <small>${row.spotDate ?? "-"}</small>
+            <strong>${formatMemoryDollar(check.spotPrice, row.spotUnit)}</strong>
+            <small>${check.spotDate ?? "-"}</small>
           </span>
           <span>
             <strong>${formatMemoryDollar(row.contractPrice, row.contractUnit)}</strong>
             <small>${row.contractDate ?? "not public"}</small>
           </span>
-          <span>${formatMemoryPremium(row.premiumPct)}</span>
-        </div>`,
-    )
+          <span>${formatMemoryPremium(check.premiumPct)}</span>
+        </div>`;
+    })
     .join("");
 
   const featuredMarkup = featuredItems
