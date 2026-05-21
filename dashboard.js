@@ -41,8 +41,8 @@ const marketRsData = window.marketRsData ?? {
   rows: [],
   histories: {},
 };
-const memorySpotData = window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
-const memorySpotHistoryData = window.memorySpotHistoryData ?? null;
+const memorySpotData = window.memoryData ?? window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
+const memorySpotHistoryData = window.memoryDataHistoryData ?? window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
@@ -96,7 +96,7 @@ const marketSubtabMeta = {
 const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS"]);
 
 const semisSubtabMeta = {
-  MemorySpot: { label: "Memory Spot" },
+  MemorySpot: { label: "Memory Data" },
   GPUCloud: { label: "GPU Rental Price" },
 };
 
@@ -6113,6 +6113,81 @@ function formatMemorySpotChange(value) {
   return `${sign}${Number(value).toFixed(2)}%`;
 }
 
+function formatMemoryRangeValue(range) {
+  if (!range || !Number.isFinite(range.low) || !Number.isFinite(range.high)) {
+    return "-";
+  }
+  return range.label ?? `${range.low}-${range.high}%`;
+}
+
+function getMemoryRangeMidpoint(range) {
+  if (!range || !Number.isFinite(range.low) || !Number.isFinite(range.high)) {
+    return null;
+  }
+  return Number(((range.low + range.high) / 2).toFixed(1));
+}
+
+function createMemoryContractGuideChart(canvas, rows) {
+  if (typeof Chart === "undefined" || !Array.isArray(rows) || !rows.length) {
+    return;
+  }
+
+  const labels = rows.map((row) => row.period);
+  const series = [
+    { key: "dram", label: "DRAM", color: "#2563eb" },
+    { key: "nand", label: "NAND", color: "#ea580c" },
+    { key: "hbm", label: "HBM / Blended", color: "#0f766e" },
+  ];
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: series.map((item) => ({
+        label: item.label,
+        data: rows.map((row) => getMemoryRangeMidpoint(row[item.key])),
+        backgroundColor: item.color,
+        borderColor: item.color,
+        borderWidth: 1,
+        borderRadius: 6,
+        maxBarThickness: 28,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}% midpoint`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          ticks: { color: "#8d8d86", callback: (value) => `${value}%`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function parseCsvLine(line) {
   const values = [];
   let current = "";
@@ -6872,6 +6947,38 @@ function renderMemorySpotOverview() {
   const periodStart = memorySpotRuntime.labels[0] || "2022-01-01";
   const periodEnd = memorySpotRuntime.labels[memorySpotRuntime.labels.length - 1] || memorySpotRuntime.updatedAt || periodStart;
   const firstObservedDate = availableDates[0] || null;
+  const contractGuide = memorySpotData.trendforceContractGuide ?? {};
+  const contractRows = contractGuide.quarterlyRows ?? [];
+  const contractTableRows = contractRows
+    .map(
+      (row) => `
+        <div class="memory-contract-row">
+          <span>
+            <strong>${row.period}</strong>
+            <small>${row.basis}</small>
+            <a href="${row.sourceUrl}" target="_blank" rel="noreferrer">${row.sourceTitle}</a>
+            ${row.nandSourceUrl ? `<a href="${row.nandSourceUrl}" target="_blank" rel="noreferrer">${row.nandSourceTitle}</a>` : ""}
+            ${row.hbmSourceUrl ? `<a href="${row.hbmSourceUrl}" target="_blank" rel="noreferrer">${row.hbmSourceTitle}</a>` : ""}
+          </span>
+          <span>${formatMemoryRangeValue(row.dram)}</span>
+          <span>${formatMemoryRangeValue(row.nand)}</span>
+          <span>${formatMemoryRangeValue(row.hbm)}</span>
+        </div>`,
+    )
+    .join("");
+  const monthlyWatchRows = (contractGuide.monthlyRows ?? [])
+    .map(
+      (row) => `
+        <div class="memory-note-row">
+          <span>
+            <strong>${row.period} ${row.segment}</strong>
+            <small>${row.basis}</small>
+            <a href="${row.sourceUrl}" target="_blank" rel="noreferrer">${row.sourceTitle}</a>
+          </span>
+          <span>${row.range}</span>
+        </div>`,
+    )
+    .join("");
 
   const featuredMarkup = featuredItems
     .map(
@@ -7018,13 +7125,13 @@ function renderMemorySpotOverview() {
   usOverviewRoot.innerHTML = `
     <section class="memory-overview">
       <div class="us-section-head cloud-section-head">
-        <h2>Memory Spot Dashboard</h2>
-        <p>Representative DRAM and NAND spot benchmarks for tracking memory pricing trends</p>
+        <h2>Memory Data Dashboard</h2>
+        <p>Spot benchmarks plus TrendForce contract-price guides for DRAM, NAND, and HBM</p>
       </div>
       <section class="memory-banner">
         <div>
           <strong>Source</strong>
-          <span>${memorySpotData.source?.name ?? "Public memory benchmark dashboard"}</span>
+          <span>${memorySpotData.source?.name ?? "Public memory data dashboard"}</span>
         </div>
         <div>
           <strong>Updated</strong>
@@ -7032,7 +7139,7 @@ function renderMemorySpotOverview() {
         </div>
         <div>
           <strong>Coverage</strong>
-          <span>${featuredItems.length} featured spot benchmarks</span>
+          <span>${featuredItems.length} spot benchmarks + contract guide</span>
         </div>
         <div>
           <strong>Period</strong>
@@ -7047,6 +7154,42 @@ function renderMemorySpotOverview() {
       <section class="memory-card-grid">
         ${featuredMarkup}
       </section>
+      <section class="memory-panel memory-contract-panel">
+        <div class="us-panel-head">
+          <div>
+            <h3>${contractGuide.title ?? "TrendForce Memory Contract Price Guide"}</h3>
+            <p>${contractGuide.subtitle ?? "Quarterly contract-price momentum from public TrendForce articles"}</p>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>Updated ${contractGuide.updatedAt ?? "-"}</span>
+            <span>${contractGuide.unit ?? "% QoQ"}</span>
+          </div>
+        </div>
+        <div class="memory-contract-grid">
+          <div class="memory-chart-wrap">
+            <canvas data-memory-contract-guide="trendforce"></canvas>
+          </div>
+          <div class="memory-contract-table">
+            <div class="memory-contract-head">
+              <span>Period</span>
+              <span>DRAM</span>
+              <span>NAND</span>
+              <span>HBM</span>
+            </div>
+            ${contractTableRows}
+          </div>
+        </div>
+        <div class="memory-guide-note">${contractGuide.note ?? ""}</div>
+        ${monthlyWatchRows ? `
+          <div class="memory-monthly-watch">
+            <div class="memory-list-head memory-note-head">
+              <span>Monthly watch</span>
+              <span>Move</span>
+            </div>
+            ${monthlyWatchRows}
+          </div>
+        ` : ""}
+      </section>
       <section class="memory-panel-grid memory-panel-grid-wide">
         ${basketMarkup}
       </section>
@@ -7058,6 +7201,11 @@ function renderMemorySpotOverview() {
 
   if (!memorySpotRuntime.loaded) {
     return;
+  }
+
+  const contractCanvas = usOverviewRoot.querySelector('[data-memory-contract-guide="trendforce"]');
+  if (contractCanvas) {
+    createMemoryContractGuideChart(contractCanvas, contractRows);
   }
 
   usOverviewRoot.querySelectorAll("[data-memory-range]").forEach((button) => {

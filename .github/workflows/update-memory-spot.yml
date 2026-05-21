@@ -1,4 +1,4 @@
-name: Update Memory Spot
+name: Update Memory Data
 
 on:
   workflow_dispatch:
@@ -22,18 +22,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh memory spot history
+      - name: Refresh memory data history
         run: python scripts/update_memory_spot.py
 
-      - name: Commit updated memory spot history
+      - name: Commit updated memory data history
         run: |
-          if git diff --quiet -- data/memory-spot-history.js; then
-            echo "No memory spot changes detected."
+          if git diff --quiet -- data/memory-data-history.js; then
+            echo "No memory data changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/memory-spot-history.js
-          git commit -m "Update memory spot history" || exit 0
+          git add data/memory-data-history.js
+          git commit -m "Update memory data history" || exit 0
           git pull --rebase origin main
           git push

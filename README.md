@@ -22,8 +22,8 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - cloud revenue / growth / margin dashboard
 - `Big Tech > Capex`
   - big tech capex and cash flow dashboard
-- `Semis > Memory Spot`
-  - DRAM and NAND spot dashboard
+- `Semis > Memory Data`
+  - DRAM/NAND spot dashboard and TrendForce contract-price guide
 - `Semis > GPU Rental Price`
   - existing SemiAnalysis-focused GPU rental dashboard plus Ornn Compute Price Index section
 - `Infra`
@@ -69,7 +69,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `/.github/workflows/update-memory-spot.yml`
   - runs daily
   - scheduled at `22:50 UTC` / `07:50 KST`
-  - updates `data/memory-spot-history.js`
+  - updates `data/memory-data-history.js`
 
 - `/.github/workflows/update-ornn-gpu-index.yml`
   - runs daily

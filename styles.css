@@ -1127,6 +1127,111 @@ h1 {
   min-height: 280px;
 }
 
+.memory-contract-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.memory-contract-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.memory-contract-table {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+}
+
+.memory-contract-head,
+.memory-contract-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) repeat(3, minmax(66px, 0.55fr));
+  gap: 10px;
+  align-items: center;
+}
+
+.memory-contract-head {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e2dc;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.memory-contract-row {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0eb;
+  font-size: 0.86rem;
+}
+
+.memory-contract-row strong,
+.memory-contract-row small,
+.memory-contract-row a,
+.memory-note-row strong,
+.memory-note-row small,
+.memory-note-row a {
+  display: block;
+}
+
+.memory-contract-row strong,
+.memory-note-row strong {
+  color: #20201d;
+}
+
+.memory-contract-row small,
+.memory-note-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.memory-contract-row a,
+.memory-note-row a {
+  margin-top: 5px;
+  color: #2563eb;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.memory-contract-row a:hover,
+.memory-note-row a:hover {
+  text-decoration: underline;
+}
+
+.memory-guide-note {
+  padding: 11px 12px;
+  border: 1px solid #e6dfc7;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #6d5b21;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.memory-monthly-watch {
+  display: grid;
+  gap: 0;
+}
+
+.memory-note-head,
+.memory-note-row {
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 0.22fr);
+}
+
+.memory-note-row {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0eb;
+  font-size: 0.86rem;
+}
+
 .memory-list {
   margin-top: 14px;
 }
@@ -2274,6 +2379,7 @@ h1 {
   .memory-banner,
   .memory-card-grid,
   .memory-panel-grid,
+  .memory-contract-grid,
   .macro-panel-grid,
   .infra-card-grid,
   .infra-chart-grid {

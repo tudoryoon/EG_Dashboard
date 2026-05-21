@@ -95,9 +95,9 @@ def main() -> None:
         "items": items,
     }
 
-    output_path = Path(__file__).resolve().parents[1] / "data" / "memory-spot-history.js"
+    output_path = Path(__file__).resolve().parents[1] / "data" / "memory-data-history.js"
     output_path.write_text(
-        "window.memorySpotHistoryData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
+        "window.memoryDataHistoryData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
     )
 
