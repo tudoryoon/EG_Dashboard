@@ -14,10 +14,12 @@ from urllib.request import Request, urlopen
 
 START_DATE = "1965-01-01"
 GDP_START_DATE = "1981-01-01"
+LIQUIDITY_START_DATE = "1981-01-01"
 FX_START_DATE = "1971-01-01"
 FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
+STREETSTATS_BASE = "https://streetstats.finance"
 WORLD_BANK_PINK_SHEET_URL = (
     "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/"
     "related/CMO-Historical-Data-Monthly.xlsx"
@@ -58,6 +60,18 @@ YAHOO_SERIES = {
 
 def fetch_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    last_error: Exception | None = None
+    for _ in range(3):
+        try:
+            with urlopen(request, timeout=60) as response:  # nosec B310 - fixed public endpoints
+                return response.read().decode("utf-8-sig")
+        except Exception as error:  # pragma: no cover - network variability
+            last_error = error
+    raise RuntimeError(f"Failed to fetch {url}") from last_error
+
+
+def fetch_text_with_headers(url: str, headers: dict[str, str]) -> str:
+    request = Request(url, headers=headers)
     last_error: Exception | None = None
     for _ in range(3):
         try:
@@ -313,6 +327,81 @@ def parse_real_gdp_annualized_series() -> tuple[list[str], list[float]]:
     return parse_fred_series("A191RL1Q225SBEA", GDP_START_DATE)
 
 
+def build_daily_forward_series(
+    source_dates: list[str],
+    source_values: list[float],
+    start_date: str,
+    end_date: str | None = None,
+) -> tuple[list[str], list[float | None]]:
+    if end_date is None:
+        end_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    cursor = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    dates: list[str] = []
+    values: list[float | None] = []
+    source_index = 0
+    carried_value: float | None = None
+    while cursor <= end:
+        date_key = cursor.strftime("%Y-%m-%d")
+        while source_index < len(source_dates) and source_dates[source_index] <= date_key:
+            carried_value = source_values[source_index]
+            source_index += 1
+        dates.append(date_key)
+        values.append(carried_value)
+        cursor += timedelta(days=1)
+    return dates, values
+
+
+def parse_streetstats_global_m2_proxy() -> tuple[list[str], list[float | None]]:
+    token_payload = json.loads(fetch_text(f"{STREETSTATS_BASE}/api/token"))
+    token = token_payload["token"]
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": f"{STREETSTATS_BASE}/liquidity/money/",
+        "Authorization": f"Bearer {token}",
+    }
+    url = (
+        f"{STREETSTATS_BASE}/api/econ/columns"
+        "?id=Date&id=Global_M2&id=US_M2&id=Euro_M2&id=China_M2&id=Japan_M2"
+    )
+    rows = json.loads(fetch_text_with_headers(url, headers))
+    source_dates: list[str] = []
+    source_values: list[float] = []
+    for row in rows:
+        raw_date = str(row.get("Date") or "").strip()
+        raw_value = row.get("Global_M2")
+        if not raw_date or raw_value in {"", None}:
+            continue
+        try:
+            date_key = datetime.strptime(raw_date, "%m/%d/%Y").strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+        source_dates.append(date_key)
+        source_values.append(round(float(raw_value), 2))
+    return build_daily_forward_series(source_dates, source_values, LIQUIDITY_START_DATE)
+
+
+def parse_sofr_iorb_spread_bps() -> tuple[list[str], list[float | None]]:
+    sofr_dates, sofr_values = parse_fred_series("SOFR", LIQUIDITY_START_DATE)
+    iorb_dates, iorb_values = parse_fred_series("IORB", LIQUIDITY_START_DATE)
+    try:
+        ioer_dates, ioer_values = parse_fred_series("IOER", LIQUIDITY_START_DATE)
+        iorb_dates, iorb_values = merge_series_prefer_recent(
+            (iorb_dates, iorb_values),
+            (ioer_dates, ioer_values),
+        )
+    except Exception:
+        pass
+    spread_dates, spread_values = build_spread_series(
+        sofr_dates,
+        sofr_values,
+        iorb_dates,
+        iorb_values,
+    )
+    spread_bps = [round(value * 100, 2) for value in spread_values]
+    return build_daily_forward_series(spread_dates, spread_bps, LIQUIDITY_START_DATE)
+
+
 def build_spread_series(
     first_dates: list[str],
     first_values: list[float],
@@ -391,6 +480,20 @@ def main() -> None:
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
     fed_funds_dates, fed_funds_values = build_policy_rate_series()
     gdp_dates, gdp_values = parse_real_gdp_annualized_series()
+    dff_dates, dff_values = parse_fred_series("DFF", LIQUIDITY_START_DATE)
+    liquidity_fed_dates, liquidity_fed_values = build_daily_forward_series(
+        dff_dates,
+        dff_values,
+        LIQUIDITY_START_DATE,
+    )
+    dgs2_dates, dgs2_values = parse_fred_series("DGS2", LIQUIDITY_START_DATE)
+    liquidity_us2y_dates, liquidity_us2y_values = build_daily_forward_series(
+        dgs2_dates,
+        dgs2_values,
+        LIQUIDITY_START_DATE,
+    )
+    global_m2_dates, global_m2_values = parse_streetstats_global_m2_proxy()
+    sofr_iorb_dates, sofr_iorb_values = parse_sofr_iorb_spread_bps()
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
     real_5y_dates, real_5y_values = build_spread_series(
         us_series["us5y"][0],
@@ -475,6 +578,43 @@ def main() -> None:
             "yAxisLabel": "Yield %",
             "formatter": "percent2",
             "series": rates_series,
+        },
+        "liquidity_global_m2": {
+            "title": "Global Money Supply Proxy",
+            "subtitle": "Daily forward-filled proxy for GLMOSUPP-style global M2 in USD, using US, Eurozone, China, and Japan M2 converted to USD where available.",
+            "source": "StreetStats public Global M2 proxy / central bank sources",
+            "mode": "raw",
+            "connectGaps": False,
+            "yAxisLabel": "USD bn",
+            "formatter": "number1",
+            "series": {
+                "global_m2_usd": build_series_item("Global M2 Proxy (USD)", "#2563eb", global_m2_dates, global_m2_values),
+            },
+        },
+        "liquidity_sofr_iorb": {
+            "title": "SOFR - IORB",
+            "subtitle": "Daily SOFR less the Fed reserve-balance administered rate, shown in basis points. IOER is used as the historical reserve-rate bridge before IORB.",
+            "source": "FRED SOFR / IORB / IOER",
+            "mode": "raw",
+            "connectGaps": False,
+            "yAxisLabel": "bps",
+            "formatter": "number1",
+            "series": {
+                "sofr_iorb": build_series_item("SOFR - IORB", "#dc2626", sofr_iorb_dates, sofr_iorb_values),
+            },
+        },
+        "liquidity_policy_2y": {
+            "title": "Fed Policy vs US 2Y",
+            "subtitle": "Daily effective Fed Funds rate and US 2Y Treasury yield, forward-filled across non-trading days for continuous comparison from 1981-01-01.",
+            "source": "FRED DFF / DGS2",
+            "mode": "raw",
+            "connectGaps": False,
+            "yAxisLabel": "%",
+            "formatter": "percent2",
+            "series": {
+                "fed_funds_daily": build_series_item("Fed Funds Effective", "#111827", liquidity_fed_dates, liquidity_fed_values),
+                "us2y": build_series_item("US 2Y Treasury", "#2563eb", liquidity_us2y_dates, liquidity_us2y_values),
+            },
         },
         "dxy": {
             "title": "Dollar Index",

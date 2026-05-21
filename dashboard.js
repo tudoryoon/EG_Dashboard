@@ -85,6 +85,7 @@ const bigTechSubtabMeta = {
 const marketSubtabMeta = {
   Overview: { label: "Price" },
   Macro: { label: "Macro" },
+  Liquidity: { label: "Liquidity" },
   Valuation: { label: "Valuation" },
   FxCommodities: { label: "FX & Commodities" },
   VIX: { label: "VIX" },
@@ -1638,6 +1639,9 @@ function getTotalDashboardSeriesItems() {
   });
 
   Object.entries(marketMacroData?.panels ?? {}).forEach(([panelKey, panel]) => {
+    if (panelKey.startsWith("liquidity_")) {
+      return;
+    }
     Object.entries(panel.series ?? {}).forEach(([seriesKey, item]) => {
       if (panelKey === "fx_dashboard" && seriesKey === "dxy") {
         return;
@@ -1955,6 +1959,81 @@ function getMarketMacroSelection(panelKey) {
 
 function getMarketMacroCustomRange(panelKey) {
   return state.marketMacroCustomRanges?.[panelKey] ?? { start: "", end: "" };
+}
+
+function buildMarketMacroPanelCard({ key, canvas = key, className = "" }, rangeSource) {
+  const panel = getMarketMacroPanel(key);
+  if (!panel) {
+    return "";
+  }
+  const selectedSeries = new Set(getMarketMacroSelection(key));
+  const customRange = getMarketMacroCustomRange(key);
+  const seriesChips = Object.entries(panel.series ?? {})
+    .map(
+      ([seriesKey, item]) => `
+        <button
+          type="button"
+          class="m7-range-chip macro-dashboard-chip${selectedSeries.has(seriesKey) ? " active" : ""}"
+          data-market-macro-series="${seriesKey}"
+          data-market-macro-panel="${key}"
+        >
+          <i class="macro-series-dot" style="background:${item.color}"></i>
+          ${item.name}
+        </button>`,
+    )
+    .join("");
+  const customDateMarkup = `
+        <div class="total-date-row market-macro-date-row">
+          <label class="total-date-field">
+            Start
+            <input type="date" value="${customRange.start || ""}" data-market-macro-custom-start="${key}">
+          </label>
+          <label class="total-date-field">
+            End
+            <input type="date" value="${customRange.end || ""}" data-market-macro-custom-end="${key}">
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-market-macro-custom-apply="${key}">Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-market-macro-custom-reset="${key}">Reset</button>
+          </div>
+        </div>
+      `;
+  return `
+    <article class="cloud-panel macro-panel ${className}">
+      <div class="us-panel-head">
+        <div>
+          <h3>${panel.title}</h3>
+          <p>${panel.subtitle}</p>
+        </div>
+        <div class="m7-range-row">
+          ${rangeSource
+            .map(
+              (range) => `
+                <button
+                  type="button"
+                  class="m7-range-chip${getMarketMacroRange(key) === range.key ? " active" : ""}"
+                  data-market-macro-range="${range.key}"
+                  data-market-macro-panel="${key}"
+                >
+                  ${range.label}
+                </button>`,
+            )
+            .join("")}
+        </div>
+      </div>
+      <div class="macro-panel-meta">
+        <span>${panel.source ?? ""}</span>
+        <span>${panel.yAxisLabel ?? (panel.mode === "normalized" ? "Start = 100" : "Raw level")}</span>
+      </div>
+      <div class="market-macro-series-row">
+        ${seriesChips}
+      </div>
+      ${customDateMarkup}
+      <div class="macro-chart-wrap">
+        <canvas data-market-macro="${canvas}"></canvas>
+      </div>
+    </article>
+  `;
 }
 
 function buildDailyDateLabels(startDate, endDate) {
@@ -8152,6 +8231,131 @@ function renderMarketFxCommoditiesOverview() {
   });
 }
 
+function bindMarketMacroPanelControls(panelKeys) {
+  usOverviewRoot.querySelectorAll("[data-market-macro-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroPanel;
+      const rangeKey = button.dataset.marketMacroRange || marketMacroData.defaultRange || "max";
+      if (!panelKey) {
+        return;
+      }
+      state.marketMacroRanges = {
+        ...state.marketMacroRanges,
+        [panelKey]: rangeKey,
+      };
+      state.marketMacroCustomRanges = {
+        ...state.marketMacroCustomRanges,
+        [panelKey]: { start: "", end: "" },
+      };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-custom-apply]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroCustomApply;
+      if (!panelKey) {
+        return;
+      }
+      const startInput = usOverviewRoot.querySelector(`[data-market-macro-custom-start="${panelKey}"]`);
+      const endInput = usOverviewRoot.querySelector(`[data-market-macro-custom-end="${panelKey}"]`);
+      const start = startInput?.value || "";
+      const end = endInput?.value || "";
+      if (start && end && start > end) {
+        return;
+      }
+      state.marketMacroCustomRanges = {
+        ...state.marketMacroCustomRanges,
+        [panelKey]: { start, end },
+      };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-custom-reset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroCustomReset;
+      if (!panelKey) {
+        return;
+      }
+      state.marketMacroCustomRanges = {
+        ...state.marketMacroCustomRanges,
+        [panelKey]: { start: "", end: "" },
+      };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-macro-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.marketMacroPanel;
+      const seriesKey = button.dataset.marketMacroSeries;
+      if (!panelKey || !seriesKey) {
+        return;
+      }
+      const selected = new Set(getMarketMacroSelection(panelKey));
+      if (selected.has(seriesKey)) {
+        if (selected.size <= 1) {
+          return;
+        }
+        selected.delete(seriesKey);
+      } else {
+        selected.add(seriesKey);
+      }
+      state.marketMacroSelections = {
+        ...state.marketMacroSelections,
+        [panelKey]: [...selected],
+      };
+      render();
+    });
+  });
+
+  panelKeys.forEach((panelKey) => {
+    const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);
+    if (canvas) {
+      createMarketMacroChart(canvas, panelKey, getMarketMacroRange(panelKey));
+    }
+  });
+}
+
+function renderMarketLiquidityOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const rangeSource = (marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [];
+  const marketUpdatedAt = marketMacroData.updatedAt || marketPriceData.updatedAt || "-";
+  const panelKeys = ["liquidity_global_m2", "liquidity_sofr_iorb", "liquidity_policy_2y"];
+  const liquidityPanels = [
+    { key: "liquidity_global_m2", canvas: "liquidity_global_m2", className: "macro-panel-wide" },
+    { key: "liquidity_sofr_iorb", canvas: "liquidity_sofr_iorb", className: "" },
+    { key: "liquidity_policy_2y", canvas: "liquidity_policy_2y", className: "" },
+  ]
+    .map((panelConfig) => buildMarketMacroPanelCard(panelConfig, rangeSource))
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Liquidity Dashboard</h2>
+            <p>Global money supply proxy, reserve-market spread, and Fed policy versus the US 2Y yield for daily liquidity monitoring.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
+          </div>
+        </div>
+        <div class="macro-panel-grid">
+          ${liquidityPanels}
+        </div>
+      </section>
+    </section>
+  `;
+
+  bindMarketMacroPanelControls(panelKeys);
+}
+
 function renderMarketValuationOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -9255,6 +9459,10 @@ function renderSummary(list) {
       summaryText.textContent = "FX & Commodities dashboard for dollar, energy, metals, uranium spot, iron ore, and LNG futures";
       return;
     }
+    if (state.marketView === "Liquidity") {
+      summaryText.textContent = "Daily liquidity dashboard for global M2 proxy, SOFR-IORB spread, and Fed policy versus US 2Y";
+      return;
+    }
     if (state.marketView === "Macro") {
       summaryText.textContent = "US monthly macro dashboard with snapshot, coverage, categories, and history";
       return;
@@ -9468,6 +9676,10 @@ function render() {
     }
     if (state.marketView === "FxCommodities") {
       renderMarketFxCommoditiesOverview();
+      return;
+    }
+    if (state.marketView === "Liquidity") {
+      renderMarketLiquidityOverview();
       return;
     }
     if (state.marketView === "Macro") {
