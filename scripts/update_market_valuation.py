@@ -104,10 +104,19 @@ def build_daily_cape_proxy(
     shiller_rows: list[dict[str, float | str | None]],
     daily_sp500_rows: list[dict[str, float | str]],
 ) -> list[dict[str, float | str]]:
+    return build_daily_scaled_proxy(shiller_rows, daily_sp500_rows, "cape", "value")
+
+
+def build_daily_scaled_proxy(
+    shiller_rows: list[dict[str, float | str | None]],
+    daily_sp500_rows: list[dict[str, float | str]],
+    source_key: str,
+    output_key: str,
+) -> list[dict[str, float | str]]:
     monthly_rows = [
         row
         for row in shiller_rows
-        if row.get("date") and row.get("cape") is not None and row.get("sp500") is not None
+        if row.get("date") and row.get(source_key) is not None and row.get("sp500") is not None
     ]
     if not monthly_rows or not daily_sp500_rows:
         return []
@@ -121,7 +130,7 @@ def build_daily_cape_proxy(
             month_index += 1
             active_month = monthly_rows[month_index]
 
-        monthly_cape = float(active_month["cape"])
+        monthly_value = float(active_month[source_key])
         monthly_sp500 = float(active_month["sp500"])
         daily_sp500 = float(daily_row["sp500Close"])
         if monthly_sp500 == 0:
@@ -129,10 +138,35 @@ def build_daily_cape_proxy(
         proxy_rows.append(
             {
                 "date": daily_date,
-                "value": round(monthly_cape * daily_sp500 / monthly_sp500, 4),
+                output_key: round(monthly_value * daily_sp500 / monthly_sp500, 4),
             }
         )
     return proxy_rows
+
+
+def build_daily_forward_series(
+    shiller_rows: list[dict[str, float | str | None]],
+    daily_sp500_rows: list[dict[str, float | str]],
+    source_key: str,
+) -> list[dict[str, float | str]]:
+    monthly_rows = [
+        row
+        for row in shiller_rows
+        if row.get("date") and row.get(source_key) is not None
+    ]
+    if not monthly_rows or not daily_sp500_rows:
+        return []
+
+    output_rows: list[dict[str, float | str]] = []
+    month_index = 0
+    active_month = monthly_rows[month_index]
+    for daily_row in daily_sp500_rows:
+        daily_date = str(daily_row["date"])
+        while month_index + 1 < len(monthly_rows) and str(monthly_rows[month_index + 1]["date"]) <= daily_date:
+            month_index += 1
+            active_month = monthly_rows[month_index]
+        output_rows.append({"date": daily_date, "value": float(active_month[source_key])})
+    return output_rows
 
 
 def build_payload() -> dict[str, object]:
@@ -163,17 +197,20 @@ def build_payload() -> dict[str, object]:
 
     dates = [row["date"] for row in rows]
     daily_sp500_rows = fetch_daily_sp500()
+    daily_cape = build_daily_forward_series(rows, daily_sp500_rows, "cape")
     daily_cape_proxy = build_daily_cape_proxy(rows, daily_sp500_rows)
+    daily_tr_cape = build_daily_forward_series(rows, daily_sp500_rows, "trCape")
+    daily_real_price = build_daily_scaled_proxy(rows, daily_sp500_rows, "realPrice", "value")
     payload = {
-        "updatedAt": daily_cape_proxy[-1]["date"] if daily_cape_proxy else (dates[-1] if dates else ""),
+        "updatedAt": daily_sp500_rows[-1]["date"] if daily_sp500_rows else (dates[-1] if dates else ""),
         "startDate": START_DATE,
         "defaultRange": "3y",
         "source": {
             "name": "Robert Shiller / Yale Irrational Exuberance data",
             "url": source_url,
             "page": SHILLER_PAGE_URL,
-            "frequency": "Monthly",
-            "dailyProxy": "Estimated with Yahoo Finance daily S&P 500 close and the latest available monthly Shiller CAPE denominator.",
+            "frequency": "Daily S&P 500 close with monthly Shiller valuation factors",
+            "dailyProxy": "Daily CAPE and real-price proxies are estimated with Yahoo Finance daily S&P 500 close and the latest available monthly Shiller denominator.",
         },
         "ranges": [
             {"key": "1m", "label": "1M"},
@@ -191,8 +228,8 @@ def build_payload() -> dict[str, object]:
                 "color": "#b42318",
                 "axis": "left",
                 "formatter": "number1",
-                "dates": dates,
-                "values": [row["cape"] for row in rows],
+                "dates": [row["date"] for row in daily_cape],
+                "values": [row["value"] for row in daily_cape],
             },
             "dailyCapeProxy": {
                 "label": "Daily CAPE Proxy",
@@ -208,26 +245,26 @@ def build_payload() -> dict[str, object]:
                 "color": "#7c3aed",
                 "axis": "left",
                 "formatter": "number1",
-                "dates": dates,
-                "values": [row["trCape"] for row in rows],
+                "dates": [row["date"] for row in daily_tr_cape],
+                "values": [row["value"] for row in daily_tr_cape],
             },
             "sp500": {
-                "label": "S&P 500 Monthly Avg",
+                "label": "S&P 500 Daily Close",
                 "color": "#111827",
                 "axis": "right",
                 "formatter": "index",
                 "normalize": True,
-                "dates": dates,
-                "values": [row["sp500"] for row in rows],
+                "dates": [row["date"] for row in daily_sp500_rows],
+                "values": [row["sp500Close"] for row in daily_sp500_rows],
             },
             "realPrice": {
-                "label": "Real S&P 500 Price",
+                "label": "Real S&P 500 Price Proxy",
                 "color": "#2563eb",
                 "axis": "right",
                 "formatter": "index",
                 "normalize": True,
-                "dates": dates,
-                "values": [row["realPrice"] for row in rows],
+                "dates": [row["date"] for row in daily_real_price],
+                "values": [row["value"] for row in daily_real_price],
             },
         },
     }
