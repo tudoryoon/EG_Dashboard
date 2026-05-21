@@ -285,6 +285,15 @@ const state = {
     "market:sp500",
   ],
   memorySpotRanges: {},
+  infraRanges: Object.fromEntries(
+    Object.keys(infraGridData?.panels ?? {}).map((key) => [key, infraGridData.defaultRange ?? "3y"]),
+  ),
+  infraSelections: Object.fromEntries(
+    Object.entries(infraGridData?.panels ?? {}).map(([panelKey, panel]) => [
+      panelKey,
+      Object.keys(panel?.series ?? {}),
+    ]),
+  ),
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
   ornnGpuRange: "3y",
 };
@@ -4213,160 +4222,105 @@ function renderPlaceholderOverview(title, description) {
   `;
 }
 
-function formatInfraMw(value) {
+function formatInfraPrice(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return "-";
   }
-  if (Math.abs(numeric) >= 1000) {
-    return `${(numeric / 1000).toFixed(1)} GW`;
-  }
-  return `${numeric.toFixed(0)} MW`;
+  return `$${numeric.toFixed(1)}/MWh`;
 }
 
-function formatInfraTime(value) {
+function formatInfraDate(value) {
   if (!value) {
     return "-";
   }
-  const date = new Date(value);
+  const date = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) {
     return String(value);
   }
-  return date.toLocaleString("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
 }
 
-function createInfraLoadChart(canvas) {
+function getInfraPanel(panelKey) {
+  return infraGridData?.panels?.[panelKey] ?? null;
+}
+
+function getInfraRange(panelKey) {
+  return state.infraRanges?.[panelKey] ?? infraGridData.defaultRange ?? "3y";
+}
+
+function getInfraSelection(panelKey) {
+  const selected = state.infraSelections?.[panelKey];
+  if (Array.isArray(selected) && selected.length) {
+    return selected;
+  }
+  return Object.keys(getInfraPanel(panelKey)?.series ?? {});
+}
+
+function buildInfraChartPayload(panel, rangeKey, selectedKeys) {
+  const selectedSet = new Set(selectedKeys?.length ? selectedKeys : Object.keys(panel?.series ?? {}));
+  const entries = Object.entries(panel?.series ?? {}).filter(([key]) => selectedSet.has(key));
+  const allDates = [...new Set(entries.flatMap(([, item]) => item?.dates ?? []))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, infraGridData?.startDate ?? "2001-01-01");
+  const selectedLabels = allDates.filter((label) => label >= startDate);
+
+  const datasets = entries.map(([key, item]) => {
+    const dateIndex = new Map();
+    (item.dates ?? []).forEach((date, index) => dateIndex.set(date, index));
+    return {
+      key,
+      label: item.name,
+      data: selectedLabels.map((label) => {
+        const index = dateIndex.get(label);
+        if (index === undefined) {
+          return null;
+        }
+        const value = Number(item.values?.[index]);
+        return Number.isFinite(value) ? value : null;
+      }),
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: 2.2,
+      tension: 0.14,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: panel.connectGaps === true,
+    };
+  });
+
+  return { labels: selectedLabels, datasets };
+}
+
+function createInfraChart(canvas, panelKey) {
   if (typeof Chart === "undefined") {
     return;
   }
-  const available = (infraGridData.items ?? []).filter((item) => Number.isFinite(Number(item.latestLoadMw)));
-  const chart = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels: available.map((item) => item.label),
-      datasets: [
-        {
-          label: "Latest Load",
-          data: available.map((item) => Number(item.latestLoadMw)),
-          backgroundColor: "#242521",
-          borderRadius: 10,
-          maxBarThickness: 46,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (context) => `Load: ${formatInfraMw(context.parsed.y)}`,
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: "#77736b" }, border: { color: "#dedbd2" } },
-        y: {
-          ticks: { color: "#77736b", callback: (value) => formatInfraMw(value) },
-          grid: { color: "rgba(40, 40, 36, 0.10)" },
-          border: { color: "#dedbd2" },
-        },
-      },
-    },
-  });
-  charts.push(chart);
-}
-
-function createInfraFuelChart(canvas) {
-  if (typeof Chart === "undefined") {
+  const panel = getInfraPanel(panelKey);
+  if (!panel) {
     return;
   }
-  const available = (infraGridData.items ?? []).filter((item) => (item.fuelMix ?? []).length);
-  const fuelLabels = Object.keys(infraGridData.fuelColors ?? {});
-  const datasets = fuelLabels.map((fuel) => ({
-    label: fuel,
-    data: available.map((item) => {
-      const row = (item.fuelMix ?? []).find((fuelItem) => fuelItem.label === fuel);
-      return Number.isFinite(Number(row?.sharePct)) ? Number(row.sharePct) : 0;
-    }),
-    backgroundColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
-    borderWidth: 0,
-  }));
-  const chart = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels: available.map((item) => item.label),
-      datasets,
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: {
-        legend: {
-          position: "bottom",
-          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`,
-          },
-        },
-      },
-      scales: {
-        x: { stacked: true, grid: { display: false }, ticks: { color: "#77736b" }, border: { color: "#dedbd2" } },
-        y: {
-          stacked: true,
-          min: 0,
-          max: 100,
-          ticks: { color: "#77736b", callback: (value) => `${value}%` },
-          grid: { color: "rgba(40, 40, 36, 0.10)" },
-          border: { color: "#dedbd2" },
-        },
-      },
-    },
-  });
-  charts.push(chart);
-}
+  const rangeKey = getInfraRange(panelKey);
+  const payload = buildInfraChartPayload(panel, rangeKey, getInfraSelection(panelKey));
+  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const spread = Math.max(maxValue - minValue, Math.abs(maxValue) * 0.18, 1);
+  const yMin = minValue >= 0 ? Math.max(0, minValue - spread * 0.1) : minValue - spread * 0.1;
+  const yMax = maxValue + spread * 0.12;
+  const tickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const tickSet = new Set(tickIndexes);
 
-function createInfraFuelHistoryChart(canvas) {
-  if (typeof Chart === "undefined") {
-    return;
-  }
-  const item =
-    (infraGridData.items ?? []).find((candidate) => candidate.key === "caiso" && (candidate.fuelHistory ?? []).length) ??
-    (infraGridData.items ?? []).find((candidate) => (candidate.fuelHistory ?? []).length);
-  if (!item) {
-    return;
-  }
-
-  const history = item.fuelHistory ?? [];
-  const fuelLabels = Object.keys(infraGridData.fuelColors ?? {}).filter((fuel) =>
-    history.some((point) => Number.isFinite(Number(point.shares?.[fuel]))),
-  );
   const chart = new Chart(canvas, {
     type: "line",
     data: {
-      labels: history.map((point) => formatInfraTime(point.time)),
-      datasets: fuelLabels.map((fuel) => ({
-        label: fuel,
-        data: history.map((point) => Number(point.shares?.[fuel] ?? 0)),
-        borderColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
-        backgroundColor: infraGridData.fuelColors?.[fuel] ?? "#a3a3a3",
-        borderWidth: 1,
-        pointRadius: 0,
-        pointHoverRadius: 3,
-        tension: 0.22,
-        fill: true,
-        stack: "fuel-share",
-      })),
+      labels: payload.labels,
+      datasets: payload.datasets,
     },
     options: {
       responsive: true,
@@ -4374,31 +4328,43 @@ function createInfraFuelHistoryChart(canvas) {
       animation: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        filler: { propagate: true },
         legend: {
-          position: "bottom",
+          position: "top",
+          align: "start",
           labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
         },
         tooltip: {
           callbacks: {
-            title: (items) => `${item.label} ${items[0]?.label ?? ""}`,
-            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`,
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatMacroValue(context.parsed.y, panel.formatter)}`,
           },
         },
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#77736b", maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
-          border: { color: "#dedbd2" },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
         },
         y: {
-          stacked: true,
-          min: 0,
-          max: 100,
-          ticks: { color: "#77736b", callback: (value) => `${value}%` },
-          grid: { color: "rgba(40, 40, 36, 0.10)" },
-          border: { color: "#dedbd2" },
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatMacroValue(value, panel.formatter),
+            maxTicksLimit: 6,
+          },
+          title: { display: true, text: panel.yAxisLabel ?? "", color: "#8d8d86" },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
         },
       },
     },
@@ -4406,60 +4372,136 @@ function createInfraFuelHistoryChart(canvas) {
   charts.push(chart);
 }
 
+function buildInfraPanelCard(panelConfig, rangeSource) {
+  const panel = getInfraPanel(panelConfig.key);
+  if (!panel) {
+    return "";
+  }
+  const selected = new Set(getInfraSelection(panelConfig.key));
+  const seriesChips = Object.entries(panel.series ?? {})
+    .map(
+      ([seriesKey, item]) => `
+        <button
+          type="button"
+          class="m7-range-chip macro-dashboard-chip${selected.has(seriesKey) ? " active" : ""}"
+          data-infra-series="${seriesKey}"
+          data-infra-panel="${panelConfig.key}"
+        >
+          <i class="macro-series-dot" style="background:${item.color}"></i>
+          ${item.name}
+        </button>`,
+    )
+    .join("");
+
+  return `
+    <article class="cloud-panel macro-panel ${panelConfig.className ?? ""}">
+      <div class="us-panel-head">
+        <div>
+          <h3>${panel.title}</h3>
+          <p>${panel.subtitle}</p>
+        </div>
+        <div class="m7-range-row">
+          ${rangeSource
+            .map(
+              (range) => `
+                <button
+                  type="button"
+                  class="m7-range-chip${getInfraRange(panelConfig.key) === range.key ? " active" : ""}"
+                  data-infra-range="${range.key}"
+                  data-infra-panel="${panelConfig.key}"
+                >
+                  ${range.label}
+                </button>`,
+            )
+            .join("")}
+        </div>
+      </div>
+      <div class="macro-panel-meta">
+        <span>${panel.source ?? ""}</span>
+        <span>${panel.yAxisLabel ?? ""}</span>
+      </div>
+      <div class="market-macro-series-row">${seriesChips}</div>
+      <div class="macro-chart-wrap"><canvas data-infra-panel="${panelConfig.key}"></canvas></div>
+    </article>`;
+}
+
+function bindInfraControls(panelKeys) {
+  usOverviewRoot.querySelectorAll("[data-infra-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.infraPanel;
+      state.infraRanges = { ...state.infraRanges, [panelKey]: button.dataset.infraRange || infraGridData.defaultRange || "3y" };
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-infra-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const panelKey = button.dataset.infraPanel;
+      const seriesKey = button.dataset.infraSeries;
+      if (!panelKey || !seriesKey) {
+        return;
+      }
+      const selected = new Set(getInfraSelection(panelKey));
+      if (selected.has(seriesKey) && selected.size > 1) {
+        selected.delete(seriesKey);
+      } else {
+        selected.add(seriesKey);
+      }
+      state.infraSelections = { ...state.infraSelections, [panelKey]: [...selected] };
+      render();
+    });
+  });
+
+  panelKeys.forEach((panelKey) => {
+    const canvas = usOverviewRoot.querySelector(`canvas[data-infra-panel="${panelKey}"]`);
+    if (canvas) {
+      createInfraChart(canvas, panelKey);
+    }
+  });
+}
+
 function renderInfraOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
 
-  const items = infraGridData.items ?? [];
-  const availableCount = items.filter((item) => item.status === "available").length;
-  const sampleCount = items.filter((item) => item.status === "sample").length;
-  const displayedCount = items.filter((item) => item.status === "available" || item.status === "sample").length;
-  const totalLoadMw = items.reduce((sum, item) => {
-    const value = Number(item.latestLoadMw);
-    return Number.isFinite(value) ? sum + value : sum;
-  }, 0);
-  const cardsMarkup = items
-    .map((item) => {
-      const fuelRows = (item.fuelMix ?? [])
-        .slice(0, 4)
-        .map(
-          (fuel) => `
-            <span class="infra-fuel-chip">
-              <span class="infra-fuel-dot" style="background:${fuel.color}"></span>
-              ${fuel.label} ${Number.isFinite(Number(fuel.sharePct)) ? `${Number(fuel.sharePct).toFixed(1)}%` : "-"}
-            </span>`,
-        )
-        .join("");
-      return `
-        <article class="infra-grid-card ${item.status === "available" ? "available" : item.status === "sample" ? "sample" : "unavailable"}">
+  const rangeSource = (infraGridData.ranges ?? []).length ? infraGridData.ranges : marketPriceData.ranges ?? [];
+  const snapshots = infraGridData.snapshots ?? [];
+  const panelKeys = (infraGridData.dashboards ?? []).map((item) => item.key).filter((key) => infraGridData.panels?.[key]);
+  const stressedCount = snapshots.filter((item) => item.status === "stressed").length;
+  const elevatedCount = snapshots.filter((item) => item.status === "elevated").length;
+  const highest = snapshots.reduce((winner, item) => (Number(item.price) > Number(winner?.price ?? -Infinity) ? item : winner), null);
+  const cardsMarkup = snapshots
+    .map(
+      (item) => `
+        <article class="infra-grid-card ${item.status}">
           <div class="infra-grid-card-head">
             <div>
               <h3>${item.label}</h3>
               <p>${item.region}</p>
             </div>
-            <span class="infra-status-pill">${item.status === "available" ? "Live" : item.status === "sample" ? "Sample" : "Check"}</span>
+            <span class="infra-status-pill">${item.status}</span>
           </div>
           <div class="infra-grid-metrics">
             <div>
-              <span>Latest Load</span>
-              <strong>${formatInfraMw(item.latestLoadMw)}</strong>
+              <span>Latest</span>
+              <strong>${formatInfraPrice(item.price)}</strong>
             </div>
             <div>
-              <span>Renewables</span>
-              <strong>${Number.isFinite(Number(item.renewableSharePct)) ? `${Number(item.renewableSharePct).toFixed(1)}%` : "-"}</strong>
+              <span>1Y Avg</span>
+              <strong>${formatInfraPrice(item.avg1y)}</strong>
             </div>
             <div>
-              <span>Top Fuel</span>
-              <strong>${item.topFuel || "-"}</strong>
+              <span>90D Spike</span>
+              <strong>${Number(item.spikeDays90 ?? 0).toFixed(0)}d</strong>
             </div>
           </div>
-          <div class="infra-fuel-row">${fuelRows || `<span class="infra-error-text">${item.error || "No fuel mix snapshot"}</span>`}</div>
-          <p class="infra-card-foot">Load ${formatInfraTime(item.loadTime)} · Fuel ${formatInfraTime(item.fuelTime)}</p>
-          ${item.fallbackNote ? `<p class="infra-sample-text">${item.fallbackNote}</p>` : ""}
-          ${item.error ? `<p class="infra-error-text">${item.error}</p>` : ""}
-        </article>`;
-    })
+          <p class="infra-card-foot">${formatInfraDate(item.date)} ? ${Number.isFinite(Number(item.premiumTo1yPct)) ? `${Number(item.premiumTo1yPct).toFixed(1)}% vs 1Y avg` : "1Y comparison unavailable"}</p>
+        </article>`,
+    )
+    .join("");
+  const panelMarkup = (infraGridData.dashboards ?? [])
+    .map((config, index) => buildInfraPanelCard({ key: config.key, className: index < 2 ? "macro-panel-wide" : "" }, rangeSource))
     .join("");
 
   usOverviewRoot.innerHTML = `
@@ -4467,79 +4509,44 @@ function renderInfraOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>US Grid Status</h2>
-            <p>GridStatus 오픈소스 라이브러리와 각 ISO 공개 피드를 사용한 전력망 스냅샷입니다. GitHub Pages 특성상 실시간 스트리밍이 아니라 업데이트 시점 기준 정적 스냅샷으로 표시됩니다.</p>
+            <h2>Data Center Power Stress</h2>
+            <p>Daily power-hub prices and spike indicators for regions where data-center load can pressure local grids.</p>
           </div>
           <div class="us-price-controls">
-            <a class="market-breadth-link" href="${infraGridData.source?.liveUrl ?? "https://www.gridstatus.io/live"}" target="_blank" rel="noreferrer">Open GridStatus Live</a>
-            <div class="us-price-updated">Updated ${formatInfraTime(infraGridData.updatedAt)}</div>
+            <a class="market-breadth-link" href="${infraGridData.source?.url ?? "https://www.eia.gov/electricity/wholesale/"}" target="_blank" rel="noreferrer">Open EIA Source</a>
+            <div class="us-price-updated">Updated ${infraGridData.updatedAt || "-"}</div>
           </div>
         </div>
         <div class="market-trend-meta">
-          <span>Source: ${infraGridData.source?.name ?? "GridStatus"}</span>
-          <span>${availableCount} live · ${sampleCount} sample fallback · ${items.length - displayedCount} unavailable</span>
-          <span>Load · Fuel Mix · Renewable share</span>
+          <span>Source: ${infraGridData.source?.name ?? "EIA Wholesale Electricity"}</span>
+          <span>EIA republishes ICE daily hub prices on a biweekly source cadence</span>
+          <span>PJM West is used as the broad public proxy for Northern Virginia grid-price pressure</span>
         </div>
         <div class="infra-grid-summary">
           <div>
-            <strong>${availableCount}</strong>
-            <span>markets live</span>
+            <strong>${snapshots.length}</strong>
+            <span>tracked hubs</span>
           </div>
           <div>
-            <strong>${sampleCount}</strong>
-            <span>sample fallback</span>
+            <strong>${stressedCount}</strong>
+            <span>stressed</span>
           </div>
           <div>
-            <strong>${formatInfraMw(totalLoadMw)}</strong>
-            <span>tracked load</span>
+            <strong>${elevatedCount}</strong>
+            <span>elevated</span>
+          </div>
+          <div>
+            <strong>${highest ? formatInfraPrice(highest.price) : "-"}</strong>
+            <span>${highest?.label ?? "highest hub"}</span>
           </div>
         </div>
         <div class="infra-card-grid">${cardsMarkup}</div>
-        <div class="market-panel-grid infra-chart-grid">
-          <article class="memory-panel">
-            <div class="memory-panel-head">
-              <div>
-                <h3>Latest Load by ISO</h3>
-                <p>가장 최근 공개 피드 기준 전력 수요입니다.</p>
-              </div>
-            </div>
-            <div class="memory-chart-wrap"><canvas data-infra-grid="load"></canvas></div>
-          </article>
-          <article class="memory-panel">
-            <div class="memory-panel-head">
-              <div>
-                <h3>Fuel Mix Share</h3>
-                <p>양수 값 기준 발전원 비중입니다. 저장장치는 방전이면 양수, 충전이면 음수일 수 있습니다.</p>
-              </div>
-            </div>
-            <div class="memory-chart-wrap"><canvas data-infra-grid="fuel"></canvas></div>
-          </article>
-          <article class="memory-panel infra-history-panel">
-            <div class="memory-panel-head">
-              <div>
-                <h3>Hourly Fuel Mix Share</h3>
-                <p>Stacked area view of each fuel's share by time. Live CAISO history is shown first; blocked feeds use labeled sample fallbacks.</p>
-              </div>
-            </div>
-            <div class="memory-chart-wrap"><canvas data-infra-grid="fuel-history"></canvas></div>
-          </article>
-        </div>
+        <div class="macro-panel-grid infra-chart-grid">${panelMarkup}</div>
       </section>
     </section>
   `;
 
-  const loadCanvas = usOverviewRoot.querySelector("[data-infra-grid='load']");
-  const fuelCanvas = usOverviewRoot.querySelector("[data-infra-grid='fuel']");
-  const fuelHistoryCanvas = usOverviewRoot.querySelector("[data-infra-grid='fuel-history']");
-  if (loadCanvas) {
-    createInfraLoadChart(loadCanvas);
-  }
-  if (fuelCanvas) {
-    createInfraFuelChart(fuelCanvas);
-  }
-  if (fuelHistoryCanvas) {
-    createInfraFuelHistoryChart(fuelHistoryCanvas);
-  }
+  bindInfraControls(panelKeys);
 }
 
 function renderMarketBreadthOverview() {
@@ -9532,7 +9539,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Infra") {
-    summaryText.textContent = "US power grid status dashboard with load and fuel mix snapshots";
+    summaryText.textContent = "Daily power-hub price dashboard for data-center grid stress";
     return;
   }
 

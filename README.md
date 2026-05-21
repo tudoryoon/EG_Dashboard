@@ -27,7 +27,7 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 - `Semis > GPU Rental Price`
   - existing SemiAnalysis-focused GPU rental dashboard plus Ornn Compute Price Index section
 - `Infra`
-  - GridStatus-style US power grid snapshot with ISO load and fuel mix panels
+  - data-center power-stress dashboard with daily EIA/ICE power-hub prices, spike counts, and rolling max prices
 - `Taiwan`
   - monthly revenue company cards
 
@@ -76,9 +76,9 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
 
 - `/.github/workflows/update-infra-grid-status.yml`
   - runs daily
-  - scheduled at `23:10 UTC` / `08:10 KST`
+  - scheduled at `23:47 UTC` / `08:47 KST`
   - updates `data/infra-grid-status-data.js`
-  - source: GridStatus open-source library and ISO public feeds
+  - source: EIA Wholesale Electricity Market Data / ICE
 
 - `/.github/workflows/update-macro-data.yml`
   - runs daily at `16:30 UTC`
