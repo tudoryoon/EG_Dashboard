@@ -63,6 +63,28 @@ SECTOR_GROUPS = [
         ],
     },
     {
+        "key": "semi_large",
+        "label": "반도체(대형주)",
+        "items": [
+            {"ticker": "AVGO", "label": "AVGO US", "name": "Broadcom", "query": "Broadcom stock"},
+            {"ticker": "TSM", "label": "TSM US", "name": "TSMC ADR", "query": "TSMC stock"},
+            {"ticker": "005930.KS", "label": "삼성전자 KR", "name": "Samsung Electronics", "query": "삼성전자 주가"},
+            {"ticker": "000660.KS", "label": "SK하이닉스 KR", "name": "SK hynix", "query": "SK하이닉스 주가"},
+            {"ticker": "MU", "label": "MU US", "name": "Micron", "query": "Micron stock"},
+            {"ticker": "SNDK", "label": "SNDK US", "name": "Sandisk", "query": "Sandisk stock"},
+            {"ticker": "WDC", "label": "WDC US", "name": "Western Digital", "query": "Western Digital stock"},
+            {"ticker": "STX", "label": "STX US", "name": "Seagate", "query": "Seagate stock"},
+            {"ticker": "ASML", "label": "ASML US", "name": "ASML", "query": "ASML stock"},
+            {"ticker": "AMAT", "label": "AMAT US", "name": "Applied Materials", "query": "Applied Materials stock"},
+            {"ticker": "LRCX", "label": "LRCX US", "name": "Lam Research", "query": "Lam Research stock"},
+            {"ticker": "KLAC", "label": "KLAC US", "name": "KLA", "query": "KLA stock"},
+            {"ticker": "TER", "label": "TER US", "name": "Teradyne", "query": "Teradyne stock"},
+            {"ticker": "INTC", "label": "INTC US", "name": "Intel", "query": "Intel stock"},
+            {"ticker": "AMD", "label": "AMD US", "name": "AMD", "query": "AMD stock"},
+            {"ticker": "MRVL", "label": "MRVL US", "name": "Marvell", "query": "Marvell stock"},
+        ],
+    },
+    {
         "key": "memory",
         "label": "메모리",
         "items": [
