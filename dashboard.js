@@ -4241,6 +4241,12 @@ function formatInfraDate(value) {
   return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
 }
 
+function formatInfraStatusLabel(status) {
+  if (status === "stressed") return "스트레스";
+  if (status === "elevated") return "주의";
+  return "정상";
+}
+
 function getInfraPanel(panelKey) {
   return infraGridData?.panels?.[panelKey] ?? null;
 }
@@ -4494,19 +4500,19 @@ function buildInfraMapMarkup(snapshots) {
   return `
     <article class="infra-explain-panel infra-map-panel">
       <div>
-        <h3>Hub Map</h3>
-        <p>These are public power-price hubs, not exact data-center addresses. They help locate where grid-price pressure is showing up by region.</p>
+        <h3>전력 허브 지도</h3>
+        <p>표시된 지점은 실제 데이터센터 주소가 아니라 공개 전력가격 허브입니다. 어느 지역 전력망에서 가격 압력이 나타나는지 위치감을 잡기 위한 지도입니다.</p>
       </div>
       <div class="infra-map-canvas" aria-label="US power hub map">
-        <div class="infra-map-region west">West</div>
-        <div class="infra-map-region midwest">Midwest</div>
-        <div class="infra-map-region east">East</div>
+        <div class="infra-map-region west">서부</div>
+        <div class="infra-map-region midwest">중부</div>
+        <div class="infra-map-region east">동부</div>
         ${markers}
       </div>
       <div class="infra-map-legend">
-        <span><i class="normal"></i>normal</span>
-        <span><i class="elevated"></i>elevated</span>
-        <span><i class="stressed"></i>stressed</span>
+        <span><i class="normal"></i>정상</span>
+        <span><i class="elevated"></i>주의</span>
+        <span><i class="stressed"></i>스트레스</span>
       </div>
     </article>`;
 }
@@ -4515,25 +4521,25 @@ function buildInfraGuideMarkup() {
   return `
     <article class="infra-explain-panel">
       <div>
-        <h3>How To Read This</h3>
-        <p>Watch whether AI and data-center demand is showing up as repeated power-price stress in specific grid regions.</p>
+        <h3>어떻게 볼까</h3>
+        <p>AI와 데이터센터 수요가 특정 전력망 지역에서 반복적인 전력가격 스트레스로 나타나는지 보는 대시보드입니다.</p>
       </div>
       <div class="infra-guide-grid">
         <div>
-          <strong>Latest</strong>
-          <span>Most recent published ICE peak power price. Unit is $/MWh.</span>
+          <strong>최근값</strong>
+          <span>EIA가 공개한 최신 ICE 피크 전력가격입니다. 단위는 $/MWh입니다.</span>
         </div>
         <div>
-          <strong>1Y Avg</strong>
-          <span>Recent one-year average used to judge whether the latest price is high or low.</span>
+          <strong>1년 평균</strong>
+          <span>최근 가격이 높은지 낮은지 비교하기 위한 1년 평균 기준선입니다.</span>
         </div>
         <div>
-          <strong>90D Spike</strong>
-          <span>Number of trading days in the last 90 observations with price at or above $100/MWh.</span>
+          <strong>90일 급등</strong>
+          <span>최근 90개 관측치 중 전력가격이 $100/MWh 이상이었던 날의 개수입니다.</span>
         </div>
         <div>
-          <strong>Status</strong>
-          <span>Stressed means 10 or more spike days; elevated means 4 or more spike days.</span>
+          <strong>상태</strong>
+          <span>스트레스는 급등일 10일 이상, 주의는 4일 이상을 의미합니다.</span>
         </div>
       </div>
     </article>`;
@@ -4543,33 +4549,33 @@ function buildInfraInvestmentGuideMarkup() {
   return `
     <article class="infra-investment-guide">
       <div class="infra-investment-head">
-        <h3>Investment Read-Through</h3>
-        <p>This dashboard is not a standalone trading signal. It is a context layer for judging whether the AI infrastructure cycle is moving from GPU scarcity into local power-grid scarcity.</p>
+        <h3>투자 관점에서 보는 법</h3>
+        <p>이 대시보드는 단독 매매 신호가 아닙니다. AI 인프라 사이클이 GPU 부족에서 지역 전력망 부족으로 번지고 있는지 판단하기 위한 보조 지표입니다.</p>
       </div>
       <div class="infra-investment-grid">
         <div>
-          <strong>Repeated price spikes</strong>
-          <span>Recurring $100/MWh days can indicate tighter local supply, transmission congestion, or demand pressure. This can support grid equipment, power generation, and electrical infrastructure themes.</span>
+          <strong>전력가격 급등이 반복될 때</strong>
+          <span>$100/MWh 이상인 날이 반복되면 지역 전력 공급 부족, 송전 병목, 수요 압박을 의심할 수 있습니다. 전력 장비, 발전, 전기 인프라 투자 테마에 우호적인 배경이 될 수 있습니다.</span>
         </div>
         <div>
-          <strong>Regional confirmation</strong>
-          <span>If PJM West, Mass Hub, and Indiana rise together, the signal is broader than a single local event. If only one hub jumps, treat it as a local stress clue first.</span>
+          <strong>여러 지역이 같이 오르는지</strong>
+          <span>PJM West, Mass Hub, Indiana가 동시에 오르면 단일 지역 이벤트보다 넓은 전력 압력으로 볼 수 있습니다. 한 지역만 튀면 우선 지역 이슈로 해석하는 편이 낫습니다.</span>
         </div>
         <div>
-          <strong>PJM West matters</strong>
-          <span>PJM West is a broad public proxy for Mid-Atlantic and Northern Virginia power pressure, where data-center load growth is central to the investment debate.</span>
+          <strong>PJM West가 중요한 이유</strong>
+          <span>PJM West는 미드애틀랜틱과 북버지니아 전력 압력을 보는 공개 대용 지표입니다. 북버지니아는 데이터센터 전력 수요 논쟁의 핵심 지역입니다.</span>
         </div>
         <div>
-          <strong>30D max vs Latest</strong>
-          <span>A high 30D max with a low latest price points to event risk. A high 90D spike count points to repeated stress, which is more relevant for structural capex themes.</span>
+          <strong>30일 최고값과 최근값 비교</strong>
+          <span>30일 최고값은 높지만 최근값이 낮으면 일회성 이벤트였을 수 있습니다. 반대로 90일 급등 횟수가 많으면 반복적인 스트레스라 구조적 설비투자 테마와 더 관련이 큽니다.</span>
         </div>
         <div>
-          <strong>Cross-check with AI compute</strong>
-          <span>Power-price stress plus rising GPU rental prices suggests the compute cycle is still tight. Power stress plus weak hyperscaler stocks may mean investors are focusing on capex and margin burden.</span>
+          <strong>GPU/클라우드 지표와 같이 보기</strong>
+          <span>전력가격 스트레스와 GPU 임대료 상승이 같이 나타나면 컴퓨팅 공급이 여전히 타이트하다는 신호일 수 있습니다. 전력 스트레스가 있는데 하이퍼스케일러 주가가 약하면 투자자들이 CAPEX와 마진 부담을 더 크게 보는 국면일 수 있습니다.</span>
         </div>
         <div>
-          <strong>Keep the caveat</strong>
-          <span>Weather, outages, fuel costs, and congestion can all move power prices. The useful signal is persistence and regional pattern, not one isolated spike.</span>
+          <strong>주의할 점</strong>
+          <span>날씨, 발전소/송전망 고장, 연료비, 송전 혼잡만으로도 전력가격은 움직입니다. 중요한 것은 하루짜리 급등이 아니라 반복성과 지역 패턴입니다.</span>
         </div>
       </div>
     </article>`;
@@ -4595,23 +4601,23 @@ function renderInfraOverview() {
               <h3>${item.label}</h3>
               <p>${item.region}</p>
             </div>
-            <span class="infra-status-pill">${item.status}</span>
+            <span class="infra-status-pill">${formatInfraStatusLabel(item.status)}</span>
           </div>
           <div class="infra-grid-metrics">
             <div>
-              <span>Latest</span>
+              <span>최근값</span>
               <strong>${formatInfraPrice(item.price)}</strong>
             </div>
             <div>
-              <span>1Y Avg</span>
+              <span>1년 평균</span>
               <strong>${formatInfraPrice(item.avg1y)}</strong>
             </div>
             <div>
-              <span>90D Spike</span>
-              <strong>${Number(item.spikeDays90 ?? 0).toFixed(0)}d</strong>
+              <span>90일 급등</span>
+              <strong>${Number(item.spikeDays90 ?? 0).toFixed(0)}일</strong>
             </div>
           </div>
-          <p class="infra-card-foot">${formatInfraDate(item.date)} / ${Number.isFinite(Number(item.premiumTo1yPct)) ? `${Number(item.premiumTo1yPct).toFixed(1)}% vs 1Y avg` : "1Y comparison unavailable"}</p>
+          <p class="infra-card-foot">${formatInfraDate(item.date)} / ${Number.isFinite(Number(item.premiumTo1yPct)) ? `1년 평균 대비 ${Number(item.premiumTo1yPct).toFixed(1)}%` : "1년 평균 비교 불가"}</p>
         </article>`,
     )
     .join("");
@@ -4624,18 +4630,18 @@ function renderInfraOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>Data Center Power Stress</h2>
-            <p>Daily power-hub prices and spike indicators for regions where data-center load can pressure local grids.</p>
+            <h2>데이터센터 전력 스트레스</h2>
+            <p>데이터센터 전력 수요가 지역 전력망에 부담을 주는지 보기 위한 일별 전력 허브 가격과 급등 지표입니다.</p>
           </div>
           <div class="us-price-controls">
-            <a class="market-breadth-link" href="${infraGridData.source?.url ?? "https://www.eia.gov/electricity/wholesale/"}" target="_blank" rel="noreferrer">Open EIA Source</a>
-            <div class="us-price-updated">Updated ${infraGridData.updatedAt || "-"}</div>
+            <a class="market-breadth-link" href="${infraGridData.source?.url ?? "https://www.eia.gov/electricity/wholesale/"}" target="_blank" rel="noreferrer">EIA 원천 열기</a>
+            <div class="us-price-updated">업데이트 ${infraGridData.updatedAt || "-"}</div>
           </div>
         </div>
         <div class="market-trend-meta">
-          <span>Source: ${infraGridData.source?.name ?? "EIA Wholesale Electricity"}</span>
-          <span>EIA republishes ICE daily hub prices on a biweekly source cadence</span>
-          <span>PJM West is used as the broad public proxy for Northern Virginia grid-price pressure</span>
+          <span>출처: ${infraGridData.source?.name ?? "EIA Wholesale Electricity"}</span>
+          <span>EIA는 ICE 일별 전력 허브 가격을 보통 격주 단위로 다시 공개합니다</span>
+          <span>PJM West는 북버지니아 전력가격 압력을 보는 공개 대용 지표로 사용합니다</span>
         </div>
         <div class="infra-explain-grid">
           ${buildInfraGuideMarkup()}
@@ -4644,19 +4650,19 @@ function renderInfraOverview() {
         <div class="infra-grid-summary">
           <div>
             <strong>${snapshots.length}</strong>
-            <span>tracked hubs</span>
+            <span>추적 허브</span>
           </div>
           <div>
             <strong>${stressedCount}</strong>
-            <span>stressed</span>
+            <span>스트레스</span>
           </div>
           <div>
             <strong>${elevatedCount}</strong>
-            <span>elevated</span>
+            <span>주의</span>
           </div>
           <div>
             <strong>${highest ? formatInfraPrice(highest.price) : "-"}</strong>
-            <span>${highest?.label ?? "highest hub"}</span>
+            <span>${highest?.label ?? "최고가 허브"}</span>
           </div>
         </div>
         <div class="infra-card-grid">${cardsMarkup}</div>
@@ -9831,7 +9837,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Infra") {
-    summaryText.textContent = "Daily power-hub price dashboard for data-center grid stress";
+    summaryText.textContent = "데이터센터 전력망 스트레스를 보는 일별 전력 허브 가격 대시보드";
     return;
   }
 
