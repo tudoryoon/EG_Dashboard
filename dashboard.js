@@ -3695,7 +3695,7 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
     backgroundColor: cloudDashboardData.colors[series.key],
     borderWidth: 2.8,
     tension: 0.24,
-    pointRadius: 0,
+    pointRadius: 3,
     pointHoverRadius: 4,
     pointHitRadius: 10,
     spanGaps: false,
