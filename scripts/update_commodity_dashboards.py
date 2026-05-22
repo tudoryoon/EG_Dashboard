@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import csv
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -10,6 +11,8 @@ from urllib.request import Request, urlopen
 DATA_PATH = Path("data/market-macro-data.js")
 START_DATE = "1965-01-01"
 FOOD_START_DATE = "2001-01-01"
+FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
+FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 
 YAHOO_SERIES = {
     ("energy", "wti"): ("CL=F", START_DATE),
@@ -24,6 +27,11 @@ YAHOO_SERIES = {
     ("food", "wheat_hrw"): ("KE=F", FOOD_START_DATE),
     ("food", "wheat_srw"): ("ZW=F", FOOD_START_DATE),
     ("food", "sugar"): ("SB=F", FOOD_START_DATE),
+}
+
+FRED_SERIES = {
+    ("natural_gas", "henry_hub"): ("DHHNGSP", START_DATE),
+    ("strategic", "uranium"): ("PURANUSDM", START_DATE),
 }
 
 
@@ -49,6 +57,13 @@ def yahoo_chart_url(symbol: str, start_date: str) -> str:
     )
 
 
+def fred_csv_urls(series_id: str, start_date: str) -> list[str]:
+    return [
+        f"{FRED_GATEWAY_BASE}{series_id}",
+        f"{FRED_GRAPH_BASE}{series_id}&cosd={start_date}",
+    ]
+
+
 def parse_yahoo_series(symbol: str, start_date: str) -> tuple[list[str], list[float]]:
     payload = json.loads(fetch_text(yahoo_chart_url(symbol, start_date)))
     result = payload["chart"]["result"][0]
@@ -68,6 +83,36 @@ def parse_yahoo_series(symbol: str, start_date: str) -> tuple[list[str], list[fl
 
     dates = sorted(by_date)
     return dates, [by_date[date] for date in dates]
+
+
+def parse_fred_series(series_id: str, start_date: str) -> tuple[list[str], list[float]]:
+    last_error: Exception | None = None
+    for url in fred_csv_urls(series_id, start_date):
+        try:
+            reader = csv.DictReader(fetch_text(url).splitlines())
+            dates: list[str] = []
+            values: list[float] = []
+            for row in reader:
+                lower_row = {str(key).lower(): value for key, value in row.items()}
+                raw_date = (row.get("DATE") or lower_row.get("yyyymmdd") or "").strip()
+                raw_value = (row.get(series_id) or lower_row.get(series_id.lower()) or "").strip()
+                if not raw_date or raw_value in {"", "."}:
+                    continue
+                if len(raw_date) == 8 and raw_date.isdigit():
+                    date_key = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
+                else:
+                    date_key = raw_date[:10]
+                if date_key < start_date:
+                    continue
+                dates.append(date_key)
+                values.append(round(float(raw_value), 4))
+            if dates:
+                return dates, values
+        except Exception as error:  # pragma: no cover - network variability
+            last_error = error
+    if last_error:
+        raise last_error
+    return [], []
 
 
 def load_payload() -> dict:
@@ -113,6 +158,26 @@ def main() -> None:
         updated_series = payload["panels"][panel_key]["series"][series_key]
         latest_dates.append(updated_series["dates"][-1])
         print(f"{panel_key}.{series_key}: {updated_series['dates'][-1]} {updated_series['values'][-1]}")
+
+    for (panel_key, series_key), (series_id, start_date) in FRED_SERIES.items():
+        dates, values = parse_fred_series(series_id, start_date)
+        if not dates:
+            raise RuntimeError(f"No FRED observations returned for {panel_key}.{series_key} ({series_id})")
+        series = payload["panels"][panel_key]["series"][series_key]
+        payload["panels"][panel_key]["series"][series_key] = merge_series(series, dates, values, start_date)
+        updated_series = payload["panels"][panel_key]["series"][series_key]
+        latest_dates.append(updated_series["dates"][-1])
+        print(f"{panel_key}.{series_key}: {updated_series['dates'][-1]} {updated_series['values'][-1]}")
+
+    payload["panels"]["energy"]["fillMissing"] = "forward"
+    payload["panels"]["energy"]["subtitle"] = (
+        "WTI combines World Bank monthly spot history from 1982 with daily front-month futures from Yahoo Finance. "
+        "Brent uses daily futures; Dubai uses World Bank monthly spot and is forward-filled between monthly prints."
+    )
+    payload["panels"]["natural_gas"]["fillMissing"] = "forward"
+    payload["panels"]["natural_gas"]["subtitle"] = (
+        "Henry Hub spot from FRED/EIA and JKM LNG futures close from Yahoo Finance, forward-filled across missing days."
+    )
 
     payload["updatedAt"] = max([payload.get("updatedAt", "")] + latest_dates)
     write_payload(payload)
