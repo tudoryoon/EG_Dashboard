@@ -3938,6 +3938,92 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
   charts.push(chart);
 }
 
+function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const labels = options.labels ?? cloudDashboardData.labels ?? [];
+  const datasets = panel.series.map((series) => ({
+    label: series.name,
+    data: series.values,
+    borderColor: cloudDashboardData.colors[series.key],
+    backgroundColor: cloudDashboardData.colors[series.key],
+    borderWidth: 2.6,
+    tension: 0.24,
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    pointHitRadius: 10,
+    spanGaps: false,
+  }));
+
+  const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
+  const minValue = allValues.length ? Math.min(...allValues) : 0;
+  const maxValue = allValues.length ? Math.max(...allValues) : 100;
+  const step = options.step ?? 5;
+  const yMin = options.min ?? Math.floor((minValue - step) / step) * step;
+  const yMax = options.max ?? Math.ceil((maxValue + step) / step) * step;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index) => {
+              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+                return labels[index] ?? "";
+              }
+              return "";
+            },
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatter(Number(value)),
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function buildCloudRpoStatsMarkup(panel) {
   const labels = cloudDashboardData.labels ?? [];
   const latestIndex = labels.length - 1;
@@ -3980,7 +4066,7 @@ function buildCloudRpoRevenueRatioPanel() {
 
   return {
     title: "RPO / Cloud Revenue Ratio",
-    subtitle: "RPO backlog divided by quarterly cloud revenue. Higher means a larger contracted backlog versus the current quarterly revenue base.",
+    subtitle: "RPO backlog divided by quarterly cloud revenue. Higher means contracted backlog is larger versus the current quarterly revenue base.",
     series,
   };
 }
@@ -4332,7 +4418,7 @@ function renderCloudOverview() {
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-cloud-chart="rpo"></canvas>
           </div>
-          <p class="cloud-rpo-note">RPO는 이미 계약됐지만 아직 매출로 인식되지 않은 잔고입니다. AI 클라우드 수요가 실제 장기 계약으로 쌓이는지 보는 보조 지표로 사용합니다.</p>
+          <p class="cloud-rpo-note">RPO는 이미 계약됐지만 아직 매출로 인식되지 않은 잔고입니다. 다만 기준은 완전히 동일하지 않습니다. AWS는 주로 AWS 장기계약, Microsoft는 Azure-only가 아닌 Commercial RPO, Google은 최신 공시상 대부분 Google Cloud 관련 RPO로 봐야 합니다.</p>
         </article>
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
@@ -4368,7 +4454,7 @@ function renderCloudOverview() {
     createCloudBarChart(rpoCanvas, cloudDashboardData.rpo, (value) => `$${Number(value).toFixed(0)}B`, { step: 100 });
   }
   if (rpoRatioCanvas) {
-    createCloudBarChart(rpoRatioCanvas, rpoRatioPanel, (value) => `${Number(value).toFixed(1)}x`, { step: 5 });
+    createCloudPointLineChart(rpoRatioCanvas, rpoRatioPanel, (value) => `${Number(value).toFixed(1)}x`, { step: 5, min: 0 });
   }
 }
 
