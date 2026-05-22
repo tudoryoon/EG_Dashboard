@@ -7225,7 +7225,7 @@ function renderMemorySpotOverview() {
               <span>Period</span>
               <span>DRAM</span>
               <span>NAND</span>
-              <span>HBM</span>
+              <span>HBM/Blend</span>
             </div>
             ${contractTableRows}
           </div>

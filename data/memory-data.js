@@ -142,7 +142,7 @@ window.memoryData = {
     title: "TrendForce Memory Contract Price Guide",
     subtitle: "Public TrendForce article ranges for DRAM, NAND, and HBM contract-price/ASP momentum.",
     unit: "% QoQ",
-    note: "TrendForce's free articles usually disclose contract-price ranges by quarter, not a full monthly ASP series. HBM is often reported as blended DRAM incl. HBM or annual negotiation commentary, so missing cells are intentionally left blank.",
+    note: "TrendForce's free articles usually disclose contract-price ranges by quarter, not a full monthly ASP series. HBM entries here are not standalone HBM ASPs; they are TrendForce's blended DRAM pricing including HBM or blended conventional DRAM + HBM ranges. Missing cells are intentionally left blank.",
     quarterlyRows: [
       {
         period: "2Q24",
@@ -163,6 +163,8 @@ window.memoryData = {
         basis: "Conventional DRAM expected slightly down; average DRAM pricing including HBM expected higher.",
         sourceTitle: "Downstream Inventory Reduction Eases DRAM Price Decline in 2Q25",
         sourceUrl: "https://www.trendforce.com/presscenter/news/20250325-12528.html",
+        hbmSourceTitle: "HBM/blended: average DRAM pricing including HBM, TrendForce 2Q25",
+        hbmSourceUrl: "https://www.trendforce.com/presscenter/news/20250325-12528.html",
       },
       {
         period: "3Q25",
@@ -175,6 +177,8 @@ window.memoryData = {
         sourceUrl: "https://www.trendforce.com/presscenter/news/20250707-12633.html",
         nandSourceTitle: "3Q25 NAND Flash Contract Prices Projected to Rise 5-10%",
         nandSourceUrl: "https://www.trendforce.com/presscenter/news/20250709-12638.html",
+        hbmSourceTitle: "HBM/blended: overall DRAM prices including HBM, TrendForce 3Q25",
+        hbmSourceUrl: "https://www.trendforce.com/presscenter/news/20250707-12633.html",
       },
       {
         period: "4Q25",
@@ -187,6 +191,8 @@ window.memoryData = {
         sourceUrl: "https://www.trendforce.com/presscenter/news/20260226-12937.html",
         nandSourceTitle: "NAND Flash Prices to Rise 5-10% in 4Q25",
         nandSourceUrl: "https://www.trendforce.com/presscenter/news/20250925-12736.html",
+        hbmSourceTitle: "HBM/blended: conventional DRAM + HBM contract prices, TrendForce 4Q25",
+        hbmSourceUrl: "https://www.trendforce.com/presscenter/news/20260226-12937.html",
       },
       {
         period: "1Q26",
@@ -197,7 +203,7 @@ window.memoryData = {
         basis: "Revised 1Q26 conventional DRAM and NAND forecast; blended conventional DRAM + HBM range from TrendForce's 4Q25 DRAM follow-up.",
         sourceTitle: "Memory Price Outlook for 1Q26 Sharply Upgraded",
         sourceUrl: "https://www.trendforce.com/presscenter/news/20260202-12911.html",
-        hbmSourceTitle: "Price Rally Drives 4Q25 DRAM Revenue Up 29.4%",
+        hbmSourceTitle: "HBM/blended: conventional DRAM + HBM pricing rising 80-85%, TrendForce 1Q26 outlook",
         hbmSourceUrl: "https://www.trendforce.com/presscenter/news/20260226-12937.html",
       },
       {
