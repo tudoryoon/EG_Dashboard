@@ -1389,6 +1389,44 @@ h1 {
   height: 360px;
 }
 
+.cloud-rpo-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 12px;
+}
+
+.cloud-rpo-stat {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(70, 70, 66, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.cloud-rpo-stat span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.cloud-rpo-stat strong {
+  color: var(--ink);
+  font-size: 1.18rem;
+}
+
+.cloud-rpo-stat small,
+.cloud-rpo-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.cloud-rpo-note {
+  margin: 12px 0 0;
+  line-height: 1.55;
+}
+
 .market-panel-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -3218,6 +3256,10 @@ h1 {
 
   .cloud-panel-wide {
     grid-column: auto;
+  }
+
+  .cloud-rpo-stats {
+    grid-template-columns: 1fr;
   }
 
   .market-rs-card-grid {

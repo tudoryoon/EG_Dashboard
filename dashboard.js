@@ -3856,6 +3856,27 @@ function createCloudRevenueBarChart(canvas, panel) {
   charts.push(chart);
 }
 
+function buildCloudRpoStatsMarkup(panel) {
+  const labels = cloudDashboardData.labels ?? [];
+  const latestIndex = labels.length - 1;
+  return (panel?.series ?? [])
+    .map((series) => {
+      const latestValue = series.values?.[latestIndex];
+      const yearAgoValue = series.values?.[latestIndex - 4];
+      const yoy =
+        Number.isFinite(latestValue) && Number.isFinite(yearAgoValue) && yearAgoValue !== 0
+          ? ((latestValue - yearAgoValue) / yearAgoValue) * 100
+          : null;
+      return `
+        <div class="cloud-rpo-stat">
+          <span>${series.name}</span>
+          <strong>${Number.isFinite(latestValue) ? `$${Number(latestValue).toFixed(1)}B` : "-"}</strong>
+          <small>${Number.isFinite(yoy) ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% YoY` : "YoY N/A"}</small>
+        </div>`;
+    })
+    .join("");
+}
+
 function createCapexLineChart(canvas, labels, panel, formatter, minOverride = null) {
   if (typeof Chart === "undefined" || !panel) {
     return;
@@ -4189,6 +4210,21 @@ function renderCloudOverview() {
             <canvas data-cloud-chart="revenue"></canvas>
           </div>
         </article>
+        <article class="cloud-panel cloud-panel-wide cloud-rpo-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${cloudDashboardData.rpo.title}</h3>
+              <p>${cloudDashboardData.rpo.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-rpo-stats">
+            ${buildCloudRpoStatsMarkup(cloudDashboardData.rpo)}
+          </div>
+          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+            <canvas data-cloud-chart="rpo"></canvas>
+          </div>
+          <p class="cloud-rpo-note">RPO는 이미 계약됐지만 아직 매출로 인식되지 않은 잔고입니다. AI 클라우드 수요가 실제 장기 계약으로 쌓이는지 보는 보조 지표로 사용합니다.</p>
+        </article>
       </div>
     </section>
   `;
@@ -4196,6 +4232,7 @@ function renderCloudOverview() {
   const growthCanvas = usOverviewRoot.querySelector('[data-cloud-chart="growth"]');
   const marginCanvas = usOverviewRoot.querySelector('[data-cloud-chart="margin"]');
   const revenueCanvas = usOverviewRoot.querySelector('[data-cloud-chart="revenue"]');
+  const rpoCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo"]');
 
   if (growthCanvas) {
     createCloudLineChart(growthCanvas, cloudDashboardData.yoyGrowth, (value) => `${Number(value).toFixed(1)}%`, 0);
@@ -4205,6 +4242,9 @@ function renderCloudOverview() {
   }
   if (revenueCanvas) {
     createCloudRevenueBarChart(revenueCanvas, cloudDashboardData.revenue);
+  }
+  if (rpoCanvas) {
+    createCloudLineChart(rpoCanvas, cloudDashboardData.rpo, (value) => `$${Number(value).toFixed(0)}B`, 0);
   }
 }
 

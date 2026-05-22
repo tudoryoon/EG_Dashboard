@@ -89,4 +89,27 @@ window.cloudDashboardData = {
       },
     ],
   },
+  rpo: {
+    title: "Cloud RPO Backlog",
+    subtitle: "Quarterly remaining performance obligations. AWS is primarily >1Y AWS commitments; Microsoft is commercial/total RPO; Google is Alphabet RPO, now mostly Google Cloud.",
+    unit: "$B",
+    source: "SEC filings and company disclosures",
+    series: [
+      {
+        key: "amazon",
+        name: "AWS RPO",
+        values: [88.9, 100.1, 104.3, 110.4, 122.0, 132.1, 133.0, 155.7, 157.7, 156.6, 164.0, 177.0, 189.0, 195.0, 200.0, 244.0, 364.0],
+      },
+      {
+        key: "microsoft",
+        name: "Microsoft Cloud RPO",
+        values: [160.0, 193.0, 183.0, 193.0, 201.0, 229.0, 216.0, 229.0, 242.0, 275.0, 266.0, 304.0, 321.0, 375.0, 398.0, 631.0, 633.0],
+      },
+      {
+        key: "google",
+        name: "Google Cloud RPO",
+        values: [50.5, 51.2, 52.4, 64.3, 61.7, 60.6, 64.9, 74.1, 72.5, 78.8, 86.8, 93.2, 92.4, 108.2, 157.7, 242.8, 467.6],
+      },
+    ],
+  },
 };
