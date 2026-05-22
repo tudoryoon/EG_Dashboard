@@ -29,7 +29,7 @@ window.usOverviewData = (() => {
     }
     return series;
   }
-  const quarterLabels = ["23Q1", "23Q2", "23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4"];
+  const quarterLabels = ["23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1", "26Q2"];
   const m7Quarterly = [
     {
       name: "Apple",
@@ -330,17 +330,16 @@ window.usOverviewData = (() => {
     {
       name: "NVIDIA",
       labels: quarterLabels,
-      revenue: [6.1, 7.2, 13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.1, 46.7, 57.0],
-      revenueYoy: [-20.8, -13.2, 101.5, 205.5, 265.3, 262.1, 122.4, 93.6, 77.9, 69.2, 55.6, 62.5],
-      opm: [20.8, 29.8, 50.3, 57.5, 61.6, 64.9, 62.1, 62.3, 61.1, 49.1, 60.8, 63.2],
+      revenue: [13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.1, 46.7, 57.0, 68.1, 81.6],
+      revenueYoy: [101.5, 205.5, 265.3, 262.1, 122.4, 93.6, 77.9, 69.2, 55.6, 62.5, 73.2, 85.2],
+      opm: [50.3, 57.5, 61.6, 64.9, 62.1, 62.3, 61.1, 49.1, 60.8, 63.2, 65.0, 65.6],
       segments: [
         {
           name: "Data Center",
-          priorRevenue: 30.8,
-          latestRevenue: 51.2,
+          priorRevenue: 39.1,
+          latestRevenue: 75.2,
           opm: null,
           history: [
-            { quarter: "24Q1", revenue: 18.4, yoy: 409.0, opm: null },
             { quarter: "24Q2", revenue: 22.6, yoy: 426.7, opm: null },
             { quarter: "24Q3", revenue: 26.3, yoy: 154.5, opm: null },
             { quarter: "24Q4", revenue: 30.8, yoy: 112.0, opm: null },
@@ -348,54 +347,25 @@ window.usOverviewData = (() => {
             { quarter: "25Q2", revenue: 39.1, yoy: 73.3, opm: null },
             { quarter: "25Q3", revenue: 41.1, yoy: 56.5, opm: null },
             { quarter: "25Q4", revenue: 51.2, yoy: 66.4, opm: null },
+            { quarter: "26Q1", revenue: 62.3, yoy: 75.0, opm: null },
+            { quarter: "26Q2", revenue: 75.2, yoy: 92.4, opm: null },
           ],
         },
         {
-          name: "Gaming",
-          priorRevenue: 3.3,
-          latestRevenue: 4.3,
+          name: "Edge Computing",
+          priorRevenue: 5.0,
+          latestRevenue: 6.4,
           opm: null,
           history: [
-            { quarter: "24Q1", revenue: 2.9, yoy: 56.5, opm: null },
-            { quarter: "24Q2", revenue: 2.6, yoy: 18.2, opm: null },
-            { quarter: "24Q3", revenue: 2.9, yoy: 15.8, opm: null },
-            { quarter: "24Q4", revenue: 3.3, yoy: 14.8, opm: null },
-            { quarter: "25Q1", revenue: 2.5, yoy: -11.2, opm: null },
-            { quarter: "25Q2", revenue: 3.8, yoy: 42.2, opm: null },
-            { quarter: "25Q3", revenue: 4.3, yoy: 49.3, opm: null },
-            { quarter: "25Q4", revenue: 4.3, yoy: 31.1, opm: null },
-          ],
-        },
-        {
-          name: "Professional Visualization",
-          priorRevenue: 0.5,
-          latestRevenue: 0.8,
-          opm: null,
-          history: [
-            { quarter: "24Q1", revenue: 0.5, yoy: 104.9, opm: null },
-            { quarter: "24Q2", revenue: 0.4, yoy: 44.7, opm: null },
-            { quarter: "24Q3", revenue: 0.5, yoy: 19.8, opm: null },
-            { quarter: "24Q4", revenue: 0.5, yoy: 16.8, opm: null },
-            { quarter: "25Q1", revenue: 0.5, yoy: 10.4, opm: null },
-            { quarter: "25Q2", revenue: 0.5, yoy: 19.2, opm: null },
-            { quarter: "25Q3", revenue: 0.6, yoy: 32.4, opm: null },
-            { quarter: "25Q4", revenue: 0.8, yoy: 56.4, opm: null },
-          ],
-        },
-        {
-          name: "Automotive and Robotics",
-          priorRevenue: 0.4,
-          latestRevenue: 0.6,
-          opm: null,
-          history: [
-            { quarter: "24Q1", revenue: 0.3, yoy: -4.4, opm: null },
-            { quarter: "24Q2", revenue: 0.3, yoy: 11.1, opm: null },
-            { quarter: "24Q3", revenue: 0.3, yoy: 36.8, opm: null },
-            { quarter: "24Q4", revenue: 0.4, yoy: 72.0, opm: null },
-            { quarter: "25Q1", revenue: 0.6, yoy: 102.8, opm: null },
-            { quarter: "25Q2", revenue: 0.6, yoy: 72.3, opm: null },
-            { quarter: "25Q3", revenue: 0.6, yoy: 69.4, opm: null },
-            { quarter: "25Q4", revenue: 0.6, yoy: 31.8, opm: null },
+            { quarter: "24Q2", revenue: 3.5, yoy: null, opm: null },
+            { quarter: "24Q3", revenue: 3.8, yoy: null, opm: null },
+            { quarter: "24Q4", revenue: 4.3, yoy: null, opm: null },
+            { quarter: "25Q1", revenue: 3.8, yoy: null, opm: null },
+            { quarter: "25Q2", revenue: 5.0, yoy: 42.2, opm: null },
+            { quarter: "25Q3", revenue: 5.6, yoy: 49.9, opm: null },
+            { quarter: "25Q4", revenue: 5.8, yoy: 34.3, opm: null },
+            { quarter: "26Q1", revenue: 5.8, yoy: 55.0, opm: null },
+            { quarter: "26Q2", revenue: 6.4, yoy: 28.7, opm: null },
           ],
         },
       ],
