@@ -89,6 +89,19 @@ TERMINAL_SKIP_TICKERS = {
     "SBT",
     "THRD",
 }
+MANUAL_UNIVERSE_MEMBERS = [
+    {
+        "ticker": "NBIS",
+        "name": "Nebius Group N.V.",
+        "member_sp500": False,
+        "member_nasdaq100": False,
+        "member_dowjones": False,
+        "member_russell2000": False,
+    },
+]
+MANUAL_SHARES_OUTSTANDING = {
+    "NBIS": 253_898_194,
+}
 
 
 def normalize_ticker(raw: object) -> str:
@@ -191,6 +204,25 @@ def fetch_universe_frame() -> pd.DataFrame:
             )
             item["name"] = str(row.get(name_col, item["name"])).strip()
             item[f"member_{key}"] = True
+    for manual_member in MANUAL_UNIVERSE_MEMBERS:
+        ticker = normalize_ticker(manual_member["ticker"])
+        if not ticker or is_terminal_symbol(ticker):
+            continue
+        item = merged.setdefault(
+            ticker,
+            {
+                "ticker": ticker,
+                "name": str(manual_member.get("name") or ticker).strip(),
+                "member_sp500": False,
+                "member_nasdaq100": False,
+                "member_dowjones": False,
+                "member_russell2000": False,
+            },
+        )
+        item["name"] = str(manual_member.get("name") or item["name"]).strip()
+        for universe_key in UNIVERSES:
+            member_key = f"member_{universe_key}"
+            item[member_key] = bool(manual_member.get(member_key, item[member_key]))
     return pd.DataFrame(merged.values()).sort_values("ticker").reset_index(drop=True)
 
 
@@ -312,6 +344,12 @@ def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
 def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, object]]) -> dict[str, int | None]:
     cache: dict[str, int | None] = {}
     for symbol in symbols:
+        manual_shares = MANUAL_SHARES_OUTSTANDING.get(symbol)
+        if manual_shares:
+            cache[symbol] = manual_shares
+    for symbol in symbols:
+        if symbol in cache:
+            continue
         if symbol not in existing_rows:
             continue
         row = existing_rows[symbol]
