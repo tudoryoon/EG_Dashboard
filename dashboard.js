@@ -3954,7 +3954,7 @@ function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
     pointRadius: 3,
     pointHoverRadius: 5,
     pointHitRadius: 10,
-    spanGaps: false,
+    spanGaps: options.spanGaps === true,
   }));
 
   const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
@@ -4068,6 +4068,73 @@ function buildCloudRpoRevenueRatioPanel() {
     title: "RPO / Cloud Revenue Ratio",
     subtitle: "RPO backlog divided by quarterly cloud revenue. Higher means contracted backlog is larger versus the current quarterly revenue base.",
     series,
+  };
+}
+
+function buildMicrosoftAiStatsMarkup(panel) {
+  const labels = cloudDashboardData.labels ?? [];
+  const series = panel?.series?.[0] ?? null;
+  const values = series?.values ?? [];
+  const latestIndex = values.map((value, index) => (Number.isFinite(value) ? index : -1)).filter((index) => index >= 0).slice(-1)[0];
+  if (latestIndex === undefined) {
+    return "";
+  }
+  const latestValue = values[latestIndex];
+  const previousIndex = values
+    .map((value, index) => (Number.isFinite(value) && index < latestIndex ? index : -1))
+    .filter((index) => index >= 0)
+    .slice(-1)[0];
+  const previousValue = previousIndex !== undefined ? values[previousIndex] : null;
+  const sequentialGrowth =
+    Number.isFinite(latestValue) && Number.isFinite(previousValue) && previousValue !== 0
+      ? ((latestValue - previousValue) / previousValue) * 100
+      : null;
+  const microsoftRevenueSeries = cloudDashboardData.revenue?.series?.find((item) => item.key === "microsoft");
+  const cloudRevenueMillions = microsoftRevenueSeries?.values?.[latestIndex];
+  const aiToCloudRunRate =
+    Number.isFinite(latestValue) && Number.isFinite(cloudRevenueMillions) && cloudRevenueMillions > 0
+      ? (latestValue / ((cloudRevenueMillions / 1000) * 4)) * 100
+      : null;
+
+  return `
+    <div class="cloud-rpo-stat">
+      <span>Latest AI ARR</span>
+      <strong>$${Number(latestValue).toFixed(1)}B</strong>
+      <small>${labels[latestIndex] ?? "-"}</small>
+    </div>
+    <div class="cloud-rpo-stat">
+      <span>Growth vs Prior Disclosure</span>
+      <strong>${Number.isFinite(sequentialGrowth) ? `+${sequentialGrowth.toFixed(1)}%` : "-"}</strong>
+      <small>${previousIndex !== undefined ? `${labels[previousIndex]} to ${labels[latestIndex]}` : "N/A"}</small>
+    </div>
+    <div class="cloud-rpo-stat">
+      <span>AI ARR / MS Cloud Run-Rate</span>
+      <strong>${Number.isFinite(aiToCloudRunRate) ? `${aiToCloudRunRate.toFixed(1)}%` : "-"}</strong>
+      <small>vs Intelligent Cloud revenue run-rate</small>
+    </div>`;
+}
+
+function buildMicrosoftAiRatioPanel() {
+  const aiSeries = cloudDashboardData.microsoftAi?.series?.[0];
+  const microsoftRevenueSeries = cloudDashboardData.revenue?.series?.find((item) => item.key === "microsoft");
+  const values = (aiSeries?.values ?? []).map((aiArr, index) => {
+    const revenueMillions = microsoftRevenueSeries?.values?.[index];
+    if (!Number.isFinite(aiArr) || !Number.isFinite(revenueMillions) || revenueMillions === 0) {
+      return null;
+    }
+    return Number(((aiArr / ((revenueMillions / 1000) * 4)) * 100).toFixed(1));
+  });
+
+  return {
+    title: "AI ARR / MS Intelligent Cloud Run-Rate",
+    subtitle: "AI ARR divided by annualized Microsoft Intelligent Cloud quarterly revenue. Use as a rough scale check, not a pure segment margin metric.",
+    series: [
+      {
+        key: "microsoft",
+        name: "AI ARR / Intelligent Cloud",
+        values,
+      },
+    ],
   };
 }
 
@@ -4364,6 +4431,7 @@ function renderCloudOverview() {
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
   const rpoRatioPanel = buildCloudRpoRevenueRatioPanel();
+  const microsoftAiRatioPanel = buildMicrosoftAiRatioPanel();
 
   usOverviewRoot.innerHTML = `
     <section class="cloud-overview">
@@ -4431,6 +4499,26 @@ function renderCloudOverview() {
             <canvas data-cloud-chart="rpo-ratio"></canvas>
           </div>
         </article>
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>${cloudDashboardData.microsoftAi.title}</h3>
+              <p>${cloudDashboardData.microsoftAi.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-rpo-stats">
+            ${buildMicrosoftAiStatsMarkup(cloudDashboardData.microsoftAi)}
+          </div>
+          <div class="cloud-ai-chart-grid">
+            <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+              <canvas data-cloud-chart="msft-ai-arr"></canvas>
+            </div>
+            <div class="cloud-chart-wrap cloud-chart-wrap-tall">
+              <canvas data-cloud-chart="msft-ai-ratio"></canvas>
+            </div>
+          </div>
+          <p class="cloud-rpo-note">Microsoft는 AI 관련 RPO를 따로 공개하지 않습니다. 따라서 이 패널은 RPO가 아니라 공개된 AI business annual revenue run rate를 추적합니다. 값은 모두 “surpassed/exceeded” 기준이라 실제치는 표시값보다 약간 높을 수 있습니다.</p>
+        </article>
       </div>
     </section>
   `;
@@ -4440,6 +4528,8 @@ function renderCloudOverview() {
   const revenueCanvas = usOverviewRoot.querySelector('[data-cloud-chart="revenue"]');
   const rpoCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo"]');
   const rpoRatioCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo-ratio"]');
+  const microsoftAiCanvas = usOverviewRoot.querySelector('[data-cloud-chart="msft-ai-arr"]');
+  const microsoftAiRatioCanvas = usOverviewRoot.querySelector('[data-cloud-chart="msft-ai-ratio"]');
 
   if (growthCanvas) {
     createCloudLineChart(growthCanvas, cloudDashboardData.yoyGrowth, (value) => `${Number(value).toFixed(1)}%`, 0);
@@ -4455,6 +4545,12 @@ function renderCloudOverview() {
   }
   if (rpoRatioCanvas) {
     createCloudPointLineChart(rpoRatioCanvas, rpoRatioPanel, (value) => `${Number(value).toFixed(1)}x`, { step: 5, min: 0 });
+  }
+  if (microsoftAiCanvas) {
+    createCloudPointLineChart(microsoftAiCanvas, cloudDashboardData.microsoftAi, (value) => `$${Number(value).toFixed(1)}B`, { step: 10, min: 0, spanGaps: true });
+  }
+  if (microsoftAiRatioCanvas) {
+    createCloudPointLineChart(microsoftAiRatioCanvas, microsoftAiRatioPanel, (value) => `${Number(value).toFixed(1)}%`, { step: 10, min: 0, spanGaps: true });
   }
 }
 

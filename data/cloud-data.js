@@ -112,4 +112,22 @@ window.cloudDashboardData = {
       },
     ],
   },
+  microsoftAi: {
+    title: "Microsoft AI Business ARR",
+    subtitle: "Microsoft-disclosed AI business annual revenue run rate. This is not AI-only RPO; it is an annualized revenue run-rate across Azure AI, Copilot, GitHub and other AI services.",
+    unit: "$B",
+    source: "Microsoft earnings releases and earnings-call commentary",
+    series: [
+      {
+        key: "microsoft",
+        name: "MSFT AI ARR",
+        values: [null, null, null, null, null, null, null, null, null, null, null, 13.0, null, null, null, 22.0, 37.0],
+      },
+    ],
+    notes: [
+      "FY25 Q2: AI business surpassed $13B annual revenue run rate.",
+      "FY26 Q2: management commentary indicated AI business exceeded roughly $22B annual revenue run rate.",
+      "FY26 Q3: AI business surpassed $37B annual revenue run rate, up 123% YoY.",
+    ],
+  },
 };
