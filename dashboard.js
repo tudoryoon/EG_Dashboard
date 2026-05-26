@@ -5493,7 +5493,8 @@ function renderMarketBriefingOverview() {
     .join("");
 
   const rotationSignal = briefing.rotationSignal ?? {};
-  const rotationSectors = (rotationSignal.sectors ?? []).slice(0, 25);
+  const allRotationSectors = rotationSignal.sectors ?? [];
+  const rotationSectors = allRotationSectors.slice(0, 25);
   const rotationSectorMarkup = rotationSectors
     .map(
       (sector) => `
@@ -5517,12 +5518,12 @@ function renderMarketBriefingOverview() {
     .join("");
   const rotationQuadrantMarkup = ["Leading", "Improving", "Weakening", "Lagging"]
     .map((classification) => {
-      const sectors = rotationSectors.filter((sector) => sector.classification === classification);
+      const sectors = allRotationSectors.filter((sector) => sector.classification === classification);
       return `
         <article class="briefing-rotation-quadrant is-${classification.toLowerCase()}">
           <div class="briefing-rotation-quadrant-head">
             <strong>${getRotationClassLabel(classification)}</strong>
-            <span>${getRotationClassKorean(classification)}</span>
+            <span>${getRotationClassKorean(classification)} ${sectors.length}</span>
           </div>
           <span class="briefing-rotation-rule">${getRotationClassRule(classification)}</span>
           <p>${sectors.map((sector) => sector.label).join(" · ") || "해당 섹터 없음"}</p>
