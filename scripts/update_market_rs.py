@@ -226,10 +226,10 @@ def fetch_universe_frame() -> pd.DataFrame:
     return pd.DataFrame(merged.values()).sort_values("ticker").reset_index(drop=True)
 
 
-def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, pd.Series]]:
+def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, pd.Series], dict[str, pd.Series], dict[str, pd.Series]]:
     symbols = [symbol for symbol in symbols if not is_terminal_symbol(symbol)]
     if not symbols:
-        return {}, {}
+        return {}, {}, {}, {}
     history = yf.download(
         tickers=symbols,
         period=PRICE_PERIOD,
@@ -239,10 +239,12 @@ def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, 
         group_by="ticker",
     )
     if history.empty:
-        return {}, {}
+        return {}, {}, {}, {}
 
     raw_close_map: dict[str, pd.Series] = {}
     adjusted_close_map: dict[str, pd.Series] = {}
+    high_map: dict[str, pd.Series] = {}
+    low_map: dict[str, pd.Series] = {}
     multi = isinstance(history.columns, pd.MultiIndex)
     for symbol in symbols:
         try:
@@ -251,15 +253,25 @@ def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, 
             continue
         raw_close = symbol_frame.get("Close")
         adjusted_close = symbol_frame.get("Adj Close", raw_close)
-        if raw_close is None or adjusted_close is None:
+        high = symbol_frame.get("High")
+        low = symbol_frame.get("Low")
+        if raw_close is None or adjusted_close is None or high is None or low is None:
             continue
         raw_close = raw_close.dropna()
         adjusted_close = adjusted_close.dropna()
-        if raw_close.empty or adjusted_close.empty:
+        high = high.dropna()
+        low = low.dropna()
+        if raw_close.empty or adjusted_close.empty or high.empty or low.empty:
             continue
         raw_close_map[symbol] = raw_close.rename(symbol)
         adjusted_close_map[symbol] = adjusted_close.rename(symbol)
-    missing = [symbol for symbol in symbols if symbol not in raw_close_map or symbol not in adjusted_close_map]
+        high_map[symbol] = high.rename(symbol)
+        low_map[symbol] = low.rename(symbol)
+    missing = [
+        symbol
+        for symbol in symbols
+        if symbol not in raw_close_map or symbol not in adjusted_close_map or symbol not in high_map or symbol not in low_map
+    ]
     for symbol in missing:
         if is_terminal_symbol(symbol):
             continue
@@ -272,36 +284,46 @@ def download_batch(symbols: list[str]) -> tuple[dict[str, pd.Series], dict[str, 
                     progress=False,
                     threads=False,
                 )
-                if single.empty or "Close" not in single.columns:
+                if single.empty or "Close" not in single.columns or "High" not in single.columns or "Low" not in single.columns:
                     time.sleep(RETRY_SLEEP)
                     continue
                 raw_close = single["Close"].dropna()
                 adjusted_close = single["Adj Close"].dropna() if "Adj Close" in single.columns else raw_close
-                if raw_close.empty or adjusted_close.empty:
+                high = single["High"].dropna()
+                low = single["Low"].dropna()
+                if raw_close.empty or adjusted_close.empty or high.empty or low.empty:
                     time.sleep(RETRY_SLEEP)
                     continue
                 raw_close_map[symbol] = raw_close.rename(symbol)
                 adjusted_close_map[symbol] = adjusted_close.rename(symbol)
+                high_map[symbol] = high.rename(symbol)
+                low_map[symbol] = low.rename(symbol)
                 break
             except Exception:
                 time.sleep(RETRY_SLEEP)
-    return raw_close_map, adjusted_close_map
+    return raw_close_map, adjusted_close_map, high_map, low_map
 
 
-def fetch_price_frames(symbols: list[str], batch_size: int = BATCH_SIZE) -> tuple[pd.DataFrame, pd.DataFrame]:
+def fetch_price_frames(symbols: list[str], batch_size: int = BATCH_SIZE) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     raw_close_map: dict[str, pd.Series] = {}
     adjusted_close_map: dict[str, pd.Series] = {}
+    high_map: dict[str, pd.Series] = {}
+    low_map: dict[str, pd.Series] = {}
     for start in range(0, len(symbols), batch_size):
         batch = symbols[start : start + batch_size]
-        batch_raw_close_map, batch_adjusted_close_map = download_batch(batch)
+        batch_raw_close_map, batch_adjusted_close_map, batch_high_map, batch_low_map = download_batch(batch)
         raw_close_map.update(batch_raw_close_map)
         adjusted_close_map.update(batch_adjusted_close_map)
+        high_map.update(batch_high_map)
+        low_map.update(batch_low_map)
         time.sleep(BATCH_SLEEP)
-    if not raw_close_map or not adjusted_close_map:
+    if not raw_close_map or not adjusted_close_map or not high_map or not low_map:
         raise RuntimeError("No price data downloaded for RS universe.")
     raw_close_frame = pd.concat(raw_close_map.values(), axis=1).sort_index()
     adjusted_close_frame = pd.concat(adjusted_close_map.values(), axis=1).sort_index()
-    return raw_close_frame, adjusted_close_frame
+    high_frame = pd.concat(high_map.values(), axis=1).sort_index()
+    low_frame = pd.concat(low_map.values(), axis=1).sort_index()
+    return raw_close_frame, adjusted_close_frame, high_frame, low_frame
 
 
 def load_existing_rows() -> dict[str, dict[str, object]]:
@@ -480,11 +502,15 @@ def build_payload(
     universe: pd.DataFrame,
     raw_close_frame: pd.DataFrame,
     adjusted_close_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
     shares_cache: dict[str, int | None],
 ) -> dict[str, object]:
     benchmark = adjusted_close_frame[BENCHMARK_SYMBOL].dropna()
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
+    stock_high = high_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
+    stock_low = low_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     market_caps: dict[str, int] = {}
     eligible_tickers: list[str] = []
     for _, member in universe.iterrows():
@@ -507,6 +533,8 @@ def build_payload(
     universe = universe[universe["ticker"].isin(eligible_tickers)].copy().reset_index(drop=True)
     stock_adjusted_close = stock_adjusted_close[[ticker for ticker in eligible_tickers if ticker in stock_adjusted_close.columns]]
     stock_raw_close = stock_raw_close[[ticker for ticker in eligible_tickers if ticker in stock_raw_close.columns]]
+    stock_high = stock_high[[ticker for ticker in eligible_tickers if ticker in stock_high.columns]]
+    stock_low = stock_low[[ticker for ticker in eligible_tickers if ticker in stock_low.columns]]
     if stock_adjusted_close.empty or stock_raw_close.empty:
         raise RuntimeError("No RS universe members passed the market-cap filter.")
 
@@ -614,6 +642,11 @@ def build_payload(
                 "6m": compute_return(performance_series, LOOKBACKS["6m"]),
                 "12m": compute_return(performance_series, LOOKBACKS["12m"]),
             },
+            "atr21Pct": compute_atr_pct(
+                stock_high[ticker] if ticker in stock_high.columns else pd.Series(dtype=float),
+                stock_low[ticker] if ticker in stock_low.columns else pd.Series(dtype=float),
+                stock_raw_close[ticker] if ticker in stock_raw_close.columns else pd.Series(dtype=float),
+            ),
             "distanceTo52wHighPct": compute_52w_gap(performance_series),
             "rsNewHigh": rs_new_high_all,
             "rsNewHighAll": rs_new_high_all,
@@ -684,6 +717,7 @@ def build_payload(
             "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. Names with market cap at or below $200M are excluded.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
             "weights": RS_WEIGHTS,
+            "atr": "ATR% = 21-day average true range divided by latest close.",
         },
         "rows": rows,
         "histories": histories,
@@ -701,6 +735,33 @@ def compute_52w_gap(series: pd.Series) -> float | None:
     return round((float(high - current) / float(high)) * 100, 2)
 
 
+def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = 21) -> float | None:
+    frame = pd.concat(
+        {
+            "high": high_series,
+            "low": low_series,
+            "close": close_series,
+        },
+        axis=1,
+    ).dropna()
+    if len(frame) < window + 1:
+        return None
+    previous_close = frame["close"].shift(1)
+    true_range = pd.concat(
+        [
+            frame["high"] - frame["low"],
+            (frame["high"] - previous_close).abs(),
+            (frame["low"] - previous_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+    atr = true_range.dropna().tail(window).mean()
+    current_price = frame["close"].iloc[-1]
+    if not math.isfinite(float(atr)) or not math.isfinite(float(current_price)) or float(current_price) <= 0:
+        return None
+    return round(float(atr / current_price) * 100, 2)
+
+
 def nullable_int(value: object) -> int | None:
     if value is None or pd.isna(value):
         return None
@@ -710,10 +771,10 @@ def nullable_int(value: object) -> int | None:
 def main() -> None:
     universe = fetch_universe_frame()
     symbols = sorted(symbol for symbol in universe["ticker"].tolist() if not is_terminal_symbol(str(symbol)))
-    raw_close_frame, adjusted_close_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
+    raw_close_frame, adjusted_close_frame, high_frame, low_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
     existing_rows = load_existing_rows()
     shares_cache = build_shares_cache(symbols, existing_rows)
-    payload = build_payload(universe, raw_close_frame, adjusted_close_frame, shares_cache)
+    payload = build_payload(universe, raw_close_frame, adjusted_close_frame, high_frame, low_frame, shares_cache)
 
     OUTPUT_PATH.write_text(
         "window.marketRsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",

@@ -5726,6 +5726,13 @@ function formatRsGapPercent(value) {
   return `${Number(value).toFixed(2)}%`;
 }
 
+function formatAtrPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toFixed(2)}%`;
+}
+
 function formatMarketCapCompact(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -5925,6 +5932,8 @@ function getMarketRsTableSortValue(row, sortKey) {
       return row.rsPeriods?.["3m"] ?? Number.NEGATIVE_INFINITY;
     case "rs6m":
       return row.rsPeriods?.["6m"] ?? Number.NEGATIVE_INFINITY;
+    case "atr21Pct":
+      return row.atr21Pct ?? Number.NEGATIVE_INFINITY;
     case "gap52w":
       return row.distanceTo52wHighPct ?? Number.POSITIVE_INFINITY;
     case "rsNewHigh":
@@ -6217,6 +6226,10 @@ function renderMarketRsOverview() {
             <span>RS_3M</span>
             <strong>${formatRsNumber(row.rsPeriods?.["3m"])}</strong>
           </div>
+          <div class="market-rs-card-meta">
+            <span>ATR%</span>
+            <strong>${formatAtrPercent(row.atr21Pct)}</strong>
+          </div>
           ${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? '<div class="market-rs-flag">RS New High</div>' : ""}
         </button>
       `;
@@ -6234,6 +6247,7 @@ function renderMarketRsOverview() {
           <td>${formatRsNumber(row.rsPeriods?.["1m"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["3m"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["6m"])}</td>
+          <td>${formatAtrPercent(row.atr21Pct)}</td>
           <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
           <td>${getMarketRsUniverseNewHigh(row, state.rsUniverse) ? "Yes" : "-"}</td>
         </tr>
@@ -6333,6 +6347,10 @@ function renderMarketRsOverview() {
               <span>RS_12M</span>
               <strong>${formatRsNumber(selected?.rsPeriods?.["12m"])}</strong>
             </div>
+            <div class="market-rs-metric">
+              <span>ATR 21D %</span>
+              <strong>${formatAtrPercent(selected?.atr21Pct)}</strong>
+            </div>
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
@@ -6359,6 +6377,7 @@ function renderMarketRsOverview() {
                 <th>${renderMarketRsSortHeader("RS_1M", "rs1m")}</th>
                 <th>${renderMarketRsSortHeader("RS_3M", "rs3m")}</th>
                 <th>${renderMarketRsSortHeader("RS_6M", "rs6m")}</th>
+                <th>${renderMarketRsSortHeader("ATR%", "atr21Pct")}</th>
                 <th>${renderMarketRsSortHeader("52W Gap", "gap52w")}</th>
                 <th>${renderMarketRsSortHeader("RS NH", "rsNewHigh")}</th>
               </tr>
