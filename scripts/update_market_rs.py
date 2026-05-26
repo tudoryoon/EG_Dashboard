@@ -98,6 +98,14 @@ MANUAL_UNIVERSE_MEMBERS = [
         "member_dowjones": False,
         "member_russell2000": False,
     },
+    {
+        "ticker": "CBRS",
+        "name": "Cerebras Systems, Inc.",
+        "member_sp500": False,
+        "member_nasdaq100": False,
+        "member_dowjones": False,
+        "member_russell2000": False,
+    },
 ]
 MANUAL_SHARES_OUTSTANDING = {
     "NBIS": 253_898_194,
