@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +15,8 @@ OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "infra-grid-status-
 EIA_BASE_URL = "https://www.eia.gov/electricity/wholesale"
 EIA_CURRENT_URL = f"{EIA_BASE_URL}/xls/ice_electric-{datetime.now(timezone.utc).year}.xlsx"
 EIA_ARCHIVE_ZIP_URL = f"{EIA_BASE_URL}/xls/archive/ice_electric-historical.zip"
+FRED_GRAPH_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+FRED_START_DATE = "2013-01-01"
 RANGES = [
     {"key": "1m", "label": "1M"},
     {"key": "3m", "label": "3M"},
@@ -75,6 +78,44 @@ HUBS = {
         "aliases": {"ERCOT North 345KV Peak"},
     },
 }
+FRED_EQUIPMENT_SERIES = {
+    "power_specialty_transformer_ppi": {
+        "fredId": "PCU335311335311P",
+        "name": "Power & Specialty Transformer PPI",
+        "title": "Power & Specialty Transformer PPI",
+        "subtitle": "Producer Price Index for electric power and specialty transformer manufacturing, power and distribution transformers except parts. Monthly, indexed by BLS/FRED.",
+        "color": "#111827",
+        "yAxisLabel": "Index",
+        "formatter": "number1",
+    },
+    "switchgear_ppi": {
+        "fredId": "PCU335313335313",
+        "name": "Switchgear & Switchboard PPI",
+        "title": "Switchgear & Switchboard Apparatus PPI",
+        "subtitle": "Producer Price Index for switchgear and switchboard apparatus manufacturing. A direct read on grid equipment pricing pressure.",
+        "color": "#2563eb",
+        "yAxisLabel": "Index",
+        "formatter": "number1",
+    },
+    "power_distribution_transformer_ppi": {
+        "fredId": "WPU117409",
+        "name": "Power & Distribution Transformer PPI",
+        "title": "Power & Distribution Transformer PPI",
+        "subtitle": "Commodity PPI for power and distribution transformers, except parts. Monthly, indexed by BLS/FRED.",
+        "color": "#7c3aed",
+        "yAxisLabel": "Index",
+        "formatter": "number1",
+    },
+    "electrical_equipment_orders": {
+        "fredId": "A35SNO",
+        "name": "Electrical Equipment New Orders",
+        "title": "Electrical Equipment New Orders",
+        "subtitle": "Manufacturers' new orders for electrical equipment, appliances, and components. Seasonally adjusted monthly value.",
+        "color": "#0f766e",
+        "yAxisLabel": "USD Mil.",
+        "formatter": "number1",
+    },
+}
 
 
 def normalize_column(name: object) -> str:
@@ -85,6 +126,37 @@ def fetch_bytes(url: str) -> bytes:
     response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=90)
     response.raise_for_status()
     return response.content
+
+
+def fetch_fred_equipment_series(start_date: str = FRED_START_DATE) -> dict[str, dict[str, list[float] | list[str]]]:
+    series_ids = [str(config["fredId"]) for config in FRED_EQUIPMENT_SERIES.values()]
+    url = f"{FRED_GRAPH_URL}?id={','.join(series_ids)}"
+    frame = None
+    for attempt in range(3):
+        try:
+            frame = pd.read_csv(url)
+            break
+        except Exception:
+            if attempt == 2:
+                raise
+            time.sleep(2 + attempt)
+    if frame is None or "observation_date" not in frame.columns:
+        raise RuntimeError("Unexpected FRED equipment schema")
+
+    output: dict[str, dict[str, list[float] | list[str]]] = {}
+    frame["date"] = pd.to_datetime(frame["observation_date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    for key, config in FRED_EQUIPMENT_SERIES.items():
+        series_id = str(config["fredId"])
+        if series_id not in frame.columns:
+            raise RuntimeError(f"Missing FRED series {series_id}")
+        item = frame[["date", series_id]].rename(columns={series_id: "value"}).copy()
+        item["value"] = pd.to_numeric(item["value"].replace(".", pd.NA), errors="coerce")
+        item = item.dropna(subset=["date", "value"]).loc[lambda row: row["date"] >= start_date].sort_values("date")
+        output[key] = {
+            "dates": item["date"].tolist(),
+            "values": [round(float(value), 3) for value in item["value"]],
+        }
+    return output
 
 
 def current_year_urls() -> list[str]:
@@ -201,6 +273,17 @@ def series_item(key: str, dates: list[str], values: list[float] | list[int], *, 
     }
 
 
+def fred_series_item(key: str, dates: list[str], values: list[float]) -> dict[str, object]:
+    config = FRED_EQUIPMENT_SERIES[key]
+    return {
+        "name": config["name"],
+        "color": config["color"],
+        "dates": dates,
+        "values": values,
+        "fredId": config["fredId"],
+    }
+
+
 def latest_snapshot(key: str, dates: list[str], prices: list[float]) -> dict[str, object]:
     last_price = float(prices[-1])
     trailing = [float(value) for value in prices[-252:]]
@@ -225,9 +308,13 @@ def build_payload() -> dict[str, object]:
     hub_series = build_hub_series(power_frame)
     if not hub_series:
         raise RuntimeError("No configured EIA ICE hubs were found")
+    fred_series = fetch_fred_equipment_series()
 
     included_keys = [key for key in HUBS if key in hub_series]
-    latest_date = max(hub_series[key]["dates"][-1] for key in included_keys)
+    latest_date = max(
+        [hub_series[key]["dates"][-1] for key in included_keys]
+        + [series["dates"][-1] for series in fred_series.values() if series["dates"]]
+    )
     snapshots = [
         latest_snapshot(key, hub_series[key]["dates"], hub_series[key]["prices"])
         for key in included_keys
@@ -315,10 +402,28 @@ def build_payload() -> dict[str, object]:
             },
         }
 
+    for key, config in FRED_EQUIPMENT_SERIES.items():
+        series = fred_series.get(key) or {"dates": [], "values": []}
+        panels[key] = {
+            "title": config["title"],
+            "subtitle": f"{config['subtitle']} Series starts at {FRED_START_DATE} in this dashboard.",
+            "source": f"FRED / BLS ({config['fredId']})",
+            "mode": "raw",
+            "connectGaps": True,
+            "yAxisLabel": config["yAxisLabel"],
+            "formatter": config["formatter"],
+            "series": {
+                key: fred_series_item(key, series["dates"], series["values"]),
+            },
+        }
+
     return {
         "updatedAt": latest_date,
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "startDate": min(hub_series[key]["dates"][0] for key in included_keys),
+        "startDate": min(
+            [hub_series[key]["dates"][0] for key in included_keys]
+            + [series["dates"][0] for series in fred_series.values() if series["dates"]]
+        ),
         "defaultRange": "3y",
         "ranges": RANGES,
         "source": {
@@ -329,6 +434,10 @@ def build_payload() -> dict[str, object]:
         "dashboards": [
             {"key": "dc_corridor_prices", "group": "Power Prices"},
             {"key": "western_power_prices", "group": "Power Prices"},
+            {"key": "power_specialty_transformer_ppi", "group": "Grid Equipment"},
+            {"key": "switchgear_ppi", "group": "Grid Equipment"},
+            {"key": "power_distribution_transformer_ppi", "group": "Grid Equipment"},
+            {"key": "electrical_equipment_orders", "group": "Grid Equipment"},
             {"key": "spike_days_90d", "group": "Stress"},
             {"key": "rolling_30d_max", "group": "Stress"},
             *([{"key": "ercot_historical", "group": "Historical"}] if "ercot_historical" in panels else []),
