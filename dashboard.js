@@ -83,14 +83,14 @@ const bigTechSubtabMeta = {
 };
 
 const marketSubtabMeta = {
+  VIX: { label: "VIX" },
+  Breadth: { label: "Breadth" },
+  RS: { label: "RS" },
   Overview: { label: "Price" },
   Macro: { label: "Macro" },
   Liquidity: { label: "Liquidity" },
   Valuation: { label: "Valuation" },
   FxCommodities: { label: "FX & Commodities" },
-  VIX: { label: "VIX" },
-  Breadth: { label: "Breadth" },
-  RS: { label: "RS" },
 };
 
 const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS"]);
