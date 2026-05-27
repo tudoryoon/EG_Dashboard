@@ -73,6 +73,23 @@ COLOR_BY_UNIVERSE = {
     "russell2000": "#0f766e",
 }
 RS_WEIGHTS = {"1m": 0.20, "3m": 0.40, "6m": 0.20, "12m": 0.20}
+ATR_WINDOW = 21
+EXTENSION_ANCHORS = {
+    "ema21": {
+        "label": "21 EMA",
+        "kind": "ema",
+        "period": 21,
+        # The article gives 1 sigma = 1.45x ATR and 3 sigma = 4.17x ATR for 21 EMA.
+        # 2 sigma is linearly interpolated so the UI can show a complete 1/2/3 sigma ladder.
+        "sigma_thresholds": {1: 1.45, 2: 2.81, 3: 4.17},
+    },
+    "sma50": {
+        "label": "50 SMA",
+        "kind": "sma",
+        "period": 50,
+        "sigma_thresholds": {1: 2.50, 2: 5.00, 3: 7.50},
+    },
+}
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
 SYMBOL_ALIASES = {
     "CRDA": "CRD-A",
@@ -627,6 +644,11 @@ def build_payload(
         rs_new_high_dowjones = compute_rating_new_high(history_dowjones_series)
         rs_new_high_russell2000 = compute_rating_new_high(history_russell2000_series)
 
+        ticker_high_series = stock_high[ticker] if ticker in stock_high.columns else pd.Series(dtype=float)
+        ticker_low_series = stock_low[ticker] if ticker in stock_low.columns else pd.Series(dtype=float)
+        ticker_raw_close_series = stock_raw_close[ticker] if ticker in stock_raw_close.columns else pd.Series(dtype=float)
+        ticker_atr_series = compute_atr_series(ticker_high_series, ticker_low_series, ticker_raw_close_series)
+
         row = {
             "ticker": ticker,
             "name": str(member["name"]),
@@ -651,10 +673,11 @@ def build_payload(
                 "12m": compute_return(performance_series, LOOKBACKS["12m"]),
             },
             "atr21Pct": compute_atr_pct(
-                stock_high[ticker] if ticker in stock_high.columns else pd.Series(dtype=float),
-                stock_low[ticker] if ticker in stock_low.columns else pd.Series(dtype=float),
-                stock_raw_close[ticker] if ticker in stock_raw_close.columns else pd.Series(dtype=float),
+                ticker_high_series,
+                ticker_low_series,
+                ticker_raw_close_series,
             ),
+            "extension": compute_extension_metrics(ticker_raw_close_series, ticker_atr_series),
             "distanceTo52wHighPct": compute_52w_gap(performance_series),
             "rsNewHigh": rs_new_high_all,
             "rsNewHighAll": rs_new_high_all,
@@ -743,7 +766,30 @@ def compute_52w_gap(series: pd.Series) -> float | None:
     return round((float(high - current) / float(high)) * 100, 2)
 
 
-def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = 21) -> float | None:
+def compute_atr_series(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> pd.Series:
+    frame = pd.concat(
+        {
+            "high": high_series,
+            "low": low_series,
+            "close": close_series,
+        },
+        axis=1,
+    ).dropna()
+    if len(frame) < window + 1:
+        return pd.Series(dtype=float)
+    previous_close = frame["close"].shift(1)
+    true_range = pd.concat(
+        [
+            frame["high"] - frame["low"],
+            (frame["high"] - previous_close).abs(),
+            (frame["low"] - previous_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+    return true_range.rolling(window).mean().dropna()
+
+
+def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> float | None:
     frame = pd.concat(
         {
             "high": high_series,
@@ -754,20 +800,88 @@ def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series:
     ).dropna()
     if len(frame) < window + 1:
         return None
-    previous_close = frame["close"].shift(1)
-    true_range = pd.concat(
-        [
-            frame["high"] - frame["low"],
-            (frame["high"] - previous_close).abs(),
-            (frame["low"] - previous_close).abs(),
-        ],
-        axis=1,
-    ).max(axis=1)
-    atr = true_range.dropna().tail(window).mean()
+    atr_series = compute_atr_series(frame["high"], frame["low"], frame["close"], window)
+    if atr_series.empty:
+        return None
+    atr = atr_series.iloc[-1]
     current_price = frame["close"].iloc[-1]
     if not math.isfinite(float(atr)) or not math.isfinite(float(current_price)) or float(current_price) <= 0:
         return None
     return round(float(atr / current_price) * 100, 2)
+
+
+def interpolate_sigma(abs_multiple: float, thresholds: dict[int, float]) -> float:
+    if abs_multiple <= 0:
+        return 0.0
+    ordered = sorted((int(key), float(value)) for key, value in thresholds.items())
+    previous_sigma = 0
+    previous_value = 0.0
+    for sigma, threshold in ordered:
+        if abs_multiple <= threshold:
+            if threshold <= previous_value:
+                return float(sigma)
+            ratio = (abs_multiple - previous_value) / (threshold - previous_value)
+            return previous_sigma + ratio * (sigma - previous_sigma)
+        previous_sigma = sigma
+        previous_value = threshold
+    top_sigma, top_value = ordered[-1]
+    base_step = top_value / top_sigma if top_sigma else top_value
+    if base_step <= 0:
+        return float(top_sigma)
+    return top_sigma + ((abs_multiple - top_value) / base_step)
+
+
+def classify_extension(abs_sigma: float | None) -> str:
+    if abs_sigma is None:
+        return "na"
+    if abs_sigma >= 3:
+        return "extreme"
+    if abs_sigma >= 2:
+        return "stretched"
+    if abs_sigma >= 1:
+        return "watch"
+    return "normal"
+
+
+def compute_extension_metrics(close_series: pd.Series, atr_series: pd.Series) -> dict[str, dict[str, object]]:
+    metrics: dict[str, dict[str, object]] = {}
+    close = close_series.dropna()
+    if close.empty or atr_series.empty:
+        return metrics
+    current_price = float(close.iloc[-1])
+    aligned_atr = atr_series.reindex(close.index).dropna()
+    if aligned_atr.empty:
+        return metrics
+    latest_atr = float(aligned_atr.iloc[-1])
+    if not math.isfinite(current_price) or current_price <= 0 or not math.isfinite(latest_atr) or latest_atr <= 0:
+        return metrics
+    for key, meta in EXTENSION_ANCHORS.items():
+        period = int(meta["period"])
+        if len(close) < period:
+            continue
+        if meta["kind"] == "ema":
+            anchor_series = close.ewm(span=period, adjust=False).mean()
+        else:
+            anchor_series = close.rolling(period).mean()
+        anchor = float(anchor_series.dropna().iloc[-1])
+        if not math.isfinite(anchor) or anchor <= 0:
+            continue
+        atr_multiple = (current_price - anchor) / latest_atr
+        abs_sigma = interpolate_sigma(abs(float(atr_multiple)), dict(meta["sigma_thresholds"]))
+        metrics[key] = {
+            "label": meta["label"],
+            "anchor": round(anchor, 2),
+            "price": round(current_price, 2),
+            "atr": round(latest_atr, 2),
+            "atrMultiple": round(float(atr_multiple), 2),
+            "absAtrMultiple": round(abs(float(atr_multiple)), 2),
+            "sigma": round(abs_sigma, 2),
+            "signedSigma": round(abs_sigma if atr_multiple >= 0 else -abs_sigma, 2),
+            "zone": classify_extension(abs_sigma),
+            "direction": "above" if atr_multiple >= 0 else "below",
+            "sigmaThresholds": {str(level): value for level, value in meta["sigma_thresholds"].items()},
+        }
+    return metrics
 
 
 def nullable_int(value: object) -> int | None:

@@ -5733,6 +5733,105 @@ function formatAtrPercent(value) {
   return `${Number(value).toFixed(2)}%`;
 }
 
+function formatAtrMultiple(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}x`;
+}
+
+function formatSignedSigma(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}σ`;
+}
+
+function formatDollarPrice(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `$${Number(value).toFixed(2)}`;
+}
+
+function getExtensionZoneLabel(zone) {
+  if (zone === "extreme") {
+    return "Extreme";
+  }
+  if (zone === "stretched") {
+    return "Stretched";
+  }
+  if (zone === "watch") {
+    return "Watch";
+  }
+  if (zone === "normal") {
+    return "Normal";
+  }
+  return "N/A";
+}
+
+function renderExtensionTick(label, value, maxRange) {
+  if (!Number.isFinite(Number(value)) || !Number.isFinite(Number(maxRange)) || Number(maxRange) <= 0) {
+    return "";
+  }
+  const position = Math.max(0, Math.min(100, ((Number(value) + Number(maxRange)) / (Number(maxRange) * 2)) * 100));
+  return `<span class="market-rs-extension-tick" style="left:${position}%"><i></i><b>${label}</b></span>`;
+}
+
+function renderMarketRsExtensionGauge(metric) {
+  if (!metric || !Number.isFinite(Number(metric.atrMultiple))) {
+    return "";
+  }
+  const thresholds = metric.sigmaThresholds ?? {};
+  const sigma1 = Number(thresholds["1"]);
+  const sigma2 = Number(thresholds["2"]);
+  const sigma3 = Number(thresholds["3"]);
+  const atrMultiple = Number(metric.atrMultiple);
+  const maxRange = Math.max(
+    Number.isFinite(sigma3) ? sigma3 * 1.15 : 4,
+    Math.abs(atrMultiple) * 1.15,
+    1,
+  );
+  const markerPosition = Math.max(0, Math.min(100, ((atrMultiple + maxRange) / (maxRange * 2)) * 100));
+  const ticks = [
+    renderExtensionTick("-3σ", -sigma3, maxRange),
+    renderExtensionTick("-2σ", -sigma2, maxRange),
+    renderExtensionTick("-1σ", -sigma1, maxRange),
+    renderExtensionTick("0", 0, maxRange),
+    renderExtensionTick("+1σ", sigma1, maxRange),
+    renderExtensionTick("+2σ", sigma2, maxRange),
+    renderExtensionTick("+3σ", sigma3, maxRange),
+  ].join("");
+
+  return `
+    <article class="market-rs-extension-card is-${metric.zone ?? "na"}">
+      <div class="market-rs-extension-head">
+        <div>
+          <strong>${metric.label ?? "-"}</strong>
+          <span>${metric.direction === "below" ? "Below anchor" : "Above anchor"}</span>
+        </div>
+        <b>${getExtensionZoneLabel(metric.zone)}</b>
+      </div>
+      <div class="market-rs-extension-scale">
+        <div class="market-rs-extension-track">
+          ${ticks}
+          <span class="market-rs-extension-marker" style="left:${markerPosition}%"></span>
+        </div>
+      </div>
+      <div class="market-rs-extension-stats">
+        <span>ATR Multiple <strong>${formatAtrMultiple(metric.atrMultiple)}</strong></span>
+        <span>Sigma <strong>${formatSignedSigma(metric.signedSigma)}</strong></span>
+        <span>Anchor <strong>${formatDollarPrice(metric.anchor)}</strong></span>
+        <span>ATR <strong>${formatDollarPrice(metric.atr)}</strong></span>
+      </div>
+    </article>
+  `;
+}
+
 function formatMarketCapCompact(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -6254,6 +6353,10 @@ function renderMarketRsOverview() {
       `;
     })
     .join("");
+  const extension = selected?.extension ?? {};
+  const extensionMarkup = ["ema21", "sma50"]
+    .map((key) => renderMarketRsExtensionGauge(extension[key]))
+    .join("");
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -6350,6 +6453,15 @@ function renderMarketRsOverview() {
             <div class="market-rs-metric">
               <span>ATR 21D %</span>
               <strong>${formatAtrPercent(selected?.atr21Pct)}</strong>
+            </div>
+          </div>
+          <div class="market-rs-extension-panel">
+            <div class="market-rs-extension-title">
+              <strong>ATR Extension</strong>
+              <span>Distance from 21 EMA and 50 SMA measured in 21D ATR multiples.</span>
+            </div>
+            <div class="market-rs-extension-grid">
+              ${extensionMarkup || '<p class="market-rs-empty">Extension data will appear after the next RS data refresh.</p>'}
             </div>
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
