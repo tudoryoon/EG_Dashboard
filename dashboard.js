@@ -5824,6 +5824,7 @@ function renderMarketRsExtensionGauge(metric) {
       </div>
       <div class="market-rs-extension-stats">
         <span>ATR Multiple <strong>${formatAtrMultiple(metric.atrMultiple)}</strong></span>
+        <span>Gap <strong>${formatSignedPercent(metric.deviationPct)}</strong></span>
         <span>Sigma <strong>${formatSignedSigma(metric.signedSigma)}</strong></span>
         <span>Anchor <strong>${formatDollarPrice(metric.anchor)}</strong></span>
         <span>ATR <strong>${formatDollarPrice(metric.atr)}</strong></span>

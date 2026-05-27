@@ -867,12 +867,14 @@ def compute_extension_metrics(close_series: pd.Series, atr_series: pd.Series) ->
         if not math.isfinite(anchor) or anchor <= 0:
             continue
         atr_multiple = (current_price - anchor) / latest_atr
+        deviation_pct = ((current_price / anchor) - 1) * 100
         abs_sigma = interpolate_sigma(abs(float(atr_multiple)), dict(meta["sigma_thresholds"]))
         metrics[key] = {
             "label": meta["label"],
             "anchor": round(anchor, 2),
             "price": round(current_price, 2),
             "atr": round(latest_atr, 2),
+            "deviationPct": round(float(deviation_pct), 2),
             "atrMultiple": round(float(atr_multiple), 2),
             "absAtrMultiple": round(abs(float(atr_multiple)), 2),
             "sigma": round(abs_sigma, 2),
