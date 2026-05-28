@@ -81,6 +81,7 @@ HUBS = {
 FRED_EQUIPMENT_SERIES = {
     "power_specialty_transformer_ppi": {
         "fredId": "PCU335311335311P",
+        "sourceName": "FRED / BLS",
         "name": "Power & Specialty Transformer PPI (전력 및 특수 변압기 PPI)",
         "title": "Power & Specialty Transformer PPI (전력 및 특수 변압기 PPI)",
         "subtitle": "BLS/FRED 월간 PPI입니다. 원천 공식값이 몇 달씩 동일하게 반복될 수 있어 YTD보다 1Y/3Y 추세와 YoY 변화를 같이 봐야 합니다.",
@@ -90,6 +91,7 @@ FRED_EQUIPMENT_SERIES = {
     },
     "switchgear_ppi": {
         "fredId": "PCU335313335313",
+        "sourceName": "FRED / BLS",
         "name": "Switchgear & Switchboard PPI (배전반 및 스위치기어 PPI)",
         "title": "Switchgear & Switchboard Apparatus PPI (배전반 및 스위치기어 PPI)",
         "subtitle": "Producer Price Index for switchgear and switchboard apparatus manufacturing. A direct read on grid equipment pricing pressure. Uses the latest FRED vintage, so recent revised observations can differ from older report charts.",
@@ -99,6 +101,7 @@ FRED_EQUIPMENT_SERIES = {
     },
     "power_distribution_transformer_ppi": {
         "fredId": "WPU117409",
+        "sourceName": "FRED / BLS",
         "name": "Power & Distribution Transformer PPI (전력 및 배전용 변압기 PPI)",
         "title": "Power & Distribution Transformer PPI (전력 및 배전용 변압기 PPI)",
         "subtitle": "BLS/FRED 월간 Commodity PPI입니다. 현재 공식 원천값이 2025년 11월부터 같은 값으로 이어져 YTD에서는 평평하게 보입니다.",
@@ -108,6 +111,7 @@ FRED_EQUIPMENT_SERIES = {
     },
     "electrical_equipment_orders": {
         "fredId": "A35SNO",
+        "sourceName": "FRED / Census",
         "name": "Electrical Equipment New Orders (전기장비 신규주문)",
         "title": "Electrical Equipment New Orders (전기장비 신규주문)",
         "subtitle": "Manufacturers' new orders for electrical equipment, appliances, and components. Seasonally adjusted monthly value from the latest FRED vintage.",
@@ -407,7 +411,7 @@ def build_payload() -> dict[str, object]:
         panels[key] = {
             "title": config["title"],
             "subtitle": f"{config['subtitle']} Series starts at {FRED_START_DATE} in this dashboard.",
-            "source": f"FRED / BLS ({config['fredId']})",
+            "source": f"{config.get('sourceName', 'FRED / BLS')} ({config['fredId']})",
             "mode": "raw",
             "connectGaps": True,
             "yAxisLabel": config["yAxisLabel"],
