@@ -394,12 +394,24 @@ h1 {
 }
 
 .briefing-rotation-sector {
+  appearance: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   display: grid;
   gap: 8px;
   min-height: 116px;
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-radius: 15px;
   padding: 12px;
+}
+
+.briefing-rotation-sector:hover,
+.briefing-rotation-sector.active {
+  border-color: rgba(17, 24, 39, 0.38);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.10);
+  transform: translateY(-1px);
 }
 
 .briefing-rotation-sector-head,
@@ -458,6 +470,73 @@ h1 {
   grid-template-columns: 0.9fr 1.4fr;
   gap: 12px;
   margin-top: 12px;
+}
+
+.briefing-rotation-history-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid rgba(28, 28, 26, 0.10);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+}
+
+.briefing-rotation-history-head,
+.briefing-rotation-history-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.briefing-rotation-history-head strong {
+  display: block;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.briefing-rotation-history-head span,
+.briefing-rotation-history-stats span {
+  color: #6b6b64;
+  font-size: 0.78rem;
+}
+
+.briefing-rotation-history-stats {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.briefing-rotation-history-stats b {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+}
+
+.briefing-rotation-history-legend {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.briefing-rotation-history-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #55554f;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.briefing-rotation-history-legend-item i {
+  width: 18px;
+  height: 10px;
+  border: 1px solid;
+  border-radius: 999px;
+}
+
+.briefing-rotation-history-chart-wrap {
+  height: 280px;
+  min-height: 280px;
 }
 
 .briefing-rotation-quadrants,
@@ -3526,6 +3605,14 @@ h1 {
 
   .briefing-index-grid {
     grid-template-columns: 1fr;
+  }
+
+  .briefing-rotation-history-head {
+    display: grid;
+  }
+
+  .briefing-rotation-history-stats {
+    text-align: left;
   }
 
   .briefing-rotation-grid {

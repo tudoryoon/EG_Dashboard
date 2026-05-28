@@ -263,6 +263,7 @@ const state = {
   totalDashboardCustomStart: "",
   totalDashboardCustomEnd: "",
   briefingMapRange: "1d",
+  briefingRotationSectorKey: "",
   rsUniverse: "all",
   rsHistoryRange: "3y",
   rsSelectedTicker: "",
@@ -5258,6 +5259,26 @@ function getRotationClassRule(classification) {
   return rules[classification] ?? "";
 }
 
+function getRotationHistoryShadeColor(classification) {
+  const colors = {
+    Leading: "rgba(19, 112, 71, 0.12)",
+    Improving: "rgba(37, 99, 235, 0.10)",
+    Weakening: "rgba(217, 119, 6, 0.12)",
+    Lagging: "rgba(180, 35, 24, 0.10)",
+  };
+  return colors[classification] ?? "rgba(107, 114, 128, 0.08)";
+}
+
+function getRotationHistoryBorderColor(classification) {
+  const colors = {
+    Leading: "#137047",
+    Improving: "#2563eb",
+    Weakening: "#d97706",
+    Lagging: "#b42318",
+  };
+  return colors[classification] ?? "#6b7280";
+}
+
 function getSignedValueClass(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -5292,6 +5313,126 @@ function renderRotationCandidateList(items, emptyText) {
       `,
     )
     .join("");
+}
+
+function createBriefingRotationHistoryChart(canvas, sector, history) {
+  if (typeof Chart === "undefined" || !canvas || !history?.length) {
+    return;
+  }
+  const labels = history.map((item) => item.date);
+  const values = history.map((item) => (Number.isFinite(Number(item.score)) ? Number(item.score) : null));
+  const finiteValues = values.filter((value) => Number.isFinite(value));
+  const minValue = finiteValues.length ? Math.min(...finiteValues, 0) : -5;
+  const maxValue = finiteValues.length ? Math.max(...finiteValues, 0) : 5;
+  const spread = Math.max(maxValue - minValue, 4);
+  const tickIndexes = getMacroTickIndexes(labels, "1y", canvas.clientWidth ?? 0);
+  const tickSet = new Set(tickIndexes);
+  const bandsPlugin = {
+    id: `briefingRotationBands-${sector?.key ?? "selected"}`,
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      const xScale = scales.x;
+      if (!chartArea || !xScale) {
+        return;
+      }
+      ctx.save();
+      history.forEach((item, index) => {
+        const center = xScale.getPixelForValue(index);
+        const previousCenter = index > 0 ? xScale.getPixelForValue(index - 1) : chartArea.left;
+        const nextCenter = index < history.length - 1 ? xScale.getPixelForValue(index + 1) : chartArea.right;
+        const left = index > 0 ? (previousCenter + center) / 2 : chartArea.left;
+        const right = index < history.length - 1 ? (center + nextCenter) / 2 : chartArea.right;
+        ctx.fillStyle = getRotationHistoryShadeColor(item.classification);
+        ctx.fillRect(left, chartArea.top, Math.max(right - left, 1), chartArea.bottom - chartArea.top);
+      });
+      ctx.restore();
+    },
+  };
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: `${sector?.label ?? "Sector"} score`,
+          data: values,
+          borderColor: getRotationHistoryBorderColor(sector?.classification),
+          backgroundColor: "rgba(17, 24, 39, 0.10)",
+          borderWidth: 2.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          tension: 0.22,
+          spanGaps: true,
+        },
+        {
+          label: "Zero line",
+          data: labels.map(() => 0),
+          borderColor: "rgba(31, 41, 55, 0.34)",
+          borderDash: [5, 5],
+          borderWidth: 1,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        },
+      ],
+    },
+    plugins: [bandsPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => formatShortIsoDate(items?.[0]?.label),
+            label: (context) => {
+              if (context.datasetIndex === 1) {
+                return "Zero line";
+              }
+              const item = history[context.dataIndex] ?? {};
+              return [
+                `Score ${formatSignedScore(context.parsed.y)}`,
+                `${getRotationClassLabel(item.classification)} / ${getRotationClassKorean(item.classification)}`,
+                `1W ${formatSignedPercent(item.excessReturns?.["1w"])}`,
+                `1M ${formatSignedPercent(item.excessReturns?.["1m"])}`,
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(labels[value], "1y") : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: minValue - spread * 0.14,
+          max: maxValue + spread * 0.14,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatSignedScore(value),
+            maxTicksLimit: 6,
+          },
+          title: { display: true, text: "Rotation Score", color: "#8d8d86" },
+          grid: { color: "rgba(70, 70, 66, 0.12)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
 }
 
 function getBriefingOverviewSizeClass(items, item) {
@@ -5495,12 +5636,32 @@ function renderMarketBriefingOverview() {
   const rotationSignal = briefing.rotationSignal ?? {};
   const allRotationSectors = rotationSignal.sectors ?? [];
   const rotationSectors = allRotationSectors.slice(0, 25);
+  const rotationHistory = rotationSignal.history ?? {};
+  const selectedRotationSectorKey = allRotationSectors.some((sector) => sector.key === state.briefingRotationSectorKey)
+    ? state.briefingRotationSectorKey
+    : rotationSectors[0]?.key ?? allRotationSectors[0]?.key ?? "";
+  state.briefingRotationSectorKey = selectedRotationSectorKey;
+  const selectedRotationSector = allRotationSectors.find((sector) => sector.key === selectedRotationSectorKey) ?? rotationSectors[0] ?? null;
+  const selectedRotationHistory = rotationHistory[selectedRotationSectorKey] ?? [];
+  const rotationHistoryLatest = selectedRotationHistory.at(-1) ?? {};
+  const rotationHistoryLegend = ["Leading", "Improving", "Weakening", "Lagging"]
+    .map(
+      (classification) => `
+        <span class="briefing-rotation-history-legend-item">
+          <i style="background:${getRotationHistoryShadeColor(classification)};border-color:${getRotationHistoryBorderColor(classification)}"></i>
+          ${getRotationClassLabel(classification)}
+        </span>
+      `,
+    )
+    .join("");
   const rotationSectorMarkup = rotationSectors
     .map(
       (sector) => `
-        <article
-          class="briefing-rotation-sector is-${String(sector.classification ?? "neutral").toLowerCase()}"
+        <button
+          type="button"
+          class="briefing-rotation-sector is-${String(sector.classification ?? "neutral").toLowerCase()}${sector.key === selectedRotationSectorKey ? " active" : ""}"
           style="background:${getRotationScoreColor(sector.score)}"
+          data-rotation-sector="${sector.key}"
         >
           <div class="briefing-rotation-sector-head">
             <strong>${sector.label}</strong>
@@ -5512,10 +5673,34 @@ function renderMarketBriefingOverview() {
             <span class="${getSignedValueClass(sector.excessReturns?.["2w"])}">2W ${formatSignedPercent(sector.excessReturns?.["2w"])}</span>
             <span class="${getSignedValueClass(sector.excessReturns?.["1m"])}">1M ${formatSignedPercent(sector.excessReturns?.["1m"])}</span>
           </div>
-        </article>
+        </button>
       `,
     )
     .join("");
+  const rotationHistoryMarkup = selectedRotationSector && selectedRotationHistory.length
+    ? `
+      <article class="briefing-rotation-history-panel">
+        <div class="briefing-rotation-history-head">
+          <div>
+            <strong>${selectedRotationSector.label}</strong>
+            <span>${formatShortIsoDate(selectedRotationHistory[0]?.date)} - ${formatShortIsoDate(rotationHistoryLatest.date)}</span>
+          </div>
+          <div class="briefing-rotation-history-stats">
+            <b class="${getSignedValueClass(rotationHistoryLatest.score)}">Score ${formatSignedScore(rotationHistoryLatest.score)}</b>
+            <span>${getRotationClassLabel(rotationHistoryLatest.classification)} / ${getRotationClassKorean(rotationHistoryLatest.classification)}</span>
+          </div>
+        </div>
+        <div class="briefing-rotation-history-legend">${rotationHistoryLegend}</div>
+        <div class="briefing-rotation-history-chart-wrap">
+          <canvas data-briefing-rotation-history></canvas>
+        </div>
+      </article>
+    `
+    : `
+      <article class="briefing-rotation-history-panel">
+        <p class="market-rs-empty">선택한 섹터의 Rotation Score 히스토리가 아직 없습니다.</p>
+      </article>
+    `;
   const rotationQuadrantMarkup = ["Leading", "Improving", "Weakening", "Lagging"]
     .map((classification) => {
       const sectors = allRotationSectors.filter((sector) => sector.classification === classification);
@@ -5654,6 +5839,7 @@ function renderMarketBriefingOverview() {
           </div>
         </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
+        ${rotationHistoryMarkup}
         <div class="briefing-rotation-bottom">
           <div class="briefing-rotation-quadrants">${rotationQuadrantMarkup}</div>
           <div class="briefing-rotation-candidates">${rotationCandidateMarkup}</div>
@@ -5701,6 +5887,16 @@ function renderMarketBriefingOverview() {
       render();
     });
   });
+  usOverviewRoot.querySelectorAll("[data-rotation-sector]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingRotationSectorKey = button.dataset.rotationSector || "";
+      render();
+    });
+  });
+  const rotationHistoryCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-history]");
+  if (rotationHistoryCanvas && selectedRotationSector && selectedRotationHistory.length) {
+    createBriefingRotationHistoryChart(rotationHistoryCanvas, selectedRotationSector, selectedRotationHistory);
+  }
 }
 
 function formatRsNumber(value, digits = 0) {

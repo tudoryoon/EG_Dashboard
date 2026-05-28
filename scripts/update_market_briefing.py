@@ -19,6 +19,7 @@ import yfinance as yf
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-data.js"
 USER_AGENT = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "2y"
+ROTATION_HISTORY_POINTS = 252
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
@@ -726,6 +727,17 @@ def compute_period_return(series: pd.Series, periods: int) -> float | None:
     return round((current / base - 1) * 100, 2)
 
 
+def compute_period_return_at(series: pd.Series, end_date: pd.Timestamp, periods: int) -> float | None:
+    history = series.loc[:end_date].dropna()
+    if len(history) <= periods:
+        return None
+    current = normalize_number(history.iloc[-1])
+    base = normalize_number(history.iloc[-(periods + 1)])
+    if current is None or base is None or base == 0:
+        return None
+    return round((current / base - 1) * 100, 2)
+
+
 def compute_ytd_return(series: pd.Series) -> float | None:
     if series.empty:
         return None
@@ -742,7 +754,7 @@ def compute_ytd_return(series: pd.Series) -> float | None:
     return round((current / base - 1) * 100, 2)
 
 
-def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object]]:
+def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object], pd.DataFrame]:
     companies = [item | {"sectorKey": sector["key"], "sectorLabel": sector["label"]} for sector in SECTOR_GROUPS for item in sector["items"]]
     symbols = sorted({company["ticker"] for company in companies} | set(BENCHMARK_SYMBOLS) | {USD_PER_KRW_SYMBOL})
     close_frame = fetch_price_frame(symbols)
@@ -795,7 +807,7 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         }
         snapshots.append(snapshot)
         by_ticker[symbol] = snapshot
-    return snapshots, by_ticker, latest_date, rotation_benchmark
+    return snapshots, by_ticker, latest_date, rotation_benchmark, close_frame
 
 
 def build_sector_panels(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -883,10 +895,102 @@ def item_excess_returns(item: dict[str, object], benchmark_returns: dict[str, ob
     return output
 
 
+def compute_series_rotation_returns(
+    close_frame: pd.DataFrame,
+    symbol: str,
+    end_date: pd.Timestamp,
+) -> dict[str, float | None]:
+    if symbol not in close_frame.columns:
+        return {key: None for key in ROTATION_WEIGHTS}
+    series = close_frame[symbol].dropna()
+    output: dict[str, float | None] = {}
+    for key in ROTATION_WEIGHTS:
+        periods = MAP_RANGE_PERIODS.get(key)
+        if periods is None:
+            output[key] = None
+            continue
+        output[key] = compute_period_return_at(series, end_date, periods)
+    return output
+
+
+def build_sector_excess_returns(
+    items: list[dict[str, object]],
+    item_excess_by_ticker: dict[str, dict[str, float | None]],
+) -> dict[str, float | None]:
+    excess_by_range: dict[str, float | None] = {}
+    for key in ROTATION_WEIGHTS:
+        numerator = 0.0
+        denominator = 0.0
+        equal_weight_values = []
+        for item in items:
+            value = safe_float(item_excess_by_ticker.get(str(item.get("ticker")), {}).get(key))
+            if value is None:
+                continue
+            weight = safe_float(item.get("marketCapUsd")) or 0.0
+            if weight > 0:
+                numerator += value * weight
+                denominator += weight
+            equal_weight_values.append(value)
+        if denominator > 0:
+            cap_weighted = numerator / denominator
+            equal_weighted = sum(equal_weight_values) / len(equal_weight_values) if equal_weight_values else cap_weighted
+            excess_by_range[key] = round((cap_weighted * 0.5) + (equal_weighted * 0.5), 2)
+        elif equal_weight_values:
+            excess_by_range[key] = round(sum(equal_weight_values) / len(equal_weight_values), 2)
+        else:
+            excess_by_range[key] = None
+    return excess_by_range
+
+
+def build_rotation_history(
+    close_frame: pd.DataFrame,
+    sector_panels: list[dict[str, object]],
+) -> dict[str, list[dict[str, object]]]:
+    if ROTATION_BENCHMARK_SYMBOL not in close_frame.columns:
+        return {}
+    benchmark_dates = close_frame[ROTATION_BENCHMARK_SYMBOL].dropna().index
+    if len(benchmark_dates) <= max(MAP_RANGE_PERIODS[key] for key in ROTATION_WEIGHTS):
+        return {}
+    history_dates = benchmark_dates[-ROTATION_HISTORY_POINTS:]
+    history: dict[str, list[dict[str, object]]] = {str(sector["key"]): [] for sector in sector_panels}
+    for end_date in history_dates:
+        benchmark_returns = compute_series_rotation_returns(close_frame, ROTATION_BENCHMARK_SYMBOL, end_date)
+        item_excess_by_ticker: dict[str, dict[str, float | None]] = {}
+        for sector in sector_panels:
+            for item in sector.get("items", []):
+                ticker = str(item.get("ticker"))
+                if ticker in item_excess_by_ticker:
+                    continue
+                item_returns = compute_series_rotation_returns(close_frame, ticker, end_date)
+                item_excess_by_ticker[ticker] = {
+                    key: round(item_return - benchmark_return, 2)
+                    if item_return is not None and benchmark_return is not None
+                    else None
+                    for key, item_return in item_returns.items()
+                    for benchmark_return in [safe_float(benchmark_returns.get(key))]
+                }
+        for sector in sector_panels:
+            sector_key = str(sector["key"])
+            items = list(sector.get("items", []))
+            excess_by_range = build_sector_excess_returns(items, item_excess_by_ticker)
+            score = compute_rotation_score(excess_by_range)
+            classification = classify_rotation(excess_by_range)
+            history[sector_key].append(
+                {
+                    "date": end_date.strftime("%Y-%m-%d"),
+                    "score": score,
+                    "classification": classification,
+                    "excessReturns": excess_by_range,
+                }
+            )
+    return history
+
+
 def build_rotation_signal(
     snapshots: list[dict[str, object]],
     sector_panels: list[dict[str, object]],
     benchmark: dict[str, object],
+    close_frame: pd.DataFrame,
 ) -> dict[str, object]:
     benchmark_returns = benchmark.get("returns") if isinstance(benchmark.get("returns"), dict) else {}
     enriched_items = []
@@ -905,29 +1009,8 @@ def build_rotation_signal(
     sectors = []
     for sector in sector_panels:
         items = [enriched_by_ticker[item["ticker"]] for item in sector.get("items", []) if item["ticker"] in enriched_by_ticker]
-        excess_by_range: dict[str, float | None] = {}
-        for key in ROTATION_WEIGHTS:
-            numerator = 0.0
-            denominator = 0.0
-            equal_weight_values = []
-            for item in items:
-                value = safe_float(item.get("excessReturns", {}).get(key))
-                if value is None:
-                    continue
-                weight = safe_float(item.get("marketCapUsd")) or 0.0
-                if weight > 0:
-                    numerator += value * weight
-                    denominator += weight
-                equal_weight_values.append(value)
-            if denominator > 0:
-                cap_weighted = numerator / denominator
-                equal_weighted = sum(equal_weight_values) / len(equal_weight_values) if equal_weight_values else cap_weighted
-                excess_by_range[key] = round((cap_weighted * 0.5) + (equal_weighted * 0.5), 2)
-            elif equal_weight_values:
-                excess_by_range[key] = round(sum(equal_weight_values) / len(equal_weight_values), 2)
-            else:
-                excess_by_range[key] = None
-
+        item_excess_by_ticker = {str(item["ticker"]): item.get("excessReturns", {}) for item in items}
+        excess_by_range = build_sector_excess_returns(items, item_excess_by_ticker)
         score = compute_rotation_score(excess_by_range)
         classification = classify_rotation(excess_by_range)
         ranked_items = sorted(
@@ -1019,6 +1102,7 @@ def build_rotation_signal(
         "benchmark": benchmark,
         "weights": [{"key": key, "label": MAP_RANGE_LABELS[key], "weight": weight} for key, weight in ROTATION_WEIGHTS.items()],
         "sectors": sectors,
+        "history": build_rotation_history(close_frame, sector_panels),
         "candidates": {
             "buyWatch": [candidate_view(item) for item in buy_watch],
             "earlyRotation": [candidate_view(item) for item in early_rotation],
@@ -1094,11 +1178,11 @@ def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
 
 
 def build_payload() -> dict[str, object]:
-    snapshots, _, latest_date, rotation_benchmark = build_company_snapshots()
+    snapshots, _, latest_date, rotation_benchmark, close_frame = build_company_snapshots()
     major_news = build_major_news()
     movers = build_movers(snapshots)
     sector_panels = build_sector_panels(snapshots)
-    rotation_signal = build_rotation_signal(snapshots, sector_panels, rotation_benchmark)
+    rotation_signal = build_rotation_signal(snapshots, sector_panels, rotation_benchmark, close_frame)
     return {
         "updatedAt": latest_date,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
