@@ -382,6 +382,17 @@ function formatShortIsoDate(dateText) {
   return `${year.slice(2)}/${month}`;
 }
 
+function formatFullIsoDate(dateText) {
+  if (!dateText) {
+    return "-";
+  }
+  const [year, month, day] = dateText.split("-");
+  if (!year || !month || !day) {
+    return dateText;
+  }
+  return `${year}-${month}-${day}`;
+}
+
 function formatMonthLabel(monthText) {
   if (!monthText) {
     return "-";
@@ -5387,7 +5398,11 @@ function createBriefingRotationHistoryChart(canvas, sector, history) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            title: (items) => formatShortIsoDate(items?.[0]?.label),
+            title: (items) => {
+              const point = items?.[0];
+              const date = history[point?.dataIndex]?.date ?? point?.label;
+              return formatFullIsoDate(date);
+            },
             label: (context) => {
               if (context.datasetIndex === 1) {
                 return "Zero line";
