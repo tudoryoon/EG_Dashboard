@@ -5786,6 +5786,10 @@ function renderMarketRsExtensionGauge(metric) {
   if (!metric || !Number.isFinite(Number(metric.atrMultiple))) {
     return "";
   }
+  const atrPct = Number(metric.atrPct);
+  const atrLabel = Number.isFinite(atrPct)
+    ? { label: "ATR%", value: formatAtrPercent(atrPct) }
+    : { label: "ATR", value: formatDollarPrice(metric.atr) };
   const thresholds = metric.sigmaThresholds ?? {};
   const sigma1 = Number(thresholds["1"]);
   const sigma2 = Number(thresholds["2"]);
@@ -5827,7 +5831,7 @@ function renderMarketRsExtensionGauge(metric) {
         <span>Gap <strong>${formatSignedPercent(metric.deviationPct)}</strong></span>
         <span>Sigma <strong>${formatSignedSigma(metric.signedSigma)}</strong></span>
         <span>Anchor <strong>${formatDollarPrice(metric.anchor)}</strong></span>
-        <span>ATR <strong>${formatDollarPrice(metric.atr)}</strong></span>
+        <span>${atrLabel.label} <strong>${atrLabel.value}</strong></span>
       </div>
     </article>
   `;
@@ -6459,7 +6463,7 @@ function renderMarketRsOverview() {
           <div class="market-rs-extension-panel">
             <div class="market-rs-extension-title">
               <strong>ATR Extension</strong>
-              <span>Distance from 21 EMA and 50 SMA measured in 21D ATR multiples.</span>
+              <span>Distance from 21 EMA and 50 SMA measured as gap % divided by 21D ATR%.</span>
             </div>
             <div class="market-rs-extension-grid">
               ${extensionMarkup || '<p class="market-rs-empty">Extension data will appear after the next RS data refresh.</p>'}

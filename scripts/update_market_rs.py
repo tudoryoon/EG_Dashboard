@@ -648,6 +648,7 @@ def build_payload(
         ticker_low_series = stock_low[ticker] if ticker in stock_low.columns else pd.Series(dtype=float)
         ticker_raw_close_series = stock_raw_close[ticker] if ticker in stock_raw_close.columns else pd.Series(dtype=float)
         ticker_atr_series = compute_atr_series(ticker_high_series, ticker_low_series, ticker_raw_close_series)
+        ticker_atr_pct_series = compute_atr_pct_series(ticker_high_series, ticker_low_series, ticker_raw_close_series)
 
         row = {
             "ticker": ticker,
@@ -677,7 +678,7 @@ def build_payload(
                 ticker_low_series,
                 ticker_raw_close_series,
             ),
-            "extension": compute_extension_metrics(ticker_raw_close_series, ticker_atr_series),
+            "extension": compute_extension_metrics(ticker_raw_close_series, ticker_atr_series, ticker_atr_pct_series),
             "distanceTo52wHighPct": compute_52w_gap(performance_series),
             "rsNewHigh": rs_new_high_all,
             "rsNewHighAll": rs_new_high_all,
@@ -866,17 +867,26 @@ def classify_extension(abs_sigma: float | None) -> str:
     return "normal"
 
 
-def compute_extension_metrics(close_series: pd.Series, atr_series: pd.Series) -> dict[str, dict[str, object]]:
+def compute_extension_metrics(
+    close_series: pd.Series,
+    atr_series: pd.Series,
+    atr_pct_series: pd.Series,
+) -> dict[str, dict[str, object]]:
     metrics: dict[str, dict[str, object]] = {}
     close = close_series.dropna()
-    if close.empty or atr_series.empty:
+    if close.empty or atr_pct_series.empty:
         return metrics
     current_price = float(close.iloc[-1])
-    aligned_atr = atr_series.reindex(close.index).dropna()
-    if aligned_atr.empty:
+    aligned_atr_pct = atr_pct_series.reindex(close.index).dropna()
+    if aligned_atr_pct.empty:
         return metrics
-    latest_atr = float(aligned_atr.iloc[-1])
-    if not math.isfinite(current_price) or current_price <= 0 or not math.isfinite(latest_atr) or latest_atr <= 0:
+    latest_atr_pct = float(aligned_atr_pct.iloc[-1])
+    latest_atr_dollar = None
+    if not atr_series.empty:
+        aligned_atr_dollar = atr_series.reindex(close.index).dropna()
+        if not aligned_atr_dollar.empty and math.isfinite(float(aligned_atr_dollar.iloc[-1])):
+            latest_atr_dollar = float(aligned_atr_dollar.iloc[-1])
+    if not math.isfinite(current_price) or current_price <= 0 or not math.isfinite(latest_atr_pct) or latest_atr_pct <= 0:
         return metrics
     for key, meta in EXTENSION_ANCHORS.items():
         period = int(meta["period"])
@@ -889,14 +899,16 @@ def compute_extension_metrics(close_series: pd.Series, atr_series: pd.Series) ->
         anchor = float(anchor_series.dropna().iloc[-1])
         if not math.isfinite(anchor) or anchor <= 0:
             continue
-        atr_multiple = (current_price - anchor) / latest_atr
         deviation_pct = ((current_price / anchor) - 1) * 100
+        atr_multiple = deviation_pct / latest_atr_pct
         abs_sigma = interpolate_sigma(abs(float(atr_multiple)), dict(meta["sigma_thresholds"]))
         metrics[key] = {
             "label": meta["label"],
             "anchor": round(anchor, 2),
             "price": round(current_price, 2),
-            "atr": round(latest_atr, 2),
+            "atr": round(latest_atr_pct, 2),
+            "atrPct": round(latest_atr_pct, 2),
+            "atrDollar": round(latest_atr_dollar, 2) if latest_atr_dollar is not None else None,
             "deviationPct": round(float(deviation_pct), 2),
             "atrMultiple": round(float(atr_multiple), 2),
             "absAtrMultiple": round(abs(float(atr_multiple)), 2),
