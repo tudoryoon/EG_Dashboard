@@ -177,8 +177,8 @@ SECTOR_GROUPS = [
         ],
     },
     {
-        "key": "sw_platform",
-        "label": "S/W 플랫폼",
+        "key": "software",
+        "label": "S/W",
         "items": [
             {"ticker": "PLTR", "label": "PLTR US", "name": "Palantir", "query": "Palantir stock"},
             {"ticker": "IBM", "label": "IBM US", "name": "IBM", "query": "IBM stock"},
@@ -188,12 +188,6 @@ SECTOR_GROUPS = [
             {"ticker": "RDDT", "label": "RDDT US", "name": "Reddit", "query": "Reddit stock"},
             {"ticker": "SHOP", "label": "SHOP US", "name": "Shopify", "query": "Shopify stock"},
             {"ticker": "MDB", "label": "MDB US", "name": "MongoDB", "query": "MongoDB stock"},
-        ],
-    },
-    {
-        "key": "legacy_software",
-        "label": "전통 S/W",
-        "items": [
             {"ticker": "CRM", "label": "CRM US", "name": "Salesforce", "query": "Salesforce stock"},
             {"ticker": "NOW", "label": "NOW US", "name": "ServiceNow", "query": "ServiceNow stock"},
             {"ticker": "SNOW", "label": "SNOW US", "name": "Snowflake", "query": "Snowflake stock"},
