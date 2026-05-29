@@ -25,17 +25,19 @@ jobs:
       - name: Refresh market RS history
         env:
           MARKET_RS_MAX_SHARES_FETCH: "250"
-        run: python scripts/update_market_rs.py
+        run: |
+          python scripts/update_market_rs.py
+          python scripts/update_market_rs_financials.py
 
       - name: Commit updated market RS history
         run: |
-          if git diff --quiet -- data/market-rs-data.js; then
+          if git diff --quiet -- data/market-rs-data.js data/market-rs-financials-data.js; then
             echo "No market RS changes detected."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-rs-data.js
+          git add data/market-rs-data.js data/market-rs-financials-data.js
           git commit -m "Update market RS history" || exit 0
           git pull --rebase origin main
           git push

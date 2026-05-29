@@ -41,6 +41,12 @@ const marketRsData = window.marketRsData ?? {
   rows: [],
   histories: {},
 };
+const marketRsFinancialsData = window.marketRsFinancialsData ?? {
+  updatedAt: "",
+  scope: {},
+  metrics: [],
+  financials: {},
+};
 const memorySpotData = window.memoryData ?? window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memoryDataHistoryData ?? window.memorySpotHistoryData ?? null;
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
@@ -6059,6 +6065,139 @@ function formatMarketCapCompact(value) {
   return `$${(numeric / 1_000_000_000).toFixed(1)}B`;
 }
 
+function formatRsFinancialUsd(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric < 0 ? "-" : "";
+  const absolute = Math.abs(numeric);
+  if (absolute >= 1_000_000_000) {
+    return `${sign}$${(absolute / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (absolute >= 1_000_000) {
+    return `${sign}$${(absolute / 1_000_000).toFixed(0)}M`;
+  }
+  return `${sign}$${absolute.toFixed(0)}`;
+}
+
+function formatRsFinancialPercent(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(1)}%`;
+}
+
+function formatRsFinancialMargin(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toFixed(1)}%`;
+}
+
+function formatRsFinancialPp(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(1)}pp`;
+}
+
+function formatRsFinancialEps(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric < 0 ? "-" : "";
+  return `${sign}$${Math.abs(numeric).toFixed(2)}`;
+}
+
+function renderMarketRsFinancials(row) {
+  if (!row) {
+    return "";
+  }
+
+  const ticker = row.ticker;
+  const isNasdaq100 = Boolean(row.memberships?.nasdaq100);
+  const item = marketRsFinancialsData.financials?.[ticker];
+  const updatedAt = marketRsFinancialsData.updatedAt ? formatKstDateTime(marketRsFinancialsData.updatedAt) : "";
+  const scopeText = marketRsFinancialsData.scope?.basis ?? "SEC GAAP/XBRL proxy.";
+
+  if (!isNasdaq100) {
+    return `
+      <div class="market-rs-financial-panel">
+        <div class="market-rs-financial-head">
+          <strong>Quarterly Financials</strong>
+          <span>NASDAQ 100 first pass</span>
+        </div>
+        <p class="market-rs-empty">NASDAQ 100 종목부터 재무 데이터가 표시됩니다.</p>
+      </div>
+    `;
+  }
+
+  if (!item?.quarters?.length) {
+    return `
+      <div class="market-rs-financial-panel">
+        <div class="market-rs-financial-head">
+          <strong>Quarterly Financials</strong>
+          <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
+        </div>
+        <p class="market-rs-empty">SEC companyfacts에서 최근 분기 재무 데이터를 찾지 못했습니다.</p>
+      </div>
+    `;
+  }
+
+  const rows = item.quarters
+    .map((quarter) => `
+      <tr>
+        <td>${quarter.period ?? "-"}</td>
+        <td>${formatRsFinancialUsd(quarter.revenue)}</td>
+        <td><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
+        <td>${formatRsFinancialMargin(quarter.grossMarginPct)}</td>
+        <td>${formatRsFinancialMargin(quarter.operatingMarginPct)}</td>
+        <td><span class="${getSignedValueClass(quarter.operatingMarginYoyPp)}">${formatRsFinancialPp(quarter.operatingMarginYoyPp)}</span></td>
+        <td>${formatRsFinancialEps(quarter.epsDiluted)}</td>
+        <td>${formatRsFinancialUsd(quarter.ocf)}</td>
+        <td>${formatRsFinancialUsd(quarter.fcf)}</td>
+      </tr>
+    `)
+    .join("");
+
+  return `
+    <div class="market-rs-financial-panel">
+      <div class="market-rs-financial-head">
+        <div>
+          <strong>Quarterly Financials</strong>
+          <p>Revenue YoY / OPM YoY pp included</p>
+        </div>
+        <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
+      </div>
+      <div class="market-rs-financial-table-wrap">
+        <table class="market-rs-financial-table">
+          <thead>
+            <tr>
+              <th>Quarter</th>
+              <th>Revenue</th>
+              <th>Rev YoY</th>
+              <th>GPM</th>
+              <th>OPM</th>
+              <th>OPM YoY</th>
+              <th>EPS</th>
+              <th>OCF</th>
+              <th>FCF</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p class="market-rs-financial-note">${scopeText}</p>
+    </div>
+  `;
+}
+
 function formatUsStockPrice(value, maximumFractionDigits = 2) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -6573,6 +6712,7 @@ function renderMarketRsOverview() {
   const extensionMarkup = ["ema21", "sma50"]
     .map((key) => renderMarketRsExtensionGauge(extension[key]))
     .join("");
+  const financialMarkup = renderMarketRsFinancials(selected);
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -6684,6 +6824,7 @@ function renderMarketRsOverview() {
             <canvas data-rs-chart="detail"></canvas>
           </div>
           <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price.</p>
+          ${financialMarkup}
         </article>
       </section>
 
