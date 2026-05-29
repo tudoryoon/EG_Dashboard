@@ -27,6 +27,30 @@ BLS_CPI_OFFICIAL_YOY = {
 }
 BLS_DIRECT_SERIES = {"WPSFD4", "WPSFD49104"}
 MANUAL_RELEASE_OVERRIDES = {
+    "headline_pce": {
+        "releaseDate": "2026-05-28",
+        "time": "21:30",
+        "reference": "Apr",
+        "actual": "0.4%",
+        "actualValue": 0.4,
+        "previous": "0.7%",
+        "consensus": "0.4%",
+        "surprise": "+0.00%p",
+        "surpriseValue": 0.0,
+        "unit": "percent",
+    },
+    "core_pce": {
+        "releaseDate": "2026-05-28",
+        "time": "21:30",
+        "reference": "Apr",
+        "actual": "0.2%",
+        "actualValue": 0.2,
+        "previous": "0.3%",
+        "consensus": "0.3%",
+        "surprise": "-0.10%p",
+        "surpriseValue": -0.1,
+        "unit": "percent",
+    },
     "final_demand_ppi": {
         "releaseDate": "2026-05-13",
         "time": "18:00",
