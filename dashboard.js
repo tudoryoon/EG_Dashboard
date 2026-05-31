@@ -6121,19 +6121,19 @@ function renderMarketRsFinancials(row) {
   }
 
   const ticker = row.ticker;
-  const isNasdaq100 = Boolean(row.memberships?.nasdaq100);
+  const isFinancialsCovered = Boolean(row.memberships?.sp500 || row.memberships?.nasdaq100);
   const item = marketRsFinancialsData.financials?.[ticker];
   const updatedAt = marketRsFinancialsData.updatedAt ? formatKstDateTime(marketRsFinancialsData.updatedAt) : "";
   const scopeText = marketRsFinancialsData.scope?.basis ?? "SEC GAAP/XBRL proxy.";
 
-  if (!isNasdaq100) {
+  if (!isFinancialsCovered) {
     return `
       <div class="market-rs-financial-panel">
         <div class="market-rs-financial-head">
           <strong>Quarterly Financials</strong>
-          <span>NASDAQ 100 first pass</span>
+          <span>S&P 500 + NASDAQ 100 coverage</span>
         </div>
-        <p class="market-rs-empty">NASDAQ 100 종목부터 재무 데이터가 표시됩니다.</p>
+        <p class="market-rs-empty">Financials are currently available for S&P 500 and NASDAQ 100 names.</p>
       </div>
     `;
   }
@@ -6145,7 +6145,7 @@ function renderMarketRsFinancials(row) {
           <strong>Quarterly Financials</strong>
           <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
         </div>
-        <p class="market-rs-empty">SEC companyfacts에서 최근 분기 재무 데이터를 찾지 못했습니다.</p>
+        <p class="market-rs-empty">Recent quarterly financials were not available from SEC companyfacts for this ticker.</p>
       </div>
     `;
   }

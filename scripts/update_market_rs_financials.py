@@ -19,13 +19,21 @@ SEC_HEADERS = {
     "User-Agent": "EG Dashboard research contact@example.com",
     "Accept-Encoding": "gzip, deflate",
 }
+TARGET_MEMBERSHIPS = ("sp500", "nasdaq100")
 
 REVENUE_TAGS = [
     "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "RevenueFromContractWithCustomerIncludingAssessedTax",
+    "RegulatedAndUnregulatedOperatingRevenue",
+    "RevenuesNetOfInterestExpense",
+    "OperatingRevenues",
+    "OperatingLeaseLeaseIncome",
     "Revenues",
     "SalesRevenueNet",
     "SalesRevenueGoodsNet",
 ]
+NET_INTEREST_INCOME_TAGS = ["InterestIncomeExpenseNet"]
+NONINTEREST_INCOME_TAGS = ["NoninterestIncome"]
 GROSS_PROFIT_TAGS = ["GrossProfit"]
 OPERATING_INCOME_TAGS = ["OperatingIncomeLoss"]
 EPS_DILUTED_TAGS = ["EarningsPerShareDiluted"]
@@ -80,6 +88,16 @@ def load_sec_ticker_map() -> dict[str, dict[str, Any]]:
             "title": item.get("title") or ticker,
         }
     return mapping
+
+
+def sec_ticker_candidates(ticker: str) -> list[str]:
+    clean = ticker.upper().strip()
+    candidates = [clean]
+    if "." in clean:
+        candidates.append(clean.replace(".", "-"))
+    if "-" in clean:
+        candidates.append(clean.replace("-", "."))
+    return list(dict.fromkeys(candidates))
 
 
 def normalize_period(frame: str | None, end: str | None) -> str | None:
@@ -266,9 +284,48 @@ def pct_change(current: float | None, previous: float | None) -> float | None:
     return (ratio - 1) * 100
 
 
+def latest_period_key(series: dict[str, dict[str, Any]]) -> str:
+    return max(series) if series else ""
+
+
+def add_series(
+    left: dict[str, dict[str, Any]],
+    right: dict[str, dict[str, Any]],
+    *,
+    tag: str,
+) -> dict[str, dict[str, Any]]:
+    combined: dict[str, dict[str, Any]] = {}
+    for period in sorted(set(left) & set(right)):
+        left_item = left.get(period, {})
+        right_item = right.get(period, {})
+        left_value = left_item.get("value")
+        right_value = right_item.get("value")
+        if left_value is None or right_value is None:
+            continue
+        combined[period] = {
+            "value": float(left_value) + float(right_value),
+            "end": left_item.get("end") or right_item.get("end"),
+            "filed": max(str(left_item.get("filed") or ""), str(right_item.get("filed") or "")) or None,
+            "form": left_item.get("form") or right_item.get("form"),
+            "tag": tag,
+            "unit": left_item.get("unit") or right_item.get("unit"),
+            "derived": "net-interest-income-plus-noninterest-income",
+        }
+    return combined
+
+
 def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]:
     facts = fetch_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
     revenue = extract_tag_series(facts, REVENUE_TAGS)
+    bank_revenue = add_series(
+        extract_tag_series(facts, NET_INTEREST_INCOME_TAGS),
+        extract_tag_series(facts, NONINTEREST_INCOME_TAGS),
+        tag="InterestIncomeExpenseNet+NoninterestIncome",
+    )
+    if latest_period_key(bank_revenue) > latest_period_key(revenue):
+        revenue = bank_revenue
+    if revenue and latest_period_key(revenue) < "2024Q1":
+        revenue = {}
     gross_profit = extract_tag_series(facts, GROSS_PROFIT_TAGS)
     operating_income = extract_tag_series(facts, OPERATING_INCOME_TAGS)
     eps = extract_tag_series(facts, EPS_DILUTED_TAGS, ("USD/shares", "USD/shares"), allow_annual_derive=False)
@@ -329,19 +386,19 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
 
 def main() -> None:
     rs_payload = read_js_payload(RS_DATA_PATH, "marketRsData")
-    nasdaq_rows = [
+    target_rows = [
         row
         for row in rs_payload.get("rows", [])
-        if (row.get("memberships") or {}).get("nasdaq100")
+        if any((row.get("memberships") or {}).get(key) for key in TARGET_MEMBERSHIPS)
     ]
     ticker_map = load_sec_ticker_map()
     financials: dict[str, Any] = {}
     missing: list[str] = []
     errors: dict[str, str] = {}
 
-    for index, row in enumerate(sorted(nasdaq_rows, key=lambda item: str(item.get("ticker")))):
+    for index, row in enumerate(sorted(target_rows, key=lambda item: str(item.get("ticker")))):
         ticker = str(row.get("ticker") or "").upper()
-        mapping = ticker_map.get(ticker)
+        mapping = next((ticker_map.get(candidate) for candidate in sec_ticker_candidates(ticker) if ticker_map.get(candidate)), None)
         if not mapping:
             missing.append(ticker)
             continue
@@ -351,13 +408,18 @@ def main() -> None:
             errors[ticker] = str(error)
         time.sleep(0.12)
         if (index + 1) % 20 == 0:
-            print(f"Processed {index + 1}/{len(nasdaq_rows)}")
+            print(f"Processed {index + 1}/{len(target_rows)}")
+
+    sp500_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("sp500"))
+    nasdaq100_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("nasdaq100"))
 
     payload = {
         "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "scope": {
-            "universe": "NASDAQ 100",
-            "tickers": sorted(row.get("ticker") for row in nasdaq_rows),
+            "universe": "S&P 500 + NASDAQ 100",
+            "universes": list(TARGET_MEMBERSHIPS),
+            "counts": {"sp500": sp500_count, "nasdaq100": nasdaq100_count, "total": len(target_rows)},
+            "tickers": sorted(row.get("ticker") for row in target_rows),
             "source": "SEC EDGAR companyfacts",
             "basis": "SEC GAAP/XBRL proxy. Free SEC data does not provide standardized Non-GAAP GPM/OPM across issuers.",
         },
@@ -375,7 +437,7 @@ def main() -> None:
     }
     write_js_payload(OUTPUT_PATH, "marketRsFinancialsData", payload)
     print(f"Wrote {OUTPUT_PATH}")
-    print(f"Companies: {len(financials)} / {len(nasdaq_rows)}")
+    print(f"Companies: {len(financials)} / {len(target_rows)}")
     if missing:
         print(f"Missing CIK: {', '.join(missing)}")
     if errors:
