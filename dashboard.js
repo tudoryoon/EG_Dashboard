@@ -5268,8 +5268,8 @@ function getRotationClassKorean(classification) {
 
 function getRotationClassRule(classification) {
   const rules = {
-    Leading: "1W > 0, 1M > 0",
-    Improving: "1W > 0, 1M <= 0",
+    Leading: "1W > 0, 2W > 0, 1M > 0",
+    Improving: "1W > 0, and not all Leading conditions",
     Weakening: "1W <= 0, 1M 또는 2W > 0",
     Lagging: "그 외",
   };

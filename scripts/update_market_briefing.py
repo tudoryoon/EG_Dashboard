@@ -869,7 +869,14 @@ def classify_rotation(excess: dict[str, float | None]) -> str:
     one_week = safe_float(excess.get("1w"))
     two_week = safe_float(excess.get("2w"))
     one_month = safe_float(excess.get("1m"))
-    if one_week is not None and one_week > 0 and one_month is not None and one_month > 0:
+    if (
+        one_week is not None
+        and one_week > 0
+        and two_week is not None
+        and two_week > 0
+        and one_month is not None
+        and one_month > 0
+    ):
         return "Leading"
     if one_week is not None and one_week > 0:
         return "Improving"
