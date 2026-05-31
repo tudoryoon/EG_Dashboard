@@ -191,6 +191,7 @@ SECTOR_GROUPS = [
             {"ticker": "CRM", "label": "CRM US", "name": "Salesforce", "query": "Salesforce stock"},
             {"ticker": "NOW", "label": "NOW US", "name": "ServiceNow", "query": "ServiceNow stock"},
             {"ticker": "SNOW", "label": "SNOW US", "name": "Snowflake", "query": "Snowflake stock"},
+            {"ticker": "NTAP", "label": "NTAP US", "name": "NetApp", "query": "NetApp stock"},
         ],
     },
     {
