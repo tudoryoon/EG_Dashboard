@@ -6115,6 +6115,15 @@ function formatRsFinancialEps(value) {
   return `${sign}$${Math.abs(numeric).toFixed(2)}`;
 }
 
+function formatRsFinancialPeriodRange(start, end) {
+  const startText = formatShortIsoDate(start);
+  const endText = formatShortIsoDate(end);
+  if (startText && endText) {
+    return `${startText} - ${endText}`;
+  }
+  return startText || endText || "-";
+}
+
 function renderMarketRsFinancials(row) {
   if (!row) {
     return "";
@@ -6154,6 +6163,7 @@ function renderMarketRsFinancials(row) {
     .map((quarter) => `
       <tr>
         <td>${quarter.period ?? "-"}</td>
+        <td>${formatRsFinancialPeriodRange(quarter.periodStart, quarter.periodEnd)}</td>
         <td>${formatRsFinancialUsd(quarter.revenue)}</td>
         <td><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
         <td>${formatRsFinancialMargin(quarter.grossMarginPct)}</td>
@@ -6180,6 +6190,7 @@ function renderMarketRsFinancials(row) {
           <thead>
             <tr>
               <th>Quarter</th>
+              <th>FY Dates</th>
               <th>Revenue</th>
               <th>Rev YoY</th>
               <th>GPM</th>

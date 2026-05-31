@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -100,25 +100,95 @@ def sec_ticker_candidates(ticker: str) -> list[str]:
     return list(dict.fromkeys(candidates))
 
 
-def normalize_period(frame: str | None, end: str | None) -> str | None:
+def normalize_calendar_period(frame: str | None, end: str | None) -> str | None:
     if frame:
         match = re.match(r"CY(\d{4})Q([1-4])$", frame)
         if match:
-            return f"{match.group(1)}Q{match.group(2)}"
+            return f"FY{match.group(1)}Q{match.group(2)}"
     if end and re.match(r"\d{4}-\d{2}-\d{2}", end):
         month = int(end[5:7])
         quarter = ((month - 1) // 3) + 1
-        return f"{end[:4]}Q{quarter}"
+        return f"FY{end[:4]}Q{quarter}"
     return None
 
 
-def period_from_fiscal_period(fy: int | None, fp: str | None, end: str | None) -> str | None:
-    if not isinstance(fy, int) or fp not in {"Q1", "Q2", "Q3"} or not end:
+def fiscal_period_key(fy: int | None, fp: str | None, *, annual_as_q4: bool = False) -> str | None:
+    if not isinstance(fy, int):
         return None
-    match = re.match(r"(\d{4})-\d{2}-\d{2}", end)
-    if not match:
+    if fp in {"Q1", "Q2", "Q3", "Q4"}:
+        return f"FY{fy}Q{str(fp)[1]}"
+    if fp == "FY" and annual_as_q4:
+        return f"FY{fy}Q4"
+    return None
+
+
+def fiscal_year_key(fy: int | None, frame: str | None) -> str | None:
+    if isinstance(fy, int):
+        return str(fy)
+    if frame:
+        match = re.match(r"CY(\d{4})$", frame)
+        if match:
+            return match.group(1)
+    return None
+
+
+def format_fiscal_period_label(period: str) -> str:
+    match = re.match(r"FY(\d{4})Q([1-4])$", period)
+    if match:
+        return f"FY{match.group(1)} Q{match.group(2)}"
+    return period
+
+
+def next_day_iso(date_text: str | None) -> str | None:
+    if not date_text:
         return None
-    return f"{match.group(1)}Q{str(fp)[1]}"
+    try:
+        return (datetime.fromisoformat(date_text) + timedelta(days=1)).date().isoformat()
+    except ValueError:
+        return None
+
+
+def parse_iso_date(date_text: str | None) -> datetime | None:
+    if not date_text:
+        return None
+    try:
+        return datetime.fromisoformat(date_text)
+    except ValueError:
+        return None
+
+
+def infer_fiscal_year(
+    fy: int | None,
+    fp: str | None,
+    start: str | None,
+    end: str | None,
+    annual_ranges: list[dict[str, Any]],
+) -> int | None:
+    if fp not in {"Q1", "Q2", "Q3", "Q4"}:
+        return fy if isinstance(fy, int) else None
+
+    start_date = parse_iso_date(start)
+    end_date = parse_iso_date(end)
+    if start_date and end_date:
+        for annual in annual_ranges:
+            annual_start = parse_iso_date(annual.get("start"))
+            annual_end = parse_iso_date(annual.get("end"))
+            if annual_start and annual_end and annual_start <= start_date and end_date <= annual_end:
+                return int(annual["fy"])
+
+        previous_annuals = [
+            annual
+            for annual in annual_ranges
+            if parse_iso_date(annual.get("end")) and parse_iso_date(annual.get("end")) < end_date
+        ]
+        if previous_annuals:
+            latest = max(previous_annuals, key=lambda annual: parse_iso_date(annual.get("end")) or datetime.min)
+            latest_end = parse_iso_date(latest.get("end"))
+            if latest_end:
+                years_after = max(1, ((end_date - latest_end).days + 370) // 371)
+                return int(latest["fy"]) + years_after
+
+    return fy if isinstance(fy, int) else None
 
 
 def is_ytd_fact(start: str | None, end: str | None, fiscal_quarter: int) -> bool:
@@ -168,12 +238,13 @@ def extract_tag_series(
             frame = row.get("frame")
             if row.get("form") not in FINANCIAL_FORMS or row.get("val") is None:
                 continue
-            if frame and re.match(r"CY\d{4}Q[1-4]$", frame):
-                periods.append(frame[2:])
-            elif frame and re.match(r"CY\d{4}$", frame):
-                periods.append(f"{frame[2:]}Q4")
-            elif isinstance(row.get("fy"), int) and row.get("fp") in {"Q1", "Q2", "Q3"}:
-                periods.append(f"{row['fy']}Q{str(row['fp'])[1]}")
+            period = fiscal_period_key(row.get("fy"), row.get("fp"), annual_as_q4=True)
+            if not period and frame and re.match(r"CY\d{4}Q[1-4]$", frame):
+                period = normalize_calendar_period(frame, row.get("end"))
+            if not period and frame and re.match(r"CY\d{4}$", frame):
+                period = f"FY{frame[2:6]}Q4"
+            if period:
+                periods.append(period)
         latest_period = max(periods) if periods else ""
         if rows and latest_period and latest_period > selected_latest_period:
             selected_rows = rows
@@ -187,6 +258,18 @@ def extract_tag_series(
     quarters: dict[str, dict[str, Any]] = {}
     annuals: dict[str, dict[str, Any]] = {}
     ytd: dict[tuple[str, int], dict[str, Any]] = {}
+    annual_ranges = sorted(
+        [
+            {"fy": row.get("fy"), "start": row.get("start"), "end": row.get("end")}
+            for row in selected_rows
+            if isinstance(row.get("fy"), int)
+            and row.get("fp") == "FY"
+            and row.get("start")
+            and row.get("end")
+            and row.get("val") is not None
+        ],
+        key=lambda item: (int(item["fy"]), str(item.get("filed") or "")) if isinstance(item.get("fy"), int) else (0, ""),
+    )
     framed_fact_keys = {
         (row.get("end"), row.get("filed"))
         for row in selected_rows
@@ -204,9 +287,11 @@ def extract_tag_series(
         end = row.get("end")
         fy = row.get("fy")
         fp = row.get("fp")
-        period = normalize_period(frame, end)
+        inferred_fy = infer_fiscal_year(fy, fp, row.get("start"), end, annual_ranges)
+        period = fiscal_period_key(inferred_fy, fp) or normalize_calendar_period(frame, end)
         item = {
             "value": float(value),
+            "start": row.get("start"),
             "end": end,
             "filed": row.get("filed"),
             "form": form,
@@ -221,22 +306,24 @@ def extract_tag_series(
             continue
 
         if frame and re.match(r"CY\d{4}$", frame):
-            annuals[frame[2:6]] = item
+            year = fiscal_year_key(fy, frame)
+            if year:
+                annuals[year] = item
             continue
 
         if not frame and (end, row.get("filed")) in framed_fact_keys:
             continue
 
-        if isinstance(fy, int) and fp in {"Q1", "Q2", "Q3"}:
+        if isinstance(inferred_fy, int) and fp in {"Q1", "Q2", "Q3"}:
             quarter = int(str(fp)[1])
-            fiscal_period = period_from_fiscal_period(fy, fp, end) or period
+            fiscal_period = fiscal_period_key(inferred_fy, fp) or period
             if quarter == 1:
                 existing = quarters.get(fiscal_period or "")
                 if not existing or str(item.get("filed") or "") >= str(existing.get("filed") or ""):
                     quarters[fiscal_period or ""] = item
-                ytd[(str(fy), quarter)] = {**item, "period": fiscal_period}
+                ytd[(str(inferred_fy), quarter)] = {**item, "period": fiscal_period}
             elif is_ytd_fact(row.get("start"), end, quarter):
-                ytd[(str(fy), quarter)] = {**item, "period": fiscal_period}
+                ytd[(str(inferred_fy), quarter)] = {**item, "period": fiscal_period}
             elif fiscal_period:
                 existing = quarters.get(fiscal_period)
                 if not existing or str(item.get("filed") or "") >= str(existing.get("filed") or ""):
@@ -244,13 +331,14 @@ def extract_tag_series(
 
     if allow_annual_derive:
         for year, annual in annuals.items():
-            q4_key = f"{year}Q4"
+            q4_key = f"FY{year}Q4"
             if q4_key in quarters:
                 continue
-            q_values = [quarters.get(f"{year}Q{quarter}") for quarter in (1, 2, 3)]
+            q_values = [quarters.get(f"FY{year}Q{quarter}") for quarter in (1, 2, 3)]
             if all(item and item.get("value") is not None for item in q_values):
                 derived = dict(annual)
                 derived["value"] = float(annual["value"]) - sum(float(item["value"]) for item in q_values if item)
+                derived["start"] = next_day_iso(q_values[-1].get("end") if q_values[-1] else None)
                 derived["derived"] = "FY-Q1-Q2-Q3"
                 quarters[q4_key] = derived
 
@@ -265,6 +353,7 @@ def extract_tag_series(
             if previous:
                 derived = dict(item)
                 derived["value"] = float(item["value"]) - float(previous["value"])
+                derived["start"] = next_day_iso(previous.get("end"))
                 derived["derived"] = f"YTD-Q{quarter - 1}"
                 quarters[period] = derived
 
@@ -272,9 +361,28 @@ def extract_tag_series(
 
 
 def divide(numerator: float | None, denominator: float | None) -> float | None:
-    if numerator is None or denominator in {None, 0}:
+    if numerator is None or denominator is None or denominator <= 0:
         return None
     return float(numerator) / float(denominator)
+
+
+def previous_fiscal_quarter(period: str) -> str | None:
+    match = re.match(r"FY(\d{4})Q([1-4])$", period)
+    if not match:
+        return None
+    year = int(match.group(1))
+    quarter = int(match.group(2))
+    if quarter == 1:
+        return f"FY{year - 1}Q4"
+    return f"FY{year}Q{quarter - 1}"
+
+
+def get_series_field(series_list: list[dict[str, dict[str, Any]]], period: str, field: str) -> Any:
+    for series in series_list:
+        value = series.get(period, {}).get(field)
+        if value:
+            return value
+    return None
 
 
 def pct_change(current: float | None, previous: float | None) -> float | None:
@@ -324,7 +432,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
     )
     if latest_period_key(bank_revenue) > latest_period_key(revenue):
         revenue = bank_revenue
-    if revenue and latest_period_key(revenue) < "2024Q1":
+    if revenue and latest_period_key(revenue) < "FY2024Q1":
         revenue = {}
     gross_profit = extract_tag_series(facts, GROSS_PROFIT_TAGS)
     operating_income = extract_tag_series(facts, OPERATING_INCOME_TAGS)
@@ -344,7 +452,10 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         eps_value = eps.get(period, {}).get("value")
         ocf_value = ocf.get(period, {}).get("value")
         capex_value = capex.get(period, {}).get("value")
-        prior_year_period = f"{int(period[:4]) - 1}{period[4:]}" if re.match(r"\d{4}Q[1-4]", period) else ""
+        prior_year_period = ""
+        period_match = re.match(r"FY(\d{4})Q([1-4])$", period)
+        if period_match:
+            prior_year_period = f"FY{int(period_match.group(1)) - 1}Q{period_match.group(2)}"
         prior_revenue = revenue.get(prior_year_period, {}).get("value")
         prior_op_margin = None
         if prior_year_period:
@@ -353,16 +464,19 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         fcf_value = None
         if ocf_value is not None and capex_value is not None:
             fcf_value = float(ocf_value) - abs(float(capex_value))
+        period_start = get_series_field([revenue, operating_income, ocf], period, "start")
+        if not period_start:
+            previous_period = previous_fiscal_quarter(period)
+            previous_end = get_series_field([revenue, operating_income, ocf], previous_period or "", "end")
+            period_start = next_day_iso(previous_end)
 
         rows.append(
             {
-                "period": period,
-                "periodEnd": revenue.get(period, {}).get("end")
-                or operating_income.get(period, {}).get("end")
-                or ocf.get(period, {}).get("end"),
-                "filed": revenue.get(period, {}).get("filed")
-                or operating_income.get(period, {}).get("filed")
-                or ocf.get(period, {}).get("filed"),
+                "period": format_fiscal_period_label(period),
+                "periodKey": period,
+                "periodStart": period_start,
+                "periodEnd": get_series_field([revenue, operating_income, ocf], period, "end"),
+                "filed": get_series_field([revenue, operating_income, ocf], period, "filed"),
                 "revenue": safe_round(revenue_value, 0),
                 "revenueYoyPct": safe_round(pct_change(revenue_value, prior_revenue), 1),
                 "grossMarginPct": safe_round(divide(gross_profit_value, revenue_value) * 100 if divide(gross_profit_value, revenue_value) is not None else None, 1),
