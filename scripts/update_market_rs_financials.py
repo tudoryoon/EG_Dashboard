@@ -27,7 +27,6 @@ REVENUE_TAGS = [
     "RegulatedAndUnregulatedOperatingRevenue",
     "RevenuesNetOfInterestExpense",
     "OperatingRevenues",
-    "OperatingLeaseLeaseIncome",
     "Revenues",
     "SalesRevenueNet",
     "SalesRevenueGoodsNet",
@@ -157,6 +156,57 @@ def parse_iso_date(date_text: str | None) -> datetime | None:
         return None
 
 
+def duration_days(start: str | None, end: str | None) -> int | None:
+    start_date = parse_iso_date(start)
+    end_date = parse_iso_date(end)
+    if not start_date or not end_date:
+        return None
+    return (end_date - start_date).days
+
+
+def is_full_year_fact(start: str | None, end: str | None) -> bool:
+    days = duration_days(start, end)
+    return days is not None and days >= 300
+
+
+def is_quarter_length_fact(start: str | None, end: str | None) -> bool:
+    days = duration_days(start, end)
+    return days is not None and 45 <= days <= 125
+
+
+def fiscal_year_from_end(end: str | None, fallback: int | None = None) -> int | None:
+    if end and re.match(r"\d{4}-\d{2}-\d{2}$", end):
+        return int(end[:4])
+    return fallback if isinstance(fallback, int) else None
+
+
+def infer_quarter_period_from_range(
+    start: str | None,
+    end: str | None,
+    annual_ranges: list[dict[str, Any]],
+) -> str | None:
+    start_date = parse_iso_date(start)
+    end_date = parse_iso_date(end)
+    if not start_date or not end_date or not is_quarter_length_fact(start, end):
+        return None
+
+    for annual in annual_ranges:
+        annual_start = parse_iso_date(annual.get("start"))
+        annual_end = parse_iso_date(annual.get("end"))
+        annual_fy = annual.get("fy")
+        if not annual_start or not annual_end or not isinstance(annual_fy, int):
+            continue
+        if not (annual_start <= start_date and end_date <= annual_end):
+            continue
+        if end_date.date() == annual_end.date():
+            return f"FY{annual_fy}Q4"
+        total_days = max(1, (annual_end - annual_start).days + 1)
+        offset_days = max(0, ((start_date - annual_start).days + (end_date - annual_start).days) / 2)
+        quarter = min(4, max(1, int((offset_days / total_days) * 4) + 1))
+        return f"FY{annual_fy}Q{quarter}"
+    return None
+
+
 def infer_fiscal_year(
     fy: int | None,
     fp: str | None,
@@ -260,13 +310,18 @@ def extract_tag_series(
     ytd: dict[tuple[str, int], dict[str, Any]] = {}
     annual_ranges = sorted(
         [
-            {"fy": row.get("fy"), "start": row.get("start"), "end": row.get("end")}
+            {
+                "fy": fiscal_year_from_end(row.get("end"), row.get("fy")),
+                "start": row.get("start"),
+                "end": row.get("end"),
+            }
             for row in selected_rows
             if isinstance(row.get("fy"), int)
             and row.get("fp") == "FY"
             and row.get("start")
             and row.get("end")
             and row.get("val") is not None
+            and is_full_year_fact(row.get("start"), row.get("end"))
         ],
         key=lambda item: (int(item["fy"]), str(item.get("filed") or "")) if isinstance(item.get("fy"), int) else (0, ""),
     )
@@ -288,7 +343,12 @@ def extract_tag_series(
         fy = row.get("fy")
         fp = row.get("fp")
         inferred_fy = infer_fiscal_year(fy, fp, row.get("start"), end, annual_ranges)
-        period = fiscal_period_key(inferred_fy, fp) or normalize_calendar_period(frame, end)
+        framed_quarter_period = (
+            infer_quarter_period_from_range(row.get("start"), end, annual_ranges)
+            if frame and re.match(r"CY\d{4}Q[1-4]$", frame)
+            else None
+        )
+        period = framed_quarter_period or fiscal_period_key(inferred_fy, fp) or normalize_calendar_period(frame, end)
         item = {
             "value": float(value),
             "start": row.get("start"),
@@ -306,8 +366,8 @@ def extract_tag_series(
             continue
 
         if frame and re.match(r"CY\d{4}$", frame):
-            year = fiscal_year_key(fy, frame)
-            if year:
+            year = str(fiscal_year_from_end(end, fy) or fiscal_year_key(fy, frame) or "")
+            if year and is_full_year_fact(row.get("start"), end):
                 annuals[year] = item
             continue
 
