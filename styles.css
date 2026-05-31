@@ -663,6 +663,15 @@ h1 {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+.briefing-tile.is-rs-linked {
+  cursor: pointer;
+}
+
+.briefing-tile.is-rs-linked:focus-visible {
+  outline: 2px solid rgba(22, 101, 52, 0.72);
+  outline-offset: 2px;
+}
+
 .briefing-tile.xl {
   grid-column: span 4;
   min-height: 164px;
@@ -771,7 +780,6 @@ h1 {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: hidden;
   position: relative;
-  cursor: default;
 }
 
 .briefing-tile-overview .briefing-tile-ticker {

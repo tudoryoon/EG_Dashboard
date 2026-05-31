@@ -5517,6 +5517,66 @@ function getBriefingSectorLayout(sectors, sector) {
   return { sizeClass: "sector-uniform", cols: 3 };
 }
 
+function getMarketRsRowByTicker(ticker) {
+  const normalized = String(ticker ?? "").trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+  return (marketRsData.rows ?? []).find((row) => String(row.ticker ?? "").toUpperCase() === normalized) ?? null;
+}
+
+function getBriefingRsTicker(item) {
+  const rawCandidates = [
+    item?.ticker,
+    String(item?.label ?? "").split(/\s+/)[0],
+  ];
+  const candidates = rawCandidates
+    .map((value) => String(value ?? "").trim().toUpperCase())
+    .filter(Boolean)
+    .flatMap((ticker) => [ticker, ticker.replace(".", "-")]);
+
+  for (const ticker of candidates) {
+    const row = getMarketRsRowByTicker(ticker);
+    if (row) {
+      return row.ticker;
+    }
+  }
+  return "";
+}
+
+function getBriefingRsLinkAttrs(item) {
+  const ticker = getBriefingRsTicker(item);
+  if (!ticker) {
+    return "";
+  }
+  return `data-briefing-rs-ticker="${ticker}" role="button" tabindex="0" aria-label="Open ${ticker} in Market RS"`;
+}
+
+function openMarketRsTicker(ticker) {
+  const row = getMarketRsRowByTicker(ticker);
+  if (!row) {
+    return;
+  }
+
+  state.tab = "Market";
+  state.marketView = "RS";
+  state.rsUniverse = "all";
+  state.rsFilter = "all";
+  state.rsMarketCapRange = "all";
+  state.rsCustomMarketCapMin = "";
+  state.rsCustomMarketCapMax = "";
+  state.rsSelectedTicker = row.ticker;
+  state.query = row.ticker;
+  if (searchInput) {
+    searchInput.value = row.ticker;
+  }
+
+  render();
+  requestAnimationFrame(() => {
+    usOverviewRoot.querySelector(".market-rs-detail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 function renderMarketBriefingOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -5546,11 +5606,13 @@ function renderMarketBriefingOverview() {
       const tiles = (sector.items ?? [])
         .map((item) => {
           const changeClass = Number(item.dayChangePct) > 0 ? "is-up" : Number(item.dayChangePct) < 0 ? "is-down" : "";
+          const rsLinkAttrs = getBriefingRsLinkAttrs(item);
           return `
             <article
-              class="briefing-tile ${item.tileClass ?? "sm"} ${changeClass}"
+              class="briefing-tile ${item.tileClass ?? "sm"} ${changeClass}${rsLinkAttrs ? " is-rs-linked" : ""}"
               style="background:${item.mapColor ?? "#f3f4f6"}"
               title="${item.name} / ${formatSignedPercent(item.dayChangePct)}"
+              ${rsLinkAttrs}
             >
               <span class="briefing-tile-ticker">${item.label}</span>
               <strong class="briefing-tile-name">${item.name}</strong>
@@ -5585,10 +5647,12 @@ function renderMarketBriefingOverview() {
           const overviewChange = getBriefingOverviewReturn(item, state.briefingMapRange);
           const changeClass = Number(overviewChange) > 0 ? "is-up" : Number(overviewChange) < 0 ? "is-down" : "";
           const sizeClass = getBriefingOverviewSizeClass(sector.items ?? [], item);
+          const rsLinkAttrs = getBriefingRsLinkAttrs(item);
           return `
             <article
-              class="briefing-tile briefing-tile-overview ${sizeClass} ${changeClass}"
+              class="briefing-tile briefing-tile-overview ${sizeClass} ${changeClass}${rsLinkAttrs ? " is-rs-linked" : ""}"
               style="background:${getBriefingOverviewColor(item, state.briefingMapRange)}"
+              ${rsLinkAttrs}
             >
               <span class="briefing-tile-ticker">${item.label}</span>
               <span class="briefing-tile-change">${formatSignedPercent(overviewChange)}</span>
@@ -5906,6 +5970,18 @@ function renderMarketBriefingOverview() {
     button.addEventListener("click", () => {
       state.briefingMapRange = button.dataset.briefingRange;
       render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-briefing-rs-ticker]").forEach((element) => {
+    element.addEventListener("click", () => {
+      openMarketRsTicker(element.dataset.briefingRsTicker);
+    });
+    element.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault();
+      openMarketRsTicker(element.dataset.briefingRsTicker);
     });
   });
   usOverviewRoot.querySelectorAll("[data-rotation-sector]").forEach((button) => {
