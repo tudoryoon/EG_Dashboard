@@ -1063,9 +1063,37 @@ def build_rotation_signal(
             "marketCapUsd": item.get("marketCapUsd"),
         }
 
+    def unique_candidates(
+        items: list[dict[str, object]],
+        *,
+        reverse: bool,
+        limit: int = 8,
+    ) -> list[dict[str, object]]:
+        selected: dict[str, dict[str, object]] = {}
+        for item in items:
+            ticker = str(item.get("ticker") or "")
+            score = safe_float(item.get("rotationScore"))
+            if not ticker or score is None:
+                continue
+            current = selected.get(ticker)
+            current_score = safe_float(current.get("rotationScore")) if current else None
+            if current is None or current_score is None:
+                selected[ticker] = item
+                continue
+            if reverse and score > current_score:
+                selected[ticker] = item
+            elif not reverse and score < current_score:
+                selected[ticker] = item
+
+        return sorted(
+            selected.values(),
+            key=lambda item: float(item["rotationScore"]),
+            reverse=reverse,
+        )[:limit]
+
     leading_sector_keys = {sector["key"] for sector in sectors if sector["classification"] in {"Leading", "Improving"}}
     weak_sector_keys = {sector["key"] for sector in sectors if sector["classification"] in {"Weakening", "Lagging"}}
-    buy_watch = sorted(
+    buy_watch = unique_candidates(
         [
             item
             for item in enriched_items
@@ -1073,10 +1101,9 @@ def build_rotation_signal(
             and safe_float(item.get("rotationScore")) is not None
             and all((safe_float(item["excessReturns"].get(key)) or -999) > 0 for key in ("1d", "1w", "1m"))
         ],
-        key=lambda item: float(item["rotationScore"]),
         reverse=True,
-    )[:8]
-    early_rotation = sorted(
+    )
+    early_rotation = unique_candidates(
         [
             item
             for item in enriched_items
@@ -1085,10 +1112,9 @@ def build_rotation_signal(
             and (safe_float(item["excessReturns"].get("1w")) or -999) > 0
             and (safe_float(item["excessReturns"].get("1m")) or 999) <= 0
         ],
-        key=lambda item: float(item["rotationScore"]),
         reverse=True,
-    )[:8]
-    trim_watch = sorted(
+    )
+    trim_watch = unique_candidates(
         [
             item
             for item in enriched_items
@@ -1097,8 +1123,8 @@ def build_rotation_signal(
             and (safe_float(item["excessReturns"].get("1d")) or 999) < 0
             and (safe_float(item["excessReturns"].get("1w")) or 999) < 0
         ],
-        key=lambda item: float(item["rotationScore"]),
-    )[:8]
+        reverse=False,
+    )
 
     return {
         "benchmark": benchmark,
