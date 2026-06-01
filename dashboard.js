@@ -41,6 +41,15 @@ const marketRsData = window.marketRsData ?? {
   rows: [],
   histories: {},
 };
+const marketTrendScoreData = window.marketTrendScoreData ?? {
+  updatedAt: "",
+  historyDates: [],
+  ranges: [],
+  universes: {},
+  scoring: { label: "", description: "" },
+  rows: {},
+  histories: {},
+};
 const marketRsFinancialsData = window.marketRsFinancialsData ?? {
   updatedAt: "",
   scope: {},
@@ -92,6 +101,7 @@ const marketSubtabMeta = {
   VIX: { label: "VIX" },
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
+  TrendScore: { label: "추세스코어" },
   Overview: { label: "Price" },
   Macro: { label: "Macro" },
   Liquidity: { label: "Liquidity" },
@@ -99,7 +109,7 @@ const marketSubtabMeta = {
   FxCommodities: { label: "FX & Commodities" },
 };
 
-const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS"]);
+const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore"]);
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
@@ -280,6 +290,11 @@ const state = {
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
+  trendScoreUniverse: "nasdaq100",
+  trendScoreRange: "3m",
+  trendScoreSelectedTicker: "",
+  trendScoreTableSortKey: "rank",
+  trendScoreTableSortDirection: "asc",
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
@@ -7021,6 +7036,491 @@ function renderMarketRsOverview() {
   }
 }
 
+function getTrendScoreUniverseLabel(key = state.trendScoreUniverse) {
+  return marketTrendScoreData.universes?.[key]?.label ?? key;
+}
+
+function getTrendScoreRows() {
+  return marketTrendScoreData.rows?.[state.trendScoreUniverse] ?? [];
+}
+
+function getVisibleTrendScoreRows() {
+  const query = state.query.trim().toLowerCase();
+  const rows = getTrendScoreRows().filter((row) => {
+    if (!query) {
+      return true;
+    }
+    return String(row.ticker ?? "").toLowerCase().includes(query)
+      || String(row.name ?? "").toLowerCase().includes(query);
+  });
+  return sortTrendScoreRows(rows);
+}
+
+function getSelectedTrendScoreRow(rows) {
+  return rows.find((row) => row.ticker === state.trendScoreSelectedTicker) ?? rows[0] ?? null;
+}
+
+function getTrendScoreSortValue(row, sortKey) {
+  switch (sortKey) {
+    case "ticker":
+      return row.ticker ?? "";
+    case "name":
+      return row.name ?? "";
+    case "marketCap":
+      return row.marketCap ?? Number.NEGATIVE_INFINITY;
+    case "score":
+      return row.score ?? Number.NEGATIVE_INFINITY;
+    case "rank":
+      return row.rank ?? Number.POSITIVE_INFINITY;
+    case "rankChange":
+      return row.rankChange ?? Number.NEGATIVE_INFINITY;
+    case "rsRating":
+      return row.rsRating ?? Number.NEGATIVE_INFINITY;
+    case "absoluteScore":
+      return row.absoluteScore ?? Number.NEGATIVE_INFINITY;
+    case "relativeScore":
+      return row.relativeScore ?? Number.NEGATIVE_INFINITY;
+    case "momentumScore":
+      return row.momentumScore ?? Number.NEGATIVE_INFINITY;
+    case "atr21Pct":
+      return row.atr21Pct ?? Number.NEGATIVE_INFINITY;
+    case "deviation50Pct":
+      return row.deviation50Pct ?? Number.NEGATIVE_INFINITY;
+    default:
+      return row.rank ?? Number.POSITIVE_INFINITY;
+  }
+}
+
+function sortTrendScoreRows(rows) {
+  const direction = state.trendScoreTableSortDirection === "asc" ? 1 : -1;
+  const sortKey = state.trendScoreTableSortKey ?? "rank";
+  return [...rows].sort((left, right) => {
+    const leftValue = getTrendScoreSortValue(left, sortKey);
+    const rightValue = getTrendScoreSortValue(right, sortKey);
+    if (typeof leftValue === "string" || typeof rightValue === "string") {
+      const comparison = String(leftValue).localeCompare(String(rightValue));
+      if (comparison !== 0) {
+        return comparison * direction;
+      }
+    } else if (leftValue !== rightValue) {
+      return (leftValue < rightValue ? -1 : 1) * direction;
+    }
+    const leftRank = left.rank ?? Number.POSITIVE_INFINITY;
+    const rightRank = right.rank ?? Number.POSITIVE_INFINITY;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+    return String(left.ticker ?? "").localeCompare(String(right.ticker ?? ""));
+  });
+}
+
+function renderTrendScoreSortHeader(label, sortKey) {
+  const active = state.trendScoreTableSortKey === sortKey;
+  const arrow = !active ? "" : state.trendScoreTableSortDirection === "asc" ? " ↑" : " ↓";
+  return `<button type="button" class="market-rs-sort${active ? " active" : ""}" data-trend-score-sort="${sortKey}">${label}${arrow}</button>`;
+}
+
+function formatTrendRank(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `#${Number(value).toFixed(0)}`;
+}
+
+function formatTrendChange(value, unit = "") {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  if (Number(value) === 0) {
+    return "0";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(0)}${unit}`;
+}
+
+function formatTrendSignedPercent(value) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}%`;
+}
+
+function createTrendScoreChart(canvas, row) {
+  if (typeof Chart === "undefined" || !row) {
+    return;
+  }
+  const universeKey = state.trendScoreUniverse;
+  const history = marketTrendScoreData.histories?.[universeKey]?.[row.ticker];
+  const labels = marketTrendScoreData.historyDates ?? [];
+  if (!history || !labels.length) {
+    return;
+  }
+  const minStart = labels[0];
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, state.trendScoreRange, minStart);
+  const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
+  const selectedLabels = labels.slice(startIndex);
+  const selectedRanks = (history.rank ?? []).slice(startIndex);
+  const selectedScores = (history.score ?? []).slice(startIndex);
+  const rankValues = selectedRanks.filter((value) => Number.isFinite(value));
+  const maxRank = rankValues.length ? Math.max(...rankValues) : Math.max(20, row.rank ?? 20);
+  const rankAxisMax = Math.min(Math.max(20, Math.ceil(maxRank / 10) * 10), getTrendScoreRows().length || 100);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: selectedLabels,
+      datasets: [
+        {
+          label: "Rank",
+          data: selectedRanks,
+          borderColor: "#15803d",
+          backgroundColor: "#15803d",
+          borderWidth: 2.6,
+          tension: 0.16,
+          pointRadius: 1.8,
+          pointHoverRadius: 4,
+          yAxisID: "y",
+        },
+        {
+          label: "Trend Score",
+          data: selectedScores,
+          borderColor: "#111827",
+          backgroundColor: "#111827",
+          borderWidth: 2,
+          tension: 0.16,
+          pointRadius: 1.8,
+          pointHoverRadius: 4,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => {
+              if (context.dataset.yAxisID === "y") {
+                return `Rank: ${formatTrendRank(context.parsed.y)}`;
+              }
+              return `Trend Score: ${formatRsNumber(context.parsed.y)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            const indexes = buildRegularDateTickIndexes(selectedLabels, state.trendScoreRange);
+            axis.ticks = indexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8a8a83",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index, ticks) => {
+              const labelIndex = ticks?.[index]?.value;
+              return formatRangeAxisDate(selectedLabels[labelIndex], state.trendScoreRange);
+            },
+          },
+        },
+        y: {
+          position: "left",
+          reverse: true,
+          min: 1,
+          max: rankAxisMax,
+          grid: { color: "rgba(28,28,26,0.08)" },
+          ticks: {
+            color: "#15803d",
+            callback: (value) => `#${value}`,
+          },
+        },
+        y1: {
+          position: "right",
+          min: 0,
+          max: 10,
+          grid: { drawOnChartArea: false },
+          ticks: { color: "#111827", stepSize: 2 },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function renderMarketTrendScoreOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  const rows = getVisibleTrendScoreRows();
+  const selected = getSelectedTrendScoreRow(rows);
+  if (selected) {
+    state.trendScoreSelectedTicker = selected.ticker;
+  }
+
+  const universeChips = Object.entries(marketTrendScoreData.universes ?? {})
+    .map(
+      ([key, meta]) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.trendScoreUniverse === key ? " active" : ""}"
+          data-trend-score-universe="${key}"
+        >${meta.label}</button>
+      `,
+    )
+    .join("");
+  const rangeChips = (marketTrendScoreData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.trendScoreRange === range.key ? " active" : ""}"
+          data-trend-score-range="${range.key}"
+        >${range.label}</button>
+      `,
+    )
+    .join("");
+  const leaderCards = rows.slice(0, 12)
+    .map(
+      (row) => `
+        <button
+          type="button"
+          class="market-rs-card${state.trendScoreSelectedTicker === row.ticker ? " active" : ""}"
+          data-trend-score-ticker="${row.ticker}"
+        >
+          <div class="market-rs-card-top">
+            <span class="market-rs-card-ticker">${row.ticker}</span>
+            <span class="market-rs-card-score">${formatTrendRank(row.rank)}</span>
+          </div>
+          <p class="market-rs-card-name">${row.name}</p>
+          <p class="market-rs-card-cap">${formatMarketCapCompact(row.marketCap)}</p>
+          <div class="market-rs-card-meta">
+            <span>Score</span>
+            <strong>${formatRsNumber(row.score)}</strong>
+          </div>
+          <div class="market-rs-card-meta">
+            <span>RS Trend</span>
+            <strong>${formatRsNumber(row.relativeScore)}/4</strong>
+          </div>
+          <div class="market-rs-flag">${row.zone ?? "-"}</div>
+        </button>
+      `,
+    )
+    .join("");
+  const tableRows = rows
+    .map(
+      (row) => `
+        <tr data-trend-score-ticker="${row.ticker}">
+          <td>${formatTrendRank(row.rank)}</td>
+          <td>${row.ticker}</td>
+          <td>${row.name}</td>
+          <td>${formatMarketCapCompact(row.marketCap)}</td>
+          <td>${formatRsNumber(row.score)}</td>
+          <td>${formatTrendChange(row.rankChange)}</td>
+          <td>${formatRsNumber(row.absoluteScore)}/4</td>
+          <td>${formatRsNumber(row.relativeScore)}/4</td>
+          <td>${formatRsNumber(row.momentumScore)}/2</td>
+          <td>${formatRsNumber(row.rsRating)}</td>
+          <td>${formatAtrPercent(row.atr21Pct)}</td>
+          <td>${formatTrendSignedPercent(row.deviation50Pct)}</td>
+          <td>${row.state ?? "-"}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-rs-overview">
+      <article class="us-panel">
+        <div class="us-section-head market-rs-head">
+          <div>
+            <h2>추세스코어</h2>
+            <p>${marketTrendScoreData.scoring?.description ?? ""}</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">As of ${marketTrendScoreData.updatedAt ?? "-"}</span>
+            <span class="market-rs-pill">${getTrendScoreUniverseLabel()}</span>
+            <span class="market-rs-pill">${getTrendScoreRows().length} names</span>
+          </div>
+        </div>
+        <div class="market-rs-controls">
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Universe</span>
+            <div class="market-rs-chip-row">${universeChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Rank History</span>
+            <div class="market-rs-chip-row">${rangeChips}</div>
+          </div>
+        </div>
+      </article>
+
+      <section class="market-rs-layout">
+        <article class="us-panel market-rs-leaders">
+          <div class="us-section-head">
+            <div>
+              <h2>Trend Leaders</h2>
+              <p>${getTrendScoreUniverseLabel()} universe ranked by 10-point trend score and tie-breakers.</p>
+            </div>
+          </div>
+          <div class="market-rs-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+        </article>
+
+        <article class="us-panel market-rs-detail">
+          <div class="us-section-head">
+            <div>
+              <h2>${selected?.ticker ?? "-"}</h2>
+              <p>${selected?.name ?? "Select a ticker from the table or search box."}</p>
+            </div>
+            <span class="market-rs-detail-score">${formatRsNumber(selected?.score)}</span>
+          </div>
+          <div class="market-rs-metrics">
+            <div class="market-rs-metric">
+              <span>Rank</span>
+              <strong>${formatTrendRank(selected?.rank)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Rank Δ</span>
+              <strong>${formatTrendChange(selected?.rankChange)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Score</span>
+              <strong>${formatRsNumber(selected?.score)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Abs / RS / Mo</span>
+              <strong>${formatRsNumber(selected?.absoluteScore)}/${formatRsNumber(selected?.relativeScore)}/${formatRsNumber(selected?.momentumScore)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Price</span>
+              <strong>${formatUsStockPrice(selected?.price)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>50DMA Gap</span>
+              <strong>${formatTrendSignedPercent(selected?.deviation50Pct)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>ATR 21D %</span>
+              <strong>${formatAtrPercent(selected?.atr21Pct)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Base Weight</span>
+              <strong>${formatTrendSignedPercent(selected?.baseWeightPct)}</strong>
+            </div>
+          </div>
+          <div class="market-rs-extension-panel">
+            <div class="market-rs-extension-title">
+              <strong>Scoring Logic</strong>
+              <span>① Price/50DMA/200DMA 4점 + ② 선택 유니버스 RS 추세 4점 + ③ 단기 모멘텀 2점.</span>
+            </div>
+            <div class="market-rs-extension-grid">
+              <article class="market-rs-extension-card">
+                <div class="market-rs-extension-head"><strong>Absolute</strong><b>${formatRsNumber(selected?.absoluteScore)}/4</b></div>
+                <div class="market-rs-extension-stats"><span>20DMA gap <strong>${formatTrendSignedPercent(selected?.deviation20Pct)}</strong></span><span>200DMA gap <strong>${formatTrendSignedPercent(selected?.deviation200Pct)}</strong></span></div>
+              </article>
+              <article class="market-rs-extension-card">
+                <div class="market-rs-extension-head"><strong>Relative</strong><b>${formatRsNumber(selected?.relativeScore)}/4</b></div>
+                <div class="market-rs-extension-stats"><span>Universe RS <strong>${formatRsNumber(selected?.rsRating)}</strong></span><span>State <strong>${selected?.state ?? "-"}</strong></span></div>
+              </article>
+              <article class="market-rs-extension-card">
+                <div class="market-rs-extension-head"><strong>ATR Ext</strong><b>${formatAtrMultiple(selected?.atrExt50)}</b></div>
+                <div class="market-rs-extension-stats"><span>20DMA <strong>${formatAtrMultiple(selected?.atrExt20)}</strong></span><span>200DMA <strong>${formatAtrMultiple(selected?.atrExt200)}</strong></span></div>
+              </article>
+            </div>
+          </div>
+          <div class="chart-wrap market-rs-chart-wrap">
+            <canvas data-trend-score-chart="detail"></canvas>
+          </div>
+          <p class="market-rs-chart-caption">Left axis: daily rank, inverted so #1 is at the top. Right axis: 0-10 trend score. Hover shows the exact date.</p>
+        </article>
+      </section>
+
+      <article class="us-panel market-rs-table-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>Full Trend Score Table</h2>
+            <p>Search from the top bar, switch NASDAQ100/S&P500, then click any row to inspect daily rank history.</p>
+          </div>
+        </div>
+        <div class="market-rs-table-wrap">
+          <table class="market-rs-table">
+            <thead>
+              <tr>
+                <th>${renderTrendScoreSortHeader("Rank", "rank")}</th>
+                <th>${renderTrendScoreSortHeader("Ticker", "ticker")}</th>
+                <th>${renderTrendScoreSortHeader("Name", "name")}</th>
+                <th>${renderTrendScoreSortHeader("Market Cap", "marketCap")}</th>
+                <th>${renderTrendScoreSortHeader("Score", "score")}</th>
+                <th>${renderTrendScoreSortHeader("Rank Δ", "rankChange")}</th>
+                <th>${renderTrendScoreSortHeader("Abs", "absoluteScore")}</th>
+                <th>${renderTrendScoreSortHeader("RS", "relativeScore")}</th>
+                <th>${renderTrendScoreSortHeader("Mo", "momentumScore")}</th>
+                <th>${renderTrendScoreSortHeader("RS Rating", "rsRating")}</th>
+                <th>${renderTrendScoreSortHeader("ATR%", "atr21Pct")}</th>
+                <th>${renderTrendScoreSortHeader("50DMA Gap", "deviation50Pct")}</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows || '<tr><td colspan="13">검색 결과가 없습니다.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-trend-score-universe]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreUniverse = button.dataset.trendScoreUniverse || "nasdaq100";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-trend-score-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreRange = button.dataset.trendScoreRange || "3m";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-trend-score-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextSortKey = button.dataset.trendScoreSort;
+      if (state.trendScoreTableSortKey === nextSortKey) {
+        state.trendScoreTableSortDirection = state.trendScoreTableSortDirection === "asc" ? "desc" : "asc";
+      } else {
+        state.trendScoreTableSortKey = nextSortKey || "rank";
+        state.trendScoreTableSortDirection = nextSortKey === "rank" || nextSortKey === "ticker" || nextSortKey === "name" ? "asc" : "desc";
+      }
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-trend-score-ticker]").forEach((element) => {
+    element.addEventListener("click", () => {
+      state.trendScoreSelectedTicker = element.dataset.trendScoreTicker;
+      render();
+    });
+  });
+
+  const detailCanvas = usOverviewRoot.querySelector('[data-trend-score-chart="detail"]');
+  if (detailCanvas && selected) {
+    createTrendScoreChart(detailCanvas, selected);
+  }
+}
+
 function getMemorySpotItems() {
   return (memorySpotData.groups ?? []).flatMap((group) => group.items ?? []);
 }
@@ -10641,7 +11141,7 @@ function renderSubtabs() {
     button.addEventListener("click", () => {
       if (state.tab === "Market") {
         state.marketView = viewKey;
-        if (viewKey === "RS") {
+        if (viewKey === "RS" || viewKey === "TrendScore") {
           state.query = "";
           if (searchInput) {
             searchInput.value = "";
@@ -10728,6 +11228,10 @@ function renderSummary(list) {
     }
     if (state.marketView === "RS") {
       summaryText.textContent = "StockEasy-style RS leaderboard with RS_1M, RS_3M, RS_6M and searchable daily trend";
+      return;
+    }
+    if (state.marketView === "TrendScore") {
+      summaryText.textContent = "NASDAQ100 and S&P500 trend score rankings with daily rank history";
       return;
     }
     return;
@@ -10843,7 +11347,7 @@ function renderCards(list) {
 function render() {
   destroyCharts();
   ensureValidSelection();
-  const showRsToolbar = state.tab === "Market" && state.marketView === "RS";
+  const showRsToolbar = state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore");
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
   }
@@ -10852,7 +11356,7 @@ function render() {
   }
   if (searchInput) {
     if (showRsToolbar) {
-      searchInput.placeholder = "Search ticker or company...";
+      searchInput.placeholder = state.marketView === "TrendScore" ? "Search trend score ticker..." : "Search ticker or company...";
     } else {
       searchInput.placeholder = "Search company...";
     }
@@ -10947,6 +11451,10 @@ function render() {
     }
     if (state.marketView === "RS") {
       renderMarketRsOverview();
+      return;
+    }
+    if (state.marketView === "TrendScore") {
+      renderMarketTrendScoreOverview();
       return;
     }
     return;
