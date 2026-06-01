@@ -150,6 +150,7 @@ def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
     price = price.astype("float64")
     relative = relative.astype("float64")
     frame = pd.DataFrame({"price": price, "relative": relative})
+    frame["ema21"] = frame["price"].ewm(span=21, adjust=False).mean()
     frame["sma20"] = frame["price"].rolling(20).mean()
     frame["sma50"] = frame["price"].rolling(50).mean()
     frame["sma200"] = frame["price"].rolling(200).mean()
@@ -180,6 +181,7 @@ def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
     ready = frame[["sma200", "rs200"]].notna().all(axis=1)
     frame["score"] = (frame["absoluteScore"] + frame["relativeScore"] + frame["momentumScore"]).where(ready)
     frame["deviation20Pct"] = ((frame["price"] / frame["sma20"]) - 1) * 100
+    frame["deviation21EmaPct"] = ((frame["price"] / frame["ema21"]) - 1) * 100
     frame["deviation50Pct"] = ((frame["price"] / frame["sma50"]) - 1) * 100
     frame["deviation200Pct"] = ((frame["price"] / frame["sma200"]) - 1) * 100
     frame["rankScore"] = (
@@ -207,43 +209,136 @@ def up_streak(series: pd.Series) -> int:
     return streak
 
 
+def has_ohlcv(frame: pd.DataFrame) -> bool:
+    required = ["open", "high", "low", "volume"]
+    return all(column in frame.columns and frame[column].dropna().any() for column in required)
+
+
+def compute_true_range_pct(frame: pd.DataFrame) -> pd.Series:
+    price = frame["price"].astype("float64")
+    high = frame["high"].astype("float64") if "high" in frame else price
+    low = frame["low"].astype("float64") if "low" in frame else price
+    previous_close = price.shift(1)
+    true_range = pd.concat(
+        [
+            high - low,
+            (high - previous_close).abs(),
+            (low - previous_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+    return (true_range / price) * 100
+
+
+def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:
+    price = frame["price"].astype("float64")
+    output = pd.DataFrame(index=frame.index)
+    output["return15dPct"] = ((price / price.shift(15)) - 1) * 100
+    output["return10dPct"] = ((price / price.shift(10)) - 1) * 100
+    output["threeWeekRule"] = output["return15dPct"] >= 25
+    output["tenDaySurge"] = output["return10dPct"] >= 20
+    output["ema21Extended20"] = frame["deviation21EmaPct"] >= 20
+    output["ema21Extended15"] = frame["deviation21EmaPct"] >= 15
+    output["upStreak8"] = price.diff().gt(0).rolling(8).sum() >= 8
+
+    if has_ohlcv(frame):
+        open_price = frame["open"].astype("float64")
+        high = frame["high"].astype("float64")
+        low = frame["low"].astype("float64")
+        volume = frame["volume"].astype("float64")
+
+        atr_pct = compute_true_range_pct(frame).rolling(21).mean()
+        output["atrPct"] = atr_pct
+        output["atrAvg30Pct"] = atr_pct.rolling(30).mean()
+        output["atrSpike"] = output["atrPct"] >= output["atrAvg30Pct"] * 1.5
+
+        recent_5_volume = volume.rolling(5).mean()
+        previous_20_volume = volume.shift(5).rolling(20).mean()
+        output["volumeAccel"] = recent_5_volume >= previous_20_volume * 1.5
+
+        output["gapPct"] = ((open_price / price.shift(1)) - 1) * 100
+        output["gapUpExtended"] = output["gapPct"].ge(2) & output["ema21Extended15"]
+
+        intraday_range = (high - low).replace(0, pd.NA)
+        close_location = (price - low) / intraday_range
+        output["intradayReversal"] = high.ge(high.rolling(10).max() - 1e-9) & close_location.le(0.3)
+
+        body_to_range = (price - open_price).abs() / intraday_range
+        volume_base = volume.shift(1).rolling(20).mean()
+        stalling_day = volume.gt(volume_base * 1.3) & body_to_range.lt(0.3)
+        output["stalling"] = stalling_day.rolling(5).sum() >= 2
+
+        daily_return = ((price / price.shift(1)) - 1) * 100
+        output["shellac"] = (
+            volume.ge(volume.rolling(126, min_periods=60).max() * 0.95)
+            & daily_return.le(-2)
+            & price.lt(open_price)
+        )
+        output["source"] = "ohlcv"
+    else:
+        daily_range_proxy = price.pct_change().abs() * 100
+        atr_proxy = daily_range_proxy.rolling(21).mean()
+        output["atrPct"] = atr_proxy
+        output["atrAvg30Pct"] = atr_proxy.rolling(30).mean()
+        output["atrSpike"] = output["atrPct"] >= output["atrAvg30Pct"] * 1.5
+        output["volumeAccel"] = False
+        output["gapUpExtended"] = False
+        output["intradayReversal"] = False
+        output["stalling"] = False
+        output["shellac"] = False
+        output["source"] = "close_proxy"
+
+    output["score"] = (
+        output["threeWeekRule"].astype("float64") * 2
+        + output["tenDaySurge"].astype("float64")
+        + output["atrSpike"].astype("float64") * 2
+        + output["volumeAccel"].astype("float64")
+        + output["gapUpExtended"].astype("float64")
+        + output["intradayReversal"].astype("float64") * 3
+        + output["stalling"].astype("float64") * 2
+        + output["shellac"].astype("float64") * 3
+    )
+    ready = price.notna().rolling(31).sum() >= 31
+    output["score"] = output["score"].where(ready)
+    return output
+
+
 def compute_climax_row(frame: pd.DataFrame, atr_pct: float | None) -> dict[str, object]:
     price = frame["price"].dropna()
     if len(price) < 31:
         return {"score": None, "flags": [], "extendedFlags": [], "extendedCount": 0}
 
-    current_price = float(price.iloc[-1])
-    score = 0
+    components = compute_climax_components(frame).reindex(frame.index)
+    latest = components.iloc[-1]
+    score = nullable_int(latest.get("score")) or 0
     flags: list[str] = []
     extended_flags: list[str] = []
+    source = str(latest.get("source") or "close_proxy")
 
-    return_15d = (current_price / float(price.iloc[-16]) - 1) * 100 if len(price) >= 16 and price.iloc[-16] else None
-    return_10d = (current_price / float(price.iloc[-11]) - 1) * 100 if len(price) >= 11 and price.iloc[-11] else None
-    if return_15d is not None and return_15d >= 25:
-        score += 2
+    if bool(latest.get("threeWeekRule")):
         flags.append("3주 +25%")
-    if return_10d is not None and return_10d >= 20:
-        score += 1
+    if bool(latest.get("tenDaySurge")):
         flags.append("10일 +20%")
+    if bool(latest.get("atrSpike")):
+        flags.append("ATR 확장")
+        extended_flags.append("ATR 확장")
+    if bool(latest.get("volumeAccel")):
+        flags.append("거래량 가속")
+        extended_flags.append("거래량 가속")
+    if bool(latest.get("gapUpExtended")):
+        flags.append("확장 갭상승")
+    if bool(latest.get("intradayReversal")):
+        flags.append("일중 반전")
+    if bool(latest.get("stalling")):
+        flags.append("Stalling")
+    if bool(latest.get("shellac")):
+        flags.append("Shellac")
 
-    daily_range_proxy = price.pct_change().abs() * 100
-    atr_proxy = daily_range_proxy.rolling(21).mean()
-    atr_proxy_avg_30 = atr_proxy.rolling(30).mean()
-    latest_atr_proxy = number_or_none(atr_proxy.iloc[-1])
-    avg_atr_proxy = number_or_none(atr_proxy_avg_30.iloc[-1])
-    if latest_atr_proxy is not None and avg_atr_proxy is not None and latest_atr_proxy >= avg_atr_proxy * 1.5:
-        score += 2
-        flags.append("ATR확장")
-        extended_flags.append("ATR확장")
-
-    latest = frame.iloc[-1]
-    deviation20 = number_or_none(latest.get("deviation20Pct"))
-    if deviation20 is not None and deviation20 >= 20:
-        score += 1
-        flags.append("21DMA+20%")
-        extended_flags.append(f"21DMA+{deviation20:.0f}%")
+    deviation21 = number_or_none(frame.iloc[-1].get("deviation21EmaPct"))
+    if deviation21 is not None and deviation21 >= 20:
+        extended_flags.append(f"21EMA+{deviation21:.0f}%")
     if up_streak(price) >= 8:
-        extended_flags.append("8일연속상승")
+        extended_flags.append("8일 연속상승")
 
     fresh_breakout = False
     if len(frame) >= 21:
@@ -265,32 +360,16 @@ def compute_climax_row(frame: pd.DataFrame, atr_pct: float | None) -> dict[str, 
         "extendedFlags": extended_flags,
         "extendedCount": len(extended_flags),
         "freshBreakout": fresh_breakout,
-        "return15dPct": nullable_round(return_15d),
-        "return10dPct": nullable_round(return_10d),
-        "atrProxyPct": nullable_round(latest_atr_proxy),
-        "atrProxyAvg30Pct": nullable_round(avg_atr_proxy),
-        "source": "close_proxy",
+        "return15dPct": nullable_round(latest.get("return15dPct")),
+        "return10dPct": nullable_round(latest.get("return10dPct")),
+        "atrPct": nullable_round(latest.get("atrPct")),
+        "atrAvg30Pct": nullable_round(latest.get("atrAvg30Pct")),
+        "source": source,
     }
 
 
 def compute_climax_history(frame: pd.DataFrame) -> pd.Series:
-    price = frame["price"].dropna()
-    if price.empty:
-        return pd.Series(index=frame.index, dtype="float64")
-    return_15d = ((price / price.shift(15)) - 1) * 100
-    return_10d = ((price / price.shift(10)) - 1) * 100
-    daily_range_proxy = price.pct_change().abs() * 100
-    atr_proxy = daily_range_proxy.rolling(21).mean()
-    atr_proxy_avg_30 = atr_proxy.rolling(30).mean()
-    deviation20 = frame["deviation20Pct"].reindex(price.index)
-    score = pd.Series(0.0, index=price.index)
-    score = score.add((return_15d >= 25).astype("float64") * 2, fill_value=0)
-    score = score.add((return_10d >= 20).astype("float64"), fill_value=0)
-    score = score.add((atr_proxy >= atr_proxy_avg_30 * 1.5).astype("float64") * 2, fill_value=0)
-    score = score.add((deviation20 >= 20).astype("float64"), fill_value=0)
-    ready = price.index.to_series().map(lambda date: price.index.get_loc(date) >= 30)
-    score = score.where(ready)
-    return score.reindex(frame.index)
+    return compute_climax_components(frame)["score"].reindex(frame.index)
 
 
 def rank_scores(score_frame: pd.DataFrame) -> pd.DataFrame:
@@ -344,6 +423,10 @@ def build_universe_payload(
             continue
         frame = build_score_frame(price, relative)
         frame["rsRating"] = as_numeric_series(rating_values, dates)
+        for history_key in ["open", "high", "low", "volume"]:
+            values = (history.get(history_key) or [])[-len(dates):]
+            if len(values) == len(dates):
+                frame[history_key] = as_numeric_series(values, dates)
         if frame["score"].dropna().empty:
             continue
         members.append((ticker, row, history, frame))
@@ -404,9 +487,11 @@ def build_universe_payload(
                 "rsRating": nullable_int(latest.get("rsRating")),
                 "rsLine": nullable_round(latest.get("relative"), 6),
                 "sma20": nullable_round(latest.get("sma20")),
+                "ema21": nullable_round(latest.get("ema21")),
                 "sma50": nullable_round(latest.get("sma50")),
                 "sma200": nullable_round(latest.get("sma200")),
                 "deviation20Pct": nullable_round(deviation20),
+                "deviation21EmaPct": nullable_round(latest.get("deviation21EmaPct")),
                 "deviation50Pct": nullable_round(deviation50),
                 "deviation200Pct": nullable_round(deviation200),
                 "atr21Pct": nullable_round(atr_pct),
@@ -482,9 +567,12 @@ def build_payload() -> dict:
             "climax": [
                 "15-session return >= +25% adds 2",
                 "10-session return >= +20% adds 1",
-                "ATR expansion proxy >= 30-session average x1.5 adds 2",
-                "20DMA extension >= +20% adds 1",
-                "OHLCV-only gap, reversal, stalling, shellac triggers are not scored until OHLCV is stored in the RS feed.",
+                "21D ATR >= 30-session average ATR x1.5 adds 2",
+                "5D average volume >= previous 20D average volume x1.5 adds 1",
+                "Gap-up while extended above 21EMA adds 1",
+                "10D high with close in lower 30% of intraday range adds 3",
+                "2+ stalling days in the last 5 sessions adds 2",
+                "Shellac day adds 3",
             ],
             "positionByScore": POSITION_BY_SCORE,
         },

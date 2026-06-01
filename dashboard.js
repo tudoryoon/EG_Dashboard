@@ -7442,7 +7442,7 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-extension-panel">
             <div class="market-rs-extension-title">
               <strong>Scoring Logic</strong>
-              <span>① Price/50DMA/200DMA 4점 + ② 벤치마크 대비 RS 라인 추세 4점 + ③ 단기 모멘텀 2점. Climax는 3주/10일 급등, ATR 확장, 20DMA 과열을 별도로 점검합니다.</span>
+              <span>① Price/50DMA/200DMA 4점 + ② 벤치마크 대비 RS 라인 추세 4점 + ③ 단기 모멘텀 2점. Climax는 OHLCV 기반 급등, ATR/거래량 확장, 갭상승, 일중반전, Stalling, Shellac을 별도로 점검합니다.</span>
             </div>
             <div class="market-rs-extension-grid">
               <article class="market-rs-extension-card">
