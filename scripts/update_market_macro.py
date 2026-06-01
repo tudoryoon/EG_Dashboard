@@ -91,6 +91,45 @@ def fetch_json(url: str) -> dict:
     return json.loads(fetch_text(url))
 
 
+def read_existing_payload() -> dict:
+    output_path = Path(__file__).resolve().parents[1] / "data" / "market-macro-data.js"
+    if not output_path.exists():
+        return {}
+    raw = output_path.read_text(encoding="utf-8").strip()
+    prefix = "window.marketMacroData = "
+    if raw.startswith(prefix):
+        raw = raw[len(prefix) :]
+    return json.loads(raw.rstrip(";"))
+
+
+def existing_macro_series(panel_key: str, series_key: str) -> tuple[list[str], list[float]]:
+    try:
+        item = read_existing_payload()["panels"][panel_key]["series"][series_key]
+        dates = item.get("dates") or []
+        values = item.get("values") or []
+        if dates and values:
+            return list(dates), [float(value) for value in values]
+    except Exception:
+        pass
+    return [], []
+
+
+def parse_fred_series_or_existing(
+    series_id: str,
+    start_date: str,
+    panel_key: str,
+    series_key: str,
+) -> tuple[list[str], list[float]]:
+    try:
+        return parse_fred_series(series_id, start_date)
+    except Exception as error:  # pragma: no cover - network variability
+        dates, values = existing_macro_series(panel_key, series_key)
+        if dates:
+            print(f"Using existing {panel_key}.{series_key} after {series_id} fetch failed: {error}")
+            return dates, values
+        raise
+
+
 def fred_csv_url(series_id: str) -> str:
     return f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
 
@@ -555,11 +594,11 @@ def main() -> None:
     wti_dates, wti_values = parse_yahoo_series("CL=F")
     brent_dates, brent_values = parse_yahoo_series("BZ=F")
     dubai_dates, dubai_values = long_commodity_series["dubai"]
-    henry_hub_dates, henry_hub_values = parse_fred_series("DHHNGSP")
+    henry_hub_dates, henry_hub_values = parse_fred_series_or_existing("DHHNGSP", START_DATE, "natural_gas", "henry_hub")
     gold_dates, gold_values = parse_yahoo_series("GC=F")
     silver_dates, silver_values = parse_yahoo_series("SI=F")
     copper_dates, copper_values = parse_yahoo_series("HG=F")
-    uranium_dates, uranium_values = parse_fred_series("PURANUSDM")
+    uranium_dates, uranium_values = parse_fred_series_or_existing("PURANUSDM", START_DATE, "strategic", "uranium")
     iron_ore_dates, iron_ore_values = parse_yahoo_series("TIO=F")
     nickel_dates, nickel_values = long_commodity_series["nickel"]
     zinc_dates, zinc_values = long_commodity_series["zinc"]
