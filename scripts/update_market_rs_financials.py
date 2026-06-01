@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from bs4 import BeautifulSoup
 import requests
 
 
@@ -15,11 +16,13 @@ RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-rs-financials-data.js"
 SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
+SEC_ARCHIVES_BASE_URL = "https://www.sec.gov/Archives/edgar/data"
 SEC_HEADERS = {
     "User-Agent": "EG Dashboard research contact@example.com",
     "Accept-Encoding": "gzip, deflate",
 }
-TARGET_MEMBERSHIPS = ("sp500", "nasdaq100")
+TARGET_MEMBERSHIPS = ("nasdaq100",)
 
 REVENUE_TAGS = [
     "RevenueFromContractWithCustomerExcludingAssessedTax",
@@ -43,6 +46,9 @@ CAPEX_TAGS = [
     "PaymentsToAcquireBusinessesAndPropertyPlantAndEquipment",
 ]
 FINANCIAL_FORMS = {"10-Q", "10-K", "20-F", "40-F", "6-K"}
+EARNINGS_RELEASE_FORMS = {"8-K", "6-K"}
+EARNINGS_RELEASE_DOC_LIMIT = 8
+EARNINGS_RELEASE_FILING_SCAN_LIMIT = 8
 
 
 def read_js_payload(path: Path, variable_name: str) -> dict[str, Any]:
@@ -69,10 +75,53 @@ def safe_round(value: float | None, digits: int = 2) -> float | None:
     return round(float(value), digits)
 
 
+def clean_text(value: object) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text
+
+
+def normalize_label(value: object) -> str:
+    text = clean_text(value).lower()
+    text = text.replace("\u2014", "-").replace("\u2013", "-")
+    text = re.sub(r"[^a-z0-9%/ .&+-]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def parse_numeric_cell(value: object) -> tuple[float | None, bool]:
+    if value is None:
+        return None, False
+    text = clean_text(value)
+    if not text or text.lower() in {"nan", "none", "-", "--", "nm", "n/m"}:
+        return None, False
+    is_percent = "%" in text
+    negative = bool(re.search(r"^\(.*\)$", text))
+    text = text.replace("$", "").replace(",", "").replace("%", "").replace("(", "").replace(")", "")
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not match:
+        return None, is_percent
+    try:
+        value_float = float(match.group(0))
+    except ValueError:
+        return None, is_percent
+    return (-value_float if negative else value_float), is_percent
+
+
+def scaled_amount(value: float | None, scale: float) -> float | None:
+    if value is None:
+        return None
+    return float(value) * scale
+
+
 def fetch_json(url: str) -> dict[str, Any]:
     response = requests.get(url, headers=SEC_HEADERS, timeout=40)
     response.raise_for_status()
     return response.json()
+
+
+def fetch_text(url: str) -> str:
+    response = requests.get(url, headers=SEC_HEADERS, timeout=40)
+    response.raise_for_status()
+    return response.text
 
 
 def load_sec_ticker_map() -> dict[str, dict[str, Any]]:
@@ -482,8 +531,311 @@ def add_series(
     return combined
 
 
+def sec_archive_doc_url(cik: str, accession: str, document_name: str) -> str:
+    cik_int = int(cik)
+    accession_clean = accession.replace("-", "")
+    return f"{SEC_ARCHIVES_BASE_URL}/{cik_int}/{accession_clean}/{document_name}"
+
+
+def filing_index_url(cik: str, accession: str) -> str:
+    cik_int = int(cik)
+    accession_clean = accession.replace("-", "")
+    return f"{SEC_ARCHIVES_BASE_URL}/{cik_int}/{accession_clean}/index.json"
+
+
+def likely_earnings_release_name(name: str) -> bool:
+    lowered = name.lower()
+    if not lowered.endswith((".htm", ".html", ".txt")):
+        return False
+    if any(part in lowered for part in ["xsl", "xml", "schema", "cal.xml", "def.xml", "lab.xml", "pre.xml"]):
+        return False
+    strong_tokens = ["ex99", "ex-99", "exhibit99", "exhibit-99", "dex99", "earningsrelease", "earnings-release"]
+    if any(token in lowered for token in strong_tokens):
+        return True
+    return bool(re.search(r"(?:^|[^0-9])99[-_.]?1(?:[^0-9]|$)", lowered))
+
+
+def load_earnings_release_documents(cik: str) -> list[dict[str, Any]]:
+    submissions = fetch_json(SEC_SUBMISSIONS_URL.format(cik=cik))
+    recent = submissions.get("filings", {}).get("recent", {})
+    forms = recent.get("form", [])
+    accessions = recent.get("accessionNumber", [])
+    filing_dates = recent.get("filingDate", [])
+    report_dates = recent.get("reportDate", [])
+    primary_documents = recent.get("primaryDocument", [])
+    documents: list[dict[str, Any]] = []
+
+    scanned = 0
+    for index, form in enumerate(forms):
+        if form not in EARNINGS_RELEASE_FORMS:
+            continue
+        scanned += 1
+        if scanned > EARNINGS_RELEASE_FILING_SCAN_LIMIT:
+            break
+        accession = accessions[index]
+        filing_date = filing_dates[index] if index < len(filing_dates) else None
+        report_date = report_dates[index] if index < len(report_dates) else None
+        candidate_names: list[str] = []
+        try:
+            index_payload = fetch_json(filing_index_url(cik, accession))
+            for item in index_payload.get("directory", {}).get("item", []):
+                name = str(item.get("name") or "")
+                if likely_earnings_release_name(name):
+                    candidate_names.append(name)
+        except Exception:
+            pass
+
+        if not candidate_names and index < len(primary_documents):
+            primary = str(primary_documents[index] or "")
+            if primary.endswith((".htm", ".html", ".txt")):
+                candidate_names.append(primary)
+
+        for name in dict.fromkeys(candidate_names):
+            try:
+                url = sec_archive_doc_url(cik, accession, name)
+                html = fetch_text(url)
+            except Exception:
+                continue
+            normalized = html.lower()
+            if "non-gaap" not in normalized and "non gaap" not in normalized and "free cash flow" not in normalized:
+                continue
+            documents.append(
+                {
+                    "accession": accession,
+                    "form": form,
+                    "filingDate": filing_date,
+                    "reportDate": report_date,
+                    "document": name,
+                    "url": url,
+                    "html": html,
+                }
+            )
+            break
+        if len(documents) >= EARNINGS_RELEASE_DOC_LIMIT:
+            break
+        time.sleep(0.04)
+    return documents
+
+
+def document_scale(html: str) -> float:
+    text = normalize_label(html[:100000])
+    if "in thousands" in text or "amounts in thousands" in text or "dollars in thousands" in text:
+        return 1_000.0
+    if "in millions" in text or "amounts in millions" in text or "dollars in millions" in text:
+        return 1_000_000.0
+    return 1.0
+
+
+def metric_preferred(existing: dict[str, Any], key: str, source_key: str) -> bool:
+    if existing.get(key) is None:
+        return True
+    return str(existing.get(f"{source_key}Source") or "").lower().startswith("sec gaap")
+
+
+def plausible_percent(value: float | None) -> bool:
+    return value is not None and -100 <= float(value) <= 100
+
+
+def plausible_eps(value: float | None) -> bool:
+    return value is not None and -100 <= float(value) <= 100
+
+
+def plausible_margin_from_amount(amount: float | None, revenue: float | None) -> float | None:
+    margin = divide(amount, revenue)
+    if margin is None:
+        return None
+    pct = margin * 100
+    return pct if plausible_percent(pct) else None
+
+
+def plausible_cash_flow(value: float | None, revenue: float | None) -> bool:
+    if value is None:
+        return False
+    if revenue:
+        ratio = abs(float(value)) / abs(float(revenue))
+        if ratio > 3:
+            return False
+    return True
+
+
+def first_numeric_after_label(values: list[object], max_abs: float | None = None) -> tuple[float | None, bool]:
+    for value in values[1:]:
+        numeric, is_percent = parse_numeric_cell(value)
+        if numeric is None:
+            continue
+        # Avoid selecting year/date header fragments that leaked into body cells.
+        if not is_percent and 1900 <= abs(numeric) <= 2100 and float(numeric).is_integer():
+            continue
+        if max_abs is not None and abs(numeric) > max_abs:
+            continue
+        return numeric, is_percent
+    return None, False
+
+
+def extract_metrics_from_release_html(html: str) -> dict[str, Any]:
+    scale = document_scale(html)
+    metrics: dict[str, Any] = {
+        "revenue": None,
+        "nonGaapGrossProfit": None,
+        "nonGaapGrossMarginPct": None,
+        "nonGaapOperatingIncome": None,
+        "nonGaapOperatingMarginPct": None,
+        "nonGaapEpsDiluted": None,
+        "ocf": None,
+        "fcf": None,
+    }
+    soup = BeautifulSoup(html, "html.parser")
+    for table in soup.find_all("table")[:50]:
+        table_label = normalize_label(table.get_text(" ", strip=True)[:1200])
+        is_fcf_reconciliation = "free cash flow" in table_label
+        for tr in table.find_all("tr"):
+            cells = tr.find_all(["td", "th"])
+            if len(cells) < 2:
+                continue
+            values = [cell.get_text(" ", strip=True) for cell in cells]
+            labels = [normalize_label(value) for value in values[:3] if normalize_label(value)]
+            label = " ".join(labels[:2])
+            if not label or label in {"nan"}:
+                continue
+            numeric, is_percent = first_numeric_after_label(values)
+            if numeric is None:
+                continue
+
+            has_non_gaap = "non-gaap" in label or "non gaap" in label
+            has_adjusted = "adjusted" in label
+            if metrics["revenue"] is None and "revenue" in label and not any(
+                excluded in label for excluded in ["deferred", "cost", "remaining", "rpo", "unearned"]
+            ):
+                metrics["revenue"] = scaled_amount(numeric, scale)
+
+            if has_non_gaap and "gross margin" in label:
+                margin_numeric, _ = first_numeric_after_label(values, max_abs=100)
+                if plausible_percent(margin_numeric):
+                    metrics["nonGaapGrossMarginPct"] = margin_numeric
+            elif has_non_gaap and "gross profit" in label and "margin" not in label:
+                metrics["nonGaapGrossProfit"] = scaled_amount(numeric, scale)
+
+            is_non_gaap_operating = has_non_gaap or has_adjusted
+            if is_non_gaap_operating and any(term in label for term in ["operating margin", "margin from operations"]):
+                margin_numeric, _ = first_numeric_after_label(values, max_abs=100)
+                if plausible_percent(margin_numeric):
+                    metrics["nonGaapOperatingMarginPct"] = margin_numeric
+            elif is_non_gaap_operating and any(
+                term in label
+                for term in [
+                    "income from operations",
+                    "operating income",
+                    "operating profit",
+                    "profit from operations",
+                ]
+            ) and "margin" not in label:
+                metrics["nonGaapOperatingIncome"] = scaled_amount(numeric, scale)
+
+            if has_non_gaap and any(term in label for term in ["diluted earnings per share", "diluted eps", "earnings per share", "net income per share"]):
+                eps_numeric, _ = first_numeric_after_label(values, max_abs=100)
+                if plausible_eps(eps_numeric):
+                    metrics["nonGaapEpsDiluted"] = eps_numeric
+
+            if any(term in label for term in ["net cash provided by operating activities", "cash provided by operating activities", "operating cash flow"]) and not any(
+                term in label for term in ["percentage", "margin"]
+            ):
+                # Cash flow statements often present YTD before quarterly columns. If a
+                # release has a free-cash-flow reconciliation table, prefer that row.
+                if metrics["ocf"] is None or is_fcf_reconciliation:
+                    metrics["ocf"] = scaled_amount(numeric, scale)
+            if "free cash flow" in label and "margin" not in label:
+                metrics["fcf"] = scaled_amount(numeric, scale)
+    return metrics
+
+
+def match_release_to_period(row: dict[str, Any], releases: list[dict[str, Any]]) -> dict[str, Any] | None:
+    period_end = parse_iso_date(row.get("periodEnd"))
+    if not period_end:
+        return None
+    candidates: list[tuple[int, dict[str, Any]]] = []
+    for release in releases:
+        release_date = parse_iso_date(release.get("reportDate")) or parse_iso_date(release.get("filingDate"))
+        if not release_date:
+            continue
+        diff_days = (release_date - period_end).days
+        if -5 <= diff_days <= 70:
+            candidates.append((abs(diff_days), release))
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda item: item[0])[0][1]
+
+
+def build_ir_release_metrics(cik: str) -> list[dict[str, Any]]:
+    releases = []
+    for document in load_earnings_release_documents(cik):
+        metrics = extract_metrics_from_release_html(str(document.get("html") or ""))
+        if not any(value is not None for value in metrics.values()):
+            continue
+        releases.append({**{key: value for key, value in document.items() if key != "html"}, "metrics": metrics})
+    return releases
+
+
+def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]]) -> int:
+    applied = 0
+    for row in rows:
+        metric_sources = {
+            "revenue": "SEC GAAP companyfacts",
+            "grossMarginPct": "SEC GAAP companyfacts",
+            "operatingMarginPct": "SEC GAAP companyfacts",
+            "epsDiluted": "SEC GAAP companyfacts",
+            "ocf": "SEC GAAP companyfacts",
+            "fcf": "SEC GAAP companyfacts",
+        }
+        release = match_release_to_period(row, releases)
+        if not release:
+            row["metricSources"] = metric_sources
+            continue
+        metrics = release.get("metrics", {})
+        source_label = f"IR earnings release ({release.get('form')} {release.get('filingDate')})"
+        revenue_value = metrics.get("revenue") or row.get("revenue")
+        if metrics.get("revenue") is not None and metric_preferred(row, "revenue", "revenue"):
+            row["revenue"] = safe_round(metrics.get("revenue"), 0)
+            metric_sources["revenue"] = source_label
+            applied += 1
+
+        gross_margin = metrics.get("nonGaapGrossMarginPct")
+        if gross_margin is None and metrics.get("nonGaapGrossProfit") is not None and revenue_value:
+            gross_margin = plausible_margin_from_amount(metrics.get("nonGaapGrossProfit"), revenue_value)
+        if plausible_percent(gross_margin):
+            row["grossMarginPct"] = safe_round(gross_margin, 1)
+            metric_sources["grossMarginPct"] = source_label + " Non-GAAP"
+            applied += 1
+
+        operating_margin = metrics.get("nonGaapOperatingMarginPct")
+        if operating_margin is None and metrics.get("nonGaapOperatingIncome") is not None and revenue_value:
+            operating_margin = plausible_margin_from_amount(metrics.get("nonGaapOperatingIncome"), revenue_value)
+        if plausible_percent(operating_margin):
+            row["operatingMarginPct"] = safe_round(operating_margin, 1)
+            metric_sources["operatingMarginPct"] = source_label + " Non-GAAP"
+            applied += 1
+
+        if plausible_eps(metrics.get("nonGaapEpsDiluted")):
+            row["epsDiluted"] = safe_round(metrics.get("nonGaapEpsDiluted"), 2)
+            metric_sources["epsDiluted"] = source_label + " Non-GAAP"
+            applied += 1
+        if plausible_cash_flow(metrics.get("ocf"), revenue_value):
+            row["ocf"] = safe_round(metrics.get("ocf"), 0)
+            metric_sources["ocf"] = source_label
+            applied += 1
+        if plausible_cash_flow(metrics.get("fcf"), revenue_value):
+            row["fcf"] = safe_round(metrics.get("fcf"), 0)
+            metric_sources["fcf"] = source_label
+            applied += 1
+
+        row["irReleaseUrl"] = release.get("url")
+        row["irReleaseDate"] = release.get("filingDate")
+        row["metricSources"] = metric_sources
+    return applied
+
+
 def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]:
     facts = fetch_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
+    ir_releases = build_ir_release_metrics(cik)
     revenue = extract_tag_series(facts, REVENUE_TAGS)
     bank_revenue = add_series(
         extract_tag_series(facts, NET_INTEREST_INCOME_TAGS),
@@ -548,12 +900,22 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
             }
         )
 
+    ir_values_applied = apply_ir_metrics(rows, ir_releases)
+    non_gaap_rows = sum(
+        1
+        for row in rows[:4]
+        if any("Non-GAAP" in str(source) for source in (row.get("metricSources") or {}).values())
+    )
+
     return {
         "ticker": ticker,
         "name": name,
         "cik": cik,
-        "source": "SEC EDGAR companyfacts",
-        "basis": "SEC GAAP/XBRL proxy; Non-GAAP margins are not consistently available from free SEC data.",
+        "source": "SEC EDGAR companyfacts + EDGAR earnings release exhibits",
+        "basis": "IR earnings-release Non-GAAP/adjusted metrics where extractable; SEC GAAP companyfacts fallback.",
+        "irReleaseCount": len(ir_releases),
+        "irValuesApplied": ir_values_applied,
+        "nonGaapRows": non_gaap_rows,
         "quarters": rows[:4],
     }
 
@@ -577,6 +939,7 @@ def main() -> None:
             missing.append(ticker)
             continue
         try:
+            print(f"Processing {index + 1}/{len(target_rows)} {ticker}", flush=True)
             financials[ticker] = build_company_financials(ticker, str(row.get("name") or mapping["title"]), mapping["cik"])
         except Exception as error:  # pragma: no cover - source variability
             errors[ticker] = str(error)
@@ -584,26 +947,30 @@ def main() -> None:
         if (index + 1) % 20 == 0:
             print(f"Processed {index + 1}/{len(target_rows)}")
 
-    sp500_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("sp500"))
     nasdaq100_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("nasdaq100"))
+    non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
 
     payload = {
         "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "scope": {
-            "universe": "S&P 500 + NASDAQ 100",
+            "universe": "NASDAQ 100",
             "universes": list(TARGET_MEMBERSHIPS),
-            "counts": {"sp500": sp500_count, "nasdaq100": nasdaq100_count, "total": len(target_rows)},
+            "counts": {
+                "nasdaq100": nasdaq100_count,
+                "total": len(target_rows),
+                "nonGaapCompanies": non_gaap_company_count,
+            },
             "tickers": sorted(row.get("ticker") for row in target_rows),
-            "source": "SEC EDGAR companyfacts",
-            "basis": "SEC GAAP/XBRL proxy. Free SEC data does not provide standardized Non-GAAP GPM/OPM across issuers.",
+            "source": "SEC EDGAR companyfacts + EDGAR 8-K/6-K earnings release exhibits",
+            "basis": "NASDAQ100 only. IR earnings-release Non-GAAP/adjusted metrics are preferred when extractable from official EDGAR exhibits; SEC GAAP companyfacts remains the fallback.",
         },
         "metrics": [
             {"key": "revenue", "label": "Revenue", "unit": "usd", "note": "YoY is shown against the same quarter a year ago."},
-            {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "GAAP gross profit / revenue proxy."},
-            {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "GAAP operating income / revenue proxy. YoY pp change is shown."},
-            {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "GAAP diluted EPS when disclosed as a quarterly XBRL fact."},
+            {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Non-GAAP gross margin from IR release when extractable; GAAP fallback."},
+            {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Non-GAAP/adjusted operating margin from IR release when extractable; GAAP fallback. YoY pp change is shown where available."},
+            {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "Non-GAAP diluted EPS from IR release when extractable; GAAP fallback."},
             {"key": "ocf", "label": "OCF", "unit": "usd"},
-            {"key": "fcf", "label": "FCF", "unit": "usd", "note": "OCF minus absolute capex cash outflow."},
+            {"key": "fcf", "label": "FCF", "unit": "usd", "note": "Company-reported free cash flow from IR release when extractable; otherwise OCF minus absolute capex cash outflow."},
         ],
         "financials": financials,
         "missing": missing,
