@@ -291,7 +291,7 @@ const state = {
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
   trendScoreUniverse: "nasdaq100",
-  trendScoreRange: "3m",
+  trendScoreRange: "1y",
   trendScoreSelectedTicker: "",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
@@ -6012,7 +6012,7 @@ function renderMarketBriefingOverview() {
 }
 
 function formatRsNumber(value, digits = 0) {
-  if (!Number.isFinite(Number(value))) {
+  if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
     return "-";
   }
   return Number(value).toFixed(digits);
@@ -7076,6 +7076,8 @@ function getTrendScoreSortValue(row, sortKey) {
       return row.rankChange ?? Number.NEGATIVE_INFINITY;
     case "rsRating":
       return row.rsRating ?? Number.NEGATIVE_INFINITY;
+    case "climaxScore":
+      return row.climaxScore ?? Number.NEGATIVE_INFINITY;
     case "absoluteScore":
       return row.absoluteScore ?? Number.NEGATIVE_INFINITY;
     case "relativeScore":
@@ -7148,6 +7150,13 @@ function formatTrendSignedPercent(value) {
   return `${sign}${numeric.toFixed(2)}%`;
 }
 
+function formatTrendList(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return "-";
+  }
+  return items.join(", ");
+}
+
 function createTrendScoreChart(canvas, row) {
   if (typeof Chart === "undefined" || !row) {
     return;
@@ -7165,6 +7174,7 @@ function createTrendScoreChart(canvas, row) {
   const selectedLabels = labels.slice(startIndex);
   const selectedRanks = (history.rank ?? []).slice(startIndex);
   const selectedScores = (history.score ?? []).slice(startIndex);
+  const selectedClimaxScores = (history.climaxScore ?? []).slice(startIndex);
   const rankValues = selectedRanks.filter((value) => Number.isFinite(value));
   const maxRank = rankValues.length ? Math.max(...rankValues) : Math.max(20, row.rank ?? 20);
   const rankAxisMax = Math.min(Math.max(20, Math.ceil(maxRank / 10) * 10), getTrendScoreRows().length || 100);
@@ -7196,6 +7206,17 @@ function createTrendScoreChart(canvas, row) {
           pointHoverRadius: 4,
           yAxisID: "y1",
         },
+        {
+          label: "Climax Score",
+          data: selectedClimaxScores,
+          borderColor: "#f97316",
+          backgroundColor: "#f97316",
+          borderWidth: 2,
+          tension: 0.16,
+          pointRadius: 1.8,
+          pointHoverRadius: 4,
+          yAxisID: "y1",
+        },
       ],
     },
     options: {
@@ -7216,7 +7237,7 @@ function createTrendScoreChart(canvas, row) {
               if (context.dataset.yAxisID === "y") {
                 return `Rank: ${formatTrendRank(context.parsed.y)}`;
               }
-              return `Trend Score: ${formatRsNumber(context.parsed.y)}`;
+              return `${context.dataset.label}: ${formatRsNumber(context.parsed.y)}`;
             },
           },
         },
@@ -7284,17 +7305,6 @@ function renderMarketTrendScoreOverview() {
       `,
     )
     .join("");
-  const rangeChips = (marketTrendScoreData.ranges ?? [])
-    .map(
-      (range) => `
-        <button
-          type="button"
-          class="market-rs-chip${state.trendScoreRange === range.key ? " active" : ""}"
-          data-trend-score-range="${range.key}"
-        >${range.label}</button>
-      `,
-    )
-    .join("");
   const leaderCards = rows.slice(0, 12)
     .map(
       (row) => `
@@ -7317,6 +7327,10 @@ function renderMarketTrendScoreOverview() {
             <span>RS Trend</span>
             <strong>${formatRsNumber(row.relativeScore)}/4</strong>
           </div>
+          <div class="market-rs-card-meta">
+            <span>Climax</span>
+            <strong>${formatRsNumber(row.climaxScore)}</strong>
+          </div>
           <div class="market-rs-flag">${row.zone ?? "-"}</div>
         </button>
       `,
@@ -7335,9 +7349,11 @@ function renderMarketTrendScoreOverview() {
           <td>${formatRsNumber(row.absoluteScore)}/4</td>
           <td>${formatRsNumber(row.relativeScore)}/4</td>
           <td>${formatRsNumber(row.momentumScore)}/2</td>
+          <td>${formatRsNumber(row.climaxScore)}</td>
           <td>${formatRsNumber(row.rsRating)}</td>
           <td>${formatAtrPercent(row.atr21Pct)}</td>
           <td>${formatTrendSignedPercent(row.deviation50Pct)}</td>
+          <td>${formatTrendList(row.climaxFlags)}</td>
           <td>${row.state ?? "-"}</td>
         </tr>
       `,
@@ -7362,10 +7378,6 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Universe</span>
             <div class="market-rs-chip-row">${universeChips}</div>
-          </div>
-          <div class="market-rs-control-block">
-            <span class="market-rs-control-label">Rank History</span>
-            <div class="market-rs-chip-row">${rangeChips}</div>
           </div>
         </div>
       </article>
@@ -7407,6 +7419,10 @@ function renderMarketTrendScoreOverview() {
               <strong>${formatRsNumber(selected?.absoluteScore)}/${formatRsNumber(selected?.relativeScore)}/${formatRsNumber(selected?.momentumScore)}</strong>
             </div>
             <div class="market-rs-metric">
+              <span>Climax</span>
+              <strong>${formatRsNumber(selected?.climaxScore)}</strong>
+            </div>
+            <div class="market-rs-metric">
               <span>Price</span>
               <strong>${formatUsStockPrice(selected?.price)}</strong>
             </div>
@@ -7426,7 +7442,7 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-extension-panel">
             <div class="market-rs-extension-title">
               <strong>Scoring Logic</strong>
-              <span>① Price/50DMA/200DMA 4점 + ② 선택 유니버스 RS 추세 4점 + ③ 단기 모멘텀 2점.</span>
+              <span>① Price/50DMA/200DMA 4점 + ② 벤치마크 대비 RS 라인 추세 4점 + ③ 단기 모멘텀 2점. Climax는 3주/10일 급등, ATR 확장, 20DMA 과열을 별도로 점검합니다.</span>
             </div>
             <div class="market-rs-extension-grid">
               <article class="market-rs-extension-card">
@@ -7435,18 +7451,22 @@ function renderMarketTrendScoreOverview() {
               </article>
               <article class="market-rs-extension-card">
                 <div class="market-rs-extension-head"><strong>Relative</strong><b>${formatRsNumber(selected?.relativeScore)}/4</b></div>
-                <div class="market-rs-extension-stats"><span>Universe RS <strong>${formatRsNumber(selected?.rsRating)}</strong></span><span>State <strong>${selected?.state ?? "-"}</strong></span></div>
+                <div class="market-rs-extension-stats"><span>RS Rating <strong>${formatRsNumber(selected?.rsRating)}</strong></span><span>State <strong>${selected?.state ?? "-"}</strong></span></div>
               </article>
               <article class="market-rs-extension-card">
                 <div class="market-rs-extension-head"><strong>ATR Ext</strong><b>${formatAtrMultiple(selected?.atrExt50)}</b></div>
                 <div class="market-rs-extension-stats"><span>20DMA <strong>${formatAtrMultiple(selected?.atrExt20)}</strong></span><span>200DMA <strong>${formatAtrMultiple(selected?.atrExt200)}</strong></span></div>
+              </article>
+              <article class="market-rs-extension-card${Number(selected?.climaxScore) >= 4 ? " is-stretched" : ""}">
+                <div class="market-rs-extension-head"><strong>Climax</strong><b>${formatRsNumber(selected?.climaxScore)}</b></div>
+                <div class="market-rs-extension-stats"><span>Flags <strong>${formatTrendList(selected?.climaxFlags)}</strong></span><span>Extended <strong>${formatTrendList(selected?.extendedFlags)}</strong></span></div>
               </article>
             </div>
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-trend-score-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: daily rank, inverted so #1 is at the top. Right axis: 0-10 trend score. Hover shows the exact date.</p>
+          <p class="market-rs-chart-caption">Left axis: daily rank, inverted so #1 is at the top. Right axis: 0-10 trend and climax scores. Hover shows the exact date.</p>
         </article>
       </section>
 
@@ -7470,13 +7490,15 @@ function renderMarketTrendScoreOverview() {
                 <th>${renderTrendScoreSortHeader("Abs", "absoluteScore")}</th>
                 <th>${renderTrendScoreSortHeader("RS", "relativeScore")}</th>
                 <th>${renderTrendScoreSortHeader("Mo", "momentumScore")}</th>
+                <th>${renderTrendScoreSortHeader("Climax", "climaxScore")}</th>
                 <th>${renderTrendScoreSortHeader("RS Rating", "rsRating")}</th>
                 <th>${renderTrendScoreSortHeader("ATR%", "atr21Pct")}</th>
                 <th>${renderTrendScoreSortHeader("50DMA Gap", "deviation50Pct")}</th>
+                <th>Climax Flags</th>
                 <th>State</th>
               </tr>
             </thead>
-            <tbody>${tableRows || '<tr><td colspan="13">검색 결과가 없습니다.</td></tr>'}</tbody>
+            <tbody>${tableRows || '<tr><td colspan="15">검색 결과가 없습니다.</td></tr>'}</tbody>
           </table>
         </div>
       </article>
@@ -7487,12 +7509,6 @@ function renderMarketTrendScoreOverview() {
     button.addEventListener("click", () => {
       state.trendScoreUniverse = button.dataset.trendScoreUniverse || "nasdaq100";
       state.trendScoreSelectedTicker = "";
-      render();
-    });
-  });
-  usOverviewRoot.querySelectorAll("[data-trend-score-range]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.trendScoreRange = button.dataset.trendScoreRange || "3m";
       render();
     });
   });
