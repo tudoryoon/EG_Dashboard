@@ -5389,8 +5389,8 @@ function createBriefingRotationHistoryChart(canvas, sector, history) {
         {
           label: `${sector?.label ?? "Sector"} score`,
           data: values,
-          borderColor: getRotationHistoryBorderColor(sector?.classification),
-          backgroundColor: "rgba(17, 24, 39, 0.10)",
+          borderColor: "#111827",
+          backgroundColor: "#111827",
           borderWidth: 2.4,
           pointRadius: 0,
           pointHoverRadius: 4,
