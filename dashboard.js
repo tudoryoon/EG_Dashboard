@@ -6758,7 +6758,7 @@ function renderMarketRsOverview() {
     .join("");
   const tableSortRows = sortMarketRsTableRows(rows);
   const sortedLeaderRows = sortMarketRsLeaderRows(rows);
-  const leaderRows = state.rsFilter === "newHigh" ? sortedLeaderRows : sortedLeaderRows.slice(0, 12);
+  const leaderRows = sortedLeaderRows;
   const leaderCards = leaderRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -6868,7 +6868,7 @@ function renderMarketRsOverview() {
           <div class="us-section-head">
             <div>
               <h2>RS Leaders</h2>
-              <p>${getMarketRsUniverseLabel(state.rsUniverse)} universe leaders by RS Rating.</p>
+              <p>${getMarketRsUniverseLabel(state.rsUniverse)} universe leaders by RS Rating. Showing ${leaderRows.length} names.</p>
             </div>
             <div class="market-rs-chip-row">${leaderSortChips}</div>
           </div>
