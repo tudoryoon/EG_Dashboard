@@ -290,7 +290,7 @@ const state = {
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
-  trendScoreUniverse: "nasdaq100",
+  trendScoreUniverse: "all",
   trendScoreRange: "1y",
   trendScoreSelectedTicker: "",
   trendScoreTableSortKey: "rank",
@@ -7507,7 +7507,7 @@ function renderMarketTrendScoreOverview() {
 
   usOverviewRoot.querySelectorAll("[data-trend-score-universe]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.trendScoreUniverse = button.dataset.trendScoreUniverse || "nasdaq100";
+      state.trendScoreUniverse = button.dataset.trendScoreUniverse || "all";
       state.trendScoreSelectedTicker = "";
       render();
     });

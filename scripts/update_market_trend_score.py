@@ -15,6 +15,13 @@ OUTPUT_PATH = ROOT / "data" / "market-trend-score-data.js"
 HISTORY_POINTS = 252
 
 UNIVERSES = {
+    "all": {
+        "label": "ALL",
+        "memberships": ("sp500", "nasdaq100"),
+        "history_key": "rsRatingAll",
+        "benchmark_key": "sp500",
+        "color": "#0f766e",
+    },
     "nasdaq100": {
         "label": "NASDAQ 100",
         "membership": "nasdaq100",
@@ -427,7 +434,13 @@ def build_universe_payload(
     members: list[tuple[str, dict, dict, pd.DataFrame]] = []
 
     for ticker, row in rows_by_ticker.items():
-        if not row.get("memberships", {}).get(meta["membership"]):
+        memberships = row.get("memberships", {})
+        membership_key = meta.get("membership")
+        membership_keys = meta.get("memberships")
+        if membership_keys:
+            if not any(memberships.get(key) for key in membership_keys):
+                continue
+        elif membership_key and not memberships.get(membership_key):
             continue
         history = histories.get(ticker)
         if not history:
