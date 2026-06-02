@@ -407,6 +407,26 @@ h1 {
   padding: 12px;
 }
 
+.briefing-rotation-sector.is-leading {
+  border-color: rgba(19, 112, 71, 0.34);
+  background: linear-gradient(180deg, rgba(20, 128, 78, 0.30), rgba(20, 128, 78, 0.18));
+}
+
+.briefing-rotation-sector.is-improving {
+  border-color: rgba(22, 163, 74, 0.22);
+  background: linear-gradient(180deg, rgba(220, 252, 231, 0.96), rgba(240, 253, 244, 0.94));
+}
+
+.briefing-rotation-sector.is-weakening {
+  border-color: rgba(248, 113, 113, 0.24);
+  background: linear-gradient(180deg, rgba(254, 226, 226, 0.94), rgba(255, 241, 242, 0.92));
+}
+
+.briefing-rotation-sector.is-lagging {
+  border-color: rgba(180, 35, 24, 0.32);
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.24), rgba(220, 38, 38, 0.15));
+}
+
 .briefing-rotation-sector:hover,
 .briefing-rotation-sector.active {
   border-color: rgba(17, 24, 39, 0.38);
@@ -455,6 +475,28 @@ h1 {
 .briefing-rotation-sector.is-weakening > b,
 .briefing-rotation-sector.is-lagging > b {
   color: #a63b2b;
+}
+
+.briefing-rotation-quadrant.is-leading,
+.briefing-rotation-quadrant.is-improving {
+  border-color: rgba(22, 163, 74, 0.20);
+  background: rgba(240, 253, 244, 0.82);
+}
+
+.briefing-rotation-quadrant.is-leading {
+  border-color: rgba(19, 112, 71, 0.32);
+  background: rgba(20, 128, 78, 0.16);
+}
+
+.briefing-rotation-quadrant.is-weakening,
+.briefing-rotation-quadrant.is-lagging {
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(255, 241, 242, 0.82);
+}
+
+.briefing-rotation-quadrant.is-lagging {
+  border-color: rgba(180, 35, 24, 0.30);
+  background: rgba(220, 38, 38, 0.14);
 }
 
 .briefing-rotation-panel .is-positive {

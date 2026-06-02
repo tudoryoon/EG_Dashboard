@@ -5293,10 +5293,10 @@ function getRotationClassRule(classification) {
 
 function getRotationHistoryShadeColor(classification) {
   const colors = {
-    Leading: "rgba(19, 112, 71, 0.12)",
-    Improving: "rgba(37, 99, 235, 0.10)",
-    Weakening: "rgba(217, 119, 6, 0.12)",
-    Lagging: "rgba(180, 35, 24, 0.10)",
+    Leading: "rgba(19, 112, 71, 0.20)",
+    Improving: "rgba(22, 163, 74, 0.10)",
+    Weakening: "rgba(248, 113, 113, 0.12)",
+    Lagging: "rgba(180, 35, 24, 0.18)",
   };
   return colors[classification] ?? "rgba(107, 114, 128, 0.08)";
 }
@@ -5304,8 +5304,8 @@ function getRotationHistoryShadeColor(classification) {
 function getRotationHistoryBorderColor(classification) {
   const colors = {
     Leading: "#137047",
-    Improving: "#2563eb",
-    Weakening: "#d97706",
+    Improving: "#16a34a",
+    Weakening: "#ef4444",
     Lagging: "#b42318",
   };
   return colors[classification] ?? "#6b7280";
@@ -5760,7 +5760,6 @@ function renderMarketBriefingOverview() {
         <button
           type="button"
           class="briefing-rotation-sector is-${String(sector.classification ?? "neutral").toLowerCase()}${sector.key === selectedRotationSectorKey ? " active" : ""}"
-          style="background:${getRotationScoreColor(sector.score)}"
           data-rotation-sector="${sector.key}"
         >
           <div class="briefing-rotation-sector-head">
