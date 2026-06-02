@@ -293,6 +293,9 @@ const state = {
   trendScoreUniverse: "all",
   trendScoreRange: "1y",
   trendScoreSelectedTicker: "",
+  trendScoreMarketCapRange: "all",
+  trendScoreCustomMarketCapMin: "",
+  trendScoreCustomMarketCapMax: "",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   macroIndicatorKey: "",
@@ -6387,13 +6390,13 @@ function parseMarketCapInput(value) {
   return numeric * multiplier;
 }
 
-function matchesMarketRsCapRange(row) {
+function matchesMarketCapRange(row, rangeKey, customMinValue = "", customMaxValue = "") {
   const marketCap = Number(row.marketCap);
   if (!Number.isFinite(marketCap)) {
     return false;
   }
-  const customMin = parseMarketCapInput(state.rsCustomMarketCapMin);
-  const customMax = parseMarketCapInput(state.rsCustomMarketCapMax);
+  const customMin = parseMarketCapInput(customMinValue);
+  const customMax = parseMarketCapInput(customMaxValue);
   if (customMin !== null && marketCap < customMin) {
     return false;
   }
@@ -6403,8 +6406,21 @@ function matchesMarketRsCapRange(row) {
   if (customMin !== null || customMax !== null) {
     return true;
   }
-  const range = getMarketRsCapRangeMeta(state.rsMarketCapRange);
+  const range = getMarketRsCapRangeMeta(rangeKey);
   return marketCap >= range.min && marketCap < range.max;
+}
+
+function matchesMarketRsCapRange(row) {
+  return matchesMarketCapRange(row, state.rsMarketCapRange, state.rsCustomMarketCapMin, state.rsCustomMarketCapMax);
+}
+
+function matchesTrendScoreCapRange(row) {
+  return matchesMarketCapRange(
+    row,
+    state.trendScoreMarketCapRange,
+    state.trendScoreCustomMarketCapMin,
+    state.trendScoreCustomMarketCapMax,
+  );
 }
 
 function getVisibleMarketRsRows() {
@@ -7046,6 +7062,9 @@ function getTrendScoreRows() {
 function getVisibleTrendScoreRows() {
   const query = state.query.trim().toLowerCase();
   const rows = getTrendScoreRows().filter((row) => {
+    if (!matchesTrendScoreCapRange(row)) {
+      return false;
+    }
     if (!query) {
       return true;
     }
@@ -7304,6 +7323,15 @@ function renderMarketTrendScoreOverview() {
       `,
     )
     .join("");
+  const marketCapChips = MARKET_RS_CAP_RANGES.map(
+    (range) => `
+      <button
+        type="button"
+        class="market-rs-chip${state.trendScoreMarketCapRange === range.key ? " active" : ""}"
+        data-trend-score-market-cap="${range.key}"
+      >${range.label}</button>
+    `,
+  ).join("");
   const leaderCards = rows.slice(0, 12)
     .map(
       (row) => `
@@ -7370,13 +7398,29 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${marketTrendScoreData.updatedAt ?? "-"}</span>
             <span class="market-rs-pill">${getTrendScoreUniverseLabel()}</span>
-            <span class="market-rs-pill">${getTrendScoreRows().length} names</span>
+            <span class="market-rs-pill">${rows.length} names</span>
           </div>
         </div>
         <div class="market-rs-controls">
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Universe</span>
             <div class="market-rs-chip-row">${universeChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Market Cap</span>
+            <div class="market-rs-chip-row">${marketCapChips}</div>
+            <div class="market-rs-cap-custom">
+              <label>
+                <span>Min</span>
+                <input type="text" inputmode="decimal" placeholder="ex. 5B" value="${state.trendScoreCustomMarketCapMin}" data-trend-score-market-cap-min />
+              </label>
+              <label>
+                <span>Max</span>
+                <input type="text" inputmode="decimal" placeholder="optional" value="${state.trendScoreCustomMarketCapMax}" data-trend-score-market-cap-max />
+              </label>
+              <button type="button" class="total-date-button" data-trend-score-market-cap-apply>Apply</button>
+              <button type="button" class="total-date-button total-date-button-secondary" data-trend-score-market-cap-clear>Clear</button>
+            </div>
           </div>
         </div>
       </article>
@@ -7511,6 +7555,36 @@ function renderMarketTrendScoreOverview() {
       render();
     });
   });
+  usOverviewRoot.querySelectorAll("[data-trend-score-market-cap]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreMarketCapRange = button.dataset.trendScoreMarketCap || "all";
+      state.trendScoreCustomMarketCapMin = "";
+      state.trendScoreCustomMarketCapMax = "";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  });
+  const trendScoreMarketCapMinInput = usOverviewRoot.querySelector("[data-trend-score-market-cap-min]");
+  const trendScoreMarketCapMaxInput = usOverviewRoot.querySelector("[data-trend-score-market-cap-max]");
+  const trendScoreMarketCapApplyButton = usOverviewRoot.querySelector("[data-trend-score-market-cap-apply]");
+  const trendScoreMarketCapClearButton = usOverviewRoot.querySelector("[data-trend-score-market-cap-clear]");
+  if (trendScoreMarketCapApplyButton && trendScoreMarketCapMinInput && trendScoreMarketCapMaxInput) {
+    trendScoreMarketCapApplyButton.addEventListener("click", () => {
+      state.trendScoreCustomMarketCapMin = trendScoreMarketCapMinInput.value.trim();
+      state.trendScoreCustomMarketCapMax = trendScoreMarketCapMaxInput.value.trim();
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  }
+  if (trendScoreMarketCapClearButton) {
+    trendScoreMarketCapClearButton.addEventListener("click", () => {
+      state.trendScoreCustomMarketCapMin = "";
+      state.trendScoreCustomMarketCapMax = "";
+      state.trendScoreMarketCapRange = "all";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  }
   usOverviewRoot.querySelectorAll("[data-trend-score-sort]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextSortKey = button.dataset.trendScoreSort;
