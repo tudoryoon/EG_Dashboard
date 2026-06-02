@@ -30,6 +30,14 @@ const marketVixData = window.marketVixData ?? {
   curve: {},
   snapshots: [],
 };
+const marketBreadthData = window.marketBreadthData ?? {
+  updatedAt: "",
+  startDate: "2004-01-01",
+  defaultRange: "3y",
+  ranges: [],
+  source: {},
+  panels: {},
+};
 const macroIndicatorsData = window.macroIndicatorsData ?? { updatedAt: "", commonStartMonth: "2010-04", indicators: [], categories: [] };
 const marketRsData = window.marketRsData ?? {
   updatedAt: "",
@@ -251,6 +259,7 @@ const state = {
   marketVixFamilyRange: "3y",
   marketVixFamilyCustomStart: "",
   marketVixFamilyCustomEnd: "",
+  marketBreadthRange: marketBreadthData.defaultRange ?? "3y",
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, "3y"]),
   ),
@@ -5057,22 +5066,199 @@ function renderInfraOverview() {
   bindInfraControls(panelKeys);
 }
 
+function getMarketBreadthSpreadPanel() {
+  return marketBreadthData.panels?.sp500EqualWeightSpread52w ?? null;
+}
+
+function buildMarketBreadthSpreadPayload(rangeKey) {
+  const panel = getMarketBreadthSpreadPanel();
+  const labels = panel?.dates ?? [];
+  const values = panel?.values ?? [];
+  const equalReturns = panel?.equalWeightedReturns ?? [];
+  const capReturns = panel?.capWeightedReturns ?? [];
+  if (!labels.length) {
+    return { labels: [], values: [], equalReturns: [], capReturns: [] };
+  }
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, labels[0]);
+  const startIndex = rangeKey === "max" ? 0 : Math.max(0, labels.findIndex((label) => label >= startDate));
+  return {
+    labels: labels.slice(startIndex),
+    values: values.slice(startIndex),
+    equalReturns: equalReturns.slice(startIndex),
+    capReturns: capReturns.slice(startIndex),
+  };
+}
+
+function formatBreadthSpread(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}%p`;
+}
+
+function createMarketBreadthSpreadChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined" || !canvas) {
+    return;
+  }
+  const payload = buildMarketBreadthSpreadPayload(rangeKey);
+  if (!payload.labels.length) {
+    return;
+  }
+  const finiteValues = payload.values.filter((value) => Number.isFinite(Number(value))).map(Number);
+  const minValue = finiteValues.length ? Math.min(...finiteValues, -10) : -10;
+  const maxValue = finiteValues.length ? Math.max(...finiteValues, 0) : 0;
+  const padding = Math.max((maxValue - minValue) * 0.12, 2);
+  const yMin = Math.floor((minValue - padding) / 5) * 5;
+  const yMax = Math.ceil((maxValue + padding) / 5) * 5;
+  const tickIndexes = buildRegularDateTickIndexes(payload.labels, rangeKey);
+  const tickSet = new Set(tickIndexes);
+
+  const thresholdDataset = (value, label, color, dash = [6, 6]) => ({
+    label,
+    data: payload.labels.map(() => value),
+    borderColor: color,
+    borderDash: dash,
+    borderWidth: 1.3,
+    pointRadius: 0,
+    pointHoverRadius: 0,
+  });
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: [
+        {
+          label: "S&P 500 52W Breadth Spread",
+          data: payload.values,
+          borderColor: "#344255",
+          backgroundColor: "#344255",
+          borderWidth: 2.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 10,
+          tension: 0.16,
+          spanGaps: true,
+        },
+        thresholdDataset(0, "Expansion line", "rgba(100, 116, 139, 0.45)", [2, 6]),
+        thresholdDataset(-5, "Watch line", "rgba(17, 24, 39, 0.42)", []),
+        thresholdDataset(-10, "Narrowing line", "rgba(148, 163, 184, 0.72)", [2, 6]),
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#5f5f59",
+            filter: (item) => item.datasetIndex === 0,
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              if (context.datasetIndex !== 0) {
+                return `${context.dataset.label}: ${formatBreadthSpread(context.parsed.y)}`;
+              }
+              const index = context.dataIndex;
+              return [
+                `Spread: ${formatBreadthSpread(context.parsed.y)}`,
+                `Equal weight 52W: ${formatSignedPercent(payload.equalReturns[index])}`,
+                `Cap weight 52W: ${formatSignedPercent(payload.capReturns[index])}`,
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(28,28,26,0.08)" },
+          ticks: {
+            color: "#8a8a83",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          grid: { color: "rgba(28,28,26,0.08)" },
+          ticks: {
+            color: "#77776f",
+            callback: (value) => `${Number(value).toFixed(0)}%p`,
+          },
+          title: { display: true, text: "Equal weight minus cap weight", color: "#8d8d86" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
 function renderMarketBreadthOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
+  const spreadPanel = getMarketBreadthSpreadPanel();
+  const rangeChips = (marketBreadthData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.marketBreadthRange === range.key ? " active" : ""}"
+          data-market-breadth-range="${range.key}"
+        >${range.label}</button>
+      `,
+    )
+    .join("");
+  const latestSpread = spreadPanel?.latest;
+  const latestClass = Number(latestSpread) >= 0 ? "is-positive" : "is-negative";
   usOverviewRoot.innerHTML = `
     <section class="market-breadth-overview">
       <article class="us-panel">
         <div class="us-section-head">
           <div>
             <h2>Market Breadth</h2>
-            <p>Stockbee Market Monitor breadth sheet embedded directly so the daily source updates flow through with minimal maintenance.</p>
+            <p>S&P 500 breadth proxy plus Stockbee Market Monitor sheet. The spread shows equal-weight 52W return minus cap-weight 52W return.</p>
           </div>
           <div class="market-breadth-actions">
             <a class="market-breadth-link" href="${MARKET_BREADTH_SOURCE_URL}" target="_blank" rel="noreferrer">Open Source Page</a>
             <a class="market-breadth-link" href="${MARKET_BREADTH_SHEET_URL}" target="_blank" rel="noreferrer">Open Sheet</a>
           </div>
+        </div>
+      </article>
+      <article class="us-panel market-breadth-spread-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>${spreadPanel?.label ?? "S&P 500 52W Breadth Spread"}</h2>
+            <p>${spreadPanel?.subtitle ?? "Equal-weight 52W return minus cap-weight 52W return"}</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">As of ${marketBreadthData.updatedAt || "-"}</span>
+            <span class="market-rs-pill ${latestClass}">${formatBreadthSpread(latestSpread)}</span>
+            <span class="market-rs-pill">${spreadPanel?.latestState ?? "-"}</span>
+          </div>
+        </div>
+        <div class="market-rs-chip-row">${rangeChips}</div>
+        <div class="market-breadth-spread-meta">
+          <span>Proxy: RSP 52W return - SPY 52W return</span>
+          <span>0%p 이상은 확산, -10%p 이하는 대형주 쏠림 심화로 해석</span>
+          <span>무료 데이터 한계상 2004년 4월 이후부터 제공</span>
+        </div>
+        <div class="chart-wrap market-breadth-spread-chart-wrap">
+          <canvas data-market-breadth-spread-chart></canvas>
         </div>
       </article>
       <article class="us-panel market-breadth-frame-panel">
@@ -5085,6 +5271,16 @@ function renderMarketBreadthOverview() {
       </article>
     </section>
   `;
+  usOverviewRoot.querySelectorAll("[data-market-breadth-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketBreadthRange = button.dataset.marketBreadthRange || marketBreadthData.defaultRange || "3y";
+      render();
+    });
+  });
+  const spreadCanvas = usOverviewRoot.querySelector("canvas[data-market-breadth-spread-chart]");
+  if (spreadCanvas && spreadPanel) {
+    createMarketBreadthSpreadChart(spreadCanvas, state.marketBreadthRange);
+  }
 }
 
 function formatBriefingTimestamp(value) {
