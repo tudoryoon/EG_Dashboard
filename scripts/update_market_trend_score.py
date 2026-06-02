@@ -45,6 +45,11 @@ POSITION_BY_SCORE = {
     0: -3.0,
 }
 
+ATR_EXTENSION_SIGMA = {
+    "ema10_plus3": 2.69,
+    "sma200_plus2": 10.72,
+}
+
 
 def load_market_rs_payload() -> dict:
     text = RS_DATA_PATH.read_text(encoding="utf-8").strip()
@@ -150,6 +155,7 @@ def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
     price = price.astype("float64")
     relative = relative.astype("float64")
     frame = pd.DataFrame({"price": price, "relative": relative})
+    frame["ema10"] = frame["price"].ewm(span=10, adjust=False).mean()
     frame["ema21"] = frame["price"].ewm(span=21, adjust=False).mean()
     frame["sma20"] = frame["price"].rolling(20).mean()
     frame["sma50"] = frame["price"].rolling(50).mean()
@@ -180,6 +186,7 @@ def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
     frame["momentumScore"] = sum(condition.astype("float64") for condition in momentum_conditions)
     ready = frame[["sma200", "rs200"]].notna().all(axis=1)
     frame["score"] = (frame["absoluteScore"] + frame["relativeScore"] + frame["momentumScore"]).where(ready)
+    frame["deviation10EmaPct"] = ((frame["price"] / frame["ema10"]) - 1) * 100
     frame["deviation20Pct"] = ((frame["price"] / frame["sma20"]) - 1) * 100
     frame["deviation21EmaPct"] = ((frame["price"] / frame["ema21"]) - 1) * 100
     frame["deviation50Pct"] = ((frame["price"] / frame["sma50"]) - 1) * 100
@@ -288,9 +295,17 @@ def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:
         output["shellac"] = False
         output["source"] = "close_proxy"
 
+    output["atrExt10"] = frame["deviation10EmaPct"] / output["atrPct"]
+    output["atrExt200"] = frame["deviation200Pct"] / output["atrPct"]
+    output["extremeAtrExtension"] = (
+        output["atrExt10"].gt(ATR_EXTENSION_SIGMA["ema10_plus3"])
+        & output["atrExt200"].gt(ATR_EXTENSION_SIGMA["sma200_plus2"])
+    )
+    output["extensionExhaustion"] = output["ema21Extended20"] | output["extremeAtrExtension"]
     output["score"] = (
         output["threeWeekRule"].astype("float64") * 2
         + output["tenDaySurge"].astype("float64")
+        + output["extensionExhaustion"].astype("float64") * 3
         + output["atrSpike"].astype("float64") * 2
         + output["volumeAccel"].astype("float64")
         + output["gapUpExtended"].astype("float64")
@@ -336,7 +351,11 @@ def compute_climax_row(frame: pd.DataFrame, atr_pct: float | None) -> dict[str, 
 
     deviation21 = number_or_none(frame.iloc[-1].get("deviation21EmaPct"))
     if deviation21 is not None and deviation21 >= 20:
+        flags.append(f"21EMA+{deviation21:.0f}%")
         extended_flags.append(f"21EMA+{deviation21:.0f}%")
+    if bool(latest.get("extremeAtrExtension")):
+        flags.append("ATR Ext +3sigma/+2sigma")
+        extended_flags.append("ATR Ext +3sigma/+2sigma")
     if up_streak(price) >= 8:
         extended_flags.append("8일 연속상승")
 
@@ -351,9 +370,8 @@ def compute_climax_row(frame: pd.DataFrame, atr_pct: float | None) -> dict[str, 
             and current_gap > 12
         )
 
-    # The source workbook also scores volume, gap-up, reversal, stalling, and shellac
-    # signals. The dashboard data currently stores close-based history, so those
-    # OHLCV-only triggers are intentionally left out until the RS feed carries OHLCV.
+    # 21EMA and ATR-extension exhaustion is scored so highly extended leaders are
+    # pushed into the 4~6 caution band even before a reversal day appears.
     return {
         "score": min(score, 10),
         "flags": flags,
@@ -364,6 +382,8 @@ def compute_climax_row(frame: pd.DataFrame, atr_pct: float | None) -> dict[str, 
         "return10dPct": nullable_round(latest.get("return10dPct")),
         "atrPct": nullable_round(latest.get("atrPct")),
         "atrAvg30Pct": nullable_round(latest.get("atrAvg30Pct")),
+        "atrExt10": nullable_round(latest.get("atrExt10")),
+        "atrExt200": nullable_round(latest.get("atrExt200")),
         "source": source,
     }
 
@@ -464,6 +484,7 @@ def build_universe_payload(
             state = "A. Normal Leader (8주 Hold)"
         rank_value = nullable_int(latest_rank)
         atr_pct = number_or_none(row.get("atr21Pct"))
+        deviation10 = number_or_none(latest.get("deviation10EmaPct"))
         deviation20 = number_or_none(latest.get("deviation20Pct"))
         deviation50 = number_or_none(latest.get("deviation50Pct"))
         deviation200 = number_or_none(latest.get("deviation200Pct"))
@@ -486,15 +507,18 @@ def build_universe_payload(
                 "momentumScore": nullable_int(latest.get("momentumScore")),
                 "rsRating": nullable_int(latest.get("rsRating")),
                 "rsLine": nullable_round(latest.get("relative"), 6),
+                "ema10": nullable_round(latest.get("ema10")),
                 "sma20": nullable_round(latest.get("sma20")),
                 "ema21": nullable_round(latest.get("ema21")),
                 "sma50": nullable_round(latest.get("sma50")),
                 "sma200": nullable_round(latest.get("sma200")),
+                "deviation10EmaPct": nullable_round(deviation10),
                 "deviation20Pct": nullable_round(deviation20),
                 "deviation21EmaPct": nullable_round(latest.get("deviation21EmaPct")),
                 "deviation50Pct": nullable_round(deviation50),
                 "deviation200Pct": nullable_round(deviation200),
                 "atr21Pct": nullable_round(atr_pct),
+                "atrExt10": nullable_round(deviation10 / atr_pct) if atr_pct and deviation10 is not None else None,
                 "atrExt20": nullable_round(deviation20 / atr_pct) if atr_pct and deviation20 is not None else None,
                 "atrExt50": nullable_round(deviation50 / atr_pct) if atr_pct and deviation50 is not None else None,
                 "atrExt200": nullable_round(deviation200 / atr_pct) if atr_pct and deviation200 is not None else None,
@@ -567,6 +591,7 @@ def build_payload() -> dict:
             "climax": [
                 "15-session return >= +25% adds 2",
                 "10-session return >= +20% adds 1",
+                "21EMA >= +20% or MA10 ATR Ext > +3sigma with MA200 ATR Ext > +2sigma adds 3",
                 "21D ATR >= 30-session average ATR x1.5 adds 2",
                 "5D average volume >= previous 20D average volume x1.5 adds 1",
                 "Gap-up while extended above 21EMA adds 1",

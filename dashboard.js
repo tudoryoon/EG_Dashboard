@@ -7442,7 +7442,7 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-extension-panel">
             <div class="market-rs-extension-title">
               <strong>Scoring Logic</strong>
-              <span>① Price/50DMA/200DMA 4점 + ② 벤치마크 대비 RS 라인 추세 4점 + ③ 단기 모멘텀 2점. Climax는 OHLCV 기반 급등, ATR/거래량 확장, 갭상승, 일중반전, Stalling, Shellac을 별도로 점검합니다.</span>
+              <span>① Price/50DMA/200DMA 4점 + ② 벤치마크 대비 RS 라인 추세 4점 + ③ 단기 모멘텀 2점. Climax는 OHLCV 기반 급등, 21EMA/ATR Extension 과열, 거래량 확장, 갭상승, 일중반전, Stalling, Shellac을 별도로 점검합니다.</span>
             </div>
             <div class="market-rs-extension-grid">
               <article class="market-rs-extension-card">
@@ -7455,7 +7455,7 @@ function renderMarketTrendScoreOverview() {
               </article>
               <article class="market-rs-extension-card">
                 <div class="market-rs-extension-head"><strong>ATR Ext</strong><b>${formatAtrMultiple(selected?.atrExt50)}</b></div>
-                <div class="market-rs-extension-stats"><span>20DMA <strong>${formatAtrMultiple(selected?.atrExt20)}</strong></span><span>200DMA <strong>${formatAtrMultiple(selected?.atrExt200)}</strong></span></div>
+                <div class="market-rs-extension-stats"><span>10EMA <strong>${formatAtrMultiple(selected?.atrExt10)}</strong></span><span>20DMA <strong>${formatAtrMultiple(selected?.atrExt20)}</strong></span><span>200DMA <strong>${formatAtrMultiple(selected?.atrExt200)}</strong></span></div>
               </article>
               <article class="market-rs-extension-card${Number(selected?.climaxScore) >= 4 ? " is-stretched" : ""}">
                 <div class="market-rs-extension-head"><strong>Climax</strong><b>${formatRsNumber(selected?.climaxScore)}</b></div>
