@@ -17,7 +17,7 @@ HISTORY_POINTS = 252
 UNIVERSES = {
     "all": {
         "label": "ALL",
-        "memberships": ("sp500", "nasdaq100"),
+        "memberships": ("sp500", "nasdaq100", "russell2000"),
         "history_key": "rsRatingAll",
         "benchmark_key": "sp500",
         "color": "#0f766e",
@@ -35,6 +35,13 @@ UNIVERSES = {
         "history_key": "rsRatingSp500",
         "benchmark_key": "sp500",
         "color": "#15803d",
+    },
+    "russell2000": {
+        "label": "Russell 2000",
+        "membership": "russell2000",
+        "history_key": "rsRatingRussell2000",
+        "benchmark_key": "russell2000",
+        "color": "#8b5cf6",
     },
 }
 
@@ -426,6 +433,8 @@ def build_universe_payload(
     meta: dict,
     source: dict,
     market_price_payload: dict,
+    frame_cache: dict[tuple[str, str], pd.DataFrame],
+    climax_cache: dict[str, tuple[pd.Series, dict[str, object]]],
 ) -> tuple[list[dict], dict[str, dict]]:
     rows_by_ticker = {row.get("ticker"): row for row in source.get("rows", []) if row.get("ticker")}
     dates = source.get("historyDates", [])[-HISTORY_POINTS:]
@@ -449,17 +458,22 @@ def build_universe_payload(
         rating_values = (history.get(meta["history_key"]) or [])[-len(dates):]
         if len(price_values) != len(dates) or len(rating_values) != len(dates):
             continue
-        price = as_numeric_series(price_values, dates)
-        benchmark_window = benchmark.reindex(price.index)
-        relative = price.div(benchmark_window)
-        if relative.dropna().empty:
-            continue
-        frame = build_score_frame(price, relative)
+        frame_cache_key = (ticker, str(meta["benchmark_key"]))
+        cached_frame = frame_cache.get(frame_cache_key)
+        if cached_frame is None:
+            price = as_numeric_series(price_values, dates)
+            benchmark_window = benchmark.reindex(price.index)
+            relative = price.div(benchmark_window)
+            if relative.dropna().empty:
+                continue
+            cached_frame = build_score_frame(price, relative)
+            for history_key in ["open", "high", "low", "volume"]:
+                values = (history.get(history_key) or [])[-len(dates):]
+                if len(values) == len(dates):
+                    cached_frame[history_key] = as_numeric_series(values, dates)
+            frame_cache[frame_cache_key] = cached_frame
+        frame = cached_frame.copy()
         frame["rsRating"] = as_numeric_series(rating_values, dates)
-        for history_key in ["open", "high", "low", "volume"]:
-            values = (history.get(history_key) or [])[-len(dates):]
-            if len(values) == len(dates):
-                frame[history_key] = as_numeric_series(values, dates)
         if frame["score"].dropna().empty:
             continue
         members.append((ticker, row, history, frame))
@@ -483,7 +497,15 @@ def build_universe_payload(
         rank_series = rank_matrix[ticker].dropna() if ticker in rank_matrix.columns else pd.Series(dtype="float64")
         previous_rank = rank_series.iloc[-2] if len(rank_series) >= 2 else None
         score_value = nullable_int(latest.get("score"))
-        climax = compute_climax_row(frame.loc[:valid_at], number_or_none(row.get("atr21Pct")))
+        climax_cache_key = f"{ticker}:{valid_at.date().isoformat()}"
+        cached_climax = climax_cache.get(climax_cache_key)
+        if cached_climax is None:
+            climax_history = compute_climax_history(frame)
+            climax = compute_climax_row(frame.loc[:valid_at], number_or_none(row.get("atr21Pct")))
+            cached_climax = (climax_history, climax)
+            climax_cache[climax_cache_key] = cached_climax
+        else:
+            climax_history, climax = cached_climax
         climax_score = nullable_int(climax.get("score"))
         state = classify_trend_state(
             score_value,
@@ -544,7 +566,6 @@ def build_universe_payload(
                 "state": state,
             }
         )
-        climax_history = compute_climax_history(frame)
         output_histories[ticker] = {
             "score": serialize_series(frame["score"], 0),
             "rank": serialize_series(rank_matrix[ticker] if ticker in rank_matrix.columns else pd.Series(index=frame.index), 0),
@@ -564,8 +585,17 @@ def build_payload() -> dict:
     dates = source.get("historyDates", [])[-HISTORY_POINTS:]
     rows_by_universe = {}
     histories_by_universe = {}
+    frame_cache: dict[tuple[str, str], pd.DataFrame] = {}
+    climax_cache: dict[str, tuple[pd.Series, dict[str, object]]] = {}
     for universe_key, meta in UNIVERSES.items():
-        rows, histories = build_universe_payload(universe_key, meta, source, market_price_payload)
+        rows, histories = build_universe_payload(
+            universe_key,
+            meta,
+            source,
+            market_price_payload,
+            frame_cache,
+            climax_cache,
+        )
         rows_by_universe[universe_key] = rows
         histories_by_universe[universe_key] = histories
 
@@ -587,7 +617,7 @@ def build_payload() -> dict:
         "universes": UNIVERSES,
         "scoring": {
             "label": "Trend Score",
-            "description": "Price trend 4 points, benchmark-relative RS line trend 4 points, and short-term momentum 2 points. NASDAQ100 uses the NASDAQ100 index as benchmark and S&P500 uses the S&P500 index.",
+            "description": "Price trend 4 points, benchmark-relative RS line trend 4 points, and short-term momentum 2 points. NASDAQ100, S&P500, and Russell 2000 use their own index benchmarks; ALL uses the S&P500 benchmark.",
             "absolute": [
                 "Price > 200DMA",
                 "50DMA > 200DMA",
