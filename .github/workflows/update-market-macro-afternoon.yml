@@ -1,0 +1,42 @@
+name: Update Market Macro Afternoon
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 04:10 UTC = 13:10 KST. Keep the network-heavy macro dashboard away from the morning runs.
+    - cron: "10 4 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-market-macro-afternoon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install pandas yfinance requests lxml html5lib openpyxl xlrd
+
+      - name: Refresh market macro dashboard
+        run: python scripts/update_market_macro.py
+
+      - name: Commit updated market macro dashboard
+        run: |
+          if git diff --quiet -- data/market-macro-data.js; then
+            echo "No market macro changes detected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/market-macro-data.js
+          git commit -m "Update market macro dashboard" || exit 0
+          git pull --rebase origin main
+          git push

@@ -2,6 +2,11 @@ name: Update Market RS
 
 on:
   workflow_dispatch:
+  schedule:
+    # 20:55 UTC = 05:55 KST. Separate RS run after the lighter 05:25 critical dashboards.
+    - cron: "55 20 * * *"
+    # 21:35 UTC = 06:35 KST. Backup run before the Korea 07:00 morning window.
+    - cron: "35 21 * * *"
 
 permissions:
   contents: write
@@ -9,7 +14,7 @@ permissions:
 jobs:
   update-market-rs:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
