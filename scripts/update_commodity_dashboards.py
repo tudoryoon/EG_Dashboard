@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import csv
+import re
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -13,6 +15,10 @@ START_DATE = "1965-01-01"
 FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
+WORLD_BANK_PINK_SHEET_URL = (
+    "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/"
+    "related/CMO-Historical-Data-Monthly.xlsx"
+)
 
 YAHOO_SERIES = {
     ("energy", "wti"): ("CL=F", START_DATE),
@@ -34,6 +40,12 @@ FRED_SERIES = {
     ("strategic", "uranium"): ("PURANUSDM", START_DATE),
 }
 
+WORLD_BANK_SERIES = {
+    ("energy", "dubai"): ("Crude oil, Dubai", START_DATE),
+    ("strategic", "nickel"): ("Nickel", START_DATE),
+    ("strategic", "zinc"): ("Zinc", START_DATE),
+}
+
 
 def fetch_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -42,6 +54,18 @@ def fetch_text(url: str) -> str:
         try:
             with urlopen(request, timeout=60) as response:  # nosec B310 - fixed public endpoint
                 return response.read().decode("utf-8")
+        except Exception as error:  # pragma: no cover - network variability
+            last_error = error
+    raise RuntimeError(f"Failed to fetch {url}") from last_error
+
+
+def fetch_bytes(url: str) -> bytes:
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    last_error: Exception | None = None
+    for _ in range(3):
+        try:
+            with urlopen(request, timeout=60) as response:  # nosec B310 - fixed public endpoint
+                return response.read()
         except Exception as error:  # pragma: no cover - network variability
             last_error = error
     raise RuntimeError(f"Failed to fetch {url}") from last_error
@@ -115,6 +139,43 @@ def parse_fred_series(series_id: str, start_date: str) -> tuple[list[str], list[
     return [], []
 
 
+def parse_world_bank_monthly_prices() -> dict[tuple[str, str], tuple[list[str], list[float]]]:
+    import openpyxl
+
+    workbook_path = Path(tempfile.gettempdir()) / "CMO-Historical-Data-Monthly.xlsx"
+    workbook_path.write_bytes(fetch_bytes(WORLD_BANK_PINK_SHEET_URL))
+    workbook = openpyxl.load_workbook(workbook_path, data_only=True, read_only=True)
+    worksheet = workbook["Monthly Prices"]
+    header_row = next(worksheet.iter_rows(min_row=5, max_row=5, values_only=True))
+    normalized_headers = [str(value or "").strip().lower() for value in header_row]
+    column_index = {
+        key: normalized_headers.index(header.lower())
+        for key, (header, _start_date) in WORLD_BANK_SERIES.items()
+        if header.lower() in normalized_headers
+    }
+    series = {key: ([], []) for key in WORLD_BANK_SERIES}
+    for row in worksheet.iter_rows(min_row=7, values_only=True):
+        raw_period = row[0]
+        if not raw_period:
+            continue
+        match = re.match(r"^(\d{4})M(\d{2})$", str(raw_period))
+        if not match:
+            continue
+        date_key = f"{match.group(1)}-{match.group(2)}-01"
+        for key, index in column_index.items():
+            start_date = WORLD_BANK_SERIES[key][1]
+            value = row[index]
+            if date_key < start_date or not isinstance(value, (int, float)):
+                continue
+            series[key][0].append(date_key)
+            series[key][1].append(round(float(value), 4))
+    try:
+        workbook_path.unlink()
+    except OSError:
+        pass
+    return series
+
+
 def load_payload() -> dict:
     raw = DATA_PATH.read_text(encoding="utf-8").strip()
     prefix = "window.marketMacroData = "
@@ -163,6 +224,17 @@ def main() -> None:
         dates, values = parse_fred_series(series_id, start_date)
         if not dates:
             raise RuntimeError(f"No FRED observations returned for {panel_key}.{series_key} ({series_id})")
+        series = payload["panels"][panel_key]["series"][series_key]
+        payload["panels"][panel_key]["series"][series_key] = merge_series(series, dates, values, start_date)
+        updated_series = payload["panels"][panel_key]["series"][series_key]
+        latest_dates.append(updated_series["dates"][-1])
+        print(f"{panel_key}.{series_key}: {updated_series['dates'][-1]} {updated_series['values'][-1]}")
+
+    world_bank_series = parse_world_bank_monthly_prices()
+    for (panel_key, series_key), (_header, start_date) in WORLD_BANK_SERIES.items():
+        dates, values = world_bank_series[(panel_key, series_key)]
+        if not dates:
+            raise RuntimeError(f"No World Bank observations returned for {panel_key}.{series_key}")
         series = payload["panels"][panel_key]["series"][series_key]
         payload["panels"][panel_key]["series"][series_key] = merge_series(series, dates, values, start_date)
         updated_series = payload["panels"][panel_key]["series"][series_key]

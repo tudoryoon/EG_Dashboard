@@ -278,25 +278,26 @@ def parse_world_bank_monthly_prices() -> dict[str, tuple[list[str], list[float]]
     )
     workbook = openpyxl.load_workbook(workbook_path, data_only=True, read_only=True)
     worksheet = workbook["Monthly Prices"]
-    code_row = next(worksheet.iter_rows(min_row=7, max_row=7, values_only=True))
-    target_columns = {
-        "brent": "CRUDE_BRENT",
-        "dubai": "CRUDE_DUBAI",
-        "wti": "CRUDE_WTI",
-        "gold": "GOLD",
-        "silver": "SILVER",
-        "copper": "COPPER",
-        "iron_ore": "IRON_ORE",
-        "nickel": "NICKEL",
-        "zinc": "Zinc",
+    header_row = next(worksheet.iter_rows(min_row=5, max_row=5, values_only=True))
+    target_headers = {
+        "brent": "crude oil, brent",
+        "dubai": "crude oil, dubai",
+        "wti": "crude oil, wti",
+        "gold": "gold",
+        "silver": "silver",
+        "copper": "copper",
+        "iron_ore": "iron ore, cfr spot",
+        "nickel": "nickel",
+        "zinc": "zinc",
     }
+    normalized_headers = [str(value or "").strip().lower() for value in header_row]
     column_index = {
-        key: code_row.index(code)
-        for key, code in target_columns.items()
-        if code in code_row
+        key: normalized_headers.index(header)
+        for key, header in target_headers.items()
+        if header in normalized_headers
     }
-    series = {key: ([], []) for key in target_columns}
-    for row in worksheet.iter_rows(min_row=8, values_only=True):
+    series = {key: ([], []) for key in target_headers}
+    for row in worksheet.iter_rows(min_row=7, values_only=True):
         raw_period = row[0]
         if not raw_period:
             continue
@@ -584,12 +585,12 @@ def main() -> None:
 
     dxy_dates, dxy_values = parse_yahoo_series("DX-Y.NYB")
     dxy_dates, dxy_values = filter_series_start(dxy_dates, dxy_values, FX_START_DATE)
-    jpy_usd_dates, jpy_usd_values = parse_fred_series("DEXJPUS", FX_START_DATE)
-    krw_usd_dates, krw_usd_values = parse_fred_series("DEXKOUS", FX_START_DATE)
-    chf_usd_dates, chf_usd_values = parse_fred_series("DEXSZUS", FX_START_DATE)
-    cny_usd_dates, cny_usd_values = parse_fred_series("DEXCHUS", FX_START_DATE)
-    gbp_usd_dates, gbp_usd_values = parse_fred_series("DEXUSUK", FX_START_DATE)
-    eur_usd_dates, eur_usd_values = parse_fred_series("DEXUSEU", FX_START_DATE)
+    jpy_usd_dates, jpy_usd_values = filter_series_start(*parse_yahoo_series("JPY=X"), FX_START_DATE)
+    krw_usd_dates, krw_usd_values = filter_series_start(*parse_yahoo_series("KRW=X"), FX_START_DATE)
+    chf_usd_dates, chf_usd_values = filter_series_start(*parse_yahoo_series("CHF=X"), FX_START_DATE)
+    cny_usd_dates, cny_usd_values = filter_series_start(*parse_yahoo_series("CNY=X"), FX_START_DATE)
+    gbp_usd_dates, gbp_usd_values = filter_series_start(*parse_yahoo_series("GBPUSD=X"), FX_START_DATE)
+    eur_usd_dates, eur_usd_values = filter_series_start(*parse_yahoo_series("EURUSD=X"), FX_START_DATE)
     long_commodity_series = parse_world_bank_monthly_prices()
     wti_dates, wti_values = parse_yahoo_series("CL=F")
     brent_dates, brent_values = parse_yahoo_series("BZ=F")
