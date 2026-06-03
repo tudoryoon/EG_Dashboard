@@ -9,11 +9,41 @@ from urllib.request import Request, urlopen
 
 START_DATE = "2003-01-01"
 LOOKBACK_SESSIONS = 252
-SYMBOLS = {
-    "capWeighted": {"symbol": "SPY", "label": "S&P 500 Cap Weighted ETF"},
-    "equalWeighted": {"symbol": "RSP", "label": "S&P 500 Equal Weight ETF"},
+PROXIES = {
+    "sp500": {
+        "label": "S&P 500",
+        "description": "RSP equal-weight ETF minus SPY cap-weight ETF",
+        "capWeighted": {"symbol": "SPY", "label": "SPY"},
+        "equalWeighted": {"symbol": "RSP", "label": "RSP"},
+        "color": "#2563eb",
+    },
+    "nasdaq100": {
+        "label": "NASDAQ 100",
+        "description": "QQEW equal-weight ETF minus QQQ cap-weight ETF",
+        "capWeighted": {"symbol": "QQQ", "label": "QQQ"},
+        "equalWeighted": {"symbol": "QQEW", "label": "QQEW"},
+        "color": "#7c3aed",
+    },
+    "russell2000": {
+        "label": "Russell 2000",
+        "description": "FNDA fundamental-weighted small-cap ETF minus IWM Russell 2000 ETF proxy",
+        "capWeighted": {"symbol": "IWM", "label": "IWM"},
+        "equalWeighted": {"symbol": "FNDA", "label": "FNDA"},
+        "color": "#059669",
+    },
+    "semiconductors": {
+        "label": "SOX / Semis",
+        "description": "XSD equal-weight semiconductor ETF minus SOXX semiconductor ETF",
+        "capWeighted": {"symbol": "SOXX", "label": "SOXX"},
+        "equalWeighted": {"symbol": "XSD", "label": "XSD"},
+        "color": "#dc2626",
+    },
 }
 RANGES = [
+    {"key": "1m", "label": "1M"},
+    {"key": "3m", "label": "3M"},
+    {"key": "6m", "label": "6M"},
+    {"key": "ytd", "label": "YTD"},
     {"key": "1y", "label": "1Y"},
     {"key": "3y", "label": "3Y"},
     {"key": "5y", "label": "5Y"},
@@ -69,9 +99,21 @@ def pct_change(values: list[float], index: int, lookback: int) -> float | None:
     return ((current / previous) - 1) * 100
 
 
-def main() -> None:
-    cap_item = build_price_item(SYMBOLS["capWeighted"]["symbol"])
-    equal_item = build_price_item(SYMBOLS["equalWeighted"]["symbol"])
+def classify_spread(value: float | None) -> str:
+    if value is None:
+        return "-"
+    if value >= 0:
+        return "Expansion"
+    if value <= -10:
+        return "Strong Narrowing"
+    return "Narrowing"
+
+
+def build_spread_series(config: dict[str, object]) -> dict[str, object]:
+    cap_symbol = config["capWeighted"]["symbol"]  # type: ignore[index]
+    equal_symbol = config["equalWeighted"]["symbol"]  # type: ignore[index]
+    cap_item = build_price_item(str(cap_symbol))
+    equal_item = build_price_item(str(equal_symbol))
     cap_by_date = dict(zip(cap_item["dates"], cap_item["values"]))
     equal_by_date = dict(zip(equal_item["dates"], equal_item["values"]))
     common_dates = sorted(set(cap_by_date) & set(equal_by_date))
@@ -93,46 +135,74 @@ def main() -> None:
         spread_values.append(round(equal_return - cap_return, 2))
 
     latest_spread = spread_values[-1] if spread_values else None
-    latest_state = (
-        "Expansion"
-        if latest_spread is not None and latest_spread >= 0
-        else "Narrowing"
-        if latest_spread is not None and latest_spread > -10
-        else "Strong Narrowing"
-    )
+    return {
+        "label": config["label"],
+        "description": config["description"],
+        "color": config["color"],
+        "capWeighted": config["capWeighted"],
+        "equalWeighted": config["equalWeighted"],
+        "dates": dates,
+        "values": spread_values,
+        "capWeightedReturns": cap_returns,
+        "equalWeightedReturns": equal_returns,
+        "latest": latest_spread,
+        "latestState": classify_spread(latest_spread),
+        "startDate": dates[0] if dates else START_DATE,
+        "updatedAt": dates[-1] if dates else "",
+    }
+
+
+def main() -> None:
+    series = {key: build_spread_series(config) for key, config in PROXIES.items()}
+    updated_dates = [item["updatedAt"] for item in series.values() if item.get("updatedAt")]
+    start_dates = [item["startDate"] for item in series.values() if item.get("startDate")]
+    sp500 = series["sp500"]
+
+    panel = {
+        "key": "breadthSpread52w",
+        "label": "52W Breadth Spread",
+        "subtitle": "Equal-weight 52W return minus representative cap-weight / benchmark ETF 52W return",
+        "unit": "percentagePoint",
+        "series": series,
+        "thresholds": [
+            {"value": 0, "label": "Expansion"},
+            {"value": -5, "label": "Watch"},
+            {"value": -10, "label": "Narrowing"},
+        ],
+    }
 
     payload = {
-        "updatedAt": dates[-1] if dates else "",
+        "updatedAt": max(updated_dates) if updated_dates else "",
         "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "startDate": dates[0] if dates else START_DATE,
+        "startDate": min(start_dates) if start_dates else START_DATE,
         "defaultRange": "3y",
         "ranges": RANGES,
         "source": {
             "name": "Yahoo Finance adjusted close data",
-            "symbols": {
-                "capWeighted": SYMBOLS["capWeighted"],
-                "equalWeighted": SYMBOLS["equalWeighted"],
+            "proxies": {
+                key: {
+                    "label": value["label"],
+                    "equalWeighted": value["equalWeighted"],
+                    "capWeighted": value["capWeighted"],
+                    "description": value["description"],
+                }
+                for key, value in PROXIES.items()
             },
-            "note": "Free proxy: RSP 52-week total-return proxy minus SPY 52-week total-return proxy. Negative values mean cap-weighted S&P 500 is outperforming equal-weight S&P 500.",
+            "note": (
+                "Free proxy: equal-weight ETF 52-week return minus representative cap-weight or benchmark ETF "
+                "52-week return. Positive means broader participation; negative means concentration in larger names."
+            ),
         },
         "panels": {
+            "breadthSpread52w": panel,
             "sp500EqualWeightSpread52w": {
                 "key": "sp500EqualWeightSpread52w",
                 "label": "S&P 500 52W Breadth Spread",
-                "subtitle": "Equal-weight 52W return minus cap-weight 52W return",
+                "subtitle": "RSP 52W return minus SPY 52W return",
                 "unit": "percentagePoint",
-                "dates": dates,
-                "values": spread_values,
-                "capWeightedReturns": cap_returns,
-                "equalWeightedReturns": equal_returns,
-                "latest": latest_spread,
-                "latestState": latest_state,
-                "thresholds": [
-                    {"value": 0, "label": "Expansion"},
-                    {"value": -5, "label": "Watch"},
-                    {"value": -10, "label": "Narrowing"},
-                ],
-            }
+                **sp500,
+                "thresholds": panel["thresholds"],
+            },
         },
     }
 
@@ -143,6 +213,8 @@ def main() -> None:
         newline="\n",
     )
     print(f"Wrote {output_path}")
+    for key, item in series.items():
+        print(f"{key}: {item['updatedAt']} {item['latest']}")
 
 
 if __name__ == "__main__":

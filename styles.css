@@ -3600,7 +3600,52 @@ h1 {
 
 .market-breadth-spread-panel {
   display: grid;
-  gap: 12px;
+  gap: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+}
+
+.market-breadth-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.market-breadth-summary-card {
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-left: 4px solid var(--breadth-color, #344255);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.market-breadth-summary-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.market-breadth-summary-top span {
+  color: #2f2f2b;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.market-breadth-summary-top strong {
+  font-size: 0.98rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.market-breadth-summary-card p,
+.market-breadth-summary-card small {
+  display: block;
+  margin: 4px 0 0;
+  color: #6f6f68;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .market-breadth-spread-meta {
@@ -3609,18 +3654,42 @@ h1 {
   gap: 8px;
 }
 
+.market-breadth-spread-meta span:nth-child(n + 5) {
+  display: none;
+}
+
 .market-breadth-spread-meta span {
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-radius: 999px;
-  background: rgba(247, 247, 242, 0.92);
+  background: rgba(242, 247, 244, 0.94);
   padding: 6px 10px;
-  color: #66665f;
+  color: #4f6158;
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 .market-breadth-spread-chart-wrap {
-  height: 360px;
+  height: 420px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 247, 0.96) 100%);
+  padding: 8px;
+}
+
+@media (max-width: 960px) {
+  .market-breadth-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .market-breadth-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-breadth-spread-chart-wrap {
+    height: 360px;
+  }
 }
 
 @media (max-width: 1440px) {
