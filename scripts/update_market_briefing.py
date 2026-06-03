@@ -640,6 +640,30 @@ def unique_items(items: list[dict[str, str]], limit: int) -> list[dict[str, str]
     return output
 
 
+def load_previous_market_meta() -> dict[str, dict[str, float | None]]:
+    if not OUTPUT_PATH.exists():
+        return {}
+    try:
+        text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+        text = re.sub(r"^window\.marketBriefingData\s*=\s*", "", text).rstrip(";")
+        payload = json.loads(text)
+    except Exception:
+        return {}
+
+    previous: dict[str, dict[str, float | None]] = {}
+    for sector in payload.get("sectorPanels", []):
+        for item in sector.get("items", []):
+            ticker = str(item.get("ticker") or "")
+            if not ticker or ticker in previous:
+                continue
+            previous[ticker] = {
+                "price": normalize_number(item.get("price")),
+                "marketCap": normalize_number(item.get("marketCap")),
+                "marketCapUsd": normalize_number(item.get("marketCapUsd")),
+            }
+    return previous
+
+
 def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
     history = yf.download(
         tickers=symbols,
@@ -648,6 +672,7 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
         progress=False,
         threads=False,
         group_by="ticker",
+        timeout=20,
     )
     if history.empty:
         raise RuntimeError("No market briefing price data downloaded.")
@@ -762,10 +787,7 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         if not fx_values.empty:
             fx_usd_per_krw = float(fx_values.iloc[-1])
 
-    meta_by_symbol: dict[str, dict[str, float | None]] = {}
-    for company in companies:
-        meta_by_symbol[company["ticker"]] = fetch_meta(company["ticker"])
-        time.sleep(0.05)
+    previous_meta_by_symbol = load_previous_market_meta()
 
     by_ticker: dict[str, dict[str, object]] = {}
     snapshots: list[dict[str, object]] = []
@@ -783,9 +805,16 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
             range_returns.update({key: compute_period_return(series, periods) for key, periods in MAP_RANGE_PERIODS.items()})
             range_returns["1d"] = day_change_pct
             range_returns["ytd"] = compute_ytd_return(series)
-        meta = meta_by_symbol.get(symbol, {})
-        market_cap = normalize_number(meta.get("marketCap"))
-        market_cap_usd = market_cap
+        previous_meta = previous_meta_by_symbol.get(symbol, {})
+        previous_price = normalize_number(previous_meta.get("price"))
+        market_cap = normalize_number(previous_meta.get("marketCap"))
+        market_cap_usd = normalize_number(previous_meta.get("marketCapUsd"))
+        if price is not None and previous_price and previous_price > 0:
+            price_ratio = price / previous_price
+            if market_cap is not None:
+                market_cap *= price_ratio
+            if market_cap_usd is not None:
+                market_cap_usd *= price_ratio
         if symbol.endswith(".KS") and market_cap and fx_usd_per_krw:
             market_cap_usd = market_cap / fx_usd_per_krw
         snapshot = {
