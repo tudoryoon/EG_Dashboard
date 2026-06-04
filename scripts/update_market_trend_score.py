@@ -17,7 +17,7 @@ HISTORY_POINTS = 252
 UNIVERSES = {
     "all": {
         "label": "ALL",
-        "memberships": ("sp500", "nasdaq100", "russell2000"),
+        "include_all": True,
         "history_key": "rsRatingAll",
         "benchmark_key": "sp500",
         "color": "#0f766e",
@@ -444,13 +444,16 @@ def build_universe_payload(
 
     for ticker, row in rows_by_ticker.items():
         memberships = row.get("memberships", {})
-        membership_key = meta.get("membership")
-        membership_keys = meta.get("memberships")
-        if membership_keys:
-            if not any(memberships.get(key) for key in membership_keys):
+        if meta.get("include_all"):
+            pass
+        else:
+            membership_key = meta.get("membership")
+            membership_keys = meta.get("memberships")
+            if membership_keys:
+                if not any(memberships.get(key) for key in membership_keys):
+                    continue
+            elif membership_key and not memberships.get(membership_key):
                 continue
-        elif membership_key and not memberships.get(membership_key):
-            continue
         history = histories.get(ticker)
         if not history:
             continue
