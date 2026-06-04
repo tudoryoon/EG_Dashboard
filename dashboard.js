@@ -296,6 +296,9 @@ const state = {
   rsMarketCapRange: "all",
   rsCustomMarketCapMin: "",
   rsCustomMarketCapMax: "",
+  rsScoreRange: "all",
+  rsCustomScoreMin: "",
+  rsCustomScoreMax: "",
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
@@ -305,6 +308,9 @@ const state = {
   trendScoreMarketCapRange: "all",
   trendScoreCustomMarketCapMin: "",
   trendScoreCustomMarketCapMax: "",
+  trendScoreScoreRange: "all",
+  trendScoreCustomScoreMin: "",
+  trendScoreCustomScoreMax: "",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   macroIndicatorKey: "",
@@ -6629,8 +6635,30 @@ function getMarketRsHistoryRatings(history, universeKey) {
   return history.rsRatingAll ?? history.rsRating ?? [];
 }
 
+const MARKET_RS_SCORE_RANGES = [
+  { key: "all", label: "All", min: 1, max: 100 },
+  { key: "90", label: "90-99", min: 90, max: 100 },
+  { key: "80", label: "80-89", min: 80, max: 90 },
+  { key: "70", label: "70-79", min: 70, max: 80 },
+  { key: "50", label: "50-69", min: 50, max: 70 },
+  { key: "under50", label: "<50", min: 1, max: 50 },
+];
+
+const TREND_SCORE_RANGES = [
+  { key: "all", label: "All", min: 0, max: 10.01 },
+  { key: "10", label: "10", min: 10, max: 10.01 },
+  { key: "8", label: "8-9.9", min: 8, max: 10 },
+  { key: "6", label: "6-7.9", min: 6, max: 8 },
+  { key: "4", label: "4-5.9", min: 4, max: 6 },
+  { key: "under4", label: "<4", min: 0, max: 4 },
+];
+
 function getMarketRsCapRangeMeta(key) {
   return MARKET_RS_CAP_RANGES.find((range) => range.key === key) ?? MARKET_RS_CAP_RANGES[0];
+}
+
+function getScoreRangeMeta(ranges, key) {
+  return ranges.find((range) => range.key === key) ?? ranges[0];
 }
 
 function parseMarketCapInput(value) {
@@ -6670,8 +6698,47 @@ function matchesMarketCapRange(row, rangeKey, customMinValue = "", customMaxValu
   return marketCap >= range.min && marketCap < range.max;
 }
 
+function parseScoreInput(value) {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  const numeric = Number(text);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function matchesScoreRange(score, ranges, rangeKey, customMinValue = "", customMaxValue = "") {
+  const numeric = Number(score);
+  if (!Number.isFinite(numeric)) {
+    return false;
+  }
+  const customMin = parseScoreInput(customMinValue);
+  const customMax = parseScoreInput(customMaxValue);
+  if (customMin !== null && numeric < customMin) {
+    return false;
+  }
+  if (customMax !== null && numeric > customMax) {
+    return false;
+  }
+  if (customMin !== null || customMax !== null) {
+    return true;
+  }
+  const range = getScoreRangeMeta(ranges, rangeKey);
+  return numeric >= range.min && numeric < range.max;
+}
+
 function matchesMarketRsCapRange(row) {
   return matchesMarketCapRange(row, state.rsMarketCapRange, state.rsCustomMarketCapMin, state.rsCustomMarketCapMax);
+}
+
+function matchesMarketRsScoreRange(row) {
+  return matchesScoreRange(
+    getMarketRsUniverseScore(row, state.rsUniverse),
+    MARKET_RS_SCORE_RANGES,
+    state.rsScoreRange,
+    state.rsCustomScoreMin,
+    state.rsCustomScoreMax,
+  );
 }
 
 function matchesTrendScoreCapRange(row) {
@@ -6683,11 +6750,24 @@ function matchesTrendScoreCapRange(row) {
   );
 }
 
+function matchesTrendScoreScoreRange(row) {
+  return matchesScoreRange(
+    row.score,
+    TREND_SCORE_RANGES,
+    state.trendScoreScoreRange,
+    state.trendScoreCustomScoreMin,
+    state.trendScoreCustomScoreMax,
+  );
+}
+
 function getVisibleMarketRsRows() {
   const query = (state.query ?? "").trim().toLowerCase();
   return (marketRsData.rows ?? [])
     .filter((row) => {
       if (!matchesMarketRsCapRange(row)) {
+        return false;
+      }
+      if (!matchesMarketRsScoreRange(row)) {
         return false;
       }
       if (state.rsUniverse === "sp500" && !row.memberships?.sp500) {
@@ -7016,6 +7096,15 @@ function renderMarketRsOverview() {
       >${range.label}</button>
     `,
   ).join("");
+  const scoreChips = MARKET_RS_SCORE_RANGES.map(
+    (range) => `
+      <button
+        type="button"
+        class="market-rs-chip${state.rsScoreRange === range.key ? " active" : ""}"
+        data-rs-score-range="${range.key}"
+      >${range.label}</button>
+    `,
+  ).join("");
   const leaderSortChips = [
     { key: "rs", label: "RS" },
     { key: "marketCapDesc", label: "Market Cap ↓" },
@@ -7133,6 +7222,22 @@ function renderMarketRsOverview() {
               </label>
               <button type="button" class="total-date-button" data-rs-market-cap-apply>Apply</button>
               <button type="button" class="total-date-button total-date-button-secondary" data-rs-market-cap-clear>Clear</button>
+            </div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">RS Score</span>
+            <div class="market-rs-chip-row">${scoreChips}</div>
+            <div class="market-rs-cap-custom">
+              <label>
+                <span>Min</span>
+                <input type="number" inputmode="decimal" min="1" max="99" step="1" placeholder="ex. 80" value="${state.rsCustomScoreMin}" data-rs-score-min />
+              </label>
+              <label>
+                <span>Max</span>
+                <input type="number" inputmode="decimal" min="1" max="99" step="1" placeholder="optional" value="${state.rsCustomScoreMax}" data-rs-score-max />
+              </label>
+              <button type="button" class="total-date-button" data-rs-score-apply>Apply</button>
+              <button type="button" class="total-date-button total-date-button-secondary" data-rs-score-clear>Clear</button>
             </div>
           </div>
         </div>
@@ -7258,6 +7363,7 @@ function renderMarketRsOverview() {
       state.rsMarketCapRange = button.dataset.rsMarketCap || "all";
       state.rsCustomMarketCapMin = "";
       state.rsCustomMarketCapMax = "";
+      state.rsSelectedTicker = "";
       render();
     });
   });
@@ -7269,6 +7375,7 @@ function renderMarketRsOverview() {
     rsMarketCapApplyButton.addEventListener("click", () => {
       state.rsCustomMarketCapMin = rsMarketCapMinInput.value.trim();
       state.rsCustomMarketCapMax = rsMarketCapMaxInput.value.trim();
+      state.rsSelectedTicker = "";
       render();
     });
   }
@@ -7277,6 +7384,37 @@ function renderMarketRsOverview() {
       state.rsCustomMarketCapMin = "";
       state.rsCustomMarketCapMax = "";
       state.rsMarketCapRange = "all";
+      state.rsSelectedTicker = "";
+      render();
+    });
+  }
+  usOverviewRoot.querySelectorAll("[data-rs-score-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsScoreRange = button.dataset.rsScoreRange || "all";
+      state.rsCustomScoreMin = "";
+      state.rsCustomScoreMax = "";
+      state.rsSelectedTicker = "";
+      render();
+    });
+  });
+  const rsScoreMinInput = usOverviewRoot.querySelector("[data-rs-score-min]");
+  const rsScoreMaxInput = usOverviewRoot.querySelector("[data-rs-score-max]");
+  const rsScoreApplyButton = usOverviewRoot.querySelector("[data-rs-score-apply]");
+  const rsScoreClearButton = usOverviewRoot.querySelector("[data-rs-score-clear]");
+  if (rsScoreApplyButton && rsScoreMinInput && rsScoreMaxInput) {
+    rsScoreApplyButton.addEventListener("click", () => {
+      state.rsCustomScoreMin = rsScoreMinInput.value.trim();
+      state.rsCustomScoreMax = rsScoreMaxInput.value.trim();
+      state.rsSelectedTicker = "";
+      render();
+    });
+  }
+  if (rsScoreClearButton) {
+    rsScoreClearButton.addEventListener("click", () => {
+      state.rsCustomScoreMin = "";
+      state.rsCustomScoreMax = "";
+      state.rsScoreRange = "all";
+      state.rsSelectedTicker = "";
       render();
     });
   }
@@ -7323,6 +7461,9 @@ function getVisibleTrendScoreRows() {
   const query = state.query.trim().toLowerCase();
   const rows = getTrendScoreRows().filter((row) => {
     if (!matchesTrendScoreCapRange(row)) {
+      return false;
+    }
+    if (!matchesTrendScoreScoreRange(row)) {
       return false;
     }
     if (!query) {
@@ -7592,6 +7733,15 @@ function renderMarketTrendScoreOverview() {
       >${range.label}</button>
     `,
   ).join("");
+  const scoreChips = TREND_SCORE_RANGES.map(
+    (range) => `
+      <button
+        type="button"
+        class="market-rs-chip${state.trendScoreScoreRange === range.key ? " active" : ""}"
+        data-trend-score-score-range="${range.key}"
+      >${range.label}</button>
+    `,
+  ).join("");
   const leaderCards = rows.slice(0, 12)
     .map(
       (row) => `
@@ -7680,6 +7830,22 @@ function renderMarketTrendScoreOverview() {
               </label>
               <button type="button" class="total-date-button" data-trend-score-market-cap-apply>Apply</button>
               <button type="button" class="total-date-button total-date-button-secondary" data-trend-score-market-cap-clear>Clear</button>
+            </div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Trend Score</span>
+            <div class="market-rs-chip-row">${scoreChips}</div>
+            <div class="market-rs-cap-custom">
+              <label>
+                <span>Min</span>
+                <input type="number" inputmode="decimal" min="0" max="10" step="0.1" placeholder="ex. 8" value="${state.trendScoreCustomScoreMin}" data-trend-score-score-min />
+              </label>
+              <label>
+                <span>Max</span>
+                <input type="number" inputmode="decimal" min="0" max="10" step="0.1" placeholder="optional" value="${state.trendScoreCustomScoreMax}" data-trend-score-score-max />
+              </label>
+              <button type="button" class="total-date-button" data-trend-score-score-apply>Apply</button>
+              <button type="button" class="total-date-button total-date-button-secondary" data-trend-score-score-clear>Clear</button>
             </div>
           </div>
         </div>
@@ -7841,6 +8007,36 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomMarketCapMin = "";
       state.trendScoreCustomMarketCapMax = "";
       state.trendScoreMarketCapRange = "all";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  }
+  usOverviewRoot.querySelectorAll("[data-trend-score-score-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreScoreRange = button.dataset.trendScoreScoreRange || "all";
+      state.trendScoreCustomScoreMin = "";
+      state.trendScoreCustomScoreMax = "";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  });
+  const trendScoreScoreMinInput = usOverviewRoot.querySelector("[data-trend-score-score-min]");
+  const trendScoreScoreMaxInput = usOverviewRoot.querySelector("[data-trend-score-score-max]");
+  const trendScoreScoreApplyButton = usOverviewRoot.querySelector("[data-trend-score-score-apply]");
+  const trendScoreScoreClearButton = usOverviewRoot.querySelector("[data-trend-score-score-clear]");
+  if (trendScoreScoreApplyButton && trendScoreScoreMinInput && trendScoreScoreMaxInput) {
+    trendScoreScoreApplyButton.addEventListener("click", () => {
+      state.trendScoreCustomScoreMin = trendScoreScoreMinInput.value.trim();
+      state.trendScoreCustomScoreMax = trendScoreScoreMaxInput.value.trim();
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  }
+  if (trendScoreScoreClearButton) {
+    trendScoreScoreClearButton.addEventListener("click", () => {
+      state.trendScoreCustomScoreMin = "";
+      state.trendScoreCustomScoreMax = "";
+      state.trendScoreScoreRange = "all";
       state.trendScoreSelectedTicker = "";
       render();
     });
