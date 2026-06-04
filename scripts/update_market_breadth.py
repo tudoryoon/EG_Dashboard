@@ -24,6 +24,13 @@ PROXIES = {
         "equalWeighted": {"symbol": "QQEW", "label": "QQEW"},
         "color": "#7c3aed",
     },
+    "dow30": {
+        "label": "Dow 30",
+        "description": "EDOW equal-weight Dow 30 ETF minus DIA Dow Jones Industrial Average ETF",
+        "capWeighted": {"symbol": "DIA", "label": "DIA"},
+        "equalWeighted": {"symbol": "EDOW", "label": "EDOW"},
+        "color": "#6b7280",
+    },
     "russell2000": {
         "label": "Russell 2000",
         "description": "FNDA fundamental-weighted small-cap ETF minus IWM Russell 2000 ETF proxy",
@@ -160,8 +167,8 @@ def main() -> None:
 
     panel = {
         "key": "breadthSpread52w",
-        "label": "52W Breadth Spread",
-        "subtitle": "Equal-weight 52W return minus representative cap-weight / benchmark ETF 52W return",
+        "label": "52W Breadth / Concentration Spread",
+        "subtitle": "NASDAQ100, S&P500, Dow30, Russell2000, SOX equal-weight proxy 52W return minus representative benchmark ETF 52W return",
         "unit": "percentagePoint",
         "series": series,
         "thresholds": [

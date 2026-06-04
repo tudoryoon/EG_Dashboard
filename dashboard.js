@@ -5290,7 +5290,7 @@ function renderMarketBreadthOverview() {
         <div class="us-section-head">
           <div>
             <h2>Market Breadth</h2>
-            <p>Equal-weight ETF 52W return minus benchmark ETF 52W return. Positive means broader participation, negative means leadership is concentrated in representative names.</p>
+            <p>Equal-weight proxy 52W return minus benchmark ETF 52W return. Positive means broad participation; negative means the index is being pulled by fewer large leaders.</p>
           </div>
           <div class="market-breadth-actions">
             <a class="market-breadth-link" href="${MARKET_BREADTH_SOURCE_URL}" target="_blank" rel="noreferrer">Open Source Page</a>
@@ -5312,6 +5312,13 @@ function renderMarketBreadthOverview() {
         <div class="market-breadth-summary-grid">${summaryCards}</div>
         <div class="market-rs-chip-row">${rangeChips}</div>
         <div class="market-breadth-spread-meta">
+          <span>0%p 이상: 내부 확산. 0%p 아래: 대표 대형주 쏠림.</span>
+          <span>-5%p: 경계, -10%p 이하: 강한 쏠림/폭 축소.</span>
+          <span>S&P500: RSP - SPY</span>
+          <span>NASDAQ100: QQEW - QQQ</span>
+          <span>Dow30: EDOW - DIA</span>
+          <span>Russell2000: FNDA - IWM</span>
+          <span>SOX/Semis: XSD - SOXX</span>
           <span>0%p 위는 확산, 0%p 아래는 대표주 우위</span>
           <span>-5%p는 경계, -10%p 이하는 쏠림 심화</span>
           <span>Russell 2000은 FNDA - IWM proxy</span>

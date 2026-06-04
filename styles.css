@@ -3654,7 +3654,7 @@ h1 {
   gap: 8px;
 }
 
-.market-breadth-spread-meta span:nth-child(n + 5) {
+.market-breadth-spread-meta span:nth-child(n + 8) {
   display: none;
 }
 
