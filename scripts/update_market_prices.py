@@ -13,6 +13,7 @@ SYMBOLS = [
     {"key": "nasdaq100", "symbol": "^NDX", "label": "NASDAQ 100", "color": "#111827", "isIndex": True},
     {"key": "dowjones", "symbol": "^DJI", "label": "Dow Jones", "color": "#4b5563", "isIndex": True},
     {"key": "russell2000", "symbol": "^RUT", "label": "Russell 2000", "color": "#9ca3af", "isIndex": True},
+    {"key": "sox", "symbol": "^SOX", "label": "SOX", "color": "#dc2626", "isIndex": True},
     {"key": "smh", "symbol": "SMH", "label": "SMH", "color": "#dc2626", "isIndex": False},
 ]
 

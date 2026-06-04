@@ -192,6 +192,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "market:nasdaq100": "#2563eb",
   "market:dowjones": "#6b7280",
   "market:russell2000": "#8b5cf6",
+  "market:sox": "#dc2626",
   "market:smh": "#dc2626",
   "macro:policy:fed_funds": "#e11d48",
   "macro:policy:inflation_5y": "#f97316",
@@ -5979,6 +5980,7 @@ function renderMarketBriefingOverview() {
     { key: "dowjones", label: "Dow Jones (DIA)" },
     { key: "sp500", label: "S&P 500 (SPY)" },
     { key: "nasdaq100", label: "나스닥 100 (QQQ)" },
+    { key: "sox", label: "SOX (필라델피아 반도체)" },
     { key: "russell2000", label: "Russell 2000 (IWM)" },
   ];
 
