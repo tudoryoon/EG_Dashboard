@@ -313,6 +313,9 @@ const state = {
   trendScoreScoreRange: "all",
   trendScoreCustomScoreMin: "",
   trendScoreCustomScoreMax: "",
+  trendScoreClimaxRange: "all",
+  trendScoreCustomClimaxMin: "",
+  trendScoreCustomClimaxMax: "",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   macroIndicatorKey: "",
@@ -6734,10 +6737,19 @@ const MARKET_RS_SCORE_RANGES = [
 const TREND_SCORE_RANGES = [
   { key: "all", label: "All", min: 0, max: 10.01 },
   { key: "10", label: "10", min: 10, max: 10.01 },
-  { key: "8", label: "8-9.9", min: 8, max: 10 },
-  { key: "6", label: "6-7.9", min: 6, max: 8 },
-  { key: "4", label: "4-5.9", min: 4, max: 6 },
+  { key: "8", label: "8-9", min: 8, max: 10 },
+  { key: "6", label: "6-7", min: 6, max: 8 },
+  { key: "4", label: "4-5", min: 4, max: 6 },
   { key: "under4", label: "<4", min: 0, max: 4 },
+];
+
+const CLIMAX_SCORE_RANGES = [
+  { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
+  { key: "8plus", label: "8+", min: 8, max: Number.POSITIVE_INFINITY },
+  { key: "5", label: "5-7", min: 5, max: 8 },
+  { key: "4", label: "4", min: 4, max: 5 },
+  { key: "1", label: "1-3", min: 1, max: 4 },
+  { key: "0", label: "0", min: 0, max: 1 },
 ];
 
 function getMarketRsCapRangeMeta(key) {
@@ -6844,6 +6856,16 @@ function matchesTrendScoreScoreRange(row) {
     state.trendScoreScoreRange,
     state.trendScoreCustomScoreMin,
     state.trendScoreCustomScoreMax,
+  );
+}
+
+function matchesTrendScoreClimaxRange(row) {
+  return matchesScoreRange(
+    row.climaxScore,
+    CLIMAX_SCORE_RANGES,
+    state.trendScoreClimaxRange,
+    state.trendScoreCustomClimaxMin,
+    state.trendScoreCustomClimaxMax,
   );
 }
 
@@ -7553,6 +7575,9 @@ function getVisibleTrendScoreRows() {
     if (!matchesTrendScoreScoreRange(row)) {
       return false;
     }
+    if (!matchesTrendScoreClimaxRange(row)) {
+      return false;
+    }
     if (!query) {
       return true;
     }
@@ -7829,6 +7854,15 @@ function renderMarketTrendScoreOverview() {
       >${range.label}</button>
     `,
   ).join("");
+  const climaxChips = CLIMAX_SCORE_RANGES.map(
+    (range) => `
+      <button
+        type="button"
+        class="market-rs-chip${state.trendScoreClimaxRange === range.key ? " active" : ""}"
+        data-trend-score-climax-range="${range.key}"
+      >${range.label}</button>
+    `,
+  ).join("");
   const leaderCards = rows.slice(0, 12)
     .map(
       (row) => `
@@ -7933,6 +7967,22 @@ function renderMarketTrendScoreOverview() {
               </label>
               <button type="button" class="total-date-button" data-trend-score-score-apply>Apply</button>
               <button type="button" class="total-date-button total-date-button-secondary" data-trend-score-score-clear>Clear</button>
+            </div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Climax Score</span>
+            <div class="market-rs-chip-row">${climaxChips}</div>
+            <div class="market-rs-cap-custom">
+              <label>
+                <span>Min</span>
+                <input type="number" inputmode="decimal" min="0" step="1" placeholder="ex. 4" value="${state.trendScoreCustomClimaxMin}" data-trend-score-climax-min />
+              </label>
+              <label>
+                <span>Max</span>
+                <input type="number" inputmode="decimal" min="0" step="1" placeholder="optional" value="${state.trendScoreCustomClimaxMax}" data-trend-score-climax-max />
+              </label>
+              <button type="button" class="total-date-button" data-trend-score-climax-apply>Apply</button>
+              <button type="button" class="total-date-button total-date-button-secondary" data-trend-score-climax-clear>Clear</button>
             </div>
           </div>
         </div>
@@ -8124,6 +8174,36 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomScoreMin = "";
       state.trendScoreCustomScoreMax = "";
       state.trendScoreScoreRange = "all";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  }
+  usOverviewRoot.querySelectorAll("[data-trend-score-climax-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreClimaxRange = button.dataset.trendScoreClimaxRange || "all";
+      state.trendScoreCustomClimaxMin = "";
+      state.trendScoreCustomClimaxMax = "";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  });
+  const trendScoreClimaxMinInput = usOverviewRoot.querySelector("[data-trend-score-climax-min]");
+  const trendScoreClimaxMaxInput = usOverviewRoot.querySelector("[data-trend-score-climax-max]");
+  const trendScoreClimaxApplyButton = usOverviewRoot.querySelector("[data-trend-score-climax-apply]");
+  const trendScoreClimaxClearButton = usOverviewRoot.querySelector("[data-trend-score-climax-clear]");
+  if (trendScoreClimaxApplyButton && trendScoreClimaxMinInput && trendScoreClimaxMaxInput) {
+    trendScoreClimaxApplyButton.addEventListener("click", () => {
+      state.trendScoreCustomClimaxMin = trendScoreClimaxMinInput.value.trim();
+      state.trendScoreCustomClimaxMax = trendScoreClimaxMaxInput.value.trim();
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  }
+  if (trendScoreClimaxClearButton) {
+    trendScoreClimaxClearButton.addEventListener("click", () => {
+      state.trendScoreCustomClimaxMin = "";
+      state.trendScoreCustomClimaxMax = "";
+      state.trendScoreClimaxRange = "all";
       state.trendScoreSelectedTicker = "";
       render();
     });
