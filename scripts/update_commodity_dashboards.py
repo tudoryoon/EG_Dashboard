@@ -199,6 +199,16 @@ def merge_series(existing: dict, dates: list[str], values: list[float], start_da
     }
 
 
+def keep_existing_latest(series: dict, label: str, error: Exception) -> str:
+    existing_dates = series.get("dates") or []
+    if not existing_dates:
+        raise RuntimeError(f"No existing commodity observations available for {label}") from error
+    latest_date = existing_dates[-1]
+    latest_value = (series.get("values") or [""])[-1]
+    print(f"WARNING: keeping existing {label} through {latest_date} {latest_value}: {error}")
+    return latest_date
+
+
 def write_payload(payload: dict) -> None:
     text = "window.marketMacroData = "
     text += json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -211,31 +221,47 @@ def main() -> None:
     latest_dates: list[str] = []
 
     for (panel_key, series_key), (symbol, start_date) in YAHOO_SERIES.items():
-        dates, values = parse_yahoo_series(symbol, start_date)
-        if not dates:
-            raise RuntimeError(f"No Yahoo observations returned for {panel_key}.{series_key} ({symbol})")
         series = payload["panels"][panel_key]["series"][series_key]
+        try:
+            dates, values = parse_yahoo_series(symbol, start_date)
+            if not dates:
+                raise RuntimeError(f"No Yahoo observations returned for {panel_key}.{series_key} ({symbol})")
+        except Exception as error:  # pragma: no cover - network variability
+            latest_dates.append(keep_existing_latest(series, f"{panel_key}.{series_key} ({symbol})", error))
+            continue
         payload["panels"][panel_key]["series"][series_key] = merge_series(series, dates, values, start_date)
         updated_series = payload["panels"][panel_key]["series"][series_key]
         latest_dates.append(updated_series["dates"][-1])
         print(f"{panel_key}.{series_key}: {updated_series['dates'][-1]} {updated_series['values'][-1]}")
 
     for (panel_key, series_key), (series_id, start_date) in FRED_SERIES.items():
-        dates, values = parse_fred_series(series_id, start_date)
-        if not dates:
-            raise RuntimeError(f"No FRED observations returned for {panel_key}.{series_key} ({series_id})")
         series = payload["panels"][panel_key]["series"][series_key]
+        try:
+            dates, values = parse_fred_series(series_id, start_date)
+            if not dates:
+                raise RuntimeError(f"No FRED observations returned for {panel_key}.{series_key} ({series_id})")
+        except Exception as error:  # pragma: no cover - network variability
+            latest_dates.append(keep_existing_latest(series, f"{panel_key}.{series_key} ({series_id})", error))
+            continue
         payload["panels"][panel_key]["series"][series_key] = merge_series(series, dates, values, start_date)
         updated_series = payload["panels"][panel_key]["series"][series_key]
         latest_dates.append(updated_series["dates"][-1])
         print(f"{panel_key}.{series_key}: {updated_series['dates'][-1]} {updated_series['values'][-1]}")
 
-    world_bank_series = parse_world_bank_monthly_prices()
+    try:
+        world_bank_series = parse_world_bank_monthly_prices()
+    except Exception as error:  # pragma: no cover - network variability
+        print(f"WARNING: World Bank Pink Sheet fetch failed; preserving existing monthly series: {error}")
+        world_bank_series = {key: ([], []) for key in WORLD_BANK_SERIES}
     for (panel_key, series_key), (_header, start_date) in WORLD_BANK_SERIES.items():
-        dates, values = world_bank_series[(panel_key, series_key)]
-        if not dates:
-            raise RuntimeError(f"No World Bank observations returned for {panel_key}.{series_key}")
         series = payload["panels"][panel_key]["series"][series_key]
+        try:
+            dates, values = world_bank_series[(panel_key, series_key)]
+            if not dates:
+                raise RuntimeError(f"No World Bank observations returned for {panel_key}.{series_key}")
+        except Exception as error:  # pragma: no cover - network variability
+            latest_dates.append(keep_existing_latest(series, f"{panel_key}.{series_key}", error))
+            continue
         payload["panels"][panel_key]["series"][series_key] = merge_series(series, dates, values, start_date)
         updated_series = payload["panels"][panel_key]["series"][series_key]
         latest_dates.append(updated_series["dates"][-1])

@@ -87,6 +87,16 @@ def merge_series(existing: dict, dates: list[str], values: list[float]) -> dict:
     }
 
 
+def keep_existing_latest(series: dict, label: str, error: Exception) -> str:
+    existing_dates = series.get("dates") or []
+    if not existing_dates:
+        raise RuntimeError(f"No existing FX observations available for {label}") from error
+    latest_date = existing_dates[-1]
+    latest_value = (series.get("values") or [""])[-1]
+    print(f"WARNING: keeping existing {label} through {latest_date} {latest_value}: {error}")
+    return latest_date
+
+
 def write_payload(payload: dict) -> None:
     text = "window.marketMacroData = "
     text += json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -104,17 +114,24 @@ def main() -> None:
     )
 
     latest_dates: list[str] = []
+    updated_count = 0
     for key, symbol in FX_YAHOO_SYMBOLS.items():
-        dates, values = parse_yahoo_series(symbol)
-        if not dates:
-            raise RuntimeError(f"No Yahoo FX observations returned for {key} ({symbol})")
+        existing_series = fx_panel["series"][key]
+        try:
+            dates, values = parse_yahoo_series(symbol)
+            if not dates:
+                raise RuntimeError(f"No Yahoo FX observations returned for {key} ({symbol})")
+        except Exception as error:  # pragma: no cover - network variability
+            latest_dates.append(keep_existing_latest(existing_series, f"{key} ({symbol})", error))
+            continue
         fx_panel["series"][key] = merge_series(fx_panel["series"][key], dates, values)
         latest_dates.append(fx_panel["series"][key]["dates"][-1])
+        updated_count += 1
         print(f"{key}: {fx_panel['series'][key]['dates'][-1]} {fx_panel['series'][key]['values'][-1]}")
 
     payload["updatedAt"] = max([payload.get("updatedAt", "")] + latest_dates)
     write_payload(payload)
-    print(f"Updated FX dashboard through {max(latest_dates)}")
+    print(f"Updated FX dashboard through {max(latest_dates)} ({updated_count}/{len(FX_YAHOO_SYMBOLS)} series refreshed)")
 
 
 if __name__ == "__main__":
