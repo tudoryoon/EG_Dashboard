@@ -3711,6 +3711,7 @@ h1 {
 }
 
 .market-breadth-summary-card {
+  appearance: none;
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-left: 4px solid var(--breadth-color, #344255);
   border-radius: 8px;
@@ -3718,6 +3719,35 @@ h1 {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   padding: 10px 12px;
   min-width: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.market-breadth-summary-card:hover {
+  border-color: rgba(28, 28, 26, 0.16);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.07);
+  transform: translateY(-1px);
+}
+
+.market-breadth-summary-card.active {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--breadth-color, #344255) 10%, transparent), transparent 55%),
+    rgba(255, 255, 255, 0.94);
+}
+
+.market-breadth-summary-card.inactive {
+  opacity: 0.42;
+}
+
+.market-breadth-summary-card.inactive:hover {
+  opacity: 0.78;
 }
 
 .market-breadth-summary-top {

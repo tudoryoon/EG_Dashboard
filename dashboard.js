@@ -261,6 +261,7 @@ const state = {
   marketVixFamilyCustomStart: "",
   marketVixFamilyCustomEnd: "",
   marketBreadthRange: marketBreadthData.defaultRange ?? "3y",
+  marketBreadthSeriesSelection: [],
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, "3y"]),
   ),
@@ -5078,13 +5079,24 @@ function getMarketBreadthSpreadPanel() {
   return marketBreadthData.panels?.breadthSpread52w ?? marketBreadthData.panels?.sp500EqualWeightSpread52w ?? null;
 }
 
-function buildMarketBreadthSpreadPayload(rangeKey) {
-  const panel = getMarketBreadthSpreadPanel();
-  const rawSeries = panel?.series
+function getMarketBreadthSpreadSeriesEntries(panel = getMarketBreadthSpreadPanel()) {
+  return panel?.series
     ? Object.entries(panel.series)
     : panel
       ? [["sp500", panel]]
       : [];
+}
+
+function getSelectedMarketBreadthSeriesKeys(seriesEntries = getMarketBreadthSpreadSeriesEntries()) {
+  const allKeys = seriesEntries.map(([key]) => key);
+  const selected = (state.marketBreadthSeriesSelection ?? []).filter((key) => allKeys.includes(key));
+  return selected.length ? selected : allKeys;
+}
+
+function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys) {
+  const panel = getMarketBreadthSpreadPanel();
+  const selectedSet = new Set(selectedKeys ?? getSelectedMarketBreadthSeriesKeys(getMarketBreadthSpreadSeriesEntries(panel)));
+  const rawSeries = getMarketBreadthSpreadSeriesEntries(panel).filter(([key]) => selectedSet.has(key));
   const allLabels = [
     ...new Set(rawSeries.flatMap(([, item]) => (Array.isArray(item?.dates) ? item.dates : []))),
   ].sort();
@@ -5129,11 +5141,11 @@ function formatBreadthSpread(value) {
   return `${sign}${numeric.toFixed(2)}%p`;
 }
 
-function createMarketBreadthSpreadChart(canvas, rangeKey) {
+function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
   if (typeof Chart === "undefined" || !canvas) {
     return;
   }
-  const payload = buildMarketBreadthSpreadPayload(rangeKey);
+  const payload = buildMarketBreadthSpreadPayload(rangeKey, selectedKeys);
   if (!payload.labels.length) {
     return;
   }
@@ -5255,7 +5267,10 @@ function renderMarketBreadthOverview() {
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
   const spreadPanel = getMarketBreadthSpreadPanel();
-  const spreadSeries = spreadPanel?.series ? Object.values(spreadPanel.series) : spreadPanel ? [spreadPanel] : [];
+  const spreadEntries = getMarketBreadthSpreadSeriesEntries(spreadPanel);
+  const selectedSeriesKeys = getSelectedMarketBreadthSeriesKeys(spreadEntries);
+  const selectedSeriesSet = new Set(selectedSeriesKeys);
+  state.marketBreadthSeriesSelection = selectedSeriesKeys;
   const rangeChips = (marketBreadthData.ranges ?? [])
     .map(
       (range) => `
@@ -5267,21 +5282,28 @@ function renderMarketBreadthOverview() {
       `,
     )
     .join("");
-  const summaryCards = spreadSeries
-    .map((item) => {
+  const summaryCards = spreadEntries
+    .map(([seriesKey, item]) => {
       const latestSpread = Number(item?.latest);
       const latestClass = Number.isFinite(latestSpread) && latestSpread >= 0 ? "is-positive" : "is-negative";
       const equalSymbol = item?.equalWeighted?.symbol ?? item?.equalWeighted?.label ?? "Equal";
       const capSymbol = item?.capWeighted?.symbol ?? item?.capWeighted?.label ?? "Benchmark";
+      const isSelected = selectedSeriesSet.has(seriesKey);
       return `
-        <div class="market-breadth-summary-card" style="--breadth-color:${item?.color ?? "#344255"}">
+        <button
+          type="button"
+          class="market-breadth-summary-card${isSelected ? " active" : " inactive"}"
+          style="--breadth-color:${item?.color ?? "#344255"}"
+          data-market-breadth-series="${seriesKey}"
+          aria-pressed="${isSelected ? "true" : "false"}"
+        >
           <div class="market-breadth-summary-top">
             <span>${item?.label ?? "-"}</span>
             <strong class="${latestClass}">${formatBreadthSpread(item?.latest)}</strong>
           </div>
           <p>${equalSymbol} - ${capSymbol}</p>
           <small>${item?.latestState ?? "-"} · ${item?.updatedAt ?? marketBreadthData.updatedAt ?? "-"}</small>
-        </div>
+        </button>
       `;
     })
     .join("");
@@ -5348,9 +5370,24 @@ function renderMarketBreadthOverview() {
       render();
     });
   });
+  usOverviewRoot.querySelectorAll("[data-market-breadth-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const seriesKey = button.dataset.marketBreadthSeries;
+      if (!seriesKey) {
+        return;
+      }
+      const allKeys = spreadEntries.map(([key]) => key);
+      const current = getSelectedMarketBreadthSeriesKeys(spreadEntries);
+      const next = current.includes(seriesKey)
+        ? current.filter((key) => key !== seriesKey)
+        : [...current, seriesKey];
+      state.marketBreadthSeriesSelection = next.length ? next : allKeys;
+      render();
+    });
+  });
   const spreadCanvas = usOverviewRoot.querySelector("canvas[data-market-breadth-spread-chart]");
   if (spreadCanvas && spreadPanel) {
-    createMarketBreadthSpreadChart(spreadCanvas, state.marketBreadthRange);
+    createMarketBreadthSpreadChart(spreadCanvas, state.marketBreadthRange, state.marketBreadthSeriesSelection);
   }
 }
 
