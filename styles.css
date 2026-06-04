@@ -3274,6 +3274,25 @@ h1 {
   color: #fff;
 }
 
+.trend-score-leader-sortbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trend-score-leader-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.trend-score-leader-sort b {
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
 .market-rs-cap-custom {
   display: flex;
   flex-wrap: wrap;

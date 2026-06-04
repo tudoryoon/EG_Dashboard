@@ -7653,6 +7653,22 @@ function renderTrendScoreSortHeader(label, sortKey) {
   return `<button type="button" class="market-rs-sort${active ? " active" : ""}" data-trend-score-sort="${sortKey}">${label}${arrow}</button>`;
 }
 
+function renderTrendLeaderSortButton(label, sortKey) {
+  const active = state.trendScoreTableSortKey === sortKey;
+  const arrow = active ? (state.trendScoreTableSortDirection === "asc" ? "↑" : "↓") : "↕";
+  return `
+    <button
+      type="button"
+      class="market-rs-chip trend-score-leader-sort${active ? " active" : ""}"
+      data-trend-score-sort="${sortKey}"
+      aria-pressed="${active ? "true" : "false"}"
+    >
+      <span>${label}</span>
+      <b>${arrow}</b>
+    </button>
+  `;
+}
+
 function formatTrendRank(value) {
   if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
     return "-";
@@ -7863,6 +7879,13 @@ function renderMarketTrendScoreOverview() {
       >${range.label}</button>
     `,
   ).join("");
+  const leaderSortControls = [
+    ["Score", "score"],
+    ["Market Cap", "marketCap"],
+    ["Climax", "climaxScore"],
+  ]
+    .map(([label, sortKey]) => renderTrendLeaderSortButton(label, sortKey))
+    .join("");
   const leaderCards = rows.slice(0, 12)
     .map(
       (row) => `
@@ -7994,6 +8017,9 @@ function renderMarketTrendScoreOverview() {
             <div>
               <h2>Trend Leaders</h2>
               <p>${getTrendScoreUniverseLabel()} universe ranked by 10-point trend score and tie-breakers.</p>
+            </div>
+            <div class="trend-score-leader-sortbar" aria-label="Trend leader sort">
+              ${leaderSortControls}
             </div>
           </div>
           <div class="market-rs-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
