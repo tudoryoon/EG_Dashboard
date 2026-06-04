@@ -6052,6 +6052,24 @@ function renderMarketBriefingOverview() {
       `,
     )
     .join("");
+  const rotationDailyLeaders = rotationSignal.dailyLeaders ?? [];
+  const rotationDailyLeaderMarkup = rotationDailyLeaders
+    .map((sector, index) => {
+      const topNames = (sector.top ?? [])
+        .map((item) => `${item.ticker} ${formatSignedPercent(item.excessReturns?.["1d"])}`)
+        .join(" · ");
+      return `
+        <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()}">
+          <span>#${index + 1}</span>
+          <div>
+            <strong>${sector.label}</strong>
+            <small>${topNames || getRotationClassKorean(sector.classification)}</small>
+          </div>
+          <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)}</b>
+        </article>
+      `;
+    })
+    .join("");
   const rotationHistoryMarkup = selectedRotationSector && selectedRotationHistory.length
     ? `
       <article class="briefing-rotation-history-panel">
@@ -6212,6 +6230,13 @@ function renderMarketBriefingOverview() {
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">Benchmark ${rotationSignal.benchmark?.label ?? "QQQ"}</span>
           </div>
+        </div>
+        <div class="briefing-daily-leader-panel">
+          <div class="briefing-daily-leader-head">
+            <strong>Yesterday Sector Leaders</strong>
+            <span>1D excess return vs QQQ, same 50/50 cap/equal sector logic</span>
+          </div>
+          <div class="briefing-daily-leader-grid">${rotationDailyLeaderMarkup || '<p class="market-rs-empty">전일 초과수익률 데이터를 아직 계산하지 못했습니다.</p>'}</div>
         </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
         ${rotationHistoryMarkup}

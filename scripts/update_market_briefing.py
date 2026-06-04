@@ -1080,6 +1080,15 @@ def build_rotation_signal(
         )
 
     sectors.sort(key=lambda sector: safe_float(sector.get("score")) if safe_float(sector.get("score")) is not None else -999, reverse=True)
+    daily_leaders = sorted(
+        [
+            sector
+            for sector in sectors
+            if safe_float((sector.get("excessReturns") or {}).get("1d")) is not None
+        ],
+        key=lambda sector: float((sector.get("excessReturns") or {}).get("1d")),
+        reverse=True,
+    )[:8]
 
     def candidate_view(item: dict[str, object]) -> dict[str, object]:
         return {
@@ -1159,6 +1168,17 @@ def build_rotation_signal(
         "benchmark": benchmark,
         "weights": [{"key": key, "label": MAP_RANGE_LABELS[key], "weight": weight} for key, weight in ROTATION_WEIGHTS.items()],
         "sectors": sectors,
+        "dailyLeaders": [
+            {
+                "key": sector["key"],
+                "label": sector["label"],
+                "classification": sector["classification"],
+                "score": sector["score"],
+                "excessReturn1d": (sector.get("excessReturns") or {}).get("1d"),
+                "top": sector.get("top", [])[:2],
+            }
+            for sector in daily_leaders
+        ],
         "history": build_rotation_history(close_frame, sector_panels),
         "candidates": {
             "buyWatch": [candidate_view(item) for item in buy_watch],
