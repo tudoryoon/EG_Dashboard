@@ -320,7 +320,7 @@ h1 {
 
 .briefing-index-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -370,6 +370,40 @@ h1 {
 }
 
 .briefing-index-card.is-down .briefing-index-change {
+  color: #b42318;
+}
+
+.briefing-index-return-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.briefing-index-return-pill {
+  display: grid;
+  gap: 2px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 10px;
+  background: rgba(245, 247, 244, 0.88);
+  padding: 7px 8px;
+}
+
+.briefing-index-return-pill small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.briefing-index-return-pill b {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.86rem;
+}
+
+.briefing-index-return-pill b.is-positive {
+  color: #15803d;
+}
+
+.briefing-index-return-pill b.is-negative {
   color: #b42318;
 }
 

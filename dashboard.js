@@ -5979,8 +5979,8 @@ function renderMarketBriefingOverview() {
   const briefingIndexConfigs = [
     { key: "dowjones", label: "Dow Jones (DIA)" },
     { key: "sp500", label: "S&P 500 (SPY)" },
-    { key: "nasdaq100", label: "나스닥 100 (QQQ)" },
-    { key: "sox", label: "SOX (필라델피아 반도체)" },
+    { key: "nasdaq100", label: "NASDAQ 100 (QQQ)" },
+    { key: "sox", label: "필라델피아 반도체 (SOX)" },
     { key: "russell2000", label: "Russell 2000 (IWM)" },
   ];
 
@@ -5992,6 +5992,21 @@ function renderMarketBriefingOverview() {
       const latestValue = values.at(-1);
       const latestDate = dates.at(-1);
       const rangeReturn = getBriefingIndexReturn(item, state.briefingMapRange);
+      const fixedReturnMarkup = [
+        { key: "1d", label: "1D" },
+        { key: "1w", label: "1W" },
+        { key: "1m", label: "1M" },
+      ]
+        .map((range) => {
+          const value = getBriefingIndexReturn(item, range.key);
+          return `
+            <span class="briefing-index-return-pill">
+              <small>${range.label}</small>
+              <b class="${getSignedValueClass(value)}">${formatSignedPercent(value)}</b>
+            </span>
+          `;
+        })
+        .join("");
       const changeClass =
         Number(rangeReturn) > 0 ? "is-up" : Number(rangeReturn) < 0 ? "is-down" : "";
 
@@ -6006,6 +6021,7 @@ function renderMarketBriefingOverview() {
             <span class="briefing-index-change">${formatSignedPercent(rangeReturn)}</span>
             <span class="briefing-index-caption">${selectedBriefingRangeMeta.label} return</span>
           </div>
+          <div class="briefing-index-return-grid">${fixedReturnMarkup}</div>
         </article>
       `;
     })
