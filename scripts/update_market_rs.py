@@ -725,11 +725,16 @@ def build_payload(
             rs_rating_russell2000_frame[ticker] if ticker in rs_rating_russell2000_frame.columns else pd.Series(dtype=float)
         )
 
-        rs_new_high_all = compute_rating_new_high(history_all_series)
-        rs_new_high_sp500 = compute_rating_new_high(history_sp500_series)
-        rs_new_high_nasdaq100 = compute_rating_new_high(history_nasdaq100_series)
-        rs_new_high_dowjones = compute_rating_new_high(history_dowjones_series)
-        rs_new_high_russell2000 = compute_rating_new_high(history_russell2000_series)
+        rs_new_high_1y_all = compute_rating_new_high(history_all_series, LOOKBACKS["12m"])
+        rs_new_high_1y_sp500 = compute_rating_new_high(history_sp500_series, LOOKBACKS["12m"])
+        rs_new_high_1y_nasdaq100 = compute_rating_new_high(history_nasdaq100_series, LOOKBACKS["12m"])
+        rs_new_high_1y_dowjones = compute_rating_new_high(history_dowjones_series, LOOKBACKS["12m"])
+        rs_new_high_1y_russell2000 = compute_rating_new_high(history_russell2000_series, LOOKBACKS["12m"])
+        rs_new_high_3m_all = compute_rating_new_high(history_all_series, LOOKBACKS["3m"])
+        rs_new_high_3m_sp500 = compute_rating_new_high(history_sp500_series, LOOKBACKS["3m"])
+        rs_new_high_3m_nasdaq100 = compute_rating_new_high(history_nasdaq100_series, LOOKBACKS["3m"])
+        rs_new_high_3m_dowjones = compute_rating_new_high(history_dowjones_series, LOOKBACKS["3m"])
+        rs_new_high_3m_russell2000 = compute_rating_new_high(history_russell2000_series, LOOKBACKS["3m"])
 
         ticker_high_series = stock_high[ticker] if ticker in stock_high.columns else pd.Series(dtype=float)
         ticker_low_series = stock_low[ticker] if ticker in stock_low.columns else pd.Series(dtype=float)
@@ -767,12 +772,22 @@ def build_payload(
             ),
             "extension": compute_extension_metrics(ticker_raw_close_series, ticker_atr_series, ticker_atr_pct_series),
             "distanceTo52wHighPct": compute_52w_gap(performance_series),
-            "rsNewHigh": rs_new_high_all,
-            "rsNewHighAll": rs_new_high_all,
-            "rsNewHighSp500": rs_new_high_sp500,
-            "rsNewHighNasdaq100": rs_new_high_nasdaq100,
-            "rsNewHighDowjones": rs_new_high_dowjones,
-            "rsNewHighRussell2000": rs_new_high_russell2000,
+            "rsNewHigh": rs_new_high_1y_all,
+            "rsNewHighAll": rs_new_high_1y_all,
+            "rsNewHighSp500": rs_new_high_1y_sp500,
+            "rsNewHighNasdaq100": rs_new_high_1y_nasdaq100,
+            "rsNewHighDowjones": rs_new_high_1y_dowjones,
+            "rsNewHighRussell2000": rs_new_high_1y_russell2000,
+            "rsNewHigh1yAll": rs_new_high_1y_all,
+            "rsNewHigh1ySp500": rs_new_high_1y_sp500,
+            "rsNewHigh1yNasdaq100": rs_new_high_1y_nasdaq100,
+            "rsNewHigh1yDowjones": rs_new_high_1y_dowjones,
+            "rsNewHigh1yRussell2000": rs_new_high_1y_russell2000,
+            "rsNewHigh3mAll": rs_new_high_3m_all,
+            "rsNewHigh3mSp500": rs_new_high_3m_sp500,
+            "rsNewHigh3mNasdaq100": rs_new_high_3m_nasdaq100,
+            "rsNewHigh3mDowjones": rs_new_high_3m_dowjones,
+            "rsNewHigh3mRussell2000": rs_new_high_3m_russell2000,
             "memberships": {
                 "sp500": bool(member["member_sp500"]),
                 "nasdaq100": bool(member["member_nasdaq100"]),
