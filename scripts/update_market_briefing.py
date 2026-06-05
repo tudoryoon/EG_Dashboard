@@ -399,7 +399,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "financials",
-        "label": "금융주",
+        "label": "금융",
         "items": [
             {"ticker": "JPM", "label": "JPM US", "name": "JPMorgan", "query": "JPMorgan stock"},
             {"ticker": "GS", "label": "GS US", "name": "Goldman Sachs", "query": "Goldman Sachs stock"},
