@@ -91,6 +91,7 @@ EXTENSION_ANCHORS = {
     },
 }
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
+MANUAL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-manual-tickers.json"
 SYMBOL_ALIASES = {
     "CRDA": "CRD-A",
     "GEFB": "GEF-B",
@@ -152,6 +153,51 @@ MANUAL_SHARES_OUTSTANDING = {
     "NBIS": 253_898_194,
     "NVT": 161_720_452,
 }
+
+
+def load_manual_config() -> dict[str, object]:
+    if not MANUAL_CONFIG_PATH.exists():
+        return {}
+    try:
+        return json.loads(MANUAL_CONFIG_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def get_manual_universe_members() -> list[dict[str, object]]:
+    members = [dict(member) for member in MANUAL_UNIVERSE_MEMBERS]
+    seen = {normalize_ticker(member.get("ticker")) for member in members}
+    for member in load_manual_config().get("members", []):
+        if not isinstance(member, dict):
+            continue
+        ticker = normalize_ticker(member.get("ticker"))
+        if not ticker or ticker in seen:
+            continue
+        memberships = member.get("memberships") if isinstance(member.get("memberships"), dict) else {}
+        members.append(
+            {
+                "ticker": ticker,
+                "name": str(member.get("name") or ticker).strip(),
+                "member_sp500": bool(memberships.get("sp500") or member.get("member_sp500")),
+                "member_nasdaq100": bool(memberships.get("nasdaq100") or member.get("member_nasdaq100")),
+                "member_dowjones": bool(memberships.get("dowjones") or member.get("member_dowjones")),
+                "member_russell2000": bool(memberships.get("russell2000") or member.get("member_russell2000")),
+            }
+        )
+        seen.add(ticker)
+    return members
+
+
+def get_manual_shares_outstanding() -> dict[str, int]:
+    shares = dict(MANUAL_SHARES_OUTSTANDING)
+    for member in load_manual_config().get("members", []):
+        if not isinstance(member, dict):
+            continue
+        ticker = normalize_ticker(member.get("ticker"))
+        manual_shares = normalize_positive_int(member.get("sharesOutstanding") or member.get("shares"))
+        if ticker and manual_shares:
+            shares[ticker] = manual_shares
+    return shares
 
 
 def normalize_ticker(raw: object) -> str:
@@ -254,7 +300,7 @@ def fetch_universe_frame() -> pd.DataFrame:
             )
             item["name"] = str(row.get(name_col, item["name"])).strip()
             item[f"member_{key}"] = True
-    for manual_member in MANUAL_UNIVERSE_MEMBERS:
+    for manual_member in get_manual_universe_members():
         ticker = normalize_ticker(manual_member["ticker"])
         if not ticker or is_terminal_symbol(ticker):
             continue
@@ -504,8 +550,9 @@ def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
 
 def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, object]]) -> dict[str, int | None]:
     cache: dict[str, int | None] = {}
+    manual_shares_outstanding = get_manual_shares_outstanding()
     for symbol in symbols:
-        manual_shares = MANUAL_SHARES_OUTSTANDING.get(symbol)
+        manual_shares = manual_shares_outstanding.get(symbol)
         if manual_shares:
             cache[symbol] = manual_shares
     for symbol in symbols:
@@ -1102,7 +1149,7 @@ def main() -> None:
     universe = fetch_universe_frame()
     symbols = sorted(symbol for symbol in universe["ticker"].tolist() if not is_terminal_symbol(str(symbol)))
     raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
-    manual_symbols = [normalize_ticker(member["ticker"]) for member in MANUAL_UNIVERSE_MEMBERS]
+    manual_symbols = [normalize_ticker(member["ticker"]) for member in get_manual_universe_members()]
     raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = ensure_symbol_price_frames(
         manual_symbols,
         raw_close_frame,
