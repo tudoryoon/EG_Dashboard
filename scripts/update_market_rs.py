@@ -139,9 +139,18 @@ MANUAL_UNIVERSE_MEMBERS = [
         "member_dowjones": False,
         "member_russell2000": False,
     },
+    {
+        "ticker": "NVT",
+        "name": "nVent Electric plc",
+        "member_sp500": False,
+        "member_nasdaq100": False,
+        "member_dowjones": False,
+        "member_russell2000": False,
+    },
 ]
 MANUAL_SHARES_OUTSTANDING = {
     "NBIS": 253_898_194,
+    "NVT": 161_720_452,
 }
 
 
@@ -418,6 +427,44 @@ def fetch_price_frames(
     return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
 
 
+def ensure_symbol_price_frames(
+    symbols: list[str],
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+    volume_frame: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    missing = [symbol for symbol in symbols if symbol not in raw_close_frame.columns]
+    if not missing:
+        return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+    raw_map, adjusted_map, open_map, high_map, low_map, volume_map = fetch_price_frames(missing, batch_size=1)
+    for symbol in missing:
+        if symbol in raw_map:
+            raw_close_frame[symbol] = raw_map[symbol]
+        if symbol in adjusted_map:
+            adjusted_close_frame[symbol] = adjusted_map[symbol]
+        if symbol in open_map:
+            open_frame[symbol] = open_map[symbol]
+        if symbol in high_map:
+            high_frame[symbol] = high_map[symbol]
+        if symbol in low_map:
+            low_frame[symbol] = low_map[symbol]
+        if symbol in volume_map:
+            volume_frame[symbol] = volume_map[symbol]
+
+    return (
+        raw_close_frame.sort_index(),
+        adjusted_close_frame.sort_index(),
+        open_frame.sort_index(),
+        high_frame.sort_index(),
+        low_frame.sort_index(),
+        volume_frame.sort_index(),
+    )
+
+
 def load_existing_rows() -> dict[str, dict[str, object]]:
     if not OUTPUT_PATH.exists():
         return {}
@@ -654,6 +701,8 @@ def build_payload(
     stock_high = stock_high[[ticker for ticker in eligible_tickers if ticker in stock_high.columns]]
     stock_low = stock_low[[ticker for ticker in eligible_tickers if ticker in stock_low.columns]]
     stock_volume = stock_volume[[ticker for ticker in eligible_tickers if ticker in stock_volume.columns]]
+    stock_adjusted_close = stock_adjusted_close.ffill(limit=1)
+    stock_raw_close = stock_raw_close.ffill(limit=1)
     if stock_adjusted_close.empty or stock_raw_close.empty:
         raise RuntimeError("No RS universe members passed the market-cap filter.")
 
@@ -1053,6 +1102,16 @@ def main() -> None:
     universe = fetch_universe_frame()
     symbols = sorted(symbol for symbol in universe["ticker"].tolist() if not is_terminal_symbol(str(symbol)))
     raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
+    manual_symbols = [normalize_ticker(member["ticker"]) for member in MANUAL_UNIVERSE_MEMBERS]
+    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = ensure_symbol_price_frames(
+        manual_symbols,
+        raw_close_frame,
+        adjusted_close_frame,
+        open_frame,
+        high_frame,
+        low_frame,
+        volume_frame,
+    )
     existing_rows = load_existing_rows()
     shares_cache = build_shares_cache(symbols, existing_rows)
     payload = build_payload(
