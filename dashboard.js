@@ -6736,6 +6736,22 @@ function getMarketRsFilterNewHighWindow(filterKey = state.rsFilter) {
   if (filterKey === "newHigh1y" || filterKey === "newHigh") {
     return "1y";
   }
+  if (filterKey === "priceNewHigh3m") {
+    return "3m";
+  }
+  if (filterKey === "priceNewHigh1y") {
+    return "1y";
+  }
+  return null;
+}
+
+function getMarketRsFilterNewHighKind(filterKey = state.rsFilter) {
+  if (filterKey === "newHigh3m" || filterKey === "newHigh1y" || filterKey === "newHigh") {
+    return "rs";
+  }
+  if (filterKey === "priceNewHigh3m" || filterKey === "priceNewHigh1y") {
+    return "price";
+  }
   return null;
 }
 
@@ -6748,8 +6764,28 @@ function getMarketRsUniverseNewHigh(row, universeKey, windowKey = "1y") {
   return Boolean(value ?? (suffix === "All" ? row.rsNewHigh : false));
 }
 
-function getMarketRsNewHighLabel(windowKey = getMarketRsFilterNewHighWindow() ?? "1y") {
-  return windowKey === "3m" ? "RS NH 3M" : "RS NH 1Y";
+function getMarketRsPriceNewHigh(row, windowKey = "1y") {
+  if (windowKey === "3m") {
+    return Boolean(row.priceNewHigh3m);
+  }
+  return Boolean(row.priceNewHigh1y ?? row.priceNewHigh);
+}
+
+function getMarketRsNewHighLabel(windowKey = getMarketRsFilterNewHighWindow() ?? "1y", kind = getMarketRsFilterNewHighKind() ?? "rs") {
+  const prefix = kind === "price" ? "Price NH" : "RS NH";
+  return windowKey === "3m" ? `${prefix} 3M` : `${prefix} 1Y`;
+}
+
+function matchesMarketRsNewHighFilter(row, universeKey, filterKey = state.rsFilter) {
+  const kind = getMarketRsFilterNewHighKind(filterKey);
+  const windowKey = getMarketRsFilterNewHighWindow(filterKey);
+  if (!kind || !windowKey) {
+    return true;
+  }
+  if (kind === "price") {
+    return getMarketRsPriceNewHigh(row, windowKey);
+  }
+  return getMarketRsUniverseNewHigh(row, universeKey, windowKey);
 }
 
 function getMarketRsHistoryRatings(history, universeKey) {
@@ -6917,7 +6953,6 @@ function matchesTrendScoreClimaxRange(row) {
 
 function getVisibleMarketRsRows() {
   const query = (state.query ?? "").trim().toLowerCase();
-  const newHighWindow = getMarketRsFilterNewHighWindow();
   return (marketRsData.rows ?? [])
     .filter((row) => {
       if (!matchesMarketRsCapRange(row)) {
@@ -6939,14 +6974,14 @@ function getVisibleMarketRsRows() {
         return false;
       }
       if (!query) {
-        return !newHighWindow || getMarketRsUniverseNewHigh(row, state.rsUniverse, newHighWindow);
+        return matchesMarketRsNewHighFilter(row, state.rsUniverse);
       }
       const ticker = row.ticker?.toLowerCase?.() ?? "";
       const matchesQuery = ticker.includes(query);
       if (!matchesQuery) {
         return false;
       }
-      return !newHighWindow || getMarketRsUniverseNewHigh(row, state.rsUniverse, newHighWindow);
+      return matchesMarketRsNewHighFilter(row, state.rsUniverse);
     })
     .sort((left, right) => {
       if (query) {
@@ -7005,6 +7040,8 @@ function getMarketRsTableSortValue(row, sortKey) {
       return row.distanceTo52wHighPct ?? Number.POSITIVE_INFINITY;
     case "rsNewHigh":
       return getMarketRsUniverseNewHigh(row, state.rsUniverse, getMarketRsFilterNewHighWindow() ?? "1y") ? 1 : 0;
+    case "priceNewHigh":
+      return getMarketRsPriceNewHigh(row, getMarketRsFilterNewHighKind() === "price" ? getMarketRsFilterNewHighWindow() : "1y") ? 1 : 0;
     default:
       return getMarketRsUniverseScore(row, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
   }
@@ -7243,6 +7280,8 @@ function renderMarketRsOverview() {
     <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh3m" ? " active" : ""}" data-rs-filter="newHigh3m">RS New High (3M)</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh1y" || state.rsFilter === "newHigh" ? " active" : ""}" data-rs-filter="newHigh1y">RS New High (1Y)</button>
+    <button type="button" class="market-rs-chip${state.rsFilter === "priceNewHigh3m" ? " active" : ""}" data-rs-filter="priceNewHigh3m">Stock Price New High (3M)</button>
+    <button type="button" class="market-rs-chip${state.rsFilter === "priceNewHigh1y" ? " active" : ""}" data-rs-filter="priceNewHigh1y">Stock Price New High (1Y)</button>
   `;
   const marketCapChips = MARKET_RS_CAP_RANGES.map(
     (range) => `
@@ -7280,8 +7319,9 @@ function renderMarketRsOverview() {
   const tableSortRows = sortMarketRsTableRows(rows);
   const sortedLeaderRows = sortMarketRsLeaderRows(rows);
   const leaderRows = sortedLeaderRows;
+  const activeNewHighKind = getMarketRsFilterNewHighKind() ?? "rs";
   const activeNewHighWindow = getMarketRsFilterNewHighWindow() ?? "1y";
-  const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow);
+  const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow, activeNewHighKind);
   const leaderCards = leaderRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -7309,7 +7349,7 @@ function renderMarketRsOverview() {
             <span>ATR%</span>
             <strong>${formatAtrPercent(row.atr21Pct)}</strong>
           </div>
-          ${getMarketRsUniverseNewHigh(row, state.rsUniverse, activeNewHighWindow) ? `<div class="market-rs-flag">${activeNewHighLabel}</div>` : ""}
+          ${matchesMarketRsNewHighFilter(row, state.rsUniverse, state.rsFilter === "all" ? "newHigh1y" : state.rsFilter) ? `<div class="market-rs-flag">${activeNewHighLabel}</div>` : ""}
         </button>
       `;
     })
@@ -7329,6 +7369,7 @@ function renderMarketRsOverview() {
           <td>${formatAtrPercent(row.atr21Pct)}</td>
           <td>${formatRsGapPercent(row.distanceTo52wHighPct)}</td>
           <td>${getMarketRsUniverseNewHigh(row, state.rsUniverse, "3m") ? "3M" : "-"} / ${getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y") ? "1Y" : "-"}</td>
+          <td>${getMarketRsPriceNewHigh(row, "3m") ? "3M" : "-"} / ${getMarketRsPriceNewHigh(row, "1y") ? "1Y" : "-"}</td>
         </tr>
       `;
     })
@@ -7352,6 +7393,8 @@ function renderMarketRsOverview() {
             <span class="market-rs-pill">${rows.length} names</span>
             <span class="market-rs-pill">${rows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "3m")).length} 3M RS highs</span>
             <span class="market-rs-pill">${rows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y")).length} 1Y RS highs</span>
+            <span class="market-rs-pill">${rows.filter((row) => getMarketRsPriceNewHigh(row, "3m")).length} 3M price highs</span>
+            <span class="market-rs-pill">${rows.filter((row) => getMarketRsPriceNewHigh(row, "1y")).length} 1Y price highs</span>
             <span class="market-rs-pill">Sorted 99 → 1</span>
           </div>
         </div>
@@ -7491,9 +7534,10 @@ function renderMarketRsOverview() {
                 <th>${renderMarketRsSortHeader("ATR%", "atr21Pct")}</th>
                 <th>${renderMarketRsSortHeader("52W Gap", "gap52w")}</th>
                 <th>${renderMarketRsSortHeader("RS NH", "rsNewHigh")}</th>
+                <th>${renderMarketRsSortHeader("Price NH", "priceNewHigh")}</th>
               </tr>
             </thead>
-            <tbody>${tableRows || '<tr><td colspan="10">검색 결과가 없습니다.</td></tr>'}</tbody>
+            <tbody>${tableRows || '<tr><td colspan="11">검색 결과가 없습니다.</td></tr>'}</tbody>
           </table>
         </div>
       </article>

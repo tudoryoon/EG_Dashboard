@@ -580,6 +580,17 @@ def compute_rating_new_high(series: pd.Series, window: int = LOOKBACKS["12m"]) -
     return latest >= trailing_high - 1e-9
 
 
+def compute_price_new_high(series: pd.Series, window: int = LOOKBACKS["12m"]) -> bool:
+    recent = series.dropna().tail(window)
+    if recent.empty:
+        return False
+    latest = float(recent.iloc[-1])
+    trailing_high = float(recent.max())
+    if not math.isfinite(latest) or not math.isfinite(trailing_high):
+        return False
+    return latest >= trailing_high - 1e-9
+
+
 def serialize_price_line(series: pd.Series) -> list[float | None]:
     values: list[float | None] = []
     for value in series:
@@ -735,6 +746,8 @@ def build_payload(
         rs_new_high_3m_nasdaq100 = compute_rating_new_high(history_nasdaq100_series, LOOKBACKS["3m"])
         rs_new_high_3m_dowjones = compute_rating_new_high(history_dowjones_series, LOOKBACKS["3m"])
         rs_new_high_3m_russell2000 = compute_rating_new_high(history_russell2000_series, LOOKBACKS["3m"])
+        price_new_high_1y = compute_price_new_high(raw_price_series, LOOKBACKS["12m"])
+        price_new_high_3m = compute_price_new_high(raw_price_series, LOOKBACKS["3m"])
 
         ticker_high_series = stock_high[ticker] if ticker in stock_high.columns else pd.Series(dtype=float)
         ticker_low_series = stock_low[ticker] if ticker in stock_low.columns else pd.Series(dtype=float)
@@ -788,6 +801,9 @@ def build_payload(
             "rsNewHigh3mNasdaq100": rs_new_high_3m_nasdaq100,
             "rsNewHigh3mDowjones": rs_new_high_3m_dowjones,
             "rsNewHigh3mRussell2000": rs_new_high_3m_russell2000,
+            "priceNewHigh": price_new_high_1y,
+            "priceNewHigh1y": price_new_high_1y,
+            "priceNewHigh3m": price_new_high_3m,
             "memberships": {
                 "sp500": bool(member["member_sp500"]),
                 "nasdaq100": bool(member["member_nasdaq100"]),
