@@ -241,6 +241,7 @@ SECTOR_GROUPS = [
         "label": "데이터센터 인프라",
         "items": [
             {"ticker": "VRT", "label": "VRT US", "name": "Vertiv", "query": "Vertiv stock"},
+            {"ticker": "NVT", "label": "NVT US", "name": "nVent Electric", "query": "nVent Electric stock"},
             {"ticker": "FIX", "label": "FIX US", "name": "Comfort Systems", "query": "Comfort Systems stock"},
             {"ticker": "PWR", "label": "PWR US", "name": "Quanta Services", "query": "Quanta Services stock"},
         ],
@@ -699,7 +700,7 @@ def fetch_meta(symbol: str) -> dict[str, float | None]:
     try:
         ticker = yf.Ticker(symbol)
         fast_info = getattr(ticker, "fast_info", {}) or {}
-        market_cap = normalize_number(fast_info.get("market_cap"))
+        market_cap = normalize_number(fast_info.get("market_cap") or fast_info.get("marketCap"))
         shares = normalize_number(fast_info.get("shares"))
         if market_cap is None or shares is None:
             info = ticker.get_info()
@@ -809,6 +810,11 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         previous_price = normalize_number(previous_meta.get("price"))
         market_cap = normalize_number(previous_meta.get("marketCap"))
         market_cap_usd = normalize_number(previous_meta.get("marketCapUsd"))
+        if market_cap is None:
+            meta = fetch_meta(symbol)
+            market_cap = normalize_number(meta.get("marketCap"))
+            if market_cap_usd is None and not symbol.endswith(".KS"):
+                market_cap_usd = market_cap
         if price is not None and previous_price and previous_price > 0:
             price_ratio = price / previous_price
             if market_cap is not None:
