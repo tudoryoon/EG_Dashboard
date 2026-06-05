@@ -358,6 +358,7 @@ const cardTemplate = document.querySelector("#company-card-template");
 const usOverviewRoot = document.querySelector("#us-overview");
 const toolbarRow = document.querySelector(".toolbar .toolbar-row-filters");
 const brandMeta = document.querySelector(".brand-meta");
+let searchRenderTimer = null;
 
 function formatKstDateTime(dateText) {
   if (!dateText) {
@@ -7676,8 +7677,7 @@ function getVisibleTrendScoreRows() {
     if (!query) {
       return true;
     }
-    return String(row.ticker ?? "").toLowerCase().includes(query)
-      || String(row.name ?? "").toLowerCase().includes(query);
+    return String(row.ticker ?? "").toLowerCase().includes(query);
   });
   return sortTrendScoreRows(rows);
 }
@@ -12303,6 +12303,17 @@ function render() {
 
 searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
+  if (searchRenderTimer) {
+    window.clearTimeout(searchRenderTimer);
+    searchRenderTimer = null;
+  }
+  if (state.tab === "Market" && state.marketView === "TrendScore") {
+    searchRenderTimer = window.setTimeout(() => {
+      searchRenderTimer = null;
+      render();
+    }, 120);
+    return;
+  }
   render();
 });
 
