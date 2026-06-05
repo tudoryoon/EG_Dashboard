@@ -1089,6 +1089,14 @@ def build_rotation_signal(
         key=lambda sector: float((sector.get("excessReturns") or {}).get("1d")),
         reverse=True,
     )[:8]
+    daily_laggards = sorted(
+        [
+            sector
+            for sector in sectors
+            if safe_float((sector.get("excessReturns") or {}).get("1d")) is not None
+        ],
+        key=lambda sector: float((sector.get("excessReturns") or {}).get("1d")),
+    )[:8]
 
     def candidate_view(item: dict[str, object]) -> dict[str, object]:
         return {
@@ -1178,6 +1186,17 @@ def build_rotation_signal(
                 "top": sector.get("top", [])[:2],
             }
             for sector in daily_leaders
+        ],
+        "dailyLaggards": [
+            {
+                "key": sector["key"],
+                "label": sector["label"],
+                "classification": sector["classification"],
+                "score": sector["score"],
+                "excessReturn1d": (sector.get("excessReturns") or {}).get("1d"),
+                "bottom": sector.get("bottom", [])[:2],
+            }
+            for sector in daily_laggards
         ],
         "history": build_rotation_history(close_frame, sector_panels),
         "candidates": {

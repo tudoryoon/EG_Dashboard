@@ -6128,6 +6128,24 @@ function renderMarketBriefingOverview() {
       `;
     })
     .join("");
+  const rotationDailyLaggards = rotationSignal.dailyLaggards ?? [];
+  const rotationDailyLaggardMarkup = rotationDailyLaggards
+    .map((sector, index) => {
+      const bottomNames = (sector.bottom ?? sector.top ?? [])
+        .map((item) => `${item.ticker} ${formatSignedPercent(item.excessReturns?.["1d"])}`)
+        .join(" · ");
+      return `
+        <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()} is-laggard">
+          <span>#${index + 1}</span>
+          <div>
+            <strong>${sector.label}</strong>
+            <small>${bottomNames || getRotationClassKorean(sector.classification)}</small>
+          </div>
+          <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)}</b>
+        </article>
+      `;
+    })
+    .join("");
   const rotationHistoryMarkup = selectedRotationSector && selectedRotationHistory.length
     ? `
       <article class="briefing-rotation-history-panel">
@@ -6295,6 +6313,11 @@ function renderMarketBriefingOverview() {
             <span>1D excess return vs QQQ, same 50/50 cap/equal sector logic</span>
           </div>
           <div class="briefing-daily-leader-grid">${rotationDailyLeaderMarkup || '<p class="market-rs-empty">전일 초과수익률 데이터를 아직 계산하지 못했습니다.</p>'}</div>
+          <div class="briefing-daily-leader-head is-laggard">
+            <strong>Yesterday Sector Laggards</strong>
+            <span>Worst 1D excess return vs QQQ, same 50/50 cap/equal sector logic</span>
+          </div>
+          <div class="briefing-daily-leader-grid">${rotationDailyLaggardMarkup || '<p class="market-rs-empty">전일 약세 섹터 데이터를 아직 계산하지 못했습니다.</p>'}</div>
         </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
         ${rotationHistoryMarkup}
