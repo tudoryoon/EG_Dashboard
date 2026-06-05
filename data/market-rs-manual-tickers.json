@@ -1,3 +1,15 @@
 {
-  "members": []
+  "members": [
+    {
+      "ticker": "SPCE",
+      "name": "Virgin Galactic Holdings, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 104451974
+    }
+  ]
 }
