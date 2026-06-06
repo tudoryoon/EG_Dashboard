@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -22,7 +23,7 @@ SEC_HEADERS = {
     "User-Agent": "EG Dashboard research contact@example.com",
     "Accept-Encoding": "gzip, deflate",
 }
-TARGET_MEMBERSHIPS = ("nasdaq100",)
+TARGET_MEMBERSHIPS = ("sp500", "nasdaq100")
 
 REVENUE_TAGS = [
     "RevenueFromContractWithCustomerExcludingAssessedTax",
@@ -69,10 +70,26 @@ def write_js_payload(path: Path, variable_name: str, payload: dict[str, Any]) ->
     )
 
 
+def read_previous_payload() -> dict[str, Any]:
+    if not OUTPUT_PATH.exists():
+        return {}
+    try:
+        return read_js_payload(OUTPUT_PATH, "marketRsFinancialsData")
+    except Exception:
+        return {}
+
+
 def safe_round(value: float | None, digits: int = 2) -> float | None:
     if value is None:
         return None
     return round(float(value), digits)
+
+
+def safe_float(value: object) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def clean_text(value: object) -> str:
@@ -709,9 +726,11 @@ def extract_metrics_from_release_html(html: str) -> dict[str, Any]:
                 metrics["revenue"] = scaled_amount(numeric, scale)
 
             if has_non_gaap and "gross margin" in label:
-                margin_numeric, _ = first_numeric_after_label(values, max_abs=100)
-                if plausible_percent(margin_numeric):
-                    metrics["nonGaapGrossMarginPct"] = margin_numeric
+                gross_numeric, gross_is_percent = first_numeric_after_label(values)
+                if gross_is_percent and plausible_percent(gross_numeric):
+                    metrics["nonGaapGrossMarginPct"] = gross_numeric
+                elif gross_numeric is not None:
+                    metrics["nonGaapGrossProfit"] = scaled_amount(gross_numeric, scale)
             elif has_non_gaap and "gross profit" in label and "margin" not in label:
                 metrics["nonGaapGrossProfit"] = scaled_amount(numeric, scale)
 
@@ -802,17 +821,39 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
         if gross_margin is None and metrics.get("nonGaapGrossProfit") is not None and revenue_value:
             gross_margin = plausible_margin_from_amount(metrics.get("nonGaapGrossProfit"), revenue_value)
         if plausible_percent(gross_margin):
-            row["grossMarginPct"] = safe_round(gross_margin, 1)
-            metric_sources["grossMarginPct"] = source_label + " Non-GAAP"
-            applied += 1
+            existing_gross_margin = safe_float(row.get("grossMarginPct"))
+            likely_reconciliation_adjustment = (
+                abs(float(gross_margin)) < 0.05
+                or (
+                    existing_gross_margin is not None
+                    and float(gross_margin) < 5
+                    and existing_gross_margin > 10
+                )
+            )
+            if not likely_reconciliation_adjustment:
+                row["grossMarginPct"] = safe_round(gross_margin, 1)
+                metric_sources["grossMarginPct"] = source_label + " Non-GAAP"
+                applied += 1
 
         operating_margin = metrics.get("nonGaapOperatingMarginPct")
         if operating_margin is None and metrics.get("nonGaapOperatingIncome") is not None and revenue_value:
             operating_margin = plausible_margin_from_amount(metrics.get("nonGaapOperatingIncome"), revenue_value)
         if plausible_percent(operating_margin):
-            row["operatingMarginPct"] = safe_round(operating_margin, 1)
-            metric_sources["operatingMarginPct"] = source_label + " Non-GAAP"
-            applied += 1
+            existing_operating_margin = safe_float(row.get("operatingMarginPct"))
+            likely_reconciliation_adjustment = (
+                abs(float(operating_margin)) < 0.05
+                or (
+                    existing_operating_margin is not None
+                    and (
+                        (float(operating_margin) < 0 and existing_operating_margin > 5)
+                        or (float(operating_margin) >= 95 and existing_operating_margin < 80)
+                    )
+                )
+            )
+            if not likely_reconciliation_adjustment:
+                row["operatingMarginPct"] = safe_round(operating_margin, 1)
+                metric_sources["operatingMarginPct"] = source_label + " Non-GAAP"
+                applied += 1
 
         if plausible_eps(metrics.get("nonGaapEpsDiluted")):
             row["epsDiluted"] = safe_round(metrics.get("nonGaapEpsDiluted"), 2)
@@ -911,6 +952,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         "ticker": ticker,
         "name": name,
         "cik": cik,
+        "financialUpdatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "SEC EDGAR companyfacts + EDGAR earnings release exhibits",
         "basis": "IR earnings-release Non-GAAP/adjusted metrics where extractable; SEC GAAP companyfacts fallback.",
         "irReleaseCount": len(ir_releases),
@@ -927,58 +969,121 @@ def main() -> None:
         for row in rs_payload.get("rows", [])
         if any((row.get("memberships") or {}).get(key) for key in TARGET_MEMBERSHIPS)
     ]
+    previous_payload = read_previous_payload()
+    force_refresh = os.environ.get("MARKET_RS_FINANCIALS_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
+    max_companies_text = os.environ.get("MARKET_RS_FINANCIALS_MAX_COMPANIES", "").strip()
+    max_companies = int(max_companies_text) if max_companies_text.isdigit() and int(max_companies_text) > 0 else None
+    stale_days_text = os.environ.get("MARKET_RS_FINANCIALS_STALE_DAYS", "14").strip()
+    try:
+        stale_days = int(stale_days_text)
+    except ValueError:
+        stale_days = 14
+    target_tickers_env = os.environ.get("MARKET_RS_FINANCIALS_TICKERS", "")
+    explicit_tickers = {
+        ticker.strip().upper()
+        for ticker in re.split(r"[\s,]+", target_tickers_env)
+        if ticker.strip()
+    }
     ticker_map = load_sec_ticker_map()
-    financials: dict[str, Any] = {}
+    financials: dict[str, Any] = dict(previous_payload.get("financials") or {})
     missing: list[str] = []
-    errors: dict[str, str] = {}
+    errors: dict[str, str] = dict(previous_payload.get("errors") or {})
 
-    for index, row in enumerate(sorted(target_rows, key=lambda item: str(item.get("ticker")))):
+    def ticker_updated_at(ticker: str) -> str:
+        financial = financials.get(ticker) or {}
+        return str(financial.get("financialUpdatedAt") or "")
+
+    def is_stale(ticker: str) -> bool:
+        if ticker not in financials:
+            return True
+        if stale_days < 0:
+            return False
+        updated_at = parse_iso_date(ticker_updated_at(ticker).replace("Z", "+00:00"))
+        if updated_at is None:
+            return True
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - updated_at).days >= stale_days
+
+    sorted_rows = sorted(
+        target_rows,
+        key=lambda item: (ticker_updated_at(str(item.get("ticker") or "").upper()), str(item.get("ticker"))),
+    )
+    pending_rows = [
+        row
+        for row in sorted_rows
+        if (
+            str(row.get("ticker") or "").upper() in explicit_tickers
+            or force_refresh
+            or is_stale(str(row.get("ticker") or "").upper())
+        )
+    ]
+    if max_companies is not None:
+        pending_rows = pending_rows[:max_companies]
+
+    def build_output_payload() -> dict[str, Any]:
+        sp500_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("sp500"))
+        nasdaq100_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("nasdaq100"))
+        non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
+        covered_tickers = set(financials)
+        target_tickers = {str(row.get("ticker") or "").upper() for row in target_rows}
+        pending_tickers = sorted(ticker for ticker in target_tickers if ticker and ticker not in covered_tickers)
+        return {
+            "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "scope": {
+                "universe": "S&P 500 + NASDAQ 100",
+                "universes": list(TARGET_MEMBERSHIPS),
+                "counts": {
+                    "sp500": sp500_count,
+                    "nasdaq100": nasdaq100_count,
+                    "total": len(target_rows),
+                    "covered": len([ticker for ticker in covered_tickers if ticker in target_tickers]),
+                    "pending": len(pending_tickers),
+                    "nonGaapCompanies": non_gaap_company_count,
+                },
+                "tickers": sorted(row.get("ticker") for row in target_rows),
+                "pendingTickers": pending_tickers,
+                "source": "SEC EDGAR companyfacts + EDGAR 8-K/6-K earnings release exhibits",
+                "basis": "S&P500 and NASDAQ100 coverage. IR earnings-release Non-GAAP/adjusted metrics are preferred when extractable from official EDGAR exhibits; SEC GAAP companyfacts remains the fallback.",
+            },
+            "metrics": [
+                {"key": "revenue", "label": "Revenue", "unit": "usd", "note": "YoY is shown against the same quarter a year ago."},
+                {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Non-GAAP gross margin from IR release when extractable; GAAP fallback."},
+                {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Non-GAAP/adjusted operating margin from IR release when extractable; GAAP fallback. YoY pp change is shown where available."},
+                {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "Non-GAAP diluted EPS from IR release when extractable; GAAP fallback."},
+                {"key": "ocf", "label": "OCF", "unit": "usd"},
+                {"key": "fcf", "label": "FCF", "unit": "usd", "note": "Company-reported free cash flow from IR release when extractable; otherwise OCF minus absolute capex cash outflow."},
+            ],
+            "financials": dict(sorted(financials.items())),
+            "missing": sorted(set(missing)),
+            "errors": dict(sorted(errors.items())),
+        }
+
+    print(
+        f"Target companies: {len(target_rows)}; existing: {len(financials)}; pending this run: {len(pending_rows)}",
+        flush=True,
+    )
+    for index, row in enumerate(pending_rows):
         ticker = str(row.get("ticker") or "").upper()
         mapping = next((ticker_map.get(candidate) for candidate in sec_ticker_candidates(ticker) if ticker_map.get(candidate)), None)
         if not mapping:
             missing.append(ticker)
             continue
         try:
-            print(f"Processing {index + 1}/{len(target_rows)} {ticker}", flush=True)
+            print(f"Processing {index + 1}/{len(pending_rows)} {ticker}", flush=True)
             financials[ticker] = build_company_financials(ticker, str(row.get("name") or mapping["title"]), mapping["cik"])
+            errors.pop(ticker, None)
         except Exception as error:  # pragma: no cover - source variability
             errors[ticker] = str(error)
         time.sleep(0.12)
-        if (index + 1) % 20 == 0:
-            print(f"Processed {index + 1}/{len(target_rows)}")
+        if (index + 1) % 10 == 0:
+            write_js_payload(OUTPUT_PATH, "marketRsFinancialsData", build_output_payload())
+            print(f"Checkpoint saved after {index + 1}/{len(pending_rows)}", flush=True)
 
-    nasdaq100_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("nasdaq100"))
-    non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
-
-    payload = {
-        "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "scope": {
-            "universe": "NASDAQ 100",
-            "universes": list(TARGET_MEMBERSHIPS),
-            "counts": {
-                "nasdaq100": nasdaq100_count,
-                "total": len(target_rows),
-                "nonGaapCompanies": non_gaap_company_count,
-            },
-            "tickers": sorted(row.get("ticker") for row in target_rows),
-            "source": "SEC EDGAR companyfacts + EDGAR 8-K/6-K earnings release exhibits",
-            "basis": "NASDAQ100 only. IR earnings-release Non-GAAP/adjusted metrics are preferred when extractable from official EDGAR exhibits; SEC GAAP companyfacts remains the fallback.",
-        },
-        "metrics": [
-            {"key": "revenue", "label": "Revenue", "unit": "usd", "note": "YoY is shown against the same quarter a year ago."},
-            {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Non-GAAP gross margin from IR release when extractable; GAAP fallback."},
-            {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Non-GAAP/adjusted operating margin from IR release when extractable; GAAP fallback. YoY pp change is shown where available."},
-            {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "Non-GAAP diluted EPS from IR release when extractable; GAAP fallback."},
-            {"key": "ocf", "label": "OCF", "unit": "usd"},
-            {"key": "fcf", "label": "FCF", "unit": "usd", "note": "Company-reported free cash flow from IR release when extractable; otherwise OCF minus absolute capex cash outflow."},
-        ],
-        "financials": financials,
-        "missing": missing,
-        "errors": errors,
-    }
+    payload = build_output_payload()
     write_js_payload(OUTPUT_PATH, "marketRsFinancialsData", payload)
     print(f"Wrote {OUTPUT_PATH}")
-    print(f"Companies: {len(financials)} / {len(target_rows)}")
+    print(f"Companies: {payload['scope']['counts']['covered']} / {len(target_rows)}")
     if missing:
         print(f"Missing CIK: {', '.join(missing)}")
     if errors:

@@ -30,6 +30,8 @@ jobs:
       - name: Refresh market RS history
         env:
           MARKET_RS_MAX_SHARES_FETCH: "250"
+          MARKET_RS_FINANCIALS_MAX_COMPANIES: "35"
+          MARKET_RS_FINANCIALS_STALE_DAYS: "14"
         run: |
           python scripts/update_market_rs.py
           python scripts/update_market_trend_score.py
