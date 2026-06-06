@@ -1178,6 +1178,20 @@ def build_rotation_signal(
         reverse=False,
     )
 
+    def sector_items_by_1d(sector: dict[str, object], *, reverse: bool) -> list[dict[str, object]]:
+        sector_key = str(sector.get("key") or "")
+        items = [
+            item
+            for item in enriched_items
+            if str(item.get("sectorKey") or "") == sector_key
+            and safe_float((item.get("excessReturns") or {}).get("1d")) is not None
+        ]
+        return sorted(
+            items,
+            key=lambda item: float((item.get("excessReturns") or {}).get("1d")),
+            reverse=reverse,
+        )[:2]
+
     return {
         "benchmark": benchmark,
         "weights": [{"key": key, "label": MAP_RANGE_LABELS[key], "weight": weight} for key, weight in ROTATION_WEIGHTS.items()],
@@ -1189,7 +1203,7 @@ def build_rotation_signal(
                 "classification": sector["classification"],
                 "score": sector["score"],
                 "excessReturn1d": (sector.get("excessReturns") or {}).get("1d"),
-                "top": sector.get("top", [])[:2],
+                "top": sector_items_by_1d(sector, reverse=True),
             }
             for sector in daily_leaders
         ],
@@ -1200,7 +1214,7 @@ def build_rotation_signal(
                 "classification": sector["classification"],
                 "score": sector["score"],
                 "excessReturn1d": (sector.get("excessReturns") or {}).get("1d"),
-                "bottom": sector.get("bottom", [])[:2],
+                "bottom": sector_items_by_1d(sector, reverse=False),
             }
             for sector in daily_laggards
         ],
