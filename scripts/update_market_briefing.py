@@ -779,7 +779,16 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
     companies = [item | {"sectorKey": sector["key"], "sectorLabel": sector["label"]} for sector in SECTOR_GROUPS for item in sector["items"]]
     symbols = sorted({company["ticker"] for company in companies} | set(BENCHMARK_SYMBOLS) | {USD_PER_KRW_SYMBOL})
     close_frame = fetch_price_frame(symbols)
-    latest_date = close_frame.index.max().strftime("%Y-%m-%d")
+    benchmark_series = (
+        close_frame[ROTATION_BENCHMARK_SYMBOL].dropna()
+        if ROTATION_BENCHMARK_SYMBOL in close_frame.columns
+        else pd.Series(dtype=float)
+    )
+    latest_date = (
+        benchmark_series.index.max().strftime("%Y-%m-%d")
+        if not benchmark_series.empty
+        else close_frame.index.max().strftime("%Y-%m-%d")
+    )
     rotation_benchmark = build_rotation_benchmark(close_frame)
 
     fx_usd_per_krw = None
@@ -881,6 +890,7 @@ def build_rotation_benchmark(close_frame: pd.DataFrame) -> dict[str, object]:
     return {
         "ticker": ROTATION_BENCHMARK_SYMBOL,
         "label": "NASDAQ 100 (QQQ)",
+        "updatedAt": series.index.max().strftime("%Y-%m-%d") if not series.empty else None,
         "price": round(price, 2) if price is not None else None,
         "returns": returns,
     }
