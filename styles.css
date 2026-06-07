@@ -2549,15 +2549,60 @@ h1 {
   color: #b91c1c;
 }
 
+.market-trend-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.market-trend-risk-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(70, 70, 66, 0.12);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.market-trend-risk-card-atr {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.055) 0%, #fff 58%);
+}
+
+.market-trend-risk-card-drawdown {
+  background: linear-gradient(180deg, rgba(220, 38, 38, 0.055) 0%, #fff 58%);
+}
+
+.market-trend-risk-card-multiple {
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.045) 0%, #fff 58%);
+}
+
+.market-trend-risk-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.market-trend-risk-card-head strong {
+  color: #252521;
+  font-size: 0.86rem;
+}
+
+.market-trend-risk-card-head span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
 .market-trend-risk-chart-wrap {
-  height: 260px;
-  margin-top: 10px;
+  height: 190px;
 }
 
 .market-trend-risk-chart-wrap canvas {
   display: block;
   width: 100%;
-  height: 260px;
+  height: 190px;
 }
 
 .market-trend-legend {
@@ -2593,6 +2638,17 @@ h1 {
 
 .market-trend-legend-swatch-bull {
   background: rgba(107, 114, 128, 0.1);
+}
+
+@media (max-width: 1040px) {
+  .market-trend-risk-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-trend-risk-chart-wrap,
+  .market-trend-risk-chart-wrap canvas {
+    height: 220px;
+  }
 }
 
 .total-date-row {

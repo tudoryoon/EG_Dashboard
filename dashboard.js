@@ -1278,45 +1278,55 @@ function createMarketTrendRiskChart(canvas, rangeKey, indexKey, customStart = ""
 
   const payload = buildMarketTrendChartPayload(rangeKey, indexKey, customStart, customEnd);
   const riskSeries = payload.riskSeries ?? {};
+  const riskType = canvas.dataset.marketTrendRisk || "drawdown";
+  const riskConfig = {
+    atr: {
+      label: "21D ATR (%)",
+      data: riskSeries.atrPct ?? [],
+      color: "#2563eb",
+      fillColor: "rgba(37, 99, 235, 0.16)",
+      tickSuffix: "%",
+      tooltipFormatter: (value) => `${value.toFixed(2)}%`,
+      suggestedMin: 0,
+    },
+    drawdown: {
+      label: "MDD from high (%)",
+      data: riskSeries.drawdownPct ?? [],
+      color: "#dc2626",
+      fillColor: "rgba(220, 38, 38, 0.18)",
+      tickSuffix: "%",
+      tooltipFormatter: formatSignedPercent,
+      suggestedMax: 0,
+    },
+    multiple: {
+      label: "Drawdown / ATR (x)",
+      data: riskSeries.drawdownAtr ?? [],
+      color: "#111827",
+      fillColor: "rgba(17, 24, 39, 0.14)",
+      tickSuffix: "x",
+      tooltipFormatter: (value) => `${value.toFixed(2)}x`,
+      suggestedMax: 0,
+    },
+  }[riskType] ?? null;
+  if (!riskConfig) {
+    return;
+  }
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
       labels: payload.labels,
       datasets: [
         {
-          label: "21D ATR (%)",
-          data: riskSeries.atrPct ?? [],
-          borderColor: "#2563eb",
-          backgroundColor: "#2563eb",
-          borderWidth: 2.4,
-          tension: 0.15,
-          pointRadius: 0,
-          pointHoverRadius: 3,
-          yAxisID: "y",
-        },
-        {
-          label: "MDD from high (%)",
-          data: riskSeries.drawdownPct ?? [],
-          borderColor: "#dc2626",
-          backgroundColor: "rgba(220, 38, 38, 0.10)",
-          borderWidth: 2.4,
+          label: riskConfig.label,
+          data: riskConfig.data,
+          borderColor: riskConfig.color,
+          backgroundColor: riskConfig.fillColor,
+          borderWidth: 2.2,
           tension: 0.12,
           pointRadius: 0,
           pointHoverRadius: 3,
-          fill: true,
-          yAxisID: "y",
-        },
-        {
-          label: "Drawdown / ATR (x)",
-          data: riskSeries.drawdownAtr ?? [],
-          borderColor: "#111827",
-          backgroundColor: "#111827",
-          borderWidth: 2,
-          borderDash: [6, 5],
-          tension: 0.12,
-          pointRadius: 0,
-          pointHoverRadius: 3,
-          yAxisID: "y1",
+          fill: { target: "origin" },
         },
       ],
     },
@@ -1327,8 +1337,7 @@ function createMarketTrendRiskChart(canvas, rangeKey, indexKey, customStart = ""
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: {
-          position: "top",
-          align: "start",
+          display: false,
           labels: {
             color: "#66665f",
             usePointStyle: true,
@@ -1344,13 +1353,7 @@ function createMarketTrendRiskChart(canvas, rangeKey, indexKey, customStart = ""
               if (!Number.isFinite(value)) {
                 return `${context.dataset.label}: -`;
               }
-              if (context.dataset.yAxisID === "y1") {
-                return `${context.dataset.label}: ${value.toFixed(2)}x`;
-              }
-              if (String(context.dataset.label ?? "").includes("ATR")) {
-                return `${context.dataset.label}: ${value.toFixed(2)}%`;
-              }
-              return `${context.dataset.label}: ${formatSignedPercent(value)}`;
+              return `${context.dataset.label}: ${riskConfig.tooltipFormatter(value)}`;
             },
           },
         },
@@ -1371,22 +1374,14 @@ function createMarketTrendRiskChart(canvas, rangeKey, indexKey, customStart = ""
         },
         y: {
           position: "left",
+          suggestedMin: riskConfig.suggestedMin,
+          suggestedMax: riskConfig.suggestedMax,
           ticks: {
             color: "#8d8d86",
-            callback: (value) => `${Number(value).toFixed(0)}%`,
+            callback: (value) => `${Number(value).toFixed(0)}${riskConfig.tickSuffix}`,
             maxTicksLimit: 6,
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-        y1: {
-          position: "right",
-          grid: { drawOnChartArea: false },
-          ticks: {
-            color: "#8d8d86",
-            callback: (value) => `${Number(value).toFixed(0)}x`,
-            maxTicksLimit: 5,
-          },
           border: { color: "#d8d8d2" },
         },
       },
@@ -10163,11 +10158,37 @@ function renderMarketOverview() {
         </div>
         <div class="market-trend-risk-block">
           <div class="market-trend-meta">
-            <span>21D ATR, drawdown from running high, and drawdown measured in ATR units</span>
+            <span>21일 ATR, 고점 대비 하락률, 하락폭의 ATR 배수를 각각 분리해서 봅니다.</span>
             <span>${marketTrendRiskMarkup}</span>
           </div>
-          <div class="market-trend-risk-chart-wrap">
-            <canvas data-market-trend="risk"></canvas>
+          <div class="market-trend-risk-grid">
+            <div class="market-trend-risk-card market-trend-risk-card-atr">
+              <div class="market-trend-risk-card-head">
+                <strong>21D ATR (%)</strong>
+                <span>일중 변동성</span>
+              </div>
+              <div class="market-trend-risk-chart-wrap">
+                <canvas data-market-trend="risk" data-market-trend-risk="atr"></canvas>
+              </div>
+            </div>
+            <div class="market-trend-risk-card market-trend-risk-card-drawdown">
+              <div class="market-trend-risk-card-head">
+                <strong>MDD from High (%)</strong>
+                <span>고점 대비 하락률</span>
+              </div>
+              <div class="market-trend-risk-chart-wrap">
+                <canvas data-market-trend="risk" data-market-trend-risk="drawdown"></canvas>
+              </div>
+            </div>
+            <div class="market-trend-risk-card market-trend-risk-card-multiple">
+              <div class="market-trend-risk-card-head">
+                <strong>Drawdown / ATR</strong>
+                <span>하락폭의 ATR 배수</span>
+              </div>
+              <div class="market-trend-risk-chart-wrap">
+                <canvas data-market-trend="risk" data-market-trend-risk="multiple"></canvas>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -10373,8 +10394,7 @@ function renderMarketOverview() {
     );
   }
 
-  const trendRiskCanvas = usOverviewRoot.querySelector('[data-market-trend="risk"]');
-  if (trendRiskCanvas) {
+  usOverviewRoot.querySelectorAll('[data-market-trend="risk"]').forEach((trendRiskCanvas) => {
     createMarketTrendRiskChart(
       trendRiskCanvas,
       state.marketTrendRange,
@@ -10382,7 +10402,7 @@ function renderMarketOverview() {
       state.marketTrendCustomStart,
       state.marketTrendCustomEnd,
     );
-  }
+  });
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
   if (relativeCanvas) {
