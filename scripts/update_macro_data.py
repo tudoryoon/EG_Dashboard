@@ -602,6 +602,13 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
         try:
             parsed = parse_series_data(series.source_id, config["startMonth"])
             parsed = merge_latest_bls_fallback(parsed, series.source_id)
+            parsed_latest_month = parsed["dates"][-1] if parsed.get("dates") else None
+            existing_latest_month = (existing_series.get("dates") or [None])[-1] if existing_series else None
+            if parsed_latest_month and existing_latest_month and parsed_latest_month < existing_latest_month:
+                raise RuntimeError(
+                    f"{series.source_id} returned stale history through {parsed_latest_month}; "
+                    f"preserving existing {existing_latest_month}"
+                )
             release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
             release_history = apply_manual_release_override(series.key, release_history)
             latest_release = release_history[-1] if release_history else None
