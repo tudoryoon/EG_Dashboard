@@ -2510,6 +2510,56 @@ h1 {
   color: #b91c1c;
 }
 
+.market-trend-risk-block {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(70, 70, 66, 0.10);
+}
+
+.market-trend-risk-block .market-trend-meta {
+  align-items: center;
+}
+
+.market-trend-risk-block .market-trend-meta > span:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.market-trend-risk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(70, 70, 66, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #4f4f49;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.market-trend-risk-pill strong {
+  color: #252521;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-trend-risk-pill.negative strong {
+  color: #b91c1c;
+}
+
+.market-trend-risk-chart-wrap {
+  height: 260px;
+  margin-top: 10px;
+}
+
+.market-trend-risk-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 260px;
+}
+
 .market-trend-legend {
   display: flex;
   flex-wrap: wrap;

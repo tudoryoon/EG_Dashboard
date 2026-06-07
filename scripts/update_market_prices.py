@@ -40,24 +40,49 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
     timestamps = result.get("timestamp") or []
     quote_data = (result.get("indicators") or {}).get("quote") or [{}]
     adjclose_data = (result.get("indicators") or {}).get("adjclose") or [{}]
-    closes = adjclose_data[0].get("adjclose") or quote_data[0].get("close") or []
+    quote = quote_data[0] or {}
+    raw_closes = quote.get("close") or []
+    raw_highs = quote.get("high") or []
+    raw_lows = quote.get("low") or []
+    adj_closes = adjclose_data[0].get("adjclose") or []
 
     dates: list[str] = []
     values: list[float] = []
-    for timestamp, close in zip(timestamps, closes):
-        if close is None:
+    highs: list[float] = []
+    lows: list[float] = []
+    closes: list[float] = []
+    for index, timestamp in enumerate(timestamps):
+        raw_close = raw_closes[index] if index < len(raw_closes) else None
+        raw_high = raw_highs[index] if index < len(raw_highs) else None
+        raw_low = raw_lows[index] if index < len(raw_lows) else None
+        adj_close = adj_closes[index] if index < len(adj_closes) else None
+        close = adj_close if adj_close is not None else raw_close
+        if close is None or raw_high is None or raw_low is None:
             continue
+        adjustment = 1.0
+        if raw_close not in (None, 0) and adj_close is not None:
+            adjustment = float(adj_close) / float(raw_close)
         dates.append((datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=timestamp)).strftime("%Y-%m-%d"))
         values.append(round(float(close), 4))
+        highs.append(round(float(raw_high) * adjustment, 4))
+        lows.append(round(float(raw_low) * adjustment, 4))
+        closes.append(round(float(close), 4))
 
-    filtered = [(day, value) for day, value in zip(dates, values) if day >= START_DATE]
+    filtered = [
+        (day, value, high, low, close)
+        for day, value, high, low, close in zip(dates, values, highs, lows, closes)
+        if day >= START_DATE
+    ]
     return {
         "label": meta["label"],
         "symbol": meta["symbol"],
         "color": meta["color"],
         "isIndex": meta["isIndex"],
-        "dates": [day for day, _ in filtered],
-        "values": [value for _, value in filtered],
+        "dates": [day for day, *_ in filtered],
+        "values": [value for _, value, *_ in filtered],
+        "highs": [high for _, _, high, _, _ in filtered],
+        "lows": [low for _, _, _, low, _ in filtered],
+        "closes": [close for _, _, _, _, close in filtered],
     }
 
 

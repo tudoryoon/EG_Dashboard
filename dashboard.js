@@ -860,6 +860,57 @@ function calculateEmaSeries(values, period) {
   return result;
 }
 
+function calculateAtrPercentSeries(values, highs, lows, period = 21) {
+  if (!Array.isArray(values) || !Array.isArray(highs) || !Array.isArray(lows) || !values.length) {
+    return [];
+  }
+  const trueRanges = values.map((close, index) => {
+    const high = Number(highs[index]);
+    const low = Number(lows[index]);
+    const previousClose = index > 0 ? Number(values[index - 1]) : Number(close);
+    if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(previousClose)) {
+      return null;
+    }
+    return Math.max(high - low, Math.abs(high - previousClose), Math.abs(low - previousClose));
+  });
+  return values.map((close, index) => {
+    if (index < period - 1 || !Number.isFinite(Number(close))) {
+      return null;
+    }
+    const window = trueRanges.slice(index - period + 1, index + 1).filter((value) => Number.isFinite(value));
+    if (window.length < period) {
+      return null;
+    }
+    const atr = window.reduce((sum, value) => sum + Number(value), 0) / period;
+    return Number(((atr / Number(close)) * 100).toFixed(2));
+  });
+}
+
+function calculateDrawdownPercentSeries(values) {
+  let peak = null;
+  return (values ?? []).map((value) => {
+    const close = Number(value);
+    if (!Number.isFinite(close) || close <= 0) {
+      return null;
+    }
+    peak = peak === null ? close : Math.max(peak, close);
+    if (!Number.isFinite(peak) || peak <= 0) {
+      return null;
+    }
+    return Number(((close / peak - 1) * 100).toFixed(2));
+  });
+}
+
+function calculateAtrDrawdownMultipleSeries(drawdowns, atrPercents) {
+  return (drawdowns ?? []).map((drawdown, index) => {
+    const atrPercent = Number(atrPercents?.[index]);
+    if (!Number.isFinite(Number(drawdown)) || !Number.isFinite(atrPercent) || atrPercent <= 0) {
+      return null;
+    }
+    return Number((Number(drawdown) / atrPercent).toFixed(2));
+  });
+}
+
 function getMarketTrendBounds() {
   const trendStart = marketPriceData?.startDate ?? "1980-01-01";
   const items = ["sp500", "nasdaq100"].map((key) => marketPriceData?.items?.[key]).filter(Boolean);
@@ -883,6 +934,8 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   );
   const fullLabels = (item.dates ?? []).slice(firstUsableIndex);
   const fullValues = (item.values ?? []).slice(firstUsableIndex);
+  const fullHighs = (item.highs ?? item.values ?? []).slice(firstUsableIndex);
+  const fullLows = (item.lows ?? item.values ?? []).slice(firstUsableIndex);
   if (!fullLabels.length || !fullValues.length) {
     return { labels: [], datasets: [], item };
   }
@@ -896,6 +949,9 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   const sliceEnd = endIndex === -1 ? fullLabels.length : Math.max(startIndex + 1, endIndex);
   const labels = fullLabels.slice(startIndex, sliceEnd);
   const priceValues = fullValues.slice(startIndex, sliceEnd);
+  const atrPctFull = calculateAtrPercentSeries(fullValues, fullHighs, fullLows, 21);
+  const drawdownPctFull = calculateDrawdownPercentSeries(fullValues);
+  const drawdownAtrFull = calculateAtrDrawdownMultipleSeries(drawdownPctFull, atrPctFull);
   const emaReferenceSeries = Object.fromEntries(
     MARKET_PRICE_EMA_OPTIONS.map((period) => [period, calculateEmaSeries(fullValues, period).slice(startIndex, sliceEnd)]),
   );
@@ -952,6 +1008,11 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
     ],
     item,
     emaReferenceSeries,
+    riskSeries: {
+      atrPct: atrPctFull.slice(startIndex, sliceEnd),
+      drawdownPct: drawdownPctFull.slice(startIndex, sliceEnd),
+      drawdownAtr: drawdownAtrFull.slice(startIndex, sliceEnd),
+    },
   };
 }
 
@@ -999,6 +1060,40 @@ function buildMarketTrendGapSummary() {
       date: payload.labels?.[latestIndex] ?? "",
     };
   });
+}
+
+function buildMarketTrendRiskSummary() {
+  const payload = buildMarketTrendChartPayload(
+    state.marketTrendRange,
+    state.marketTrendIndex,
+    state.marketTrendCustomStart,
+    state.marketTrendCustomEnd,
+  );
+  const series = payload.riskSeries ?? {};
+  let latestIndex = -1;
+  for (let index = (payload.labels ?? []).length - 1; index >= 0; index -= 1) {
+    if (
+      Number.isFinite(Number(series.atrPct?.[index])) ||
+      Number.isFinite(Number(series.drawdownPct?.[index])) ||
+      Number.isFinite(Number(series.drawdownAtr?.[index]))
+    ) {
+      latestIndex = index;
+      break;
+    }
+  }
+  if (latestIndex === -1) {
+    return [];
+  }
+  const items = [
+    { label: "21D ATR", value: series.atrPct?.[latestIndex], formatter: (value) => `${Number(value).toFixed(2)}%`, tone: "neutral" },
+    { label: "From High", value: series.drawdownPct?.[latestIndex], formatter: formatSignedPercent, tone: "negative" },
+    { label: "Drawdown / ATR", value: series.drawdownAtr?.[latestIndex], formatter: (value) => `${Number(value).toFixed(2)}x`, tone: "negative" },
+  ];
+  return items.map((item) => ({
+    ...item,
+    date: payload.labels?.[latestIndex] ?? "",
+    text: Number.isFinite(Number(item.value)) ? item.formatter(Number(item.value)) : "-",
+  }));
 }
 
 function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", customEnd = "") {
@@ -1167,6 +1262,131 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
             maxTicksLimit: 6,
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMarketTrendRiskChart(canvas, rangeKey, indexKey, customStart = "", customEnd = "") {
+  if (typeof Chart === "undefined" || !canvas) {
+    return;
+  }
+
+  const payload = buildMarketTrendChartPayload(rangeKey, indexKey, customStart, customEnd);
+  const riskSeries = payload.riskSeries ?? {};
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: [
+        {
+          label: "21D ATR (%)",
+          data: riskSeries.atrPct ?? [],
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          borderWidth: 2.4,
+          tension: 0.15,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          yAxisID: "y",
+        },
+        {
+          label: "MDD from high (%)",
+          data: riskSeries.drawdownPct ?? [],
+          borderColor: "#dc2626",
+          backgroundColor: "rgba(220, 38, 38, 0.10)",
+          borderWidth: 2.4,
+          tension: 0.12,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          fill: true,
+          yAxisID: "y",
+        },
+        {
+          label: "Drawdown / ATR (x)",
+          data: riskSeries.drawdownAtr ?? [],
+          borderColor: "#111827",
+          backgroundColor: "#111827",
+          borderWidth: 2,
+          borderDash: [6, 5],
+          tension: 0.12,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => {
+              const value = Number(context.parsed.y);
+              if (!Number.isFinite(value)) {
+                return `${context.dataset.label}: -`;
+              }
+              if (context.dataset.yAxisID === "y1") {
+                return `${context.dataset.label}: ${value.toFixed(2)}x`;
+              }
+              if (String(context.dataset.label ?? "").includes("ATR")) {
+                return `${context.dataset.label}: ${value.toFixed(2)}%`;
+              }
+              return `${context.dataset.label}: ${formatSignedPercent(value)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0).map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          position: "left",
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${Number(value).toFixed(0)}%`,
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        y1: {
+          position: "right",
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${Number(value).toFixed(0)}x`,
+            maxTicksLimit: 5,
+          },
           border: { color: "#d8d8d2" },
         },
       },
@@ -9834,6 +10054,15 @@ function renderMarketOverview() {
         </span>`;
     })
     .join("");
+  const marketTrendRiskMarkup = buildMarketTrendRiskSummary()
+    .map(
+      (item) => `
+        <span class="market-trend-risk-pill ${item.tone}" title="${item.date}">
+          <span>${item.label}</span>
+          <strong>${item.text}</strong>
+        </span>`,
+    )
+    .join("");
   const totalBounds = getTotalDashboardBounds();
   const totalStartValue = state.totalDashboardCustomStart || "";
   const totalEndValue = state.totalDashboardCustomEnd || "";
@@ -9931,6 +10160,15 @@ function renderMarketOverview() {
         </div>
         <div class="us-price-chart-wrap">
           <canvas data-market-trend="ema"></canvas>
+        </div>
+        <div class="market-trend-risk-block">
+          <div class="market-trend-meta">
+            <span>21D ATR, drawdown from running high, and drawdown measured in ATR units</span>
+            <span>${marketTrendRiskMarkup}</span>
+          </div>
+          <div class="market-trend-risk-chart-wrap">
+            <canvas data-market-trend="risk"></canvas>
+          </div>
         </div>
       </section>
       <section class="us-panel us-price-panel">
@@ -10128,6 +10366,17 @@ function renderMarketOverview() {
   if (trendCanvas) {
     createMarketTrendChart(
       trendCanvas,
+      state.marketTrendRange,
+      state.marketTrendIndex,
+      state.marketTrendCustomStart,
+      state.marketTrendCustomEnd,
+    );
+  }
+
+  const trendRiskCanvas = usOverviewRoot.querySelector('[data-market-trend="risk"]');
+  if (trendRiskCanvas) {
+    createMarketTrendRiskChart(
+      trendRiskCanvas,
       state.marketTrendRange,
       state.marketTrendIndex,
       state.marketTrendCustomStart,
