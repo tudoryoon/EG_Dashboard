@@ -10172,15 +10172,6 @@ function renderMarketOverview() {
                 <canvas data-market-trend="risk" data-market-trend-risk="atr"></canvas>
               </div>
             </div>
-            <div class="market-trend-risk-card market-trend-risk-card-drawdown">
-              <div class="market-trend-risk-card-head">
-                <strong>MDD from High (%)</strong>
-                <span>고점 대비 하락률</span>
-              </div>
-              <div class="market-trend-risk-chart-wrap">
-                <canvas data-market-trend="risk" data-market-trend-risk="drawdown"></canvas>
-              </div>
-            </div>
             <div class="market-trend-risk-card market-trend-risk-card-multiple">
               <div class="market-trend-risk-card-head">
                 <strong>Drawdown / ATR</strong>
@@ -10188,6 +10179,15 @@ function renderMarketOverview() {
               </div>
               <div class="market-trend-risk-chart-wrap">
                 <canvas data-market-trend="risk" data-market-trend-risk="multiple"></canvas>
+              </div>
+            </div>
+            <div class="market-trend-risk-card market-trend-risk-card-drawdown">
+              <div class="market-trend-risk-card-head">
+                <strong>MDD from High (%)</strong>
+                <span>고점 대비 하락률</span>
+              </div>
+              <div class="market-trend-risk-chart-wrap">
+                <canvas data-market-trend="risk" data-market-trend-risk="drawdown"></canvas>
               </div>
             </div>
           </div>
