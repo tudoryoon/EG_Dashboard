@@ -229,6 +229,7 @@ const MARKET_PRICE_EMA_OPTIONS = [10, 20, 60, 120, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
   { key: "nasdaq100", label: "NASDAQ 100" },
+  { key: "sox", label: "SOX" },
 ];
 const MARKET_RS_CAP_RANGES = [
   { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
@@ -913,7 +914,7 @@ function calculateAtrDrawdownMultipleSeries(drawdowns, atrPercents) {
 
 function getMarketTrendBounds() {
   const trendStart = marketPriceData?.startDate ?? "1980-01-01";
-  const items = ["sp500", "nasdaq100"].map((key) => marketPriceData?.items?.[key]).filter(Boolean);
+  const items = MARKET_PRICE_TREND_INDEX_OPTIONS.map((option) => marketPriceData?.items?.[option.key]).filter(Boolean);
   const dates = [...new Set(items.flatMap((item) => item.dates ?? []).filter((date) => date >= trendStart))].sort();
   return {
     min: dates[0] ?? trendStart,
@@ -10093,7 +10094,7 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500와 NASDAQ 100의 일별 지수와 EMA(10, 20, 60, 120, 200)를 1980-01-01 이후 기준으로 확인합니다.</p>
+            <p>S&P 500, NASDAQ 100, SOX의 일별 지수와 EMA(10, 20, 60, 120, 200)를 장기 시계열 기준으로 확인합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
