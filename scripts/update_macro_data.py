@@ -371,7 +371,10 @@ def merge_latest_bls_fallback(parsed: dict[str, Any], source_id: str) -> dict[st
         return parsed
 
     current_year = datetime.now(timezone.utc).year
-    bls = parse_bls_series(bls_series_id, current_year - 1, current_year)
+    try:
+        bls = parse_bls_series(bls_series_id, current_year - 1, current_year)
+    except Exception:
+        return parsed
     by_month = dict(zip(parsed.get("dates", []), parsed.get("values", [])))
     for month, value in zip(bls["dates"], bls["values"]):
         by_month[month] = value
@@ -390,7 +393,10 @@ def build_bls_official_yoy_values(dates: list[str], source_id: str) -> list[floa
 
     start_year = int(dates[0][:4]) - 1
     current_year = datetime.now(timezone.utc).year
-    bls = parse_bls_series_range(bls_series_id, start_year, current_year)
+    try:
+        bls = parse_bls_series_range(bls_series_id, start_year, current_year)
+    except Exception:
+        return None
     by_month = dict(zip(bls["dates"], bls["values"]))
     yoy_values: list[float | None] = []
     for month in dates:
@@ -410,6 +416,20 @@ def safe_round(value: float | None, digits: int = 2) -> float | None:
     return round(float(value), digits)
 
 
+def compute_yoy_values(dates: list[str], values: list[float]) -> list[float | None]:
+    by_month = dict(zip(dates, values))
+    yoy_values: list[float | None] = []
+    for month in dates:
+        previous_month = f"{int(month[:4]) - 1}-{month[5:7]}"
+        current_value = by_month.get(month)
+        previous_value = by_month.get(previous_month)
+        if current_value is None or previous_value in {None, 0}:
+            yoy_values.append(None)
+        else:
+            yoy_values.append(safe_round(((float(current_value) / float(previous_value)) - 1) * 100, 2))
+    return yoy_values
+
+
 def compute_snapshot(dates: list[str], values: list[float]) -> dict[str, Any]:
     if not dates or not values:
         return {
@@ -424,8 +444,7 @@ def compute_snapshot(dates: list[str], values: list[float]) -> dict[str, Any]:
     previous_value = float(values[-2]) if len(values) >= 2 else None
     delta_value = latest_value - previous_value if previous_value is not None else None
     mom_pct = ((latest_value / previous_value) - 1) * 100 if previous_value not in {None, 0} else None
-    yoy_base = float(values[-13]) if len(values) >= 13 else None
-    yoy_pct = ((latest_value / yoy_base) - 1) * 100 if yoy_base not in {None, 0} else None
+    yoy_pct = compute_yoy_values(dates, values)[-1]
     return {
         "latestDate": dates[-1],
         "latestValue": safe_round(latest_value, 4),
@@ -613,10 +632,15 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
             release_history = apply_manual_release_override(series.key, release_history)
             latest_release = release_history[-1] if release_history else None
             snapshot = compute_snapshot(parsed["dates"], parsed["values"])
+            yoy_values = compute_yoy_values(parsed["dates"], parsed["values"])
             official_yoy_values = build_bls_official_yoy_values(parsed["dates"], series.source_id)
             if official_yoy_values:
-                latest_official_yoy = next((value for value in reversed(official_yoy_values) if value is not None), None)
-                snapshot["yoyPct"] = latest_official_yoy
+                yoy_values = [
+                    official_value if official_value is not None else fallback_value
+                    for official_value, fallback_value in zip(official_yoy_values, yoy_values)
+                ]
+            if yoy_values:
+                snapshot["yoyPct"] = yoy_values[-1]
             payload_series = {
                 "key": series.key,
                 "label": series.label,
@@ -630,8 +654,8 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                 "latestRelease": latest_release,
                 **snapshot,
             }
-            if official_yoy_values:
-                payload_series["yoyValues"] = official_yoy_values
+            if yoy_values:
+                payload_series["yoyValues"] = yoy_values
         except Exception as error:  # pragma: no cover - network variability
             if existing_series:
                 payload_series = {

@@ -3188,6 +3188,9 @@ function getMacroReleaseBasis(series, release = series?.latestRelease) {
 
 function getMacroDerivedValues(series, kind) {
   const values = series?.values ?? [];
+  const valuesByDate = kind === "yoy"
+    ? new Map((series?.dates ?? []).map((dateText, index) => [dateText, Number(values[index])]))
+    : null;
   return values.map((value, index) => {
     const current = Number(value);
     if (!Number.isFinite(current)) {
@@ -3198,7 +3201,9 @@ function getMacroDerivedValues(series, kind) {
       if (Number.isFinite(officialYoy)) {
         return Number(officialYoy.toFixed(2));
       }
-      const base = Number(values[index - 12]);
+      const dateText = series?.dates?.[index] ?? "";
+      const baseDate = dateText ? `${Number(dateText.slice(0, 4)) - 1}-${dateText.slice(5, 7)}` : "";
+      const base = Number(valuesByDate?.get(baseDate));
       if (!Number.isFinite(base) || base === 0) {
         return null;
       }
