@@ -87,12 +87,15 @@ SECTOR_GROUPS = [
     },
     {
         "key": "memory",
-        "label": "메모리",
+        "label": "메모리&스토리지",
+        "scoreTickers": ["MU", "SNDK", "WDC", "STX"],
         "items": [
             {"ticker": "005930.KS", "label": "삼성전자 KR", "name": "Samsung Electronics", "query": "삼성전자 주가"},
             {"ticker": "000660.KS", "label": "SK하이닉스 KR", "name": "SK hynix", "query": "SK하이닉스 주가"},
             {"ticker": "MU", "label": "MU US", "name": "Micron", "query": "Micron stock"},
             {"ticker": "SNDK", "label": "SNDK US", "name": "Sandisk", "query": "Sandisk stock"},
+            {"ticker": "WDC", "label": "WDC US", "name": "Western Digital", "query": "Western Digital stock"},
+            {"ticker": "STX", "label": "STX US", "name": "Seagate", "query": "Seagate stock"},
         ],
     },
     {
@@ -856,8 +859,19 @@ def build_sector_panels(snapshots: list[dict[str, object]]) -> list[dict[str, ob
         items.sort(key=lambda item: (item.get("marketCapUsd") or 0), reverse=True)
         for index, item in enumerate(items):
             item["tileClass"] = tile_class_for_rank(index)
-        panels.append({"key": sector["key"], "label": sector["label"], "items": items})
+        panel = {"key": sector["key"], "label": sector["label"], "items": items}
+        if sector.get("scoreTickers"):
+            panel["scoreTickers"] = list(sector["scoreTickers"])
+        panels.append(panel)
     return panels
+
+
+def get_sector_scoring_items(sector: dict[str, object]) -> list[dict[str, object]]:
+    items = list(sector.get("items", []))
+    score_tickers = {str(ticker) for ticker in sector.get("scoreTickers", [])}
+    if not score_tickers:
+        return items
+    return [item for item in items if str(item.get("ticker")) in score_tickers]
 
 
 def safe_float(value: object) -> float | None:
@@ -1004,7 +1018,7 @@ def build_rotation_history(
         benchmark_returns = compute_series_rotation_returns(close_frame, ROTATION_BENCHMARK_SYMBOL, end_date)
         item_excess_by_ticker: dict[str, dict[str, float | None]] = {}
         for sector in sector_panels:
-            for item in sector.get("items", []):
+            for item in get_sector_scoring_items(sector):
                 ticker = str(item.get("ticker"))
                 if ticker in item_excess_by_ticker:
                     continue
@@ -1018,7 +1032,7 @@ def build_rotation_history(
                 }
         for sector in sector_panels:
             sector_key = str(sector["key"])
-            items = list(sector.get("items", []))
+            items = get_sector_scoring_items(sector)
             excess_by_range = build_sector_excess_returns(items, item_excess_by_ticker)
             score = compute_rotation_score(excess_by_range)
             classification = classify_rotation(excess_by_range)
@@ -1055,7 +1069,8 @@ def build_rotation_signal(
     enriched_by_ticker = {item["ticker"]: item for item in enriched_items}
     sectors = []
     for sector in sector_panels:
-        items = [enriched_by_ticker[item["ticker"]] for item in sector.get("items", []) if item["ticker"] in enriched_by_ticker]
+        score_source_items = get_sector_scoring_items(sector)
+        items = [enriched_by_ticker[item["ticker"]] for item in score_source_items if item["ticker"] in enriched_by_ticker]
         item_excess_by_ticker = {str(item["ticker"]): item.get("excessReturns", {}) for item in items}
         excess_by_range = build_sector_excess_returns(items, item_excess_by_ticker)
         score = compute_rotation_score(excess_by_range)
@@ -1188,12 +1203,19 @@ def build_rotation_signal(
         reverse=False,
     )
 
+    score_tickers_by_sector = {
+        str(sector.get("key") or ""): {str(item.get("ticker")) for item in get_sector_scoring_items(sector)}
+        for sector in sector_panels
+    }
+
     def sector_items_by_1d(sector: dict[str, object], *, reverse: bool) -> list[dict[str, object]]:
         sector_key = str(sector.get("key") or "")
+        score_tickers = score_tickers_by_sector.get(sector_key, set())
         items = [
             item
             for item in enriched_items
             if str(item.get("sectorKey") or "") == sector_key
+            and (not score_tickers or str(item.get("ticker")) in score_tickers)
             and safe_float((item.get("excessReturns") or {}).get("1d")) is not None
         ]
         return sorted(
