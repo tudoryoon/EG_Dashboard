@@ -119,14 +119,6 @@ SECTOR_GROUPS = [
         ],
     },
     {
-        "key": "storage",
-        "label": "스토리지",
-        "items": [
-            {"ticker": "STX", "label": "STX US", "name": "Seagate", "query": "Seagate stock"},
-            {"ticker": "WDC", "label": "WDC US", "name": "Western Digital", "query": "Western Digital stock"},
-        ],
-    },
-    {
         "key": "power_semi",
         "label": "전력 반도체",
         "items": [
