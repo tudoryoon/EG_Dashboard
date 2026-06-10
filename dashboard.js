@@ -7507,7 +7507,7 @@ function createMarketRsChart(canvas, row) {
       borderColor: series.color,
       backgroundColor: series.color,
       borderWidth: series.period >= 50 ? 1.8 : 1.6,
-      borderDash: series.period >= 50 ? [5, 5] : [],
+      borderDash: [5, 5],
       tension: 0.18,
       pointRadius: 0,
       pointHoverRadius: 3,
