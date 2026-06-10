@@ -295,7 +295,7 @@ const state = {
   rsUniverse: "all",
   rsHistoryRange: "3y",
   rsSelectedTicker: "",
-  rsFilter: "newHigh1y",
+  rsFilter: "all",
   rsBriefingSector: "all",
   rsMarketCapRange: "all",
   rsCustomMarketCapMin: "",
@@ -7579,7 +7579,7 @@ function renderMarketRsOverview() {
     )
     .join("");
   const filterChips = `
-    <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All</button>
+    <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All Ratings</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh3m" ? " active" : ""}" data-rs-filter="newHigh3m">RS New High (3M)</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh1y" || state.rsFilter === "newHigh" ? " active" : ""}" data-rs-filter="newHigh1y">RS New High (1Y)</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "priceNewHigh3m" ? " active" : ""}" data-rs-filter="priceNewHigh3m">Stock Price New High (3M)</button>
