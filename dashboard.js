@@ -306,6 +306,13 @@ const state = {
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
+  rsChartSeries: {
+    rs: true,
+    ema10: true,
+    ema20: true,
+    ema50: true,
+    ema200: true,
+  },
   trendScoreUniverse: "all",
   trendScoreRange: "1y",
   trendScoreSelectedTicker: "",
@@ -7393,6 +7400,31 @@ function renderMarketRsSortHeader(label, sortKey) {
   return `<button type="button" class="market-rs-sort${active ? " active" : ""}" data-rs-sort="${sortKey}">${label}${arrow}</button>`;
 }
 
+function calculateEmaSeries(values, period) {
+  const multiplier = 2 / (period + 1);
+  let ema = null;
+  return values.map((value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    ema = ema === null ? numeric : numeric * multiplier + ema * (1 - multiplier);
+    return Number(ema.toFixed(4));
+  });
+}
+
+const MARKET_RS_CHART_SERIES = [
+  { key: "rs", label: "RS Rating", color: "#111827" },
+  { key: "ema10", label: "10EMA", period: 10, color: "#2563eb" },
+  { key: "ema20", label: "20EMA", period: 20, color: "#d97706" },
+  { key: "ema50", label: "50EMA", period: 50, color: "#16a34a" },
+  { key: "ema200", label: "200EMA", period: 200, color: "#7c3aed" },
+];
+
+function isMarketRsChartSeriesVisible(key) {
+  return state.rsChartSeries?.[key] !== false;
+}
+
 function createMarketRsChart(canvas, row) {
   if (typeof Chart === "undefined" || !row) {
     return;
@@ -7409,9 +7441,19 @@ function createMarketRsChart(canvas, row) {
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
   const selectedRatings = getMarketRsHistoryRatings(history, state.rsUniverse).slice(startIndex);
-  const selectedPrice = (history.price ?? []).slice(startIndex);
+  const fullPrice = history.price ?? [];
+  const selectedPrice = fullPrice.slice(startIndex);
+  const emaSeries = Object.fromEntries(
+    MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => [
+      series.key,
+      calculateEmaSeries(fullPrice, series.period).slice(startIndex),
+    ]),
+  );
   const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
-  const priceValues = selectedPrice.filter((value) => Number.isFinite(value));
+  const priceValues = [
+    ...selectedPrice,
+    ...MARKET_RS_CHART_SERIES.filter((series) => series.period && isMarketRsChartSeriesVisible(series.key)).flatMap((series) => emaSeries[series.key] ?? []),
+  ].filter((value) => Number.isFinite(value));
   let ratingMin = ratingValues.length ? Math.floor((Math.min(...ratingValues) - 3) / 5) * 5 : 1;
   let ratingMax = ratingValues.length ? Math.ceil((Math.max(...ratingValues) + 3) / 5) * 5 : 99;
   if (ratingMax - ratingMin < 12) {
@@ -7435,34 +7477,50 @@ function createMarketRsChart(canvas, row) {
     }
   }
 
+  const chartDatasets = [
+    {
+      label: `RS Rating (${getMarketRsUniverseLabel(state.rsUniverse)})`,
+      data: selectedRatings,
+      borderColor: "#111827",
+      backgroundColor: "#111827",
+      borderWidth: 2.6,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      yAxisID: "y",
+      hidden: !isMarketRsChartSeriesVisible("rs"),
+    },
+    {
+      label: "Stock Price",
+      data: selectedPrice,
+      borderColor: "#d93025",
+      backgroundColor: "#d93025",
+      borderWidth: 2,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      yAxisID: "y1",
+    },
+    ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
+      label: series.label,
+      data: emaSeries[series.key] ?? [],
+      borderColor: series.color,
+      backgroundColor: series.color,
+      borderWidth: series.period >= 50 ? 1.8 : 1.6,
+      borderDash: series.period >= 50 ? [5, 5] : [],
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 3,
+      yAxisID: "y1",
+      hidden: !isMarketRsChartSeriesVisible(series.key),
+    })),
+  ];
+
   const chart = new Chart(canvas, {
     type: "line",
     data: {
       labels: selectedLabels,
-      datasets: [
-        {
-          label: `RS Rating (${getMarketRsUniverseLabel(state.rsUniverse)})`,
-          data: selectedRatings,
-          borderColor: "#111827",
-          backgroundColor: "#111827",
-          borderWidth: 2.6,
-          tension: 0.18,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          yAxisID: "y",
-        },
-        {
-          label: "Stock Price",
-          data: selectedPrice,
-          borderColor: "#d93025",
-          backgroundColor: "#d93025",
-          borderWidth: 2,
-          tension: 0.18,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          yAxisID: "y1",
-        },
-      ],
+      datasets: chartDatasets,
     },
     options: {
       responsive: true,
@@ -7510,6 +7568,7 @@ function createMarketRsChart(canvas, row) {
           },
         },
         y: {
+          display: isMarketRsChartSeriesVisible("rs"),
           position: "left",
           min: ratingMin,
           max: ratingMax,
@@ -7706,6 +7765,18 @@ function renderMarketRsOverview() {
     .map((key) => renderMarketRsExtensionGauge(extension[key]))
     .join("");
   const financialMarkup = renderMarketRsFinancials(selected);
+  const rsChartSeriesChips = MARKET_RS_CHART_SERIES.map(
+    (series) => `
+      <button
+        type="button"
+        class="market-rs-chip market-rs-chart-series-chip${isMarketRsChartSeriesVisible(series.key) ? " active" : ""}"
+        data-rs-chart-series="${series.key}"
+        style="--series-color:${series.color}"
+      >
+        <i></i>${series.label}
+      </button>
+    `,
+  ).join("");
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -7837,10 +7908,14 @@ function renderMarketRsOverview() {
               ${extensionMarkup || '<p class="market-rs-empty">Extension data will appear after the next RS data refresh.</p>'}
             </div>
           </div>
+          <div class="market-rs-chart-control-row">
+            <span>Chart Lines</span>
+            <div class="market-rs-chip-row">${rsChartSeriesChips}</div>
+          </div>
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price.</p>
+          <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price and price-based 10/20/50/200 EMA.</p>
           ${financialMarkup}
         </article>
       </section>
@@ -7965,6 +8040,19 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-leader-sort]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsLeaderSort = button.dataset.rsLeaderSort || "rs";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-chart-series]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const seriesKey = button.dataset.rsChartSeries;
+      if (!seriesKey) {
+        return;
+      }
+      state.rsChartSeries = {
+        ...state.rsChartSeries,
+        [seriesKey]: !isMarketRsChartSeriesVisible(seriesKey),
+      };
       render();
     });
   });

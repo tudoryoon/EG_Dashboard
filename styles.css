@@ -3714,6 +3714,40 @@ h1 {
   font-size: 0.9rem;
 }
 
+.market-rs-chart-control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.market-rs-chart-control-row > span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.market-rs-chart-series-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.market-rs-chart-series-chip i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--series-color, #111827);
+  box-shadow: 0 0 0 3px rgba(28, 28, 26, 0.06);
+}
+
+.market-rs-chart-series-chip:not(.active) {
+  opacity: 0.54;
+}
+
 .market-rs-chart-wrap {
   height: 360px;
   margin-top: 14px;
