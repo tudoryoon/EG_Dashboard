@@ -70,6 +70,15 @@ const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: 
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
 const infraGridData = window.infraGridData ?? { updatedAt: "", source: {}, items: [], fuelColors: {} };
+const openrouterRankingsData = window.openrouterRankingsData ?? {
+  updatedAt: "",
+  generatedAt: "",
+  source: {},
+  defaultLeaderboard: "week",
+  leaderboardViews: [],
+  charts: {},
+  leaderboards: {},
+};
 const memorySpotRuntime = {
   loading: false,
   loaded: false,
@@ -95,6 +104,7 @@ const primaryTabMeta = {
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
   Infra: { label: "Infra" },
+  Openrouter: { label: "Openrouter" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   DataTrend: { label: "Data Trend" },
 };
@@ -350,6 +360,8 @@ const state = {
   ),
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
   ornnGpuRange: "3y",
+  openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
+  openrouterScale: "linear",
 };
 
 const charts = [];
@@ -12576,6 +12588,11 @@ function renderSummary(list) {
     return;
   }
 
+  if (state.tab === "Openrouter") {
+    summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
+    return;
+  }
+
   if (state.tab === "Infra") {
     summaryText.textContent = "데이터센터 전력망 스트레스를 보는 일별 전력 허브 가격 대시보드";
     return;
@@ -12658,6 +12675,268 @@ function renderCards(list) {
   });
 }
 
+const OPENROUTER_COLORS = [
+  "#ff5ca8",
+  "#1888ff",
+  "#ff6b45",
+  "#8b5cf6",
+  "#22c55e",
+  "#f59e0b",
+  "#14b8a6",
+  "#64748b",
+  "#ef4444",
+  "#84cc16",
+  "#06b6d4",
+  "#a855f7",
+  "#c4c4c4",
+];
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatOpenrouterCount(value, unit = "tokens") {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  const suffix = unit === "tokens" ? " tokens" : "";
+  if (Math.abs(numeric) >= 1e12) {
+    return `${(numeric / 1e12).toFixed(2)}T${suffix}`;
+  }
+  if (Math.abs(numeric) >= 1e9) {
+    return `${(numeric / 1e9).toFixed(2)}B${suffix}`;
+  }
+  if (Math.abs(numeric) >= 1e6) {
+    return `${(numeric / 1e6).toFixed(1)}M${suffix}`;
+  }
+  if (Math.abs(numeric) >= 1e3) {
+    return `${(numeric / 1e3).toFixed(1)}K${suffix}`;
+  }
+  return `${Math.round(numeric).toLocaleString("en-US")}${suffix}`;
+}
+
+function formatOpenrouterChange(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "";
+  }
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${Math.round(numeric).toLocaleString("en-US")}%`;
+}
+
+function createOpenrouterStackedChart(canvas, chartData, { compact = false } = {}) {
+  if (typeof Chart === "undefined" || !canvas || !chartData) {
+    return;
+  }
+  const labels = chartData.dates ?? [];
+  const isLog = state.openrouterScale === "log" && !compact;
+  const datasets = (chartData.series ?? []).map((series, index) => ({
+    label: series.label ?? series.key,
+    data: (series.values ?? []).map((value) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return null;
+      }
+      return isLog && numeric <= 0 ? null : numeric;
+    }),
+    backgroundColor: series.key === "Others" ? "rgba(160, 160, 160, 0.42)" : OPENROUTER_COLORS[index % OPENROUTER_COLORS.length],
+    borderColor: "#ffffff",
+    borderWidth: compact ? 0 : 1,
+    stack: "openrouter",
+  }));
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "bottom",
+          align: "start",
+          labels: {
+            boxWidth: 10,
+            boxHeight: 10,
+            color: "#56564f",
+            font: { size: compact ? 10 : 11 },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatOpenrouterCount(context.parsed.y, chartData.unit)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: {
+            color: "#77766d",
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: compact ? 4 : 7,
+          },
+        },
+        y: {
+          stacked: true,
+          type: isLog ? "logarithmic" : "linear",
+          min: isLog ? 1 : undefined,
+          grid: { color: "rgba(17, 24, 39, 0.08)" },
+          ticks: {
+            color: "#77766d",
+            callback: (value) => formatOpenrouterCount(value, chartData.unit).replace(" tokens", ""),
+          },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function renderOpenrouterLeaderboardRows(rows) {
+  return rows.slice(0, 20).map((row) => {
+    const changeText = formatOpenrouterChange(row.change);
+    const changeClass = Number(row.change) >= 0 ? "is-positive" : "is-negative";
+    return `
+      <div class="openrouter-rank-row">
+        <div class="openrouter-rank-index">${row.rank}.</div>
+        <div class="openrouter-model-dot">${escapeHtml((row.author ?? "?").slice(0, 2).toUpperCase())}</div>
+        <div class="openrouter-rank-name">
+          <strong>${escapeHtml(row.name)}</strong>
+          <span>by ${escapeHtml(row.author)}${row.variant ? ` / ${escapeHtml(row.variant)}` : ""}</span>
+        </div>
+        <div class="openrouter-rank-value">
+          <strong>${formatOpenrouterCount(row.tokens)}</strong>
+          ${changeText ? `<span class="${changeClass}">${changeText}</span>` : "<span>-</span>"}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderOpenrouterOverview() {
+  companyGrid.classList.add("hidden");
+  usOverviewRoot.classList.remove("hidden");
+  const topChart = openrouterRankingsData.charts?.models;
+  const views = openrouterRankingsData.leaderboardViews ?? [];
+  const activeView = views.some((view) => view.key === state.openrouterLeaderboardView)
+    ? state.openrouterLeaderboardView
+    : "week";
+  state.openrouterLeaderboardView = activeView;
+  const rows = openrouterRankingsData.leaderboards?.[activeView] ?? [];
+  const latestRows = rows.slice(0, 6);
+  const secondaryKeys = ["marketShare", "tools", "images", "imageOutput", "audio"];
+  const latestDate = topChart?.dates?.length
+    ? topChart.dates[topChart.dates.length - 1]
+    : openrouterRankingsData.updatedAt ?? "-";
+  const scaleButtons = `
+    <div class="openrouter-scale-toggle">
+      <button type="button" class="${state.openrouterScale === "linear" ? "active" : ""}" data-openrouter-scale="linear">Linear</button>
+      <button type="button" class="${state.openrouterScale === "log" ? "active" : ""}" data-openrouter-scale="log">Log</button>
+    </div>
+  `;
+  const viewButtons = views.map((view) => `
+    <button type="button" class="market-rs-chip${activeView === view.key ? " active" : ""}" data-openrouter-view="${view.key}">
+      ${escapeHtml(view.label)}
+    </button>
+  `).join("");
+  const statCards = latestRows.map((row) => `
+    <article class="openrouter-stat-card">
+      <span>#${row.rank}</span>
+      <strong>${escapeHtml(row.name)}</strong>
+      <small>by ${escapeHtml(row.author)}</small>
+      <b>${formatOpenrouterCount(row.tokens)}</b>
+    </article>
+  `).join("");
+  const secondaryCards = secondaryKeys.map((key) => {
+    const chart = openrouterRankingsData.charts?.[key];
+    if (!chart) {
+      return "";
+    }
+    return `
+      <article class="us-panel openrouter-secondary-card">
+        <div class="openrouter-section-head">
+          <div>
+            <h3>${escapeHtml(chart.title)}</h3>
+            <p>${escapeHtml(chart.subtitle)}</p>
+          </div>
+        </div>
+        <div class="openrouter-mini-chart"><canvas data-openrouter-chart="${key}"></canvas></div>
+      </article>
+    `;
+  }).join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="openrouter-page">
+      <div class="openrouter-hero">
+        <div>
+          <h2>AI Model Rankings</h2>
+          <p>Based on benchmarks and real usage data from millions of users accessing models through OpenRouter.</p>
+        </div>
+        <div class="openrouter-source">
+          <span>Updated ${escapeHtml(openrouterRankingsData.updatedAt || "-")}</span>
+          <a href="${escapeHtml(openrouterRankingsData.source?.url ?? "https://openrouter.ai/rankings")}" target="_blank" rel="noreferrer">OpenRouter</a>
+        </div>
+      </div>
+
+      <article class="us-panel openrouter-chart-panel">
+        <div class="openrouter-section-head">
+          <div>
+            <h3>Top Models</h3>
+            <p>Weekly usage of models across OpenRouter</p>
+          </div>
+          ${scaleButtons}
+        </div>
+        <div class="openrouter-chart-wrap"><canvas id="openrouter-top-models-chart"></canvas></div>
+        <p class="openrouter-caption">Latest weekly bucket: ${escapeHtml(latestDate)}</p>
+      </article>
+
+      <div class="openrouter-stat-grid">${statCards}</div>
+
+      <article class="us-panel openrouter-leaderboard-panel">
+        <div class="openrouter-section-head">
+          <div>
+            <h3>LLM Leaderboard</h3>
+            <p>Compare the most popular models on OpenRouter.</p>
+          </div>
+          <div class="market-rs-chip-row">${viewButtons}</div>
+        </div>
+        <div class="openrouter-leaderboard-grid">${renderOpenrouterLeaderboardRows(rows) || "<p>No OpenRouter ranking data.</p>"}</div>
+      </article>
+
+      <section class="openrouter-secondary-grid">
+        ${secondaryCards}
+      </section>
+    </section>
+  `;
+
+  createOpenrouterStackedChart(document.querySelector("#openrouter-top-models-chart"), topChart);
+  secondaryKeys.forEach((key) => {
+    createOpenrouterStackedChart(usOverviewRoot.querySelector(`[data-openrouter-chart="${key}"]`), openrouterRankingsData.charts?.[key], { compact: true });
+  });
+  usOverviewRoot.querySelectorAll("[data-openrouter-scale]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.openrouterScale = button.dataset.openrouterScale || "linear";
+      renderOpenrouterOverview();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-openrouter-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.openrouterLeaderboardView = button.dataset.openrouterView || "week";
+      renderOpenrouterOverview();
+    });
+  });
+}
+
 function render() {
   destroyCharts();
   ensureValidSelection();
@@ -12730,6 +13009,12 @@ function render() {
   if (state.tab === "Infra") {
     renderSummary([]);
     renderInfraOverview();
+    return;
+  }
+
+  if (state.tab === "Openrouter") {
+    renderSummary([]);
+    renderOpenrouterOverview();
     return;
   }
 
