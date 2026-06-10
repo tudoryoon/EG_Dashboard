@@ -296,6 +296,7 @@ const state = {
   rsHistoryRange: "3y",
   rsSelectedTicker: "",
   rsFilter: "newHigh1y",
+  rsBriefingSector: "all",
   rsMarketCapRange: "all",
   rsCustomMarketCapMin: "",
   rsCustomMarketCapMax: "",
@@ -6116,6 +6117,7 @@ function openMarketRsTicker(ticker) {
   state.marketView = "RS";
   state.rsUniverse = "all";
   state.rsFilter = "all";
+  state.rsBriefingSector = "all";
   state.rsMarketCapRange = "all";
   state.rsCustomMarketCapMin = "";
   state.rsCustomMarketCapMax = "";
@@ -7010,6 +7012,73 @@ function matchesMarketRsNewHighFilter(row, universeKey, filterKey = state.rsFilt
   return getMarketRsUniverseNewHigh(row, universeKey, windowKey);
 }
 
+function getMarketRsBriefingSectorData() {
+  const groups = (window.marketBriefingData?.sectorPanels ?? [])
+    .map((sector) => {
+      const tickers = [
+        ...new Set(
+          (sector.items ?? [])
+            .map((item) => getBriefingRsTicker(item))
+            .filter(Boolean),
+        ),
+      ];
+      return {
+        key: sector.key,
+        label: sector.label ?? sector.key,
+        tickers,
+      };
+    })
+    .filter((sector) => sector.key && sector.tickers.length);
+  const tickerToSectors = new Map();
+  groups.forEach((sector) => {
+    sector.tickers.forEach((ticker) => {
+      const current = tickerToSectors.get(ticker) ?? [];
+      current.push({ key: sector.key, label: sector.label });
+      tickerToSectors.set(ticker, current);
+    });
+  });
+  const allTickers = [...new Set(groups.flatMap((sector) => sector.tickers))];
+  return { groups, tickerToSectors, allTickers };
+}
+
+function getMarketRsBriefingSectorLabel(sectorKey, sectorData = getMarketRsBriefingSectorData()) {
+  if (sectorKey === "all") {
+    return "All RS";
+  }
+  if (sectorKey === "briefingAll") {
+    return "Daily Briefing 전체";
+  }
+  return sectorData.groups.find((sector) => sector.key === sectorKey)?.label ?? "Daily Briefing";
+}
+
+function getMarketRsBriefingSectorLabels(row, sectorData) {
+  const labels = sectorData?.tickerToSectors?.get(row?.ticker) ?? [];
+  return labels.map((item) => item.label);
+}
+
+function formatMarketRsBriefingSectorLabels(row, sectorData, limit = 2) {
+  const labels = getMarketRsBriefingSectorLabels(row, sectorData);
+  if (!labels.length) {
+    return "-";
+  }
+  const visible = labels.slice(0, limit).join(", ");
+  return labels.length > limit ? `${visible} +${labels.length - limit}` : visible;
+}
+
+function matchesMarketRsBriefingSector(row, sectorData) {
+  if (state.rsBriefingSector === "all") {
+    return true;
+  }
+  if (state.rsBriefingSector === "briefingAll") {
+    return sectorData.allTickers.includes(row.ticker);
+  }
+  const sector = sectorData.groups.find((item) => item.key === state.rsBriefingSector);
+  if (!sector) {
+    return true;
+  }
+  return sector.tickers.includes(row.ticker);
+}
+
 function getMarketRsHistoryRatings(history, universeKey) {
   if (!history) {
     return [];
@@ -7173,7 +7242,7 @@ function matchesTrendScoreClimaxRange(row) {
   );
 }
 
-function getVisibleMarketRsRows() {
+function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorData()) {
   const query = (state.query ?? "").trim().toLowerCase();
   return (marketRsData.rows ?? [])
     .filter((row) => {
@@ -7193,6 +7262,9 @@ function getVisibleMarketRsRows() {
         return false;
       }
       if (state.rsUniverse === "russell2000" && !row.memberships?.russell2000) {
+        return false;
+      }
+      if (!matchesMarketRsBriefingSector(row, briefingSectorData)) {
         return false;
       }
       if (!query) {
@@ -7470,7 +7542,15 @@ function renderMarketRsOverview() {
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
 
-  const rows = getVisibleMarketRsRows();
+  const briefingSectorData = getMarketRsBriefingSectorData();
+  if (
+    state.rsBriefingSector !== "all" &&
+    state.rsBriefingSector !== "briefingAll" &&
+    !briefingSectorData.groups.some((sector) => sector.key === state.rsBriefingSector)
+  ) {
+    state.rsBriefingSector = "all";
+  }
+  const rows = getVisibleMarketRsRows(briefingSectorData);
   const selected = getSelectedMarketRsRow(rows);
   if (selected) {
     state.rsSelectedTicker = selected.ticker;
@@ -7505,6 +7585,25 @@ function renderMarketRsOverview() {
     <button type="button" class="market-rs-chip${state.rsFilter === "priceNewHigh3m" ? " active" : ""}" data-rs-filter="priceNewHigh3m">Stock Price New High (3M)</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "priceNewHigh1y" ? " active" : ""}" data-rs-filter="priceNewHigh1y">Stock Price New High (1Y)</button>
   `;
+  const briefingSectorChips = [
+    { key: "all", label: "All RS", count: marketRsData.rows?.length ?? 0 },
+    { key: "briefingAll", label: "Daily Briefing 전체", count: briefingSectorData.allTickers.length },
+    ...briefingSectorData.groups.map((sector) => ({
+      key: sector.key,
+      label: sector.label,
+      count: sector.tickers.length,
+    })),
+  ]
+    .map(
+      (sector) => `
+        <button
+          type="button"
+          class="market-rs-chip market-rs-sector-chip${state.rsBriefingSector === sector.key ? " active" : ""}"
+          data-rs-briefing-sector="${sector.key}"
+        >${sector.label}<small>${sector.count}</small></button>
+      `,
+    )
+    .join("");
   const marketCapChips = MARKET_RS_CAP_RANGES.map(
     (range) => `
       <button
@@ -7547,6 +7646,7 @@ function renderMarketRsOverview() {
   const leaderCards = leaderRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
+      const briefingSectorLabel = formatMarketRsBriefingSectorLabels(row, briefingSectorData);
       return `
         <button
           type="button"
@@ -7571,6 +7671,10 @@ function renderMarketRsOverview() {
             <span>ATR%</span>
             <strong>${formatAtrPercent(row.atr21Pct)}</strong>
           </div>
+          <div class="market-rs-card-meta">
+            <span>Briefing</span>
+            <strong>${briefingSectorLabel}</strong>
+          </div>
           ${matchesMarketRsNewHighFilter(row, state.rsUniverse, state.rsFilter === "all" ? "newHigh1y" : state.rsFilter) ? `<div class="market-rs-flag">${activeNewHighLabel}</div>` : ""}
         </button>
       `;
@@ -7583,6 +7687,7 @@ function renderMarketRsOverview() {
         <tr data-rs-ticker="${row.ticker}">
           <td>${row.ticker}</td>
           <td>${row.name}</td>
+          <td>${formatMarketRsBriefingSectorLabels(row, briefingSectorData, 3)}</td>
           <td>${formatMarketCapCompact(row.marketCap)}</td>
           <td>${formatRsNumber(score)}</td>
           <td>${formatRsNumber(row.rsPeriods?.["1m"])}</td>
@@ -7617,6 +7722,7 @@ function renderMarketRsOverview() {
             <span class="market-rs-pill">${rows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y")).length} 1Y RS highs</span>
             <span class="market-rs-pill">${rows.filter((row) => getMarketRsPriceNewHigh(row, "3m")).length} 3M price highs</span>
             <span class="market-rs-pill">${rows.filter((row) => getMarketRsPriceNewHigh(row, "1y")).length} 1Y price highs</span>
+            <span class="market-rs-pill">${getMarketRsBriefingSectorLabel(state.rsBriefingSector, briefingSectorData)}</span>
             <span class="market-rs-pill">Sorted 99 → 1</span>
           </div>
         </div>
@@ -7632,6 +7738,10 @@ function renderMarketRsOverview() {
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Filter</span>
             <div class="market-rs-chip-row">${filterChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Daily Briefing Sector</span>
+            <div class="market-rs-chip-row market-rs-briefing-sector-row">${briefingSectorChips}</div>
           </div>
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Market Cap</span>
@@ -7748,6 +7858,7 @@ function renderMarketRsOverview() {
               <tr>
                 <th>${renderMarketRsSortHeader("Ticker", "ticker")}</th>
                 <th>${renderMarketRsSortHeader("Name", "name")}</th>
+                <th>Briefing Sector</th>
                 <th>${renderMarketRsSortHeader("Market Cap", "marketCap")}</th>
                 <th>${renderMarketRsSortHeader("RS", "rs")}</th>
                 <th>${renderMarketRsSortHeader("RS_1M", "rs1m")}</th>
@@ -7759,7 +7870,7 @@ function renderMarketRsOverview() {
                 <th>${renderMarketRsSortHeader("Price NH", "priceNewHigh")}</th>
               </tr>
             </thead>
-            <tbody>${tableRows || '<tr><td colspan="11">검색 결과가 없습니다.</td></tr>'}</tbody>
+            <tbody>${tableRows || '<tr><td colspan="12">검색 결과가 없습니다.</td></tr>'}</tbody>
           </table>
         </div>
       </article>
@@ -7781,6 +7892,13 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsFilter = button.dataset.rsFilter;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-briefing-sector]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.rsBriefingSector = button.dataset.rsBriefingSector || "all";
+      state.rsSelectedTicker = "";
       render();
     });
   });

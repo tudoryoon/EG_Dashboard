@@ -3394,6 +3394,30 @@ h1 {
   color: #fff;
 }
 
+.market-rs-sector-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.market-rs-sector-chip small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(28, 28, 26, 0.07);
+  color: #6f6f68;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.market-rs-sector-chip.active small {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
 .trend-score-leader-sortbar {
   display: flex;
   flex-wrap: wrap;
