@@ -104,7 +104,6 @@ const primaryTabMeta = {
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
   Infra: { label: "Infra" },
-  Openrouter: { label: "Openrouter" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   DataTrend: { label: "Data Trend" },
 };
@@ -132,6 +131,11 @@ const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore"]);
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
   GPUCloud: { label: "GPU Rental Price" },
+};
+
+const dataTrendSubtabMeta = {
+  Openrouter: { label: "Openrouter" },
+  Mentions: { label: "Mentions" },
 };
 
 const MARKET_BREADTH_SOURCE_URL = "https://stockbee.blogspot.com/p/mm.html";
@@ -360,6 +364,7 @@ const state = {
   ),
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
   ornnGpuRange: "3y",
+  dataTrendView: "Openrouter",
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
   openrouterScale: "linear",
 };
@@ -12438,11 +12443,6 @@ function renderSubtabs() {
   let entries = [];
   let activeKey = "";
 
-  if (state.tab === "DataTrend") {
-    subtabSwitch.classList.add("hidden");
-    return;
-  }
-
   if (state.tab === "Market") {
     entries = Object.entries(marketSubtabMeta);
     activeKey = state.marketView;
@@ -12452,6 +12452,9 @@ function renderSubtabs() {
   } else if (state.tab === "Semis") {
     entries = Object.entries(semisSubtabMeta);
     activeKey = state.semisView;
+  } else if (state.tab === "DataTrend") {
+    entries = Object.entries(dataTrendSubtabMeta);
+    activeKey = state.dataTrendView;
   } else {
     subtabSwitch.classList.add("hidden");
     return;
@@ -12477,6 +12480,8 @@ function renderSubtabs() {
         state.bigTechView = viewKey;
       } else if (state.tab === "Semis") {
         state.semisView = viewKey;
+      } else if (state.tab === "DataTrend") {
+        state.dataTrendView = viewKey;
       }
       render();
     });
@@ -12588,18 +12593,16 @@ function renderSummary(list) {
     return;
   }
 
-  if (state.tab === "Openrouter") {
-    summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
-    return;
-  }
-
   if (state.tab === "Infra") {
     summaryText.textContent = "데이터센터 전력망 스트레스를 보는 일별 전력 허브 가격 대시보드";
     return;
   }
 
   if (state.tab === "DataTrend") {
-    summaryText.textContent = "X and Reddit keyword mention trend dashboard workspace";
+    summaryText.textContent =
+      state.dataTrendView === "Openrouter"
+        ? "OpenRouter AI model rankings, token usage, market share, and leaderboard"
+        : "X and Reddit keyword mention trend dashboard workspace";
     return;
   }
 
@@ -12961,6 +12964,10 @@ function render() {
 
   if (state.tab === "DataTrend") {
     renderSummary([]);
+    if (state.dataTrendView === "Openrouter") {
+      renderOpenrouterOverview();
+      return;
+    }
     renderPlaceholderOverview(
       "Data Trend Dashboard",
       "X와 Reddit에서 특정 키워드가 얼마나 자주 언급되는지 추적하는 영역입니다. 다음 단계에서 키워드 목록, 수집 소스, 일별/주별 집계 방식, 감성/급증률 지표를 붙이면 됩니다.",
@@ -13009,12 +13016,6 @@ function render() {
   if (state.tab === "Infra") {
     renderSummary([]);
     renderInfraOverview();
-    return;
-  }
-
-  if (state.tab === "Openrouter") {
-    renderSummary([]);
-    renderOpenrouterOverview();
     return;
   }
 
