@@ -6291,7 +6291,7 @@ function renderMarketBriefingOverview() {
 
   const rotationSignal = briefing.rotationSignal ?? {};
   const allRotationSectors = rotationSignal.sectors ?? [];
-  const rotationSectors = allRotationSectors.slice(0, 25);
+  const rotationSectors = allRotationSectors;
   const rotationHistory = rotationSignal.history ?? {};
   const selectedRotationSectorKey = allRotationSectors.some((sector) => sector.key === state.briefingRotationSectorKey)
     ? state.briefingRotationSectorKey
