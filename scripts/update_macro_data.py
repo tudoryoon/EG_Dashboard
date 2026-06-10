@@ -590,6 +590,59 @@ def apply_manual_release_override(series_key: str, release_history: list[dict[st
     return sorted(filtered, key=lambda item: item["releaseDate"])
 
 
+def month_name_from_key(month: str | None) -> str:
+    if not month:
+        return ""
+    try:
+        return datetime.strptime(month, "%Y-%m").strftime("%b")
+    except ValueError:
+        return month
+
+
+def build_fallback_release_row(series: SeriesConfig, snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    latest_month = snapshot.get("latestDate")
+    mom_pct = snapshot.get("momPct")
+    if latest_month is None or mom_pct is None:
+        return None
+    reference_label = {
+        "headline_cpi": "Inflation Rate MoM",
+        "core_cpi": "Core Inflation Rate MoM",
+        "headline_pce": "PCE Price Index MoM",
+        "core_pce": "Core PCE Price Index MoM",
+        "final_demand_ppi": "PPI MoM",
+        "core_ppi": "Core PPI MoM",
+    }.get(series.key, f"{series.label} MoM")
+    return {
+        "releaseDate": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "time": "-",
+        "reference": f"{reference_label} {month_name_from_key(str(latest_month))}".strip(),
+        "actual": format_release_numeric(float(mom_pct), "percent"),
+        "actualValue": safe_round(float(mom_pct), 4),
+        "previous": "-",
+        "consensus": "-",
+        "surprise": None,
+        "surpriseValue": None,
+        "unit": "percent",
+        "source": "BLS calculated MoM fallback",
+    }
+
+
+def append_fallback_release_if_needed(
+    release_history: list[dict[str, Any]],
+    series: SeriesConfig,
+    snapshot: dict[str, Any],
+) -> list[dict[str, Any]]:
+    fallback = build_fallback_release_row(series, snapshot)
+    if not fallback:
+        return release_history
+    latest_month_name = month_name_from_key(str(snapshot.get("latestDate")))
+    if release_history and latest_month_name and latest_month_name in str(release_history[-1].get("reference", "")):
+        return release_history
+    deduped = [row for row in release_history if row.get("reference") != fallback["reference"]]
+    deduped.append(fallback)
+    return sorted(deduped, key=lambda item: item["releaseDate"])
+
+
 def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str, Any] | None = None) -> dict[str, Any]:
     indicator_series: list[dict[str, Any]] = []
     latest_months: list[str] = []
@@ -628,10 +681,19 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                     f"{series.source_id} returned stale history through {parsed_latest_month}; "
                     f"preserving existing {existing_latest_month}"
                 )
-            release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
+            existing_release_history = existing_series.get("releaseHistory", []) if isinstance(existing_series, dict) else []
+            try:
+                release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
+            except Exception as release_error:
+                release_history = existing_release_history
+                release_fetch_error = str(release_error)
+            else:
+                release_fetch_error = None
             release_history = apply_manual_release_override(series.key, release_history)
-            latest_release = release_history[-1] if release_history else None
             snapshot = compute_snapshot(parsed["dates"], parsed["values"])
+            if release_fetch_error:
+                release_history = append_fallback_release_if_needed(release_history, series, snapshot)
+            latest_release = release_history[-1] if release_history else None
             yoy_values = compute_yoy_values(parsed["dates"], parsed["values"])
             official_yoy_values = build_bls_official_yoy_values(parsed["dates"], series.source_id)
             if official_yoy_values:
@@ -656,6 +718,9 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
             }
             if yoy_values:
                 payload_series["yoyValues"] = yoy_values
+            if release_fetch_error:
+                payload_series["releaseFetchStatus"] = "stale"
+                payload_series["releaseFetchError"] = release_fetch_error
         except Exception as error:  # pragma: no cover - network variability
             if existing_series:
                 payload_series = {
