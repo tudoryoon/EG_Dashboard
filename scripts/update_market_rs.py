@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from xml.etree import ElementTree as ET
 
 import pandas as pd
 import requests
@@ -228,6 +229,10 @@ def read_ishares_holdings_csv(url: str) -> pd.DataFrame:
     lines = text.splitlines()
     header_index = next((index for index, line in enumerate(lines) if line.startswith("Ticker,")), None)
     if header_index is None:
+        blackrock_frame = read_blackrock_fund_download_holdings("239710")
+        if not blackrock_frame.empty:
+            print("Using BlackRock fund download holdings for Russell 2000 membership.")
+            return blackrock_frame
         fallback = read_existing_universe("russell2000")
         if not fallback.empty:
             print("Unable to locate IWM holdings CSV header; using existing Russell 2000 membership snapshot.")
@@ -235,6 +240,57 @@ def read_ishares_holdings_csv(url: str) -> pd.DataFrame:
         raise RuntimeError("Unable to locate IWM holdings CSV header.")
     payload = "\n".join(lines[header_index:])
     frame = pd.read_csv(StringIO(payload))
+    return frame[frame["Asset Class"].fillna("").eq("Equity")].copy()
+
+
+def read_blackrock_fund_download_holdings(portfolio_id: str) -> pd.DataFrame:
+    url = (
+        "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document"
+        f"?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId={portfolio_id}"
+        "&component=fundDownload&userType=individual"
+    )
+    try:
+        response = requests.get(url, headers=WIKI_HEADERS, timeout=60)
+        response.raise_for_status()
+    except Exception as error:
+        print(f"Unable to download BlackRock fund holdings document: {error}")
+        return pd.DataFrame(columns=["Ticker", "Name", "Asset Class"])
+
+    xml_text = response.content.decode("utf-8", errors="replace")
+    xml_text = re.sub(r"&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[0-9A-Fa-f]+;)", "&amp;", xml_text)
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError as error:
+        print(f"Unable to parse BlackRock fund holdings document: {error}")
+        return pd.DataFrame(columns=["Ticker", "Name", "Asset Class"])
+
+    namespace = {"ss": "urn:schemas-microsoft-com:office:spreadsheet"}
+    holdings_sheet = None
+    for worksheet in root.findall("ss:Worksheet", namespace):
+        if worksheet.attrib.get(f"{{{namespace['ss']}}}Name") == "Holdings":
+            holdings_sheet = worksheet
+            break
+    if holdings_sheet is None:
+        return pd.DataFrame(columns=["Ticker", "Name", "Asset Class"])
+
+    rows: list[list[str]] = []
+    for row in holdings_sheet.findall(".//ss:Row", namespace):
+        values = []
+        for cell in row.findall("ss:Cell", namespace):
+            data = cell.find("ss:Data", namespace)
+            values.append((data.text or "").strip() if data is not None else "")
+        rows.append(values)
+
+    header_index = next((index for index, row in enumerate(rows) if row[:4] == ["Ticker", "Name", "Sector", "Asset Class"]), None)
+    if header_index is None:
+        return pd.DataFrame(columns=["Ticker", "Name", "Asset Class"])
+
+    header = rows[header_index]
+    data_rows = [row for row in rows[header_index + 1 :] if row and row[0]]
+    normalized_rows = [(row + [""] * len(header))[: len(header)] for row in data_rows]
+    frame = pd.DataFrame(normalized_rows, columns=header)
+    if "Asset Class" not in frame.columns:
+        return pd.DataFrame(columns=["Ticker", "Name", "Asset Class"])
     return frame[frame["Asset Class"].fillna("").eq("Equity")].copy()
 
 
@@ -529,6 +585,16 @@ def normalize_positive_int(value: object) -> int | None:
     return int(numeric)
 
 
+def safe_float(value: object) -> float | None:
+    try:
+        numeric = float(value)
+    except Exception:
+        return None
+    if not math.isfinite(numeric):
+        return None
+    return numeric
+
+
 def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
     try:
         ticker = yf.Ticker(symbol)
@@ -536,6 +602,17 @@ def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
         shares = normalize_positive_int(fast_info.get("shares"))
         if shares:
             return symbol, shares
+        market_cap = normalize_positive_int(fast_info.get("market_cap") or fast_info.get("marketCap"))
+        price = safe_float(
+            fast_info.get("last_price")
+            or fast_info.get("lastPrice")
+            or fast_info.get("regular_market_price")
+            or fast_info.get("regularMarketPrice")
+        )
+        if market_cap and price and price > 0:
+            inferred_shares = normalize_positive_int(market_cap / price)
+            if inferred_shares:
+                return symbol, inferred_shares
 
         info = ticker.get_info()
         shares = normalize_positive_int(
@@ -543,6 +620,12 @@ def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
         )
         if shares:
             return symbol, shares
+        market_cap = normalize_positive_int(info.get("marketCap"))
+        price = safe_float(info.get("currentPrice") or info.get("regularMarketPrice") or info.get("previousClose"))
+        if market_cap and price and price > 0:
+            inferred_shares = normalize_positive_int(market_cap / price)
+            if inferred_shares:
+                return symbol, inferred_shares
     except Exception:
         return symbol, None
     return symbol, None
