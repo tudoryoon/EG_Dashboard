@@ -460,6 +460,8 @@ h1 {
 }
 
 .briefing-daily-leader-card {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 82px;
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.76);
@@ -481,6 +483,7 @@ h1 {
   display: grid;
   min-width: 0;
   gap: 3px;
+  text-align: center;
 }
 
 .briefing-daily-leader-card strong,
@@ -493,6 +496,9 @@ h1 {
 .briefing-daily-leader-card b {
   font-family: "Space Grotesk", sans-serif;
   font-size: 1rem;
+  justify-self: end;
+  min-width: 72px;
+  text-align: right;
 }
 
 .briefing-rotation-grid {

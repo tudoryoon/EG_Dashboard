@@ -66,6 +66,7 @@ SECTOR_GROUPS = [
     {
         "key": "semi_large",
         "label": "반도체(대형주)",
+        "scoreTickers": ["AVGO", "TSM", "MU", "SNDK", "WDC", "STX", "ASML", "AMAT", "LRCX", "KLAC", "TER", "INTC", "AMD", "MRVL"],
         "items": [
             {"ticker": "AVGO", "label": "AVGO US", "name": "Broadcom", "query": "Broadcom stock"},
             {"ticker": "TSM", "label": "TSM US", "name": "TSMC ADR", "query": "TSMC stock"},
