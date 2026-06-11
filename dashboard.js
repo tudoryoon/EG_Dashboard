@@ -6225,6 +6225,9 @@ function renderMarketBriefingOverview() {
         .sort((left, right) => (right.marketCapUsd ?? 0) - (left.marketCapUsd ?? 0))
         .map((item) => {
           const overviewChange = getBriefingOverviewReturn(item, state.briefingMapRange);
+          const oneDayChange = getBriefingOverviewReturn(item, "1d");
+          const oneWeekChange = getBriefingOverviewReturn(item, "1w");
+          const oneMonthChange = getBriefingOverviewReturn(item, "1m");
           const changeClass = Number(overviewChange) > 0 ? "is-up" : Number(overviewChange) < 0 ? "is-down" : "";
           const sizeClass = getBriefingOverviewSizeClass(sector.items ?? [], item);
           const rsLinkAttrs = getBriefingRsLinkAttrs(item);
@@ -6235,15 +6238,18 @@ function renderMarketBriefingOverview() {
               ${rsLinkAttrs}
             >
               <span class="briefing-tile-ticker">${item.label}</span>
-              <span class="briefing-tile-change">${formatSignedPercent(overviewChange)}</span>
-              <span class="briefing-tile-price">${formatBriefingPrice(item)}</span>
-              <span class="briefing-tile-cap">${formatMarketCapCompact(item.marketCapUsd)}</span>
+              <span class="briefing-tile-change">${formatSignedPercent(oneDayChange)}</span>
               <div class="briefing-tile-tooltip">
                 <strong>${item.name}</strong>
                 <span>${sector.label}</span>
-                <span>${selectedBriefingRangeMeta.label} return ${formatSignedPercent(overviewChange)}</span>
-                <span>Price ${formatBriefingPrice(item)}</span>
-                <span>Market cap ${formatMarketCapCompact(item.marketCapUsd)}</span>
+                <div class="briefing-tooltip-grid">
+                  <span>1D</span><b>${formatSignedPercent(oneDayChange)}</b>
+                  <span>1W</span><b>${formatSignedPercent(oneWeekChange)}</b>
+                  <span>1M</span><b>${formatSignedPercent(oneMonthChange)}</b>
+                  <span>Price</span><b>${formatBriefingPrice(item)}</b>
+                  <span>Market Cap</span><b>${formatMarketCapCompact(item.marketCapUsd)}</b>
+                </div>
+                <small>Color: ${selectedBriefingRangeMeta.label} ${formatSignedPercent(overviewChange)}</small>
               </div>
             </article>
           `;
