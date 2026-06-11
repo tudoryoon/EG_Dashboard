@@ -20,6 +20,9 @@ OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-da
 USER_AGENT = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "2y"
 ROTATION_HISTORY_POINTS = 252
+MAX_DAILY_RETURN_PCT = 300.0
+PRICE_SCALE_JUMP_THRESHOLD = 4.0
+PRICE_SCALE_FACTORS = (2.0, 3.0, 4.0, 5.0, 10.0, 20.0)
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
@@ -665,7 +668,7 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
     history = yf.download(
         tickers=symbols,
         period=PRICE_PERIOD,
-        auto_adjust=False,
+        auto_adjust=True,
         progress=False,
         threads=False,
         group_by="ticker",
@@ -685,9 +688,68 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
         if close is None:
             continue
         close = close.dropna()
+        close = pd.Series(close, dtype=float).sort_index().dropna()
+        close = close[~close.index.duplicated(keep="last")]
+        close = repair_price_scale_jumps(close)
         if len(close) >= 2:
             close_map[symbol] = close.rename(symbol)
     return pd.concat(close_map.values(), axis=1).sort_index() if close_map else pd.DataFrame()
+
+
+def closest_price_scale_factor(ratio: float) -> float | None:
+    if ratio < PRICE_SCALE_JUMP_THRESHOLD:
+        return None
+    factor = min(PRICE_SCALE_FACTORS, key=lambda value: abs(value - ratio))
+    if abs(ratio / factor - 1.0) <= 0.35:
+        return factor
+    return None
+
+
+def repair_price_scale_jumps(series: pd.Series) -> pd.Series:
+    if len(series) < 2:
+        return series
+
+    adjusted: list[float] = []
+    suffix_multiplier = 1.0
+    for raw_value in series:
+        value = normalize_number(raw_value)
+        if value is None:
+            adjusted.append(float("nan"))
+            continue
+        candidate = value * suffix_multiplier
+        if adjusted and adjusted[-1] and math.isfinite(adjusted[-1]):
+            previous = adjusted[-1]
+            if previous > 0 and candidate > 0:
+                ratio = candidate / previous
+                up_factor = closest_price_scale_factor(ratio)
+                down_factor = closest_price_scale_factor(1.0 / ratio) if ratio else None
+                if up_factor is not None:
+                    suffix_multiplier /= up_factor
+                    candidate = value * suffix_multiplier
+                elif down_factor is not None:
+                    adjusted = [entry / down_factor if math.isfinite(entry) else entry for entry in adjusted]
+        adjusted.append(candidate)
+
+    return pd.Series(adjusted, index=series.index, name=series.name).dropna()
+
+
+def compute_recent_day_change(series: pd.Series, max_abs_return: float = MAX_DAILY_RETURN_PCT) -> tuple[float | None, float | None, float | None]:
+    if len(series) < 2:
+        return None, None, None
+
+    current = normalize_number(series.iloc[-1])
+    if current is None:
+        return None, None, None
+
+    previous_candidates = list(series.iloc[:-1].tail(10).iloc[::-1])
+    for previous_raw in previous_candidates:
+        previous = normalize_number(previous_raw)
+        if previous is None or previous == 0:
+            continue
+        pct = (current / previous - 1) * 100
+        if abs(pct) <= max_abs_return:
+            return round(pct, 2), current, previous
+    return None, current, normalize_number(series.iloc[-2])
 
 
 def fetch_meta(symbol: str) -> dict[str, float | None]:
@@ -803,10 +865,7 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         price = previous_close = day_change_pct = None
         range_returns = {key: None for key in MAP_RANGE_LABELS}
         if len(series) >= 2:
-            price = float(series.iloc[-1])
-            previous_close = float(series.iloc[-2])
-            if previous_close:
-                day_change_pct = round((price / previous_close - 1) * 100, 2)
+            day_change_pct, price, previous_close = compute_recent_day_change(series)
         if not series.empty:
             range_returns.update({key: compute_period_return(series, periods) for key, periods in MAP_RANGE_PERIODS.items()})
             range_returns["1d"] = day_change_pct
@@ -822,9 +881,9 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
                 market_cap_usd = market_cap
         if price is not None and previous_price and previous_price > 0:
             price_ratio = price / previous_price
-            if market_cap is not None:
+            if 0.5 <= price_ratio <= 2.0 and market_cap is not None:
                 market_cap *= price_ratio
-            if market_cap_usd is not None:
+            if 0.5 <= price_ratio <= 2.0 and market_cap_usd is not None:
                 market_cap_usd *= price_ratio
         if symbol.endswith(".KS") and market_cap and fx_usd_per_krw:
             market_cap_usd = market_cap / fx_usd_per_krw
@@ -886,10 +945,7 @@ def build_rotation_benchmark(close_frame: pd.DataFrame) -> dict[str, object]:
     returns = {key: None for key in MAP_RANGE_LABELS}
     price = previous_close = day_change_pct = None
     if len(series) >= 2:
-        price = float(series.iloc[-1])
-        previous_close = float(series.iloc[-2])
-        if previous_close:
-            day_change_pct = round((price / previous_close - 1) * 100, 2)
+        day_change_pct, price, previous_close = compute_recent_day_change(series)
     if not series.empty:
         returns.update({key: compute_period_return(series, periods) for key, periods in MAP_RANGE_PERIODS.items()})
         returns["1d"] = day_change_pct
