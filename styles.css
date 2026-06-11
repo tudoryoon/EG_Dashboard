@@ -312,6 +312,82 @@ h1 {
   font-size: 0.92rem;
 }
 
+.briefing-market-row {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.95fr) minmax(460px, 1.05fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.briefing-market-row .briefing-index-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.briefing-fedwatch-panel {
+  min-width: 0;
+}
+
+.briefing-fedwatch-scroll {
+  overflow-x: auto;
+  border: 1px solid rgba(28, 28, 26, 0.1);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.briefing-fedwatch-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.briefing-fedwatch-table th,
+.briefing-fedwatch-table td {
+  padding: 8px 9px;
+  border-bottom: 1px solid rgba(28, 28, 26, 0.08);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.briefing-fedwatch-table th:first-child,
+.briefing-fedwatch-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  background: #ffffff;
+}
+
+.briefing-fedwatch-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f4f6f2;
+  color: #3f4f45;
+  font-weight: 800;
+}
+
+.briefing-fedwatch-table td.is-max {
+  background: #a7f3d0;
+  color: #065f46;
+  font-weight: 800;
+}
+
+.briefing-fedwatch-source {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.briefing-fedwatch-source a {
+  color: #0f766e;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .briefing-sector-panel .us-section-head h3,
 .briefing-mover-head h3 {
   margin: 0;
@@ -4373,6 +4449,10 @@ h1 {
 }
 
 @media (max-width: 1100px) {
+  .briefing-market-row {
+    grid-template-columns: 1fr;
+  }
+
   .briefing-rotation-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

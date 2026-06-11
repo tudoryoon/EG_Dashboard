@@ -5691,6 +5691,13 @@ function formatSignedPercent(value) {
   return `${sign}${numeric.toFixed(2)}%`;
 }
 
+function formatOneDecimal(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return Number(value).toFixed(1);
+}
+
 function formatSignedScore(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -6273,6 +6280,7 @@ function renderMarketBriefingOverview() {
   const briefingIndexConfigs = [
     { key: "dowjones", label: "Dow Jones (DIA)" },
     { key: "sp500", label: "S&P 500 (SPY)" },
+    { key: "nasdaq", label: "NASDAQ Composite" },
     { key: "nasdaq100", label: "NASDAQ 100 (QQQ)" },
     { key: "sox", label: "필라델피아 반도체 (SOX)" },
     { key: "russell2000", label: "Russell 2000 (IWM)" },
@@ -6320,6 +6328,41 @@ function renderMarketBriefingOverview() {
       `;
     })
     .join("");
+  const fedWatch = briefing.fedWatch ?? null;
+  const fedWatchColumns = fedWatch?.columns ?? [];
+  const fedWatchRows = fedWatch?.rows ?? [];
+  const fedWatchMarkup = fedWatchRows.length
+    ? `
+      <div class="briefing-fedwatch-scroll">
+        <table class="briefing-fedwatch-table">
+          <thead>
+            <tr>
+              <th>Meeting</th>
+              ${fedWatchColumns.map((column) => `<th>${column}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${fedWatchRows
+              .map((row) => {
+                const maxRange = row.maxRange;
+                return `
+                  <tr>
+                    <th>${formatShortIsoDate(row.meetingDate)}</th>
+                    ${(row.probabilities ?? [])
+                      .map((value, index) => {
+                        const range = fedWatchColumns[index];
+                        return `<td class="${range === maxRange ? "is-max" : ""}">${formatOneDecimal(value)}%</td>`;
+                      })
+                      .join("")}
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `
+    : '<p class="market-rs-empty">FedWatch data is not available.</p>';
 
   const rotationSignal = briefing.rotationSignal ?? {};
   const allRotationSectors = rotationSignal.sectors ?? [];
@@ -6538,6 +6581,7 @@ function renderMarketBriefingOverview() {
         </div>
       </article>
 
+      <section class="briefing-market-row">
       <article class="us-panel briefing-index-panel">
         <div class="us-section-head">
           <div>
@@ -6547,6 +6591,24 @@ function renderMarketBriefingOverview() {
         </div>
         <div class="briefing-index-grid">${indexMarkup}</div>
       </article>
+
+      <article class="us-panel briefing-fedwatch-panel">
+        <div class="us-section-head">
+          <div>
+            <h2>CME FedWatch</h2>
+            <p>Conditional meeting probabilities by target rate range.</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">As of ${fedWatch?.asOf ?? "-"}</span>
+          </div>
+        </div>
+        ${fedWatchMarkup}
+        <div class="briefing-fedwatch-source">
+          <span>Source: ${fedWatch?.source ?? "CME FedWatch"}</span>
+          ${fedWatch?.sourceUrl ? `<a href="${fedWatch.sourceUrl}" target="_blank" rel="noreferrer">Open CME</a>` : ""}
+        </div>
+      </article>
+      </section>
 
       <article class="us-panel briefing-rotation-panel">
         <div class="us-section-head">

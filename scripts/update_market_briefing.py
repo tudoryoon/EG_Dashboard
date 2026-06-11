@@ -26,6 +26,29 @@ PRICE_SCALE_FACTORS = (2.0, 3.0, 4.0, 5.0, 10.0, 20.0)
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
+FEDWATCH_SOURCE_URL = "https://www.cmegroup.com/ko/markets/interest-rates/cme-fedwatch-tool.html"
+FEDWATCH_SNAPSHOT = {
+    "source": "CME FedWatch",
+    "sourceUrl": FEDWATCH_SOURCE_URL,
+    "asOf": "2026-06-12",
+    "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
+    "columns": ["250-275", "275-300", "300-325", "325-350", "350-375", "375-400", "400-425", "425-450", "450-475", "475-500"],
+    "rows": [
+        {"meetingDate": "2026-06-17", "probabilities": [0.0, 0.0, 0.0, 1.5, 98.5, 0.0, 0.0, 0.0, 0.0, 0.0]},
+        {"meetingDate": "2026-07-29", "probabilities": [0.0, 0.0, 0.0, 1.4, 91.3, 7.4, 0.0, 0.0, 0.0, 0.0]},
+        {"meetingDate": "2026-09-16", "probabilities": [0.0, 0.0, 0.0, 1.1, 75.6, 22.0, 1.3, 0.0, 0.0, 0.0]},
+        {"meetingDate": "2026-10-28", "probabilities": [0.0, 0.0, 0.0, 0.9, 63.3, 30.9, 4.7, 0.2, 0.0, 0.0]},
+        {"meetingDate": "2026-12-09", "probabilities": [0.0, 0.0, 0.0, 0.6, 40.2, 42.9, 14.4, 1.9, 0.1, 0.0]},
+        {"meetingDate": "2027-01-27", "probabilities": [0.0, 0.0, 0.0, 3.8, 40.4, 40.6, 13.4, 1.7, 0.1, 0.0]},
+        {"meetingDate": "2027-03-17", "probabilities": [2.0, 22.8, 40.5, 26.4, 7.3, 0.9, 0.0, 0.0, 0.0, 0.0]},
+        {"meetingDate": "2027-04-28", "probabilities": [0.0, 0.0, 0.9, 11.1, 30.6, 34.3, 18.0, 4.5, 0.5, 0.0]},
+        {"meetingDate": "2027-06-09", "probabilities": [0.0, 0.0, 0.4, 5.8, 20.5, 32.4, 26.5, 11.5, 2.6, 0.3]},
+        {"meetingDate": "2027-07-28", "probabilities": [0.0, 0.0, 0.4, 5.2, 18.9, 31.1, 27.1, 13.2, 3.6, 0.5]},
+        {"meetingDate": "2027-09-15", "probabilities": [0.0, 0.1, 1.3, 7.9, 21.3, 30.3, 24.4, 11.3, 3.0, 0.4]},
+        {"meetingDate": "2027-10-27", "probabilities": [0.0, 0.1, 1.5, 8.2, 21.5, 30.2, 24.1, 11.1, 2.9, 0.4]},
+        {"meetingDate": "2027-12-08", "probabilities": [0.0, 0.3, 2.4, 10.0, 22.7, 29.3, 22.3, 10.0, 2.6, 0.4]},
+    ],
+}
 ROTATION_WEIGHTS = {
     "1d": 0.20,
     "1w": 0.40,
@@ -1374,6 +1397,30 @@ def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
     return output
 
 
+def build_fedwatch_snapshot() -> dict[str, object]:
+    rows = []
+    for row in FEDWATCH_SNAPSHOT["rows"]:
+        probabilities = [round(float(value), 1) for value in row["probabilities"]]
+        max_probability = max(probabilities) if probabilities else None
+        max_index = probabilities.index(max_probability) if max_probability is not None else None
+        rows.append(
+            {
+                "meetingDate": row["meetingDate"],
+                "probabilities": probabilities,
+                "maxProbability": max_probability,
+                "maxRange": FEDWATCH_SNAPSHOT["columns"][max_index] if max_index is not None else None,
+            }
+        )
+    return {
+        "source": FEDWATCH_SNAPSHOT["source"],
+        "sourceUrl": FEDWATCH_SNAPSHOT["sourceUrl"],
+        "asOf": FEDWATCH_SNAPSHOT["asOf"],
+        "title": FEDWATCH_SNAPSHOT["title"],
+        "columns": FEDWATCH_SNAPSHOT["columns"],
+        "rows": rows,
+    }
+
+
 def build_payload() -> dict[str, object]:
     snapshots, _, latest_date, rotation_benchmark, close_frame = build_company_snapshots()
     major_news = build_major_news()
@@ -1391,6 +1438,7 @@ def build_payload() -> dict[str, object]:
         "mapRanges": [{"key": key, "label": label} for key, label in MAP_RANGE_LABELS.items()],
         "sectorPanels": sector_panels,
         "rotationSignal": rotation_signal,
+        "fedWatch": build_fedwatch_snapshot(),
         "majorNews": major_news,
         "movers": movers,
     }
