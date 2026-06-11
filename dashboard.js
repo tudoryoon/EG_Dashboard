@@ -6529,8 +6529,6 @@ function renderMarketBriefingOverview() {
           </div>
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${briefing.updatedAt ?? "-"}</span>
-            <span class="market-rs-pill">${(briefing.majorNews ?? []).length} key stories</span>
-            <span class="market-rs-pill">${(briefing.movers ?? []).length} movers</span>
           </div>
         </div>
         <div class="briefing-legend">
