@@ -8600,7 +8600,7 @@ function renderMarketTrendScoreOverview() {
   ]
     .map(([label, sortKey]) => renderTrendLeaderSortButton(label, sortKey))
     .join("");
-  const leaderCards = rows.slice(0, 12)
+  const leaderCards = rows
     .map(
       (row) => `
         <button
