@@ -4031,6 +4031,107 @@ h1 {
   font-weight: 700;
 }
 
+.market-canslim-panel {
+  background: #fbfcf8;
+}
+
+.market-canslim-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.market-canslim-item {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 106px;
+  padding: 12px;
+  border: 1px solid #ecece7;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.market-canslim-letter {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #f0f0ea;
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+}
+
+.market-canslim-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.market-canslim-title strong {
+  font-size: 0.88rem;
+}
+
+.market-canslim-title span {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f0f0ea;
+  color: #5f5f58;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.market-canslim-item p {
+  margin: 7px 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.market-canslim-item small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.market-canslim-item.pass {
+  border-color: rgba(19, 112, 71, 0.22);
+}
+
+.market-canslim-item.pass .market-canslim-letter,
+.market-canslim-item.pass .market-canslim-title span {
+  background: rgba(19, 112, 71, 0.1);
+  color: #137047;
+}
+
+.market-canslim-item.watch {
+  border-color: rgba(176, 122, 12, 0.22);
+}
+
+.market-canslim-item.watch .market-canslim-letter,
+.market-canslim-item.watch .market-canslim-title span {
+  background: rgba(176, 122, 12, 0.12);
+  color: #96660a;
+}
+
+.market-canslim-item.fail {
+  border-color: rgba(180, 35, 24, 0.18);
+}
+
+.market-canslim-item.fail .market-canslim-letter,
+.market-canslim-item.fail .market-canslim-title span {
+  background: rgba(180, 35, 24, 0.1);
+  color: #b42318;
+}
+
 .market-rs-table-wrap {
   margin-top: 14px;
   overflow-x: auto;
@@ -4567,6 +4668,10 @@ h1 {
   }
 
   .market-rs-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-canslim-grid {
     grid-template-columns: 1fr;
   }
 

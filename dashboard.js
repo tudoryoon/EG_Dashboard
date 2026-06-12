@@ -49,6 +49,7 @@ const marketRsData = window.marketRsData ?? {
   rows: [],
   histories: {},
 };
+const marketCanslimData = window.marketCanslimData ?? { updatedAt: "", scope: {}, profiles: {} };
 const marketTrendScoreData = window.marketTrendScoreData ?? {
   updatedAt: "",
   historyDates: [],
@@ -6906,6 +6907,20 @@ function formatMarketCapCompact(value) {
   return `$${(numeric / 1_000_000_000).toFixed(1)}B`;
 }
 
+function formatLargeNumber(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (Math.abs(numeric) >= 1_000_000_000) {
+    return `${(numeric / 1_000_000_000).toFixed(1)}B`;
+  }
+  if (Math.abs(numeric) >= 1_000_000) {
+    return `${(numeric / 1_000_000).toFixed(1)}M`;
+  }
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numeric);
+}
+
 function formatRsFinancialUsd(value) {
   if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
     return "-";
@@ -7046,6 +7061,242 @@ function renderMarketRsFinancials(row) {
         </table>
       </div>
       <p class="market-rs-financial-note">${scopeText}</p>
+    </div>
+  `;
+}
+
+function normalizeCanslimTicker(ticker) {
+  const normalized = String(ticker ?? "").toUpperCase();
+  if (normalized === "GOOG") {
+    return "GOOGL";
+  }
+  return normalized;
+}
+
+function getMarketCanslimProfile(ticker) {
+  const normalized = normalizeCanslimTicker(ticker);
+  const direct = marketCanslimData.profiles?.[normalized];
+  if (direct) {
+    return direct;
+  }
+  return Object.values(marketCanslimData.profiles ?? {}).find((profile) =>
+    (profile.aliases ?? []).map((alias) => String(alias).toUpperCase()).includes(normalized),
+  );
+}
+
+function getCanslimStatusLabel(status) {
+  if (status === "pass") {
+    return "Pass";
+  }
+  if (status === "watch") {
+    return "Watch";
+  }
+  if (status === "fail") {
+    return "Fail";
+  }
+  return "Pending";
+}
+
+function getCanslimStatusClass(status) {
+  if (status === "pass") {
+    return " pass";
+  }
+  if (status === "watch") {
+    return " watch";
+  }
+  if (status === "fail") {
+    return " fail";
+  }
+  return " pending";
+}
+
+function buildCanslimC(row, financialItem) {
+  const latest = financialItem?.quarters?.[0];
+  if (!latest) {
+    return {
+      key: "C",
+      title: "Current Earnings",
+      status: "pending",
+      summary: "최근 분기 재무 데이터 없음",
+      detail: "O'Neil식 C는 최근 분기 EPS YoY가 핵심입니다. 해당 데이터가 들어오면 EPS YoY와 매출 YoY를 같이 판정합니다.",
+    };
+  }
+  const revenueYoy = Number(latest.revenueYoyPct);
+  const opmYoy = Number(latest.operatingMarginYoyPp);
+  const eps = Number(latest.epsDiluted);
+  let status = "pending";
+  if (Number.isFinite(eps) && eps > 0 && Number.isFinite(revenueYoy)) {
+    if (revenueYoy >= 25 && (!Number.isFinite(opmYoy) || opmYoy >= 0)) {
+      status = "pass";
+    } else if (revenueYoy >= 10 || (Number.isFinite(opmYoy) && opmYoy > 0)) {
+      status = "watch";
+    } else {
+      status = "fail";
+    }
+  }
+  return {
+    key: "C",
+    title: "Current Earnings",
+    status,
+    summary: `${latest.period ?? "Latest"} Rev YoY ${formatRsFinancialPercent(latest.revenueYoyPct)} / EPS ${formatRsFinancialEps(latest.epsDiluted)}`,
+    detail:
+      "EPS YoY는 아직 별도 산출 전이라 Revenue YoY, EPS 흑자 여부, OPM YoY를 보조로 보는 proxy입니다. 엄밀한 C 판정은 EPS YoY 추가 후 확정해야 합니다.",
+  };
+}
+
+function buildCanslimA(profile) {
+  return {
+    key: "A",
+    title: "Annual Earnings",
+    status: "pending",
+    summary: "5Y annual EPS pending",
+    detail: profile?.annualNote ?? "최근 3~5년 연간 EPS 성장률 데이터가 아직 연결되지 않았습니다.",
+  };
+}
+
+function buildCanslimN(row, profile) {
+  const status = profile?.ratings?.n ?? "pending";
+  const confirmations = [
+    row?.priceNewHigh1y ? "1Y price high" : "",
+    row?.rsNewHigh1yAll ? "1Y RS high" : "",
+  ].filter(Boolean);
+  return {
+    key: "N",
+    title: "New Catalyst",
+    status,
+    summary: profile?.catalyst ?? "수동 catalyst 태그 없음",
+    detail: confirmations.length
+      ? `Price confirmation: ${confirmations.join(" / ")}. 신고가는 catalyst의 확인 신호로만 사용합니다.`
+      : "Price confirmation 없음. 신고가는 catalyst의 핵심 점수가 아니라 확인 신호로만 사용합니다.",
+  };
+}
+
+function buildCanslimS(row) {
+  const shares = Number(row?.sharesOutstanding);
+  let status = "pending";
+  if (Number.isFinite(shares)) {
+    if (shares <= 1_000_000_000) {
+      status = "pass";
+    } else if (shares <= 5_000_000_000) {
+      status = "watch";
+    } else {
+      status = "fail";
+    }
+  }
+  return {
+    key: "S",
+    title: "Supply / Demand",
+    status,
+    summary: `Shares ${Number.isFinite(shares) ? formatLargeNumber(shares) : "-"} / MCap ${formatMarketCapCompact(row?.marketCap)}`,
+    detail:
+      "O'Neil식 S는 제한된 공급과 강한 수요를 봅니다. M7은 유동성은 좋지만 shares outstanding이 커서 strict supply 관점에서는 불리하게 표시될 수 있습니다.",
+  };
+}
+
+function buildCanslimL(row) {
+  const score = Number(getMarketRsUniverseScore(row ?? {}, state.rsUniverse) ?? row?.rsRatingAll);
+  let status = "pending";
+  if (Number.isFinite(score)) {
+    if (score >= 80) {
+      status = "pass";
+    } else if (score >= 70) {
+      status = "watch";
+    } else {
+      status = "fail";
+    }
+  }
+  return {
+    key: "L",
+    title: "Leader / Laggard",
+    status,
+    summary: `RS ${formatRsNumber(score)} / 1M ${formatRsNumber(row?.rsPeriods?.["1m"])} / 3M ${formatRsNumber(row?.rsPeriods?.["3m"])}`,
+    detail: "RS 탭과 중복을 줄이기 위해 L은 80 이상 리더 조건 충족 여부만 간단히 확인합니다.",
+  };
+}
+
+function buildCanslimI(profile) {
+  return {
+    key: "I",
+    title: "Institutional Sponsorship",
+    status: profile?.ratings?.i ?? "pending",
+    summary: "13F ownership trend pending",
+    detail: profile?.institutionNote ?? "13F 기반 보유 기관 수와 QoQ 보유 변화가 아직 연결되지 않았습니다.",
+  };
+}
+
+function buildCanslimM() {
+  const spy = marketPriceData.items?.sp500 ?? marketPriceData.items?.spy;
+  const values = spy?.values ?? [];
+  const latest = Number(values.at?.(-1));
+  const ema50 = calculateEmaSeries(values, 50).at(-1);
+  const ema200 = calculateEmaSeries(values, 200).at(-1);
+  let status = "pending";
+  if (Number.isFinite(latest) && Number.isFinite(ema50) && Number.isFinite(ema200)) {
+    if (latest > ema50 && latest > ema200 && ema50 > ema200) {
+      status = "pass";
+    } else if (latest > ema200) {
+      status = "watch";
+    } else {
+      status = "fail";
+    }
+  }
+  return {
+    key: "M",
+    title: "Market Direction",
+    status,
+    summary: Number.isFinite(latest) ? `S&P 500 vs 50/200 EMA: ${getCanslimStatusLabel(status)}` : "Market trend pending",
+    detail: "1차 구현은 S&P 500의 50/200 EMA 위치만 사용합니다. 추후 Breadth/VIX/Distribution day를 결합하는 편이 좋습니다.",
+  };
+}
+
+function renderMarketRsCanslim(row) {
+  if (!row) {
+    return "";
+  }
+  const profile = getMarketCanslimProfile(row.ticker);
+  if (!profile) {
+    return "";
+  }
+  const ticker = normalizeCanslimTicker(row.ticker);
+  const financialItem = marketRsFinancialsData.financials?.[ticker] ?? marketRsFinancialsData.financials?.[row.ticker];
+  const checks = [
+    buildCanslimC(row, financialItem),
+    buildCanslimA(profile),
+    buildCanslimN(row, profile),
+    buildCanslimS(row),
+    buildCanslimL(row),
+    buildCanslimI(profile),
+    buildCanslimM(),
+  ];
+  const scored = checks.filter((item) => ["pass", "watch", "fail"].includes(item.status));
+  const score = scored.length
+    ? Math.round(scored.reduce((sum, item) => sum + (item.status === "pass" ? 1 : item.status === "watch" ? 0.5 : 0), 0) / scored.length * 100)
+    : null;
+  const rows = checks.map((item) => `
+    <div class="market-canslim-item${getCanslimStatusClass(item.status)}">
+      <div class="market-canslim-letter">${item.key}</div>
+      <div>
+        <div class="market-canslim-title">
+          <strong>${item.title}</strong>
+          <span>${getCanslimStatusLabel(item.status)}</span>
+        </div>
+        <p>${item.summary}</p>
+        <small>${item.detail}</small>
+      </div>
+    </div>
+  `).join("");
+
+  return `
+    <div class="market-rs-financial-panel market-canslim-panel">
+      <div class="market-rs-financial-head">
+        <div>
+          <strong>CANSLIM Check</strong>
+          <p>M7 prototype. Momentum is kept mostly in RS; this panel emphasizes earnings, catalyst, supply, institutions, and market direction.</p>
+        </div>
+        <span>${score === null ? "Score pending" : `${score}/100 proxy`}</span>
+      </div>
+      <div class="market-canslim-grid">${rows}</div>
+      <p class="market-rs-financial-note">${marketCanslimData.scope?.basis ?? ""}</p>
     </div>
   `;
 }
@@ -7902,6 +8153,7 @@ function renderMarketRsOverview() {
   const extensionMarkup = ["ema21", "sma50"]
     .map((key) => renderMarketRsExtensionGauge(extension[key]))
     .join("");
+  const canslimMarkup = renderMarketRsCanslim(selected);
   const financialMarkup = renderMarketRsFinancials(selected);
   const rsChartSeriesChips = MARKET_RS_CHART_SERIES.map(
     (series) => `
@@ -8054,6 +8306,7 @@ function renderMarketRsOverview() {
             <canvas data-rs-chart="detail"></canvas>
           </div>
           <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price and price-based 10/20/50/200 EMA.</p>
+          ${canslimMarkup}
           ${financialMarkup}
         </article>
       </section>
