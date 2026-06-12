@@ -2,6 +2,8 @@ name: Update Macro Data
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "20 5 * * 5"
 
 permissions:
   contents: write
