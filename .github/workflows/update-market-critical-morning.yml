@@ -3,10 +3,14 @@ name: Update Market Briefing Morning
 on:
   workflow_dispatch:
   schedule:
-    # 20:25 UTC = 05:25 KST. Primary run for the pre-07:00 Korea morning dashboard.
-    - cron: "25 20 * * *"
-    # 21:15 UTC = 06:15 KST. Backup run in case GitHub schedule queues are delayed.
-    - cron: "15 21 * * *"
+    # 19:43 UTC = 04:43 KST. Early run, expecting GitHub schedule queues to delay execution.
+    - cron: "43 19 * * *"
+    # 19:58 UTC = 04:58 KST.
+    - cron: "58 19 * * *"
+    # 20:13 UTC = 05:13 KST.
+    - cron: "13 20 * * *"
+    # 20:28 UTC = 05:28 KST.
+    - cron: "28 20 * * *"
 
 permissions:
   contents: write
