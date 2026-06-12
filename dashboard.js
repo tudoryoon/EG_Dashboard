@@ -1,4 +1,4 @@
-const companies = window.dashboardCompanies ?? [];
+﻿const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { quarterLabels: [], m7Quarterly: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 const capexDashboardData = window.capexDashboardData ?? {
@@ -5835,6 +5835,16 @@ function getRotationClassLabel(classification) {
   return labels[classification] ?? "Neutral";
 }
 
+function getRotationClassRank(classification) {
+  const ranks = {
+    Lagging: 0,
+    Weakening: 1,
+    Improving: 2,
+    Leading: 3,
+  };
+  return ranks[classification] ?? -1;
+}
+
 function getRotationClassKorean(classification) {
   const labels = {
     Leading: "주도",
@@ -6443,6 +6453,46 @@ function renderMarketBriefingOverview() {
       `;
     })
     .join("");
+  const rotationClassImprovers = allRotationSectors
+    .map((sector) => {
+      const history = rotationHistory[sector.key] ?? [];
+      const previous = history.length >= 2 ? history[history.length - 2] : null;
+      const latest = history.at(-1) ?? null;
+      const fromRank = getRotationClassRank(previous?.classification);
+      const toRank = getRotationClassRank(latest?.classification ?? sector.classification);
+      return {
+        ...sector,
+        previousClassification: previous?.classification,
+        latestClassification: latest?.classification ?? sector.classification,
+        latestScore: latest?.score ?? sector.score,
+        improvementSteps: toRank - fromRank,
+        latestDate: latest?.date,
+      };
+    })
+    .filter((sector) => sector.improvementSteps > 0)
+    .sort((a, b) => {
+      const stepDiff = Number(b.improvementSteps) - Number(a.improvementSteps);
+      if (stepDiff !== 0) {
+        return stepDiff;
+      }
+      const scoreA = Number.isFinite(Number(a.latestScore)) ? Number(a.latestScore) : -999;
+      const scoreB = Number.isFinite(Number(b.latestScore)) ? Number(b.latestScore) : -999;
+      return scoreB - scoreA;
+    });
+  const rotationClassImproverMarkup = rotationClassImprovers
+    .map(
+      (sector, index) => `
+        <article class="briefing-rotation-improver-card is-${String(sector.latestClassification ?? "neutral").toLowerCase()}">
+          <span>#${index + 1}</span>
+          <div>
+            <strong>${sector.label}</strong>
+            <small>${getRotationClassKorean(sector.previousClassification)} -> ${getRotationClassKorean(sector.latestClassification)} · ${formatShortIsoDate(sector.latestDate)}</small>
+          </div>
+          <b class="${getSignedValueClass(sector.latestScore)}">${formatSignedScore(sector.latestScore)}</b>
+        </article>
+      `,
+    )
+    .join("");
   const rotationHistoryMarkup = selectedRotationSector && selectedRotationHistory.length
     ? `
       <article class="briefing-rotation-history-panel">
@@ -6632,7 +6682,11 @@ function renderMarketBriefingOverview() {
             <span>Worst 1D excess return vs QQQ, same 50/50 cap/equal sector logic</span>
           </div>
           <div class="briefing-daily-leader-grid">${rotationDailyLaggardMarkup || '<p class="market-rs-empty">전일 약세 섹터 데이터를 아직 계산하지 못했습니다.</p>'}</div>
-        </div>
+          <div class="briefing-daily-leader-head is-improver">
+            <strong>Daily Rotation Improvers</strong>
+            <span>Classification improved versus the previous trading day, sorted by improvement and score</span>
+          </div>
+          <div class="briefing-rotation-improver-grid">${rotationClassImproverMarkup || '<p class="market-rs-empty">No sectors improved classification versus the previous trading day.</p>'}</div>        </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
         ${rotationHistoryMarkup}
         <div class="briefing-rotation-bottom">
@@ -13157,3 +13211,5 @@ sortSelect.addEventListener("change", (event) => {
 
 render();
 refreshBrandMeta();
+
+
