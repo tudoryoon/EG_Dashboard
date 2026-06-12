@@ -200,7 +200,7 @@ def build_payload() -> dict[str, Any]:
             "name": "OpenRouter Rankings",
             "url": "https://openrouter.ai/rankings",
             "apiBase": "https://openrouter.ai/api/frontend/rankings",
-            "cadence": "weekly",
+            "cadence": "daily",
         },
         "defaultLeaderboard": "week",
         "leaderboardViews": [

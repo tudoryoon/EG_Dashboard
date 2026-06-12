@@ -3,8 +3,8 @@ name: Update OpenRouter Rankings
 on:
   workflow_dispatch:
   schedule:
-    # 02:00 UTC Tuesday = 11:00 KST Tuesday. Run after OpenRouter weekly rankings refresh.
-    - cron: "0 2 * * 2"
+    # 02:00 UTC = 11:00 KST. Refresh daily after OpenRouter rankings data updates.
+    - cron: "0 2 * * *"
 
 permissions:
   contents: write
