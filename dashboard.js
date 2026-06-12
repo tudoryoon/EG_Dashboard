@@ -339,6 +339,7 @@ const state = {
   trendScoreClimaxRange: "all",
   trendScoreCustomClimaxMin: "",
   trendScoreCustomClimaxMax: "",
+  trendScoreBriefingSector: "all",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   macroIndicatorKey: "",
@@ -8226,7 +8227,31 @@ function getTrendScoreRows() {
   return marketTrendScoreData.rows?.[state.trendScoreUniverse] ?? [];
 }
 
-function getVisibleTrendScoreRows() {
+function getTrendScoreBriefingSectorLabel(sectorKey, sectorData = getMarketRsBriefingSectorData()) {
+  if (sectorKey === "all") {
+    return "All Trend";
+  }
+  if (sectorKey === "briefingAll") {
+    return "Daily Briefing 전체";
+  }
+  return sectorData.groups.find((sector) => sector.key === sectorKey)?.label ?? "Daily Briefing";
+}
+
+function matchesTrendScoreBriefingSector(row, sectorData) {
+  if (state.trendScoreBriefingSector === "all") {
+    return true;
+  }
+  if (state.trendScoreBriefingSector === "briefingAll") {
+    return sectorData.allTickers.includes(row.ticker);
+  }
+  const sector = sectorData.groups.find((item) => item.key === state.trendScoreBriefingSector);
+  if (!sector) {
+    return true;
+  }
+  return sector.tickers.includes(row.ticker);
+}
+
+function getVisibleTrendScoreRows(briefingSectorData = getMarketRsBriefingSectorData()) {
   const query = state.query.trim().toLowerCase();
   const rows = getTrendScoreRows().filter((row) => {
     if (!matchesTrendScoreCapRange(row)) {
@@ -8236,6 +8261,9 @@ function getVisibleTrendScoreRows() {
       return false;
     }
     if (!matchesTrendScoreClimaxRange(row)) {
+      return false;
+    }
+    if (!matchesTrendScoreBriefingSector(row, briefingSectorData)) {
       return false;
     }
     if (!query) {
@@ -8494,7 +8522,15 @@ function renderMarketTrendScoreOverview() {
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
 
-  const rows = getVisibleTrendScoreRows();
+  const briefingSectorData = getMarketRsBriefingSectorData();
+  if (
+    state.trendScoreBriefingSector !== "all" &&
+    state.trendScoreBriefingSector !== "briefingAll" &&
+    !briefingSectorData.groups.some((sector) => sector.key === state.trendScoreBriefingSector)
+  ) {
+    state.trendScoreBriefingSector = "all";
+  }
+  const rows = getVisibleTrendScoreRows(briefingSectorData);
   const selected = getSelectedTrendScoreRow(rows);
   if (selected) {
     state.trendScoreSelectedTicker = selected.ticker;
@@ -8508,6 +8544,25 @@ function renderMarketTrendScoreOverview() {
           class="market-rs-chip${state.trendScoreUniverse === key ? " active" : ""}"
           data-trend-score-universe="${key}"
         >${meta.label}</button>
+      `,
+    )
+    .join("");
+  const briefingSectorChips = [
+    { key: "all", label: "All Trend", count: getTrendScoreRows().length },
+    { key: "briefingAll", label: "Daily Briefing 전체", count: briefingSectorData.allTickers.length },
+    ...briefingSectorData.groups.map((sector) => ({
+      key: sector.key,
+      label: sector.label,
+      count: sector.tickers.length,
+    })),
+  ]
+    .map(
+      (sector) => `
+        <button
+          type="button"
+          class="market-rs-chip market-rs-sector-chip${state.trendScoreBriefingSector === sector.key ? " active" : ""}"
+          data-trend-score-briefing-sector="${sector.key}"
+        >${sector.label}<small>${sector.count}</small></button>
       `,
     )
     .join("");
@@ -8611,6 +8666,7 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${marketTrendScoreData.updatedAt ?? "-"}</span>
             <span class="market-rs-pill">${getTrendScoreUniverseLabel()}</span>
+            <span class="market-rs-pill">${getTrendScoreBriefingSectorLabel(state.trendScoreBriefingSector, briefingSectorData)}</span>
             <span class="market-rs-pill">${rows.length} names</span>
           </div>
         </div>
@@ -8618,6 +8674,10 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Universe</span>
             <div class="market-rs-chip-row">${universeChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Daily Briefing Sector</span>
+            <div class="market-rs-chip-row market-rs-briefing-sector-row">${briefingSectorChips}</div>
           </div>
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Market Cap</span>
@@ -8675,7 +8735,7 @@ function renderMarketTrendScoreOverview() {
           <div class="us-section-head">
             <div>
               <h2>Trend Leaders</h2>
-              <p>${getTrendScoreUniverseLabel()} universe ranked by 10-point trend score and tie-breakers.</p>
+              <p>${getTrendScoreUniverseLabel()} / ${getTrendScoreBriefingSectorLabel(state.trendScoreBriefingSector, briefingSectorData)} ranked by 10-point trend score and tie-breakers.</p>
             </div>
             <div class="trend-score-leader-sortbar" aria-label="Trend leader sort">
               ${leaderSortControls}
@@ -8799,6 +8859,13 @@ function renderMarketTrendScoreOverview() {
   usOverviewRoot.querySelectorAll("[data-trend-score-universe]").forEach((button) => {
     button.addEventListener("click", () => {
       state.trendScoreUniverse = button.dataset.trendScoreUniverse || "all";
+      state.trendScoreSelectedTicker = "";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-trend-score-briefing-sector]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreBriefingSector = button.dataset.trendScoreBriefingSector || "all";
       state.trendScoreSelectedTicker = "";
       render();
     });
@@ -13211,5 +13278,3 @@ sortSelect.addEventListener("change", (event) => {
 
 render();
 refreshBrandMeta();
-
-
