@@ -120,6 +120,7 @@ const marketSubtabMeta = {
   Breadth: { label: "Breadth" },
   RS: { label: "RS" },
   TrendScore: { label: "추세스코어" },
+  Canslim: { label: "CANSLIM" },
   Overview: { label: "Price" },
   Macro: { label: "Macro" },
   Liquidity: { label: "Liquidity" },
@@ -127,7 +128,7 @@ const marketSubtabMeta = {
   FxCommodities: { label: "FX & Commodities" },
 };
 
-const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore"]);
+const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore", "Canslim"]);
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
@@ -343,6 +344,7 @@ const state = {
   trendScoreBriefingSector: "all",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
+  canslimSelectedTicker: "",
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
@@ -7301,6 +7303,151 @@ function renderMarketRsCanslim(row) {
   `;
 }
 
+function getMarketCanslimRows() {
+  const query = state.query.trim().toLowerCase();
+  return Object.values(marketCanslimData.profiles ?? {})
+    .map((profile) => {
+      const candidates = [profile.ticker, ...(profile.aliases ?? [])]
+        .map((ticker) => String(ticker ?? "").toUpperCase())
+        .filter(Boolean);
+      const row = candidates.map((ticker) => getMarketRsRowByTicker(ticker)).find(Boolean) ?? null;
+      return {
+        ticker: profile.ticker,
+        profile,
+        row,
+        name: row?.name ?? profile.ticker,
+        marketCap: row?.marketCap,
+        rsRating: row?.rsRatingAll,
+      };
+    })
+    .filter((entry) => {
+      if (!query) {
+        return true;
+      }
+      return [
+        entry.ticker,
+        entry.name,
+        entry.profile?.catalyst,
+      ]
+        .map((value) => String(value ?? "").toLowerCase())
+        .some((value) => value.includes(query));
+    })
+    .sort((left, right) => {
+      const leftScore = Number(left.rsRating);
+      const rightScore = Number(right.rsRating);
+      if (Number.isFinite(leftScore) && Number.isFinite(rightScore) && leftScore !== rightScore) {
+        return rightScore - leftScore;
+      }
+      return String(left.ticker).localeCompare(String(right.ticker));
+    });
+}
+
+function getSelectedMarketCanslimRow(rows) {
+  return rows.find((entry) => entry.ticker === state.canslimSelectedTicker) ?? rows[0] ?? null;
+}
+
+function renderMarketCanslimOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  const rows = getMarketCanslimRows();
+  const selected = getSelectedMarketCanslimRow(rows);
+  if (selected) {
+    state.canslimSelectedTicker = selected.ticker;
+  }
+  const selectedRow = selected?.row ?? (selected ? { ticker: selected.ticker, name: selected.name } : null);
+  const canslimMarkup = renderMarketRsCanslim(selectedRow);
+  const financialMarkup = renderMarketRsFinancials(selectedRow);
+  const cards = rows
+    .map((entry) => `
+      <button
+        type="button"
+        class="market-rs-card${state.canslimSelectedTicker === entry.ticker ? " active" : ""}"
+        data-canslim-ticker="${entry.ticker}"
+      >
+        <div class="market-rs-card-top">
+          <span class="market-rs-card-ticker">${entry.ticker}</span>
+          <span class="market-rs-card-score">${formatRsNumber(entry.rsRating)}</span>
+        </div>
+        <p class="market-rs-card-name">${entry.name}</p>
+        <p class="market-rs-card-cap">${formatMarketCapCompact(entry.marketCap)}</p>
+        <div class="market-rs-card-meta">
+          <span>CANSLIM</span>
+          <strong>${entry.row ? "Linked" : "Pending RS"}</strong>
+        </div>
+        <div class="market-rs-card-meta">
+          <span>New</span>
+          <strong>${getCanslimStatusLabel(entry.profile?.ratings?.n)}</strong>
+        </div>
+      </button>
+    `)
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-rs-overview">
+      <article class="us-panel">
+        <div class="us-section-head market-rs-head">
+          <div>
+            <h2>CANSLIM</h2>
+            <p>${marketCanslimData.scope?.basis ?? "CANSLIM checklist and investor-facing quarterly financial data."}</p>
+          </div>
+          <div class="market-rs-summary-pills">
+            <span class="market-rs-pill">As of ${marketCanslimData.updatedAt ?? "-"}</span>
+            <span class="market-rs-pill">${rows.length} covered names</span>
+            <span class="market-rs-pill">Financials separated from RS</span>
+          </div>
+        </div>
+      </article>
+
+      <section class="market-rs-layout">
+        <article class="us-panel market-rs-leaders">
+          <div class="us-section-head">
+            <div>
+              <h2>CANSLIM Coverage</h2>
+              <p>현재는 M7 프로토타입입니다. 이후 커버리지 확장 시 이 탭에서만 CANSLIM/재무 데이터를 관리합니다.</p>
+            </div>
+          </div>
+          <div class="market-rs-card-grid">${cards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+        </article>
+
+        <article class="us-panel market-rs-detail">
+          <div class="us-section-head">
+            <div>
+              <h2>${selected?.ticker ?? "-"}</h2>
+              <p>${selected?.name ?? "Select a ticker from the CANSLIM coverage list."}</p>
+            </div>
+            <span class="market-rs-detail-score">${formatRsNumber(selected?.rsRating)}</span>
+          </div>
+          <div class="market-rs-metrics">
+            <div class="market-rs-metric">
+              <span>RS Rating</span>
+              <strong>${formatRsNumber(selected?.rsRating)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>Market Cap</span>
+              <strong>${formatMarketCapCompact(selected?.marketCap)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>RS Link</span>
+              <strong>${selected?.row ? "Available" : "Pending"}</strong>
+            </div>
+          </div>
+          ${canslimMarkup || '<p class="market-rs-empty">CANSLIM profile is not available for this ticker.</p>'}
+          ${financialMarkup}
+        </article>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-canslim-ticker]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.canslimSelectedTicker = button.dataset.canslimTicker;
+      render();
+    });
+  });
+}
+
 function formatUsStockPrice(value, maximumFractionDigits = 2) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -8153,8 +8300,6 @@ function renderMarketRsOverview() {
   const extensionMarkup = ["ema21", "sma50"]
     .map((key) => renderMarketRsExtensionGauge(extension[key]))
     .join("");
-  const canslimMarkup = renderMarketRsCanslim(selected);
-  const financialMarkup = renderMarketRsFinancials(selected);
   const rsChartSeriesChips = MARKET_RS_CHART_SERIES.map(
     (series) => `
       <button
@@ -8306,8 +8451,6 @@ function renderMarketRsOverview() {
             <canvas data-rs-chart="detail"></canvas>
           </div>
           <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price and price-based 10/20/50/200 EMA.</p>
-          ${canslimMarkup}
-          ${financialMarkup}
         </article>
       </section>
 
@@ -12910,7 +13053,7 @@ function renderSubtabs() {
     button.addEventListener("click", () => {
       if (state.tab === "Market") {
         state.marketView = viewKey;
-        if (viewKey === "RS" || viewKey === "TrendScore") {
+        if (viewKey === "RS" || viewKey === "TrendScore" || viewKey === "Canslim") {
           state.query = "";
           if (searchInput) {
             searchInput.value = "";
@@ -13383,7 +13526,8 @@ function renderOpenrouterOverview() {
 function render() {
   destroyCharts();
   ensureValidSelection();
-  const showRsToolbar = state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore");
+  const showRsToolbar =
+    state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore" || state.marketView === "Canslim");
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
   }
@@ -13392,7 +13536,13 @@ function render() {
   }
   if (searchInput) {
     if (showRsToolbar) {
-      searchInput.placeholder = state.marketView === "TrendScore" ? "Search trend score ticker..." : "Search ticker or company...";
+      if (state.marketView === "TrendScore") {
+        searchInput.placeholder = "Search trend score ticker...";
+      } else if (state.marketView === "Canslim") {
+        searchInput.placeholder = "Search CANSLIM ticker...";
+      } else {
+        searchInput.placeholder = "Search ticker or company...";
+      }
     } else {
       searchInput.placeholder = "Search company...";
     }
@@ -13497,6 +13647,10 @@ function render() {
       renderMarketTrendScoreOverview();
       return;
     }
+    if (state.marketView === "Canslim") {
+      renderMarketCanslimOverview();
+      return;
+    }
     return;
   }
 
@@ -13514,7 +13668,7 @@ searchInput.addEventListener("input", (event) => {
     window.clearTimeout(searchRenderTimer);
     searchRenderTimer = null;
   }
-  if (state.tab === "Market" && state.marketView === "TrendScore") {
+  if (state.tab === "Market" && (state.marketView === "TrendScore" || state.marketView === "Canslim")) {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
       render();

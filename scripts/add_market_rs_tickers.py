@@ -450,6 +450,10 @@ def main() -> None:
         print(f"{ticker}: downloaded {len(frame)} rows; market cap ${row['marketCap']:,}.")
 
     if not new_rows:
+        if not args.dry_run and not args.skip_trend:
+            subprocess.run([sys.executable, str(TREND_SCRIPT_PATH)], cwd=ROOT, check=True)
+            bump_script_versions()
+            print("Trend Score data regenerated from current RS data.")
         print("No new RS rows were needed.")
         return
 

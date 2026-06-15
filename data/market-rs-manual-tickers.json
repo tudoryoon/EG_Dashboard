@@ -1,6 +1,28 @@
 {
   "members": [
     {
+      "ticker": "APLD",
+      "name": "Applied Digital Corporation",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 285769539
+    },
+    {
+      "ticker": "IREN",
+      "name": "IREN Limited",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 357378674
+    },
+    {
       "ticker": "SPCE",
       "name": "Virgin Galactic Holdings, Inc.",
       "memberships": {
