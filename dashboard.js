@@ -5332,7 +5332,10 @@ function renderInfraOverview() {
 }
 
 function getMarketBreadthSpreadPanel() {
-  return marketBreadthData.panels?.breadthSpread52w ?? marketBreadthData.panels?.sp500EqualWeightSpread52w ?? null;
+  return marketBreadthData.panels?.primaryQuarter25
+    ?? marketBreadthData.panels?.breadthSpread52w
+    ?? marketBreadthData.panels?.sp500EqualWeightSpread52w
+    ?? null;
 }
 
 function getMarketBreadthSpreadSeriesEntries(panel = getMarketBreadthSpreadPanel()) {
@@ -5372,6 +5375,7 @@ function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys) {
       label: item?.label ?? key,
       description: item?.description ?? "",
       color: item?.color ?? "#344255",
+      isBearish: Boolean(item?.isBearish),
       equalWeighted: item?.equalWeighted ?? null,
       capWeighted: item?.capWeighted ?? null,
       latest: item?.latest ?? null,
@@ -5381,20 +5385,59 @@ function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys) {
       capReturns: labels.map((label) => capMap.get(label) ?? null),
     };
   });
+  const indexSeries = Object.entries(panel?.indices ?? {}).map(([key, item]) => {
+    const itemDates = item?.dates ?? [];
+    const valueMap = new Map(itemDates.map((label, index) => [label, item.values?.[index] ?? null]));
+    const rawValues = labels.map((label) => valueMap.get(label) ?? null);
+    const base = rawValues.find((value) => Number.isFinite(Number(value)));
+    return {
+      key,
+      label: item?.label ?? key,
+      symbol: item?.symbol ?? "",
+      color: item?.color ?? "#6b7280",
+      rawValues,
+      values: rawValues.map((value) => (
+        Number.isFinite(Number(value)) && Number.isFinite(Number(base)) && Number(base) !== 0
+          ? (Number(value) / Number(base)) * 100
+          : null
+      )),
+    };
+  });
   return {
     labels,
     series,
+    indexSeries,
     thresholds: panel?.thresholds ?? [],
+    unit: panel?.unit ?? "percentagePoint",
   };
 }
 
-function formatBreadthSpread(value) {
+function formatBreadthValue(value, unit = "count") {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (unit === "count") {
+    return numeric.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  }
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}%p`;
+}
+
+function formatBreadthDelta(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
   }
   const numeric = Number(value);
   const sign = numeric > 0 ? "+" : "";
-  return `${sign}${numeric.toFixed(2)}%p`;
+  return `${sign}${numeric.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function formatBreadthIndexLevel(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return Number(value).toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
 function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
@@ -5409,11 +5452,12 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
     .flatMap((item) => item.values)
     .filter((value) => Number.isFinite(Number(value)))
     .map(Number);
-  const minValue = finiteValues.length ? Math.min(...finiteValues, -10) : -10;
-  const maxValue = finiteValues.length ? Math.max(...finiteValues, 0) : 0;
-  const padding = Math.max((maxValue - minValue) * 0.12, 2);
-  const yMin = Math.floor((minValue - padding) / 5) * 5;
-  const yMax = Math.ceil((maxValue + padding) / 5) * 5;
+  const minValue = finiteValues.length ? Math.min(...finiteValues) : 0;
+  const maxValue = finiteValues.length ? Math.max(...finiteValues) : 100;
+  const padding = Math.max((maxValue - minValue) * 0.12, payload.unit === "count" ? 100 : 2);
+  const yStep = payload.unit === "count" ? 250 : 5;
+  const yMin = Math.max(0, Math.floor((minValue - padding) / yStep) * yStep);
+  const yMax = Math.ceil((maxValue + padding) / yStep) * yStep;
   const tickIndexes = buildRegularDateTickIndexes(payload.labels, rangeKey);
   const tickSet = new Set(tickIndexes);
 
@@ -5421,13 +5465,30 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
     label: item.label,
     data: item.values,
     borderColor: item.color,
-    backgroundColor: item.color,
-    borderWidth: 2.3,
+    backgroundColor: item.isBearish ? "rgba(185, 28, 28, 0.08)" : "rgba(21, 128, 61, 0.08)",
+    borderWidth: 2.6,
     pointRadius: 0,
     pointHoverRadius: 4,
     pointHitRadius: 10,
-    tension: 0.16,
+    tension: 0.2,
+    fill: item.isBearish ? "-1" : "origin",
     spanGaps: true,
+    yAxisID: "y",
+    meta: item,
+  }));
+  const indexDatasets = payload.indexSeries.map((item) => ({
+    label: `${item.label} (100=base)`,
+    data: item.values,
+    borderColor: item.color,
+    backgroundColor: item.color,
+    borderWidth: 1.9,
+    borderDash: [5, 5],
+    pointRadius: 0,
+    pointHoverRadius: 3,
+    pointHitRadius: 10,
+    tension: 0.12,
+    spanGaps: true,
+    yAxisID: "yIndex",
     meta: item,
   }));
   const thresholdDataset = (value, label, color, dash = [6, 6], width = 1.3) => ({
@@ -5439,18 +5500,22 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
     pointRadius: 0,
     pointHoverRadius: 0,
   });
-  const lineCount = lineDatasets.length;
+  const primaryCount = lineDatasets.length;
+  const lineCount = lineDatasets.length + indexDatasets.length;
+  const datasets = [...lineDatasets, ...indexDatasets];
+  if (payload.unit !== "count") {
+    datasets.push(
+      thresholdDataset(0, "0%p baseline", "rgba(17, 24, 39, 0.72)", [], 1.8),
+      thresholdDataset(-5, "-5%p watch", "rgba(217, 119, 6, 0.48)", [5, 6]),
+      thresholdDataset(-10, "-10%p narrowing", "rgba(220, 38, 38, 0.5)", [2, 6]),
+    );
+  }
 
   const chart = new Chart(canvas, {
     type: "line",
     data: {
       labels: payload.labels,
-      datasets: [
-        ...lineDatasets,
-        thresholdDataset(0, "0%p baseline", "rgba(17, 24, 39, 0.72)", [], 1.8),
-        thresholdDataset(-5, "-5%p watch", "rgba(217, 119, 6, 0.48)", [5, 6]),
-        thresholdDataset(-10, "-10%p narrowing", "rgba(220, 38, 38, 0.5)", [2, 6]),
-      ],
+      datasets,
     },
     options: {
       responsive: true,
@@ -5473,14 +5538,22 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
           callbacks: {
             label: (context) => {
               if (context.datasetIndex >= lineCount) {
-                return `${context.dataset.label}: ${formatBreadthSpread(context.parsed.y)}`;
+                return `${context.dataset.label}: ${formatBreadthValue(context.parsed.y, payload.unit)}`;
+              }
+              if (context.datasetIndex >= primaryCount) {
+                const meta = context.dataset.meta ?? {};
+                const rawValue = meta.rawValues?.[context.dataIndex];
+                return `${meta.label ?? context.dataset.label}: ${Number(context.parsed.y).toFixed(1)} / ${formatBreadthIndexLevel(rawValue)}`;
               }
               const index = context.dataIndex;
               const meta = context.dataset.meta ?? {};
+              if (payload.unit === "count") {
+                return `${context.dataset.label}: ${formatBreadthValue(context.parsed.y, payload.unit)}`;
+              }
               const equalLabel = meta.equalWeighted?.symbol ?? meta.equalWeighted?.label ?? "Equal weight";
               const capLabel = meta.capWeighted?.symbol ?? meta.capWeighted?.label ?? "Benchmark";
               return [
-                `${context.dataset.label}: ${formatBreadthSpread(context.parsed.y)}`,
+                `${context.dataset.label}: ${formatBreadthValue(context.parsed.y, payload.unit)}`,
                 `${equalLabel} 52W: ${formatSignedPercent(meta.equalReturns?.[index])}`,
                 `${capLabel} 52W: ${formatSignedPercent(meta.capReturns?.[index])}`,
               ];
@@ -5508,9 +5581,27 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
           },
           ticks: {
             color: "#77776f",
-            callback: (value) => `${Number(value).toFixed(0)}%p`,
+            callback: (value) => (
+              payload.unit === "count"
+                ? Number(value).toLocaleString("en-US", { maximumFractionDigits: 0 })
+                : `${Number(value).toFixed(0)}%p`
+            ),
           },
-          title: { display: true, text: "52W spread (%p)", color: "#77776f" },
+          title: {
+            display: true,
+            text: payload.unit === "count" ? "Stock count" : "52W spread (%p)",
+            color: "#77776f",
+          },
+        },
+        yIndex: {
+          position: "right",
+          border: { color: "rgba(28,28,26,0.14)" },
+          grid: { display: false },
+          ticks: {
+            color: "#8a8a83",
+            callback: (value) => Number(value).toFixed(0),
+          },
+          title: { display: true, text: "Index rebased to 100", color: "#8a8a83" },
         },
       },
     },
@@ -5541,10 +5632,10 @@ function renderMarketBreadthOverview() {
   const summaryCards = spreadEntries
     .map(([seriesKey, item]) => {
       const latestSpread = Number(item?.latest);
-      const latestClass = Number.isFinite(latestSpread) && latestSpread >= 0 ? "is-positive" : "is-negative";
-      const equalSymbol = item?.equalWeighted?.symbol ?? item?.equalWeighted?.label ?? "Equal";
-      const capSymbol = item?.capWeighted?.symbol ?? item?.capWeighted?.label ?? "Benchmark";
+      const isBearish = Boolean(item?.isBearish);
+      const latestClass = isBearish ? "is-negative" : "is-positive";
       const isSelected = selectedSeriesSet.has(seriesKey);
+      const delta = formatBreadthDelta(item?.delta);
       return `
         <button
           type="button"
@@ -5555,21 +5646,25 @@ function renderMarketBreadthOverview() {
         >
           <div class="market-breadth-summary-top">
             <span>${item?.label ?? "-"}</span>
-            <strong class="${latestClass}">${formatBreadthSpread(item?.latest)}</strong>
+            <strong class="${latestClass}">${formatBreadthValue(item?.latest, spreadPanel?.unit ?? "count")}</strong>
           </div>
-          <p>${equalSymbol} - ${capSymbol}</p>
-          <small>${item?.latestState ?? "-"} · ${item?.updatedAt ?? marketBreadthData.updatedAt ?? "-"}</small>
+          <p>${escapeHtml(item?.description ?? "Stockbee Primary Indicator")}</p>
+          <small>전일 대비 ${delta} · ${item?.updatedAt ?? marketBreadthData.updatedAt ?? "-"}</small>
         </button>
       `;
     })
     .join("");
+  const indexLabels = Object.values(spreadPanel?.indices ?? {})
+    .map((item) => item?.label)
+    .filter(Boolean)
+    .join(" / ");
   usOverviewRoot.innerHTML = `
     <section class="market-breadth-overview">
       <article class="us-panel">
         <div class="us-section-head">
           <div>
             <h2>Market Breadth</h2>
-            <p>Equal-weight proxy 52W return minus benchmark ETF 52W return. Positive means broad participation; negative means the index is being pulled by fewer large leaders.</p>
+            <p>Stockbee Primary Indicator의 분기 기준 +25% 상승 종목 수와 -25% 하락 종목 수를 일자별로 추적합니다. 지수선은 같은 기간 첫 값을 100으로 리베이스합니다.</p>
           </div>
           <div class="market-breadth-actions">
             <a class="market-breadth-link" href="${MARKET_BREADTH_SOURCE_URL}" target="_blank" rel="noreferrer">Open Source Page</a>
@@ -5580,31 +5675,22 @@ function renderMarketBreadthOverview() {
       <article class="us-panel market-breadth-spread-panel">
         <div class="us-section-head">
           <div>
-            <h2>${spreadPanel?.label ?? "52W Breadth Spread"}</h2>
-            <p>${spreadPanel?.subtitle ?? "Equal-weight 52W return minus benchmark 52W return"}</p>
+            <h2>${spreadPanel?.label ?? "Stockbee Primary Indicator"}</h2>
+            <p>${spreadPanel?.subtitle ?? "Quarter +25% / -25% breadth with index overlays"}</p>
           </div>
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${marketBreadthData.updatedAt || "-"}</span>
-            <span class="market-rs-pill">52W spread</span>
+            <span class="market-rs-pill">Daily update</span>
           </div>
         </div>
         <div class="market-breadth-summary-grid">${summaryCards}</div>
         <div class="market-rs-chip-row">${rangeChips}</div>
         <div class="market-breadth-spread-meta">
-          <span>0%p 이상: 내부 확산. 0%p 아래: 대표 대형주 쏠림.</span>
-          <span>-5%p: 경계, -10%p 이하: 강한 쏠림/폭 축소.</span>
-          <span>S&P500: RSP - SPY</span>
-          <span>NASDAQ100: QQEW - QQQ</span>
-          <span>Dow30: EDOW - DIA</span>
-          <span>Russell2000: FNDA - IWM</span>
-          <span>SOX/Semis: XSD - SOXX</span>
-          <span>0%p 위는 확산, 0%p 아래는 대표주 우위</span>
-          <span>-5%p는 경계, -10%p 이하는 쏠림 심화</span>
-          <span>Russell 2000은 FNDA - IWM proxy</span>
-          <span>SOX는 XSD - SOXX 반도체 ETF proxy</span>
-          <span>Proxy: RSP 52W return - SPY 52W return</span>
-          <span>0%p 이상은 확산, -10%p 이하는 대형주 쏠림 심화로 해석</span>
-          <span>무료 데이터 한계상 2004년 4월 이후부터 제공</span>
+          <span>초록선: 분기 +25% 이상 상승 종목 수</span>
+          <span>빨간선: 분기 -25% 이상 하락 종목 수</span>
+          <span>점선: ${indexLabels || "S&P 500 / NASDAQ 100 / SOX"} 리베이스 지수</span>
+          <span>상승 종목 수가 하락 종목 수보다 우위면 시장 내부 확산으로 해석</span>
+          <span>하락 종목 수 급증은 단기 리스크 오프 신호로 점검</span>
         </div>
         <div class="chart-wrap market-breadth-spread-chart-wrap">
           <canvas data-market-breadth-spread-chart></canvas>

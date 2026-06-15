@@ -4424,7 +4424,7 @@ h1 {
 
 .market-breadth-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -4500,10 +4500,6 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.market-breadth-spread-meta span:nth-child(n + 8) {
-  display: none;
 }
 
 .market-breadth-spread-meta span {
