@@ -345,7 +345,7 @@ const state = {
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   canslimSelectedTicker: "",
-  canslimUniverse: "all",
+  canslimUniverse: "sp500",
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
@@ -7147,12 +7147,63 @@ function buildCanslimC(row, financialItem) {
   };
 }
 
-function buildCanslimA(profile) {
+function buildAutoMarketCanslimProfile(row, financialItem) {
+  const quarters = financialItem?.quarters ?? [];
+  const revenueYoyValues = quarters
+    .map((quarter) => Number(quarter.revenueYoyPct))
+    .filter((value) => Number.isFinite(value));
+  const averageRevenueYoy = revenueYoyValues.length
+    ? revenueYoyValues.reduce((sum, value) => sum + value, 0) / revenueYoyValues.length
+    : null;
+  const positiveEpsCount = quarters.filter((quarter) => Number(quarter.epsDiluted) > 0).length;
+  return {
+    ticker: row?.ticker,
+    generated: true,
+    catalyst: "No manual catalyst tag yet. Add a company-specific product, management, industry, or regulatory catalyst before scoring N strictly.",
+    annualNote: quarters.length
+      ? `Proxy only: last ${quarters.length} quarters loaded, ${positiveEpsCount} quarters with positive EPS, average revenue YoY ${
+          averageRevenueYoy === null ? "-" : `${averageRevenueYoy.toFixed(1)}%`
+        }. Strict O'Neil A still needs 3-5Y annual EPS growth.`
+      : "Quarterly financials are not loaded yet. Strict O'Neil A needs 3-5Y annual EPS growth.",
+    institutionNote:
+      "Institutional sponsorship is pending. Add 13F holder count, fund ownership quality, and QoQ ownership trend before scoring I strictly.",
+    ratings: {
+      n: "pending",
+      i: "pending",
+    },
+  };
+}
+
+function buildCanslimA(profile, financialItem) {
+  const quarters = financialItem?.quarters ?? [];
+  const epsValues = quarters
+    .map((quarter) => Number(quarter.epsDiluted))
+    .filter((value) => Number.isFinite(value));
+  const revenueYoyValues = quarters
+    .map((quarter) => Number(quarter.revenueYoyPct))
+    .filter((value) => Number.isFinite(value));
+  const averageRevenueYoy = revenueYoyValues.length
+    ? revenueYoyValues.reduce((sum, value) => sum + value, 0) / revenueYoyValues.length
+    : null;
+  const ttmEps = epsValues.length ? epsValues.reduce((sum, value) => sum + value, 0) : null;
+  let status = "pending";
+  if (epsValues.length >= 4 && ttmEps !== null && averageRevenueYoy !== null) {
+    if (ttmEps > 0 && averageRevenueYoy >= 25) {
+      status = "pass";
+    } else if (ttmEps > 0 && averageRevenueYoy >= 10) {
+      status = "watch";
+    } else {
+      status = "fail";
+    }
+  }
+  if (!profile?.generated) {
+    status = "pending";
+  }
   return {
     key: "A",
     title: "Annual Earnings",
-    status: "pending",
-    summary: "5Y annual EPS pending",
+    status,
+    summary: ttmEps === null ? "5Y annual EPS pending" : `TTM EPS proxy ${formatRsFinancialEps(ttmEps)} / Avg Rev YoY ${formatRsFinancialPercent(averageRevenueYoy)}`,
     detail: profile?.annualNote ?? "최근 3~5년 연간 EPS 성장률 데이터가 아직 연결되지 않았습니다.",
   };
 }
@@ -7257,15 +7308,12 @@ function renderMarketRsCanslim(row) {
   if (!row) {
     return "";
   }
-  const profile = getMarketCanslimProfile(row.ticker);
-  if (!profile) {
-    return "";
-  }
   const ticker = normalizeCanslimTicker(row.ticker);
   const financialItem = marketRsFinancialsData.financials?.[ticker] ?? marketRsFinancialsData.financials?.[row.ticker];
+  const profile = getMarketCanslimProfile(row.ticker) ?? buildAutoMarketCanslimProfile(row, financialItem);
   const checks = [
     buildCanslimC(row, financialItem),
-    buildCanslimA(profile),
+    buildCanslimA(profile, financialItem),
     buildCanslimN(row, profile),
     buildCanslimS(row),
     buildCanslimL(row),
@@ -7295,12 +7343,12 @@ function renderMarketRsCanslim(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>CANSLIM Check</strong>
-          <p>Momentum is kept mostly in RS; this panel emphasizes earnings, catalyst, supply, institutions, and market direction.</p>
+          <p>${profile.generated ? "S&P500 auto proxy. C/S/L/M are calculated; A/N/I require stricter annual, catalyst, and 13F data." : "Momentum is kept mostly in RS; this panel emphasizes earnings, catalyst, supply, institutions, and market direction."}</p>
         </div>
         <span>${score === null ? "Score pending" : `${score}/100 proxy`}</span>
       </div>
       <div class="market-canslim-grid">${rows}</div>
-      <p class="market-rs-financial-note">${marketCanslimData.scope?.basis ?? ""}</p>
+      <p class="market-rs-financial-note">${profile.generated ? "Auto proxy uses RS data and the existing S&P500/NASDAQ100 financial dataset. Do not treat Pending N/I/A as a fail." : marketCanslimData.scope?.basis ?? ""}</p>
     </div>
   `;
 }
@@ -7378,6 +7426,10 @@ function renderMarketCanslimOverview() {
   const canslimMarkup = renderMarketRsCanslim(selectedRow);
   const financialMarkup = renderMarketRsFinancials(selectedRow);
   const profileCoveredCount = rows.filter((entry) => entry.profile).length;
+  const financialCoveredCount = rows.filter((entry) => {
+    const ticker = normalizeCanslimTicker(entry.ticker);
+    return Boolean(marketRsFinancialsData.financials?.[ticker] ?? marketRsFinancialsData.financials?.[entry.ticker]);
+  }).length;
   const universeChips = Object.entries(marketRsData.universes ?? {})
     .map(
       ([key, meta]) => `
@@ -7404,7 +7456,7 @@ function renderMarketCanslimOverview() {
         <p class="market-rs-card-cap">${formatMarketCapCompact(entry.marketCap)}</p>
         <div class="market-rs-card-meta">
           <span>CANSLIM</span>
-          <strong>${entry.profile ? "Profile" : "Pending"}</strong>
+          <strong>${entry.profile ? "Profile" : "Auto"}</strong>
         </div>
         <div class="market-rs-card-meta">
           <span>New</span>
@@ -7426,7 +7478,8 @@ function renderMarketCanslimOverview() {
             <span class="market-rs-pill">As of ${marketRsData.updatedAt ?? "-"}</span>
             <span class="market-rs-pill">${getMarketRsUniverseLabel(state.canslimUniverse)}</span>
             <span class="market-rs-pill">${rows.length} RS names</span>
-            <span class="market-rs-pill">${profileCoveredCount} CANSLIM profiles</span>
+            <span class="market-rs-pill">${financialCoveredCount} financials</span>
+            <span class="market-rs-pill">${profileCoveredCount} manual profiles</span>
             <span class="market-rs-pill">Financials separated from RS</span>
           </div>
         </div>
@@ -7443,7 +7496,7 @@ function renderMarketCanslimOverview() {
           <div class="us-section-head">
             <div>
               <h2>CANSLIM Coverage</h2>
-              <p>RS 유니버스를 그대로 사용합니다. 프로필이 없는 종목은 CANSLIM 세부 판정이 Pending으로 표시됩니다.</p>
+              <p>RS 유니버스를 그대로 사용합니다. 수동 프로필이 없는 종목도 재무/RS 기반 자동 proxy 체크를 표시합니다.</p>
             </div>
           </div>
           <div class="market-rs-card-grid">${cards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
