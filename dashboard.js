@@ -345,6 +345,7 @@ const state = {
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   canslimSelectedTicker: "",
+  canslimUniverse: "all",
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
@@ -7196,7 +7197,8 @@ function buildCanslimS(row) {
 }
 
 function buildCanslimL(row) {
-  const score = Number(getMarketRsUniverseScore(row ?? {}, state.rsUniverse) ?? row?.rsRatingAll);
+  const universe = state.marketView === "Canslim" ? state.canslimUniverse : state.rsUniverse;
+  const score = Number(getMarketRsUniverseScore(row ?? {}, universe) ?? row?.rsRatingAll);
   let status = "pending";
   if (Number.isFinite(score)) {
     if (score >= 80) {
@@ -7293,7 +7295,7 @@ function renderMarketRsCanslim(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>CANSLIM Check</strong>
-          <p>M7 prototype. Momentum is kept mostly in RS; this panel emphasizes earnings, catalyst, supply, institutions, and market direction.</p>
+          <p>Momentum is kept mostly in RS; this panel emphasizes earnings, catalyst, supply, institutions, and market direction.</p>
         </div>
         <span>${score === null ? "Score pending" : `${score}/100 proxy`}</span>
       </div>
@@ -7305,19 +7307,32 @@ function renderMarketRsCanslim(row) {
 
 function getMarketCanslimRows() {
   const query = state.query.trim().toLowerCase();
-  return Object.values(marketCanslimData.profiles ?? {})
-    .map((profile) => {
-      const candidates = [profile.ticker, ...(profile.aliases ?? [])]
-        .map((ticker) => String(ticker ?? "").toUpperCase())
-        .filter(Boolean);
-      const row = candidates.map((ticker) => getMarketRsRowByTicker(ticker)).find(Boolean) ?? null;
+  const universe = state.canslimUniverse || "all";
+  return (marketRsData.rows ?? [])
+    .filter((row) => {
+      if (universe === "sp500") {
+        return Boolean(row.memberships?.sp500);
+      }
+      if (universe === "nasdaq100") {
+        return Boolean(row.memberships?.nasdaq100);
+      }
+      if (universe === "dowjones") {
+        return Boolean(row.memberships?.dowjones);
+      }
+      if (universe === "russell2000") {
+        return Boolean(row.memberships?.russell2000);
+      }
+      return true;
+    })
+    .map((row) => {
+      const profile = getMarketCanslimProfile(row.ticker);
       return {
-        ticker: profile.ticker,
+        ticker: row.ticker,
         profile,
         row,
-        name: row?.name ?? profile.ticker,
-        marketCap: row?.marketCap,
-        rsRating: row?.rsRatingAll,
+        name: row.name ?? row.ticker,
+        marketCap: row.marketCap,
+        rsRating: getMarketRsUniverseScore(row, universe),
       };
     })
     .filter((entry) => {
@@ -7351,6 +7366,9 @@ function renderMarketCanslimOverview() {
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
 
+  if (!marketRsData.universes?.[state.canslimUniverse]) {
+    state.canslimUniverse = "all";
+  }
   const rows = getMarketCanslimRows();
   const selected = getSelectedMarketCanslimRow(rows);
   if (selected) {
@@ -7359,6 +7377,18 @@ function renderMarketCanslimOverview() {
   const selectedRow = selected?.row ?? (selected ? { ticker: selected.ticker, name: selected.name } : null);
   const canslimMarkup = renderMarketRsCanslim(selectedRow);
   const financialMarkup = renderMarketRsFinancials(selectedRow);
+  const profileCoveredCount = rows.filter((entry) => entry.profile).length;
+  const universeChips = Object.entries(marketRsData.universes ?? {})
+    .map(
+      ([key, meta]) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.canslimUniverse === key ? " active" : ""}"
+          data-canslim-universe="${key}"
+        >${meta.label}</button>
+      `,
+    )
+    .join("");
   const cards = rows
     .map((entry) => `
       <button
@@ -7374,7 +7404,7 @@ function renderMarketCanslimOverview() {
         <p class="market-rs-card-cap">${formatMarketCapCompact(entry.marketCap)}</p>
         <div class="market-rs-card-meta">
           <span>CANSLIM</span>
-          <strong>${entry.row ? "Linked" : "Pending RS"}</strong>
+          <strong>${entry.profile ? "Profile" : "Pending"}</strong>
         </div>
         <div class="market-rs-card-meta">
           <span>New</span>
@@ -7393,9 +7423,17 @@ function renderMarketCanslimOverview() {
             <p>${marketCanslimData.scope?.basis ?? "CANSLIM checklist and investor-facing quarterly financial data."}</p>
           </div>
           <div class="market-rs-summary-pills">
-            <span class="market-rs-pill">As of ${marketCanslimData.updatedAt ?? "-"}</span>
-            <span class="market-rs-pill">${rows.length} covered names</span>
+            <span class="market-rs-pill">As of ${marketRsData.updatedAt ?? "-"}</span>
+            <span class="market-rs-pill">${getMarketRsUniverseLabel(state.canslimUniverse)}</span>
+            <span class="market-rs-pill">${rows.length} RS names</span>
+            <span class="market-rs-pill">${profileCoveredCount} CANSLIM profiles</span>
             <span class="market-rs-pill">Financials separated from RS</span>
+          </div>
+        </div>
+        <div class="market-rs-controls">
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Universe</span>
+            <div class="market-rs-chip-row">${universeChips}</div>
           </div>
         </div>
       </article>
@@ -7405,7 +7443,7 @@ function renderMarketCanslimOverview() {
           <div class="us-section-head">
             <div>
               <h2>CANSLIM Coverage</h2>
-              <p>현재는 M7 프로토타입입니다. 이후 커버리지 확장 시 이 탭에서만 CANSLIM/재무 데이터를 관리합니다.</p>
+              <p>RS 유니버스를 그대로 사용합니다. 프로필이 없는 종목은 CANSLIM 세부 판정이 Pending으로 표시됩니다.</p>
             </div>
           </div>
           <div class="market-rs-card-grid">${cards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
@@ -7433,7 +7471,7 @@ function renderMarketCanslimOverview() {
               <strong>${selected?.row ? "Available" : "Pending"}</strong>
             </div>
           </div>
-          ${canslimMarkup || '<p class="market-rs-empty">CANSLIM profile is not available for this ticker.</p>'}
+          ${canslimMarkup || '<p class="market-rs-empty">CANSLIM profile is not available for this ticker yet. RS universe membership and quarterly financials still remain available here.</p>'}
           ${financialMarkup}
         </article>
       </section>
@@ -7443,6 +7481,13 @@ function renderMarketCanslimOverview() {
   usOverviewRoot.querySelectorAll("[data-canslim-ticker]").forEach((button) => {
     button.addEventListener("click", () => {
       state.canslimSelectedTicker = button.dataset.canslimTicker;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-canslim-universe]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.canslimUniverse = button.dataset.canslimUniverse || "all";
+      state.canslimSelectedTicker = "";
       render();
     });
   });
