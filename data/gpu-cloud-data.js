@@ -36,13 +36,13 @@ window.gpuCloudData = {
     unit: "USD/hr",
     updatedAt: "2026-04",
     labels: ["2024-05-01", "2024-08-01", "2024-11-01", "2025-02-01", "2025-05-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-10-01", "2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01"],
-    values: [2.35, 2.3, 2.0, 1.95, 1.95, 1.85, 1.75, 1.75, 1.7, 1.73, 1.73, 1.77, 2.08, 2.35, 3.11],
+    values: [2.35, 2.3, 2.0, 1.95, 1.95, 1.85, 1.75, 1.75, 1.7, 1.73, 1.73, 1.77, 2.08, 2.35, 2.4],
     floor: 1.70,
     floorLabel: "2025-10-01",
-    latestValue: 3.11,
+    latestValue: 2.4,
     latestLabel: "2026-04-01",
     method:
-      "Midpoint values are visually digitized approximations from the public chart. Use this as a directional contract-market benchmark rather than a raw downloadable dataset.",
+      "Midpoint values are approximated from public SemiAnalysis releases. April 2026 uses the public 1Y range midpoint from the GPU Pricing Index table. Use this as a directional contract-market benchmark rather than a raw downloadable dataset.",
   },
   semiAnalysisH100Spot: {
     title: "SemiAnalysis H100 Spot Index",
