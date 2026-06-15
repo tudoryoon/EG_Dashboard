@@ -116,6 +116,15 @@ def as_numeric_series(values: list[object], dates: list[str]) -> pd.Series:
     return series.replace([math.inf, -math.inf], pd.NA)
 
 
+def as_tail_aligned_series(values: list[object], dates: list[str]) -> pd.Series:
+    full_index = pd.Index(pd.to_datetime(dates), name="date")
+    if not values or not dates:
+        return pd.Series(index=full_index, dtype="float64")
+    trimmed_values = values[-len(dates):]
+    aligned_dates = dates[-len(trimmed_values):]
+    return as_numeric_series(trimmed_values, aligned_dates).reindex(full_index)
+
+
 def score_label(score: int | None) -> str:
     if score is None:
         return "-"
@@ -459,12 +468,12 @@ def build_universe_payload(
             continue
         price_values = (history.get("price") or [])[-len(dates):]
         rating_values = (history.get(meta["history_key"]) or [])[-len(dates):]
-        if len(price_values) != len(dates) or len(rating_values) != len(dates):
+        if not price_values or not rating_values:
             continue
         frame_cache_key = (ticker, str(meta["benchmark_key"]))
         cached_frame = frame_cache.get(frame_cache_key)
         if cached_frame is None:
-            price = as_numeric_series(price_values, dates)
+            price = as_tail_aligned_series(price_values, dates)
             benchmark_window = benchmark.reindex(price.index)
             relative = price.div(benchmark_window)
             if relative.dropna().empty:
@@ -472,12 +481,12 @@ def build_universe_payload(
             cached_frame = build_score_frame(price, relative)
             for history_key in ["open", "high", "low", "volume"]:
                 values = (history.get(history_key) or [])[-len(dates):]
-                if len(values) == len(dates):
-                    cached_frame[history_key] = as_numeric_series(values, dates)
+                if values:
+                    cached_frame[history_key] = as_tail_aligned_series(values, dates)
             frame_cache[frame_cache_key] = cached_frame
         frame = cached_frame.copy()
-        frame["rsRating"] = as_numeric_series(rating_values, dates)
-        if frame["score"].dropna().empty:
+        frame["rsRating"] = as_tail_aligned_series(rating_values, dates)
+        if frame["price"].dropna().empty:
             continue
         members.append((ticker, row, history, frame))
 
@@ -490,7 +499,7 @@ def build_universe_payload(
     rows = []
     output_histories: dict[str, dict] = {}
     for ticker, row, _, frame in members:
-        valid_at = latest_valid_index(frame["score"])
+        valid_at = latest_valid_index(frame["score"]) or latest_valid_index(frame["price"])
         if valid_at is None:
             continue
         latest = frame.loc[valid_at]
