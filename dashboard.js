@@ -346,6 +346,7 @@ const state = {
   trendScoreTableSortDirection: "asc",
   canslimSelectedTicker: "",
   canslimUniverse: "sp500",
+  canslimSort: "canslimDesc",
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
@@ -7040,7 +7041,7 @@ function renderMarketRsFinancials(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>Quarterly Financials</strong>
-          <p>Revenue YoY / OPM YoY pp included</p>
+          <p>Latest 8 quarters. Revenue YoY / OPM YoY pp included.</p>
         </div>
         <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
       </div>
@@ -7304,9 +7305,28 @@ function buildCanslimM() {
   };
 }
 
-function renderMarketRsCanslim(row) {
+function getCanslimScoreFromChecks(checks) {
+  const score = checks.reduce((sum, item) => {
+    if (item.status === "pass") {
+      return sum + 1;
+    }
+    if (item.status === "watch") {
+      return sum + 0.5;
+    }
+    return sum;
+  }, 0);
+  return {
+    score,
+    maxScore: checks.length,
+    passCount: checks.filter((item) => item.status === "pass").length,
+    watchCount: checks.filter((item) => item.status === "watch").length,
+    pendingCount: checks.filter((item) => item.status === "pending").length,
+  };
+}
+
+function buildMarketCanslimAnalysis(row) {
   if (!row) {
-    return "";
+    return null;
   }
   const ticker = normalizeCanslimTicker(row.ticker);
   const financialItem = marketRsFinancialsData.financials?.[ticker] ?? marketRsFinancialsData.financials?.[row.ticker];
@@ -7320,10 +7340,27 @@ function renderMarketRsCanslim(row) {
     buildCanslimI(profile),
     buildCanslimM(),
   ];
-  const scored = checks.filter((item) => ["pass", "watch", "fail"].includes(item.status));
-  const score = scored.length
-    ? Math.round(scored.reduce((sum, item) => sum + (item.status === "pass" ? 1 : item.status === "watch" ? 0.5 : 0), 0) / scored.length * 100)
-    : null;
+  return {
+    profile,
+    financialItem,
+    checks,
+    score: getCanslimScoreFromChecks(checks),
+  };
+}
+
+function formatCanslimScore(score) {
+  if (!score || !Number.isFinite(Number(score.score))) {
+    return "-";
+  }
+  return `${Number(score.score).toFixed(1)}/${score.maxScore}`;
+}
+
+function renderMarketRsCanslim(row) {
+  const analysis = buildMarketCanslimAnalysis(row);
+  if (!analysis) {
+    return "";
+  }
+  const { profile, checks, score } = analysis;
   const rows = checks.map((item) => `
     <div class="market-canslim-item${getCanslimStatusClass(item.status)}">
       <div class="market-canslim-letter">${item.key}</div>
@@ -7345,7 +7382,7 @@ function renderMarketRsCanslim(row) {
           <strong>CANSLIM Check</strong>
           <p>${profile.generated ? "S&P500 auto proxy. C/S/L/M are calculated; A/N/I require stricter annual, catalyst, and 13F data." : "Momentum is kept mostly in RS; this panel emphasizes earnings, catalyst, supply, institutions, and market direction."}</p>
         </div>
-        <span>${score === null ? "Score pending" : `${score}/100 proxy`}</span>
+        <span>${formatCanslimScore(score)} proxy</span>
       </div>
       <div class="market-canslim-grid">${rows}</div>
       <p class="market-rs-financial-note">${profile.generated ? "Auto proxy uses RS data and the existing S&P500/NASDAQ100 financial dataset. Do not treat Pending N/I/A as a fail." : marketCanslimData.scope?.basis ?? ""}</p>
@@ -7374,9 +7411,13 @@ function getMarketCanslimRows() {
     })
     .map((row) => {
       const profile = getMarketCanslimProfile(row.ticker);
+      const analysis = buildMarketCanslimAnalysis(row);
       return {
         ticker: row.ticker,
         profile,
+        analysis,
+        canslimScore: analysis?.score?.score ?? 0,
+        canslimMaxScore: analysis?.score?.maxScore ?? 0,
         row,
         name: row.name ?? row.ticker,
         marketCap: row.marketCap,
@@ -7396,6 +7437,29 @@ function getMarketCanslimRows() {
         .some((value) => value.includes(query));
     })
     .sort((left, right) => {
+      if (state.canslimSort === "marketCapDesc") {
+        return (Number(right.marketCap) || 0) - (Number(left.marketCap) || 0);
+      }
+      if (state.canslimSort === "marketCapAsc") {
+        return (Number(left.marketCap) || 0) - (Number(right.marketCap) || 0);
+      }
+      if (state.canslimSort === "rsDesc") {
+        return (Number(right.rsRating) || 0) - (Number(left.rsRating) || 0);
+      }
+      if (state.canslimSort === "rsAsc") {
+        return (Number(left.rsRating) || 0) - (Number(right.rsRating) || 0);
+      }
+      if (state.canslimSort === "canslimAsc") {
+        const scoreDiff = (Number(left.canslimScore) || 0) - (Number(right.canslimScore) || 0);
+        if (scoreDiff !== 0) {
+          return scoreDiff;
+        }
+      } else {
+        const scoreDiff = (Number(right.canslimScore) || 0) - (Number(left.canslimScore) || 0);
+        if (scoreDiff !== 0) {
+          return scoreDiff;
+        }
+      }
       const leftScore = Number(left.rsRating);
       const rightScore = Number(right.rsRating);
       if (Number.isFinite(leftScore) && Number.isFinite(rightScore) && leftScore !== rightScore) {
@@ -7441,6 +7505,24 @@ function renderMarketCanslimOverview() {
       `,
     )
     .join("");
+  const sortChips = [
+    { key: "canslimDesc", label: "CANSLIM ↓" },
+    { key: "canslimAsc", label: "CANSLIM ↑" },
+    { key: "rsDesc", label: "RS ↓" },
+    { key: "rsAsc", label: "RS ↑" },
+    { key: "marketCapDesc", label: "Market Cap ↓" },
+    { key: "marketCapAsc", label: "Market Cap ↑" },
+  ]
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="market-rs-chip${state.canslimSort === item.key ? " active" : ""}"
+          data-canslim-sort="${item.key}"
+        >${item.label}</button>
+      `,
+    )
+    .join("");
   const cards = rows
     .map((entry) => `
       <button
@@ -7456,11 +7538,11 @@ function renderMarketCanslimOverview() {
         <p class="market-rs-card-cap">${formatMarketCapCompact(entry.marketCap)}</p>
         <div class="market-rs-card-meta">
           <span>CANSLIM</span>
-          <strong>${entry.profile ? "Profile" : "Auto"}</strong>
+          <strong>${formatCanslimScore(entry.analysis?.score)}</strong>
         </div>
         <div class="market-rs-card-meta">
-          <span>New</span>
-          <strong>${getCanslimStatusLabel(entry.profile?.ratings?.n)}</strong>
+          <span>Source</span>
+          <strong>${entry.profile ? "Profile" : "Auto"}</strong>
         </div>
       </button>
     `)
@@ -7498,6 +7580,7 @@ function renderMarketCanslimOverview() {
               <h2>CANSLIM Coverage</h2>
               <p>RS 유니버스를 그대로 사용합니다. 수동 프로필이 없는 종목도 재무/RS 기반 자동 proxy 체크를 표시합니다.</p>
             </div>
+            <div class="market-rs-chip-row">${sortChips}</div>
           </div>
           <div class="market-rs-card-grid">${cards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
         </article>
@@ -7520,6 +7603,10 @@ function renderMarketCanslimOverview() {
               <strong>${formatMarketCapCompact(selected?.marketCap)}</strong>
             </div>
             <div class="market-rs-metric">
+              <span>CANSLIM Score</span>
+              <strong>${formatCanslimScore(selected?.analysis?.score)}</strong>
+            </div>
+            <div class="market-rs-metric">
               <span>RS Link</span>
               <strong>${selected?.row ? "Available" : "Pending"}</strong>
             </div>
@@ -7540,6 +7627,13 @@ function renderMarketCanslimOverview() {
   usOverviewRoot.querySelectorAll("[data-canslim-universe]").forEach((button) => {
     button.addEventListener("click", () => {
       state.canslimUniverse = button.dataset.canslimUniverse || "all";
+      state.canslimSelectedTicker = "";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-canslim-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.canslimSort = button.dataset.canslimSort || "canslimDesc";
       state.canslimSelectedTicker = "";
       render();
     });

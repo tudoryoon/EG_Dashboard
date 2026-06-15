@@ -944,7 +944,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
     ir_values_applied = apply_ir_metrics(rows, ir_releases)
     non_gaap_rows = sum(
         1
-        for row in rows[:4]
+        for row in rows[:8]
         if any("Non-GAAP" in str(source) for source in (row.get("metricSources") or {}).values())
     )
 
@@ -958,7 +958,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         "irReleaseCount": len(ir_releases),
         "irValuesApplied": ir_values_applied,
         "nonGaapRows": non_gaap_rows,
-        "quarters": rows[:4],
+        "quarters": rows[:8],
     }
 
 
