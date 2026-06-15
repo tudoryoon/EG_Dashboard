@@ -42,9 +42,10 @@ jobs:
             echo "No market briefing or market price changes detected."
             exit 0
           fi
+          python scripts/bump_data_cache_versions.py data/market-briefing-data.js data/market-price-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-briefing-data.js data/market-price-data.js
+          git add data/market-briefing-data.js data/market-price-data.js index.html
           git commit -m "Update market briefing and market prices" || exit 0
           git pull --rebase origin main
           git push

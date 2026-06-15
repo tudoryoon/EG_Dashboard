@@ -33,9 +33,10 @@ jobs:
             echo "No macro data changes detected."
             exit 0
           fi
+          python scripts/bump_data_cache_versions.py data/macro-indicators-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/macro-indicators-data.js
+          git add data/macro-indicators-data.js index.html
           git commit -m "chore: update macro data" || exit 0
           git pull --rebase origin main
           git push

@@ -31,9 +31,10 @@ jobs:
             echo "No memory data changes detected."
             exit 0
           fi
+          python scripts/bump_data_cache_versions.py data/memory-data-history.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/memory-data-history.js
+          git add data/memory-data-history.js index.html
           git commit -m "Update memory data history" || exit 0
           git pull --rebase origin main
           git push

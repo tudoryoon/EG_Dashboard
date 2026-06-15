@@ -43,9 +43,10 @@ jobs:
             echo "No market RS changes detected."
             exit 0
           fi
+          python scripts/bump_data_cache_versions.py data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js
+          git add data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js index.html
           git commit -m "Update market RS history" || exit 0
           git pull --rebase origin main
           git push
