@@ -7559,6 +7559,25 @@ function getSelectedMarketCanslimRow(rows) {
   return rows.find((entry) => entry.ticker === state.canslimSelectedTicker) ?? rows[0] ?? null;
 }
 
+function getCanslimSortField(sortKey = state.canslimSort) {
+  if (String(sortKey).startsWith("marketCap")) {
+    return "marketCap";
+  }
+  if (String(sortKey).startsWith("rs")) {
+    return "rs";
+  }
+  return "canslim";
+}
+
+function getCanslimSortDirection(sortKey = state.canslimSort) {
+  return String(sortKey).endsWith("Asc") ? "asc" : "desc";
+}
+
+function buildCanslimSortKey(field, direction) {
+  const suffix = direction === "asc" ? "Asc" : "Desc";
+  return `${field}${suffix}`;
+}
+
 function renderMarketCanslimOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -7591,22 +7610,25 @@ function renderMarketCanslimOverview() {
       `,
     )
     .join("");
+  const activeSortField = getCanslimSortField();
+  const activeSortDirection = getCanslimSortDirection();
   const sortChips = [
-    { key: "canslimDesc", label: "CANSLIM ↓" },
-    { key: "canslimAsc", label: "CANSLIM ↑" },
-    { key: "rsDesc", label: "RS ↓" },
-    { key: "rsAsc", label: "RS ↑" },
-    { key: "marketCapDesc", label: "Market Cap ↓" },
-    { key: "marketCapAsc", label: "Market Cap ↑" },
+    { field: "canslim", label: "CANSLIM" },
+    { field: "rs", label: "RS" },
+    { field: "marketCap", label: "Market Cap" },
   ]
     .map(
-      (item) => `
+      (item) => {
+        const active = activeSortField === item.field;
+        const arrow = active ? (activeSortDirection === "asc" ? "↑" : "↓") : "↕";
+        return `
         <button
           type="button"
-          class="market-rs-chip${state.canslimSort === item.key ? " active" : ""}"
-          data-canslim-sort="${item.key}"
-        >${item.label}</button>
-      `,
+          class="market-rs-chip${active ? " active" : ""}"
+          data-canslim-sort-field="${item.field}"
+        >${item.label} ${arrow}</button>
+      `;
+      },
     )
     .join("");
   const cards = rows
@@ -7717,9 +7739,13 @@ function renderMarketCanslimOverview() {
       render();
     });
   });
-  usOverviewRoot.querySelectorAll("[data-canslim-sort]").forEach((button) => {
+  usOverviewRoot.querySelectorAll("[data-canslim-sort-field]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.canslimSort = button.dataset.canslimSort || "canslimDesc";
+      const field = button.dataset.canslimSortField || "canslim";
+      const currentField = getCanslimSortField();
+      const currentDirection = getCanslimSortDirection();
+      const nextDirection = currentField === field && currentDirection === "desc" ? "asc" : "desc";
+      state.canslimSort = buildCanslimSortKey(field, nextDirection);
       state.canslimSelectedTicker = "";
       render();
     });
