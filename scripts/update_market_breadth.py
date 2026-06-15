@@ -51,9 +51,12 @@ PRIMARY_COLUMN_KEYS = {
     ),
 }
 INDEX_PROXIES = {
+    "dow": {"label": "Dow Jones", "symbol": "^DJI", "color": "#6b7280"},
     "sp500": {"label": "S&P 500", "symbol": "^GSPC", "color": "#111827"},
+    "nasdaq": {"label": "NASDAQ Composite", "symbol": "^IXIC", "color": "#0f766e"},
     "nasdaq100": {"label": "NASDAQ 100", "symbol": "^NDX", "color": "#2563eb"},
     "sox": {"label": "SOX", "symbol": "^SOX", "color": "#7c3aed"},
+    "russell2000": {"label": "Russell 2000", "symbol": "^RUT", "color": "#d97706"},
 }
 RANGES = [
     {"key": "1m", "label": "1M"},
@@ -264,7 +267,7 @@ def main() -> None:
     panel = {
         "key": "primaryQuarter25",
         "label": "Stockbee Primary Indicator: Quarter +/-25%",
-        "subtitle": "Number of stocks up/down 25% or more over a quarter. S&P 500, NASDAQ 100 and SOX are overlaid as rebased index lines.",
+        "subtitle": "Number of stocks up/down 25% or more over a quarter. Major US indexes can be overlaid as rebased index lines.",
         "unit": "count",
         "source": {
             "name": "Stockbee Market Monitor",

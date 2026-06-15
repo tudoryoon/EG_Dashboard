@@ -4432,6 +4432,7 @@ h1 {
   appearance: none;
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-left: 4px solid var(--breadth-color, #344255);
+  border-left-style: var(--breadth-line-style, solid);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.86);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
@@ -4494,6 +4495,21 @@ h1 {
   color: #6f6f68;
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.market-breadth-index-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.market-breadth-index-controls > span {
+  color: #6f6f68;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .market-breadth-spread-meta {

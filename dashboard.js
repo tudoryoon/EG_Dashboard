@@ -279,6 +279,7 @@ const state = {
   marketVixFamilyCustomEnd: "",
   marketBreadthRange: marketBreadthData.defaultRange ?? "3y",
   marketBreadthSeriesSelection: [],
+  marketBreadthIndexSelection: [],
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, "3y"]),
   ),
@@ -5352,9 +5353,44 @@ function getSelectedMarketBreadthSeriesKeys(seriesEntries = getMarketBreadthSpre
   return selected.length ? selected : allKeys;
 }
 
-function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys) {
+function getMarketBreadthIndexEntries(panel = getMarketBreadthSpreadPanel()) {
+  return panel?.indices ? Object.entries(panel.indices) : [];
+}
+
+function getSelectedMarketBreadthIndexKeys(indexEntries = getMarketBreadthIndexEntries()) {
+  const allKeys = indexEntries.map(([key]) => key);
+  const selected = (state.marketBreadthIndexSelection ?? []).filter((key) => allKeys.includes(key));
+  return selected.length ? selected : allKeys;
+}
+
+function getMarketBreadthSignalColor(item, currentValue, previousValue) {
+  if (
+    currentValue === null
+    || previousValue === null
+    || currentValue === undefined
+    || previousValue === undefined
+    || !Number.isFinite(Number(currentValue))
+    || !Number.isFinite(Number(previousValue))
+  ) {
+    return item?.neutralColor ?? "#4b5563";
+  }
+  const current = Number(currentValue);
+  const previous = Number(previousValue);
+  if (current === previous) {
+    return item?.neutralColor ?? "#6b7280";
+  }
+  const isImproving = item?.isBearish ? current < previous : current > previous;
+  return isImproving ? "#15803d" : "#b91c1c";
+}
+
+function getMarketBreadthLatestSignalClass(item) {
+  return getMarketBreadthSignalColor(item, item?.latest, item?.previous) === "#15803d" ? "is-positive" : "is-negative";
+}
+
+function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys, selectedIndexKeys) {
   const panel = getMarketBreadthSpreadPanel();
   const selectedSet = new Set(selectedKeys ?? getSelectedMarketBreadthSeriesKeys(getMarketBreadthSpreadSeriesEntries(panel)));
+  const selectedIndexSet = new Set(selectedIndexKeys ?? getSelectedMarketBreadthIndexKeys(getMarketBreadthIndexEntries(panel)));
   const rawSeries = getMarketBreadthSpreadSeriesEntries(panel).filter(([key]) => selectedSet.has(key));
   const allLabels = [
     ...new Set(rawSeries.flatMap(([, item]) => (Array.isArray(item?.dates) ? item.dates : []))),
@@ -5376,6 +5412,8 @@ function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys) {
       description: item?.description ?? "",
       color: item?.color ?? "#344255",
       isBearish: Boolean(item?.isBearish),
+      borderDash: item?.borderDash ?? (item?.isBearish ? [10, 5] : []),
+      neutralColor: item?.neutralColor ?? "#6b7280",
       equalWeighted: item?.equalWeighted ?? null,
       capWeighted: item?.capWeighted ?? null,
       latest: item?.latest ?? null,
@@ -5385,7 +5423,7 @@ function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys) {
       capReturns: labels.map((label) => capMap.get(label) ?? null),
     };
   });
-  const indexSeries = Object.entries(panel?.indices ?? {}).map(([key, item]) => {
+  const indexSeries = Object.entries(panel?.indices ?? {}).filter(([key]) => selectedIndexSet.has(key)).map(([key, item]) => {
     const itemDates = item?.dates ?? [];
     const valueMap = new Map(itemDates.map((label, index) => [label, item.values?.[index] ?? null]));
     const rawValues = labels.map((label) => valueMap.get(label) ?? null);
@@ -5440,11 +5478,11 @@ function formatBreadthIndexLevel(value) {
   return Number(value).toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
-function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
+function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys, selectedIndexKeys) {
   if (typeof Chart === "undefined" || !canvas) {
     return;
   }
-  const payload = buildMarketBreadthSpreadPayload(rangeKey, selectedKeys);
+  const payload = buildMarketBreadthSpreadPayload(rangeKey, selectedKeys, selectedIndexKeys);
   if (!payload.labels.length) {
     return;
   }
@@ -5464,9 +5502,10 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
   const lineDatasets = payload.series.map((item) => ({
     label: item.label,
     data: item.values,
-    borderColor: item.color,
-    backgroundColor: item.isBearish ? "rgba(185, 28, 28, 0.08)" : "rgba(21, 128, 61, 0.08)",
+    borderColor: item.neutralColor,
+    backgroundColor: item.isBearish ? "rgba(185, 28, 28, 0.05)" : "rgba(21, 128, 61, 0.05)",
     borderWidth: 2.6,
+    borderDash: item.borderDash,
     pointRadius: 0,
     pointHoverRadius: 4,
     pointHitRadius: 10,
@@ -5475,6 +5514,9 @@ function createMarketBreadthSpreadChart(canvas, rangeKey, selectedKeys) {
     spanGaps: true,
     yAxisID: "y",
     meta: item,
+    segment: {
+      borderColor: (context) => getMarketBreadthSignalColor(item, context.p1?.parsed?.y, context.p0?.parsed?.y),
+    },
   }));
   const indexDatasets = payload.indexSeries.map((item) => ({
     label: `${item.label} (100=base)`,
@@ -5615,9 +5657,13 @@ function renderMarketBreadthOverview() {
   companyGrid.classList.add("hidden");
   const spreadPanel = getMarketBreadthSpreadPanel();
   const spreadEntries = getMarketBreadthSpreadSeriesEntries(spreadPanel);
+  const indexEntries = getMarketBreadthIndexEntries(spreadPanel);
   const selectedSeriesKeys = getSelectedMarketBreadthSeriesKeys(spreadEntries);
   const selectedSeriesSet = new Set(selectedSeriesKeys);
+  const selectedIndexKeys = getSelectedMarketBreadthIndexKeys(indexEntries);
+  const selectedIndexSet = new Set(selectedIndexKeys);
   state.marketBreadthSeriesSelection = selectedSeriesKeys;
+  state.marketBreadthIndexSelection = selectedIndexKeys;
   const rangeChips = (marketBreadthData.ranges ?? [])
     .map(
       (range) => `
@@ -5629,18 +5675,31 @@ function renderMarketBreadthOverview() {
       `,
     )
     .join("");
+  const indexChips = indexEntries
+    .map(([indexKey, item]) => {
+      const isSelected = selectedIndexSet.has(indexKey);
+      return `
+        <button
+          type="button"
+          class="market-rs-chip${isSelected ? " active" : ""}"
+          style="--index-color:${item?.color ?? "#6b7280"}"
+          data-market-breadth-index="${indexKey}"
+          aria-pressed="${isSelected ? "true" : "false"}"
+        >${item?.label ?? indexKey}</button>
+      `;
+    })
+    .join("");
   const summaryCards = spreadEntries
     .map(([seriesKey, item]) => {
-      const latestSpread = Number(item?.latest);
-      const isBearish = Boolean(item?.isBearish);
-      const latestClass = isBearish ? "is-negative" : "is-positive";
+      const latestClass = getMarketBreadthLatestSignalClass(item);
+      const latestSignalColor = getMarketBreadthSignalColor(item, item?.latest, item?.previous);
       const isSelected = selectedSeriesSet.has(seriesKey);
       const delta = formatBreadthDelta(item?.delta);
       return `
         <button
           type="button"
           class="market-breadth-summary-card${isSelected ? " active" : " inactive"}"
-          style="--breadth-color:${item?.color ?? "#344255"}"
+          style="--breadth-color:${latestSignalColor}; --breadth-line-style:${item?.isBearish ? "dashed" : "solid"}"
           data-market-breadth-series="${seriesKey}"
           aria-pressed="${isSelected ? "true" : "false"}"
         >
@@ -5685,12 +5744,15 @@ function renderMarketBreadthOverview() {
         </div>
         <div class="market-breadth-summary-grid">${summaryCards}</div>
         <div class="market-rs-chip-row">${rangeChips}</div>
+        <div class="market-breadth-index-controls">
+          <span>Index Overlay</span>
+          <div class="market-rs-chip-row">${indexChips}</div>
+        </div>
         <div class="market-breadth-spread-meta">
-          <span>초록선: 분기 +25% 이상 상승 종목 수</span>
-          <span>빨간선: 분기 -25% 이상 하락 종목 수</span>
-          <span>점선: ${indexLabels || "S&P 500 / NASDAQ 100 / SOX"} 리베이스 지수</span>
-          <span>상승 종목 수가 하락 종목 수보다 우위면 시장 내부 확산으로 해석</span>
-          <span>하락 종목 수 급증은 단기 리스크 오프 신호로 점검</span>
+          <span>실선: Quarter +25%, 긴 점선: Quarter -25%</span>
+          <span>초록 구간: 내부 breadth 개선, 빨강 구간: 내부 breadth 악화</span>
+          <span>지수 점선: ${indexLabels || "미국 주요지수"} 첫 값을 100으로 리베이스</span>
+          <span>+25% 상승 종목 증가와 -25% 하락 종목 감소를 같이 확인</span>
         </div>
         <div class="chart-wrap market-breadth-spread-chart-wrap">
           <canvas data-market-breadth-spread-chart></canvas>
@@ -5727,9 +5789,29 @@ function renderMarketBreadthOverview() {
       render();
     });
   });
+  usOverviewRoot.querySelectorAll("[data-market-breadth-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const indexKey = button.dataset.marketBreadthIndex;
+      if (!indexKey) {
+        return;
+      }
+      const allKeys = indexEntries.map(([key]) => key);
+      const current = getSelectedMarketBreadthIndexKeys(indexEntries);
+      const next = current.includes(indexKey)
+        ? current.filter((key) => key !== indexKey)
+        : [...current, indexKey];
+      state.marketBreadthIndexSelection = next.length ? next : allKeys;
+      render();
+    });
+  });
   const spreadCanvas = usOverviewRoot.querySelector("canvas[data-market-breadth-spread-chart]");
   if (spreadCanvas && spreadPanel) {
-    createMarketBreadthSpreadChart(spreadCanvas, state.marketBreadthRange, state.marketBreadthSeriesSelection);
+    createMarketBreadthSpreadChart(
+      spreadCanvas,
+      state.marketBreadthRange,
+      state.marketBreadthSeriesSelection,
+      state.marketBreadthIndexSelection,
+    );
   }
 }
 
