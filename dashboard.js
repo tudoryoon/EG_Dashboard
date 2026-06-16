@@ -6595,7 +6595,7 @@ function renderMarketBriefingOverview() {
   const rotationDailyLeaderMarkup = rotationDailyLeaders
     .map((sector, index) => {
       const topNames = (sector.top ?? [])
-        .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.excessReturns?.["1d"])}`)
+        .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.overviewReturns?.["1d"] ?? item.excessReturns?.["1d"])}`)
         .join(" · ");
       return `
         <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()}">
@@ -6613,7 +6613,7 @@ function renderMarketBriefingOverview() {
   const rotationDailyLaggardMarkup = rotationDailyLaggards
     .map((sector, index) => {
       const bottomNames = (sector.bottom ?? sector.top ?? [])
-        .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.excessReturns?.["1d"])}`)
+        .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.overviewReturns?.["1d"] ?? item.excessReturns?.["1d"])}`)
         .join(" · ");
       return `
         <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()} is-laggard">
