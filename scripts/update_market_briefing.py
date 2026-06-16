@@ -1129,10 +1129,14 @@ def build_rotation_signal(
     enriched_items = []
     for item in snapshots:
         excess = item_excess_returns(item, benchmark_returns)
+        snapshot_returns = item.get("overviewReturns") or {}
+        if not isinstance(snapshot_returns, dict):
+            snapshot_returns = {}
         score = compute_rotation_score(excess)
         enriched_items.append(
             {
                 **item,
+                "returns": snapshot_returns,
                 "excessReturns": excess,
                 "rotationScore": score,
             }
@@ -1166,6 +1170,7 @@ def build_rotation_signal(
                         "name": item["name"],
                         "score": item["rotationScore"],
                         "excessReturns": item["excessReturns"],
+                        "returns": item["returns"],
                     }
                     for item in ranked_items[:3]
                 ],
@@ -1176,6 +1181,7 @@ def build_rotation_signal(
                         "name": item["name"],
                         "score": item["rotationScore"],
                         "excessReturns": item["excessReturns"],
+                        "returns": item["returns"],
                     }
                     for item in list(reversed(ranked_items[-3:]))
                 ],
@@ -1209,6 +1215,7 @@ def build_rotation_signal(
             "sectorLabel": item["sectorLabel"],
             "score": item["rotationScore"],
             "excessReturns": item["excessReturns"],
+            "returns": item["returns"],
             "marketCapUsd": item.get("marketCapUsd"),
         }
 
@@ -1307,6 +1314,7 @@ def build_rotation_signal(
                 "classification": sector["classification"],
                 "score": sector["score"],
                 "excessReturn1d": (sector.get("excessReturns") or {}).get("1d"),
+                "return1d": (sector.get("returns") or (sector.get("excessReturns") or {})).get("1d"),
                 "top": sector_items_by_1d(sector, reverse=True),
             }
             for sector in daily_leaders
@@ -1318,6 +1326,7 @@ def build_rotation_signal(
                 "classification": sector["classification"],
                 "score": sector["score"],
                 "excessReturn1d": (sector.get("excessReturns") or {}).get("1d"),
+                "return1d": (sector.get("returns") or (sector.get("excessReturns") or {})).get("1d"),
                 "bottom": sector_items_by_1d(sector, reverse=False),
             }
             for sector in daily_laggards

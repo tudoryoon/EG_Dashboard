@@ -6087,7 +6087,7 @@ function renderRotationCandidateList(items, emptyText) {
           </div>
           <div class="briefing-rotation-name-stats">
             <b class="${getSignedValueClass(item.score)}">Score ${formatSignedScore(item.score)}</b>
-            <span class="${getSignedValueClass(item.excessReturns?.["1w"])}">1W ${formatSignedPercent(item.excessReturns?.["1w"])}</span>
+            <span class="${getSignedValueClass(item.returns?.["1w"] ?? item.excessReturns?.["1w"])}">1W ${formatSignedPercent(item.returns?.["1w"] ?? item.excessReturns?.["1w"])}</span>
           </div>
         </article>
       `,
@@ -6595,7 +6595,7 @@ function renderMarketBriefingOverview() {
   const rotationDailyLeaderMarkup = rotationDailyLeaders
     .map((sector, index) => {
       const topNames = (sector.top ?? [])
-        .map((item) => `${item.ticker} ${formatSignedPercent(item.excessReturns?.["1d"])}`)
+        .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.excessReturns?.["1d"])}`)
         .join(" · ");
       return `
         <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()}">
@@ -6604,7 +6604,7 @@ function renderMarketBriefingOverview() {
             <strong>${sector.label}</strong>
             <small>${topNames || getRotationClassKorean(sector.classification)}</small>
           </div>
-          <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)}</b>
+          <b class="${getSignedValueClass(sector.return1d ?? sector.excessReturn1d)}">${formatSignedPercent(sector.return1d ?? sector.excessReturn1d)}</b>
         </article>
       `;
     })
@@ -6613,7 +6613,7 @@ function renderMarketBriefingOverview() {
   const rotationDailyLaggardMarkup = rotationDailyLaggards
     .map((sector, index) => {
       const bottomNames = (sector.bottom ?? sector.top ?? [])
-        .map((item) => `${item.ticker} ${formatSignedPercent(item.excessReturns?.["1d"])}`)
+        .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.excessReturns?.["1d"])}`)
         .join(" · ");
       return `
         <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()} is-laggard">
@@ -6622,7 +6622,7 @@ function renderMarketBriefingOverview() {
             <strong>${sector.label}</strong>
             <small>${bottomNames || getRotationClassKorean(sector.classification)}</small>
           </div>
-          <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)}</b>
+          <b class="${getSignedValueClass(sector.return1d ?? sector.excessReturn1d)}">${formatSignedPercent(sector.return1d ?? sector.excessReturn1d)}</b>
         </article>
       `;
     })
