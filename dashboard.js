@@ -6604,9 +6604,10 @@ function renderMarketBriefingOverview() {
           <span>#${index + 1}</span>
           <div>
             <strong>${sector.label}</strong>
+            <small class="briefing-daily-stock-label">섹터 상위 종목 수익률</small>
             <small>${topNames || getRotationClassKorean(sector.classification)}</small>
           </div>
-          <b class="${getSignedValueClass(sector.return1d ?? sector.excessReturn1d)}">${formatSignedPercent(sector.return1d ?? sector.excessReturn1d)}</b>
+          <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)} <em>(vs QQQ)</em></b>
         </article>
       `;
     })
@@ -6622,9 +6623,10 @@ function renderMarketBriefingOverview() {
           <span>#${index + 1}</span>
           <div>
             <strong>${sector.label}</strong>
+            <small class="briefing-daily-stock-label">섹터 하위 종목 수익률</small>
             <small>${bottomNames || getRotationClassKorean(sector.classification)}</small>
           </div>
-          <b class="${getSignedValueClass(sector.return1d ?? sector.excessReturn1d)}">${formatSignedPercent(sector.return1d ?? sector.excessReturn1d)}</b>
+          <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)} <em>(vs QQQ)</em></b>
         </article>
       `;
     })
