@@ -268,7 +268,7 @@ const state = {
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
-  marketTrendEmas: [10, 60, 120],
+  marketTrendEmas: [20],
   marketTrendCustomStart: "",
   marketTrendCustomEnd: "",
   marketVixMetricsRange: "3y",
