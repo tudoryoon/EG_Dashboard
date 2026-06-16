@@ -6087,7 +6087,7 @@ function renderRotationCandidateList(items, emptyText) {
           </div>
           <div class="briefing-rotation-name-stats">
             <b class="${getSignedValueClass(item.score)}">Score ${formatSignedScore(item.score)}</b>
-            <span class="${getSignedValueClass(item.returns?.["1w"] ?? item.excessReturns?.["1w"])}">1W ${formatSignedPercent(item.returns?.["1w"] ?? item.excessReturns?.["1w"])}</span>
+            <span class="${getSignedValueClass(item.excessReturns?.["1w"])}">1W ${formatSignedPercent(item.excessReturns?.["1w"])}</span>
           </div>
         </article>
       `,
