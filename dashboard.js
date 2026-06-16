@@ -6850,12 +6850,12 @@ function renderMarketBriefingOverview() {
         <div class="briefing-daily-leader-panel">
           <div class="briefing-daily-leader-head">
             <strong>Yesterday Sector Leaders</strong>
-            <span>1D excess return vs QQQ, same 50/50 cap/equal sector logic</span>
+            <span>섹터 숫자: 1D vs QQQ 초과수익률 · 아래 종목: 실제 1D 수익률</span>
           </div>
           <div class="briefing-daily-leader-grid">${rotationDailyLeaderMarkup || '<p class="market-rs-empty">전일 초과수익률 데이터를 아직 계산하지 못했습니다.</p>'}</div>
           <div class="briefing-daily-leader-head is-laggard">
             <strong>Yesterday Sector Laggards</strong>
-            <span>Worst 1D excess return vs QQQ, same 50/50 cap/equal sector logic</span>
+            <span>섹터 숫자: 1D vs QQQ 초과수익률 · 아래 종목: 실제 1D 수익률</span>
           </div>
           <div class="briefing-daily-leader-grid">${rotationDailyLaggardMarkup || '<p class="market-rs-empty">전일 약세 섹터 데이터를 아직 계산하지 못했습니다.</p>'}</div>
           <div class="briefing-daily-leader-head is-improver">
