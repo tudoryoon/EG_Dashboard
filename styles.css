@@ -856,6 +856,116 @@ h1 {
   min-height: 280px;
 }
 
+.briefing-rotation-distribution-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid rgba(28, 28, 26, 0.10);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 248, 244, 0.82));
+  padding: 12px;
+}
+
+.briefing-rotation-distribution-head,
+.briefing-rotation-distribution-stats,
+.briefing-rotation-distribution-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.briefing-rotation-distribution-head strong {
+  display: block;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.briefing-rotation-distribution-head span {
+  display: block;
+  max-width: 760px;
+  color: #6b6b64;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.briefing-rotation-distribution-stats {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.briefing-rotation-distribution-stats span {
+  display: grid;
+  min-width: 92px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 7px 9px;
+  color: #6b6b64;
+  font-size: 0.68rem;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.briefing-rotation-distribution-stats b {
+  color: #1f2937;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+}
+
+.briefing-rotation-distribution-legend {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.briefing-rotation-distribution-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #55554f;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.briefing-rotation-distribution-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.briefing-rotation-distribution-legend i.is-leading {
+  background: rgba(20, 128, 78, 0.30);
+  border-color: #137047;
+}
+
+.briefing-rotation-distribution-legend i.is-improving {
+  background: rgba(22, 163, 74, 0.14);
+  border-color: #16a34a;
+}
+
+.briefing-rotation-distribution-legend i.is-weakening {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: #ef4444;
+}
+
+.briefing-rotation-distribution-legend i.is-lagging {
+  background: rgba(220, 38, 38, 0.22);
+  border-color: #b42318;
+}
+
+.briefing-rotation-distribution-legend em {
+  color: #6b6b64;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.briefing-rotation-distribution-chart-wrap {
+  height: 360px;
+  min-height: 360px;
+}
+
 .briefing-rotation-quadrants,
 .briefing-rotation-candidates {
   display: grid;
@@ -4731,6 +4841,21 @@ h1 {
 
   .briefing-rotation-history-head {
     display: grid;
+  }
+
+  .briefing-rotation-distribution-head,
+  .briefing-rotation-distribution-stats {
+    display: grid;
+    justify-content: stretch;
+  }
+
+  .briefing-rotation-distribution-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .briefing-rotation-distribution-stats span {
+    min-width: 0;
+    text-align: left;
   }
 
   .briefing-rotation-history-stats {

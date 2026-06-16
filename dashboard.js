@@ -6228,6 +6228,231 @@ function createBriefingRotationHistoryChart(canvas, sector, history) {
   charts.push(chart);
 }
 
+function calculatePearsonCorrelation(leftValues, rightValues) {
+  const pairs = leftValues
+    .map((left, index) => [Number(left), Number(rightValues[index])])
+    .filter(([left, right]) => Number.isFinite(left) && Number.isFinite(right));
+  if (pairs.length < 10) {
+    return null;
+  }
+  const leftMean = pairs.reduce((sum, [left]) => sum + left, 0) / pairs.length;
+  const rightMean = pairs.reduce((sum, [, right]) => sum + right, 0) / pairs.length;
+  let numerator = 0;
+  let leftVariance = 0;
+  let rightVariance = 0;
+  pairs.forEach(([left, right]) => {
+    const leftDelta = left - leftMean;
+    const rightDelta = right - rightMean;
+    numerator += leftDelta * rightDelta;
+    leftVariance += leftDelta ** 2;
+    rightVariance += rightDelta ** 2;
+  });
+  const denominator = Math.sqrt(leftVariance * rightVariance);
+  if (!denominator) {
+    return null;
+  }
+  return numerator / denominator;
+}
+
+function getBriefingQqqDailyReturnsByDate() {
+  const item = window.marketPriceData?.items?.nasdaq100;
+  const dates = item?.dates ?? [];
+  const values = item?.values ?? [];
+  const returns = new Map();
+  for (let index = 1; index < dates.length; index += 1) {
+    const current = Number(values[index]);
+    const previous = Number(values[index - 1]);
+    if (!dates[index] || !Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) {
+      continue;
+    }
+    returns.set(dates[index], ((current / previous) - 1) * 100);
+  }
+  return returns;
+}
+
+function buildBriefingRotationDistribution(sectors, historyBySector) {
+  const qqqReturnsByDate = getBriefingQqqDailyReturnsByDate();
+  const points = (sectors ?? [])
+    .map((sector) => {
+      const history = (historyBySector?.[sector.key] ?? []).slice(-63);
+      const sectorReturns = [];
+      const qqqReturns = [];
+      history.forEach((item) => {
+        const qqqReturn = qqqReturnsByDate.get(item.date);
+        const excessReturn = Number(item.excessReturns?.["1d"]);
+        if (!Number.isFinite(qqqReturn) || !Number.isFinite(excessReturn)) {
+          return;
+        }
+        qqqReturns.push(qqqReturn);
+        sectorReturns.push(qqqReturn + excessReturn);
+      });
+      const correlation = calculatePearsonCorrelation(sectorReturns, qqqReturns);
+      if (!Number.isFinite(correlation)) {
+        return null;
+      }
+      const score = Number(sector.score);
+      if (!Number.isFinite(score)) {
+        return null;
+      }
+      return {
+        x: score,
+        y: correlation * 100,
+        key: sector.key,
+        label: sector.label,
+        classification: sector.classification,
+        score,
+        sampleSize: sectorReturns.length,
+        correlation,
+        excessReturns: sector.excessReturns ?? {},
+      };
+    })
+    .filter(Boolean);
+
+  const scores = points.map((point) => point.x).filter(Number.isFinite);
+  const minScore = scores.length ? Math.min(...scores, -2) : -6;
+  const maxScore = scores.length ? Math.max(...scores, 2) : 6;
+  const scoreSpread = Math.max(maxScore - minScore, 4);
+  return {
+    points,
+    xMin: minScore - scoreSpread * 0.16,
+    xMax: maxScore + scoreSpread * 0.16,
+  };
+}
+
+function createBriefingRotationDistributionChart(canvas, distribution) {
+  if (typeof Chart === "undefined" || !canvas || !distribution?.points?.length) {
+    return;
+  }
+  const alignmentPlugin = {
+    id: "briefingRotationDistributionGuides",
+    beforeDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea || !scales.x || !scales.y) {
+        return;
+      }
+      ctx.save();
+      const zeroX = scales.x.getPixelForValue(0);
+      if (zeroX >= chartArea.left && zeroX <= chartArea.right) {
+        ctx.strokeStyle = "rgba(31, 41, 55, 0.22)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(zeroX, chartArea.top);
+        ctx.lineTo(zeroX, chartArea.bottom);
+        ctx.stroke();
+      }
+      const zeroY = scales.y.getPixelForValue(0);
+      if (zeroY >= chartArea.top && zeroY <= chartArea.bottom) {
+        ctx.strokeStyle = "rgba(31, 41, 55, 0.22)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, zeroY);
+        ctx.lineTo(chartArea.right, zeroY);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(31, 41, 55, 0.34)";
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([7, 6]);
+      ctx.beginPath();
+      ctx.moveTo(chartArea.left, chartArea.bottom);
+      ctx.lineTo(chartArea.right, chartArea.top);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(31, 41, 55, 0.62)";
+      ctx.font = "700 11px Inter, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("Score-QQQ alignment", chartArea.right - 4, chartArea.top + 14);
+      ctx.restore();
+    },
+  };
+
+  const chart = new Chart(canvas, {
+    type: "scatter",
+    data: {
+      datasets: [
+        {
+          label: "Rotation sectors",
+          data: distribution.points,
+          borderColor: (context) => getRotationHistoryBorderColor(context.raw?.classification),
+          backgroundColor: (context) => getRotationHistoryShadeColor(context.raw?.classification),
+          borderWidth: 1.7,
+          pointRadius: (context) => {
+            const value = Math.abs(Number(context.raw?.excessReturns?.["1m"]));
+            if (!Number.isFinite(value)) {
+              return 6;
+            }
+            return Math.max(5, Math.min(10, 5 + value / 2.8));
+          },
+          pointHoverRadius: 10,
+          pointHitRadius: 14,
+        },
+      ],
+    },
+    plugins: [alignmentPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      parsing: false,
+      onClick: (_event, elements) => {
+        const point = elements?.[0];
+        const raw = point ? chart.data.datasets[point.datasetIndex]?.data?.[point.index] : null;
+        if (!raw?.key) {
+          return;
+        }
+        state.briefingRotationSectorKey = raw.key;
+        render();
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.raw?.label ?? "",
+            label: (context) => {
+              const item = context.raw ?? {};
+              return [
+                `Score ${formatSignedScore(item.score)}`,
+                `QQQ corr ${formatOneDecimal(Number(item.correlation) * 100)}% (${item.sampleSize} sessions)`,
+                `${getRotationClassLabel(item.classification)} / ${getRotationClassKorean(item.classification)}`,
+                `1W vs QQQ ${formatSignedPercent(item.excessReturns?.["1w"])}`,
+                `1M vs QQQ ${formatSignedPercent(item.excessReturns?.["1m"])}`,
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          min: distribution.xMin,
+          max: distribution.xMax,
+          title: { display: true, text: "Rotation Score", color: "#6b6b64" },
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatSignedScore(value),
+            maxTicksLimit: 7,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.12)" },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: -100,
+          max: 100,
+          title: { display: true, text: "63D correlation with QQQ", color: "#6b6b64" },
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `${Math.round(value)}%`,
+            maxTicksLimit: 7,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.12)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
 function getBriefingOverviewSizeClass(items, item) {
   if (!item) {
     return "cap-sm";
@@ -6561,6 +6786,39 @@ function renderMarketBriefingOverview() {
   const selectedRotationSector = allRotationSectors.find((sector) => sector.key === selectedRotationSectorKey) ?? rotationSectors[0] ?? null;
   const selectedRotationHistory = rotationHistory[selectedRotationSectorKey] ?? [];
   const rotationHistoryLatest = selectedRotationHistory.at(-1) ?? {};
+  const rotationDistribution = buildBriefingRotationDistribution(allRotationSectors, rotationHistory);
+  const highQqqCouplingCount = rotationDistribution.points.filter((point) => point.correlation >= 0.65).length;
+  const independentLeaderCount = rotationDistribution.points.filter((point) => point.score > 0 && point.correlation < 0.35).length;
+  const averageQqqCorrelation = rotationDistribution.points.length
+    ? rotationDistribution.points.reduce((sum, point) => sum + point.correlation, 0) / rotationDistribution.points.length
+    : null;
+  const rotationDistributionMarkup = rotationDistribution.points.length
+    ? `
+      <article class="briefing-rotation-distribution-panel">
+        <div class="briefing-rotation-distribution-head">
+          <div>
+            <strong>Rotation Score Distribution</strong>
+            <span>X축은 최신 Rotation Score, Y축은 최근 63거래일 QQQ 상관계수입니다. 점을 누르면 해당 섹터 히스토리로 이동합니다.</span>
+          </div>
+          <div class="briefing-rotation-distribution-stats">
+            <span><b>${formatOneDecimal(Number(averageQqqCorrelation) * 100)}%</b> avg corr</span>
+            <span><b>${highQqqCouplingCount}</b> high QQQ</span>
+            <span><b>${independentLeaderCount}</b> independent leaders</span>
+          </div>
+        </div>
+        <div class="briefing-rotation-distribution-legend">
+          <span><i class="is-leading"></i>주도</span>
+          <span><i class="is-improving"></i>개선</span>
+          <span><i class="is-weakening"></i>둔화</span>
+          <span><i class="is-lagging"></i>소외</span>
+          <em>대각선 근처: 점수 방향과 QQQ 연동성이 같이 정렬된 구간</em>
+        </div>
+        <div class="briefing-rotation-distribution-chart-wrap">
+          <canvas data-briefing-rotation-distribution></canvas>
+        </div>
+      </article>
+    `
+    : "";
   const rotationHistoryLegend = ["Leading", "Improving", "Weakening", "Lagging"]
     .map(
       (classification) => `
@@ -6866,6 +7124,7 @@ function renderMarketBriefingOverview() {
           </div>
           <div class="briefing-rotation-improver-grid">${rotationClassImproverMarkup || '<p class="market-rs-empty">No sectors improved classification versus the previous trading day.</p>'}</div>        </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
+        ${rotationDistributionMarkup}
         ${rotationHistoryMarkup}
         <div class="briefing-rotation-bottom">
           <div class="briefing-rotation-quadrants">${rotationQuadrantMarkup}</div>
@@ -6935,6 +7194,10 @@ function renderMarketBriefingOverview() {
   const rotationHistoryCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-history]");
   if (rotationHistoryCanvas && selectedRotationSector && selectedRotationHistory.length) {
     createBriefingRotationHistoryChart(rotationHistoryCanvas, selectedRotationSector, selectedRotationHistory);
+  }
+  const rotationDistributionCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-distribution]");
+  if (rotationDistributionCanvas && rotationDistribution.points.length) {
+    createBriefingRotationDistributionChart(rotationDistributionCanvas, rotationDistribution);
   }
 }
 
