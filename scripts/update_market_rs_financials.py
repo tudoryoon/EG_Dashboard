@@ -964,11 +964,27 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
 
 def main() -> None:
     rs_payload = read_js_payload(RS_DATA_PATH, "marketRsData")
-    target_rows = [
+    extra_tickers_env = os.environ.get("MARKET_RS_FINANCIALS_EXTRA_TICKERS", "")
+    extra_tickers = {
+        ticker.strip().upper()
+        for ticker in re.split(r"[\s,]+", extra_tickers_env)
+        if ticker.strip()
+    }
+    base_target_rows = [
         row
         for row in rs_payload.get("rows", [])
         if any((row.get("memberships") or {}).get(key) for key in TARGET_MEMBERSHIPS)
     ]
+    target_rows_by_ticker = {
+        str(row.get("ticker") or "").upper(): row
+        for row in base_target_rows
+        if row.get("ticker")
+    }
+    for row in rs_payload.get("rows", []):
+        ticker = str(row.get("ticker") or "").upper()
+        if ticker in extra_tickers and ticker not in target_rows_by_ticker:
+            target_rows_by_ticker[ticker] = row
+    target_rows = list(target_rows_by_ticker.values())
     previous_payload = read_previous_payload()
     force_refresh = os.environ.get("MARKET_RS_FINANCIALS_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
     max_companies_text = os.environ.get("MARKET_RS_FINANCIALS_MAX_COMPANIES", "").strip()
@@ -1024,6 +1040,7 @@ def main() -> None:
     def build_output_payload() -> dict[str, Any]:
         sp500_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("sp500"))
         nasdaq100_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("nasdaq100"))
+        russell2000_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("russell2000"))
         non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
         covered_tickers = set(financials)
         target_tickers = {str(row.get("ticker") or "").upper() for row in target_rows}
@@ -1032,10 +1049,11 @@ def main() -> None:
             "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "scope": {
                 "universe": "S&P 500 + NASDAQ 100",
-                "universes": list(TARGET_MEMBERSHIPS),
+                "universes": list(TARGET_MEMBERSHIPS) + (["russell2000_extra"] if extra_tickers else []),
                 "counts": {
                     "sp500": sp500_count,
                     "nasdaq100": nasdaq100_count,
+                    "russell2000Extra": russell2000_count,
                     "total": len(target_rows),
                     "covered": len([ticker for ticker in covered_tickers if ticker in target_tickers]),
                     "pending": len(pending_tickers),
