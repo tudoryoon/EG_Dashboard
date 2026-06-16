@@ -375,6 +375,8 @@ const state = {
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
   openrouterScale: "linear",
 };
+const marketCanslimAnalysisCache = new Map();
+let marketCanslimDirectionCache = null;
 
 const charts = [];
 
@@ -7449,6 +7451,9 @@ function buildCanslimI(profile) {
 }
 
 function buildCanslimM() {
+  if (marketCanslimDirectionCache) {
+    return marketCanslimDirectionCache;
+  }
   const spy = marketPriceData.items?.sp500 ?? marketPriceData.items?.spy;
   const values = spy?.values ?? [];
   const latest = Number(values.at?.(-1));
@@ -7464,13 +7469,14 @@ function buildCanslimM() {
       status = "fail";
     }
   }
-  return {
+  marketCanslimDirectionCache = {
     key: "M",
     title: "Market Direction",
     status,
     summary: Number.isFinite(latest) ? `S&P 500 vs 50/200 EMA: ${getCanslimStatusLabel(status)}` : "Market trend pending",
     detail: "1차 구현은 S&P 500의 50/200 EMA 위치만 사용합니다. 추후 Breadth/VIX/Distribution day를 결합하는 편이 좋습니다.",
   };
+  return marketCanslimDirectionCache;
 }
 
 function getCanslimScoreFromChecks(checks) {
@@ -7496,6 +7502,11 @@ function buildMarketCanslimAnalysis(row) {
   if (!row) {
     return null;
   }
+  const cacheKey = `${state.canslimUniverse || "all"}:${row.ticker}`;
+  const cached = marketCanslimAnalysisCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
   const ticker = normalizeCanslimTicker(row.ticker);
   const financialItem = marketRsFinancialsData.financials?.[ticker] ?? marketRsFinancialsData.financials?.[row.ticker];
   const profile = getMarketCanslimProfile(row.ticker) ?? buildAutoMarketCanslimProfile(row, financialItem);
@@ -7508,12 +7519,14 @@ function buildMarketCanslimAnalysis(row) {
     buildCanslimI(profile),
     buildCanslimM(),
   ];
-  return {
+  const analysis = {
     profile,
     financialItem,
     checks,
     score: getCanslimScoreFromChecks(checks),
   };
+  marketCanslimAnalysisCache.set(cacheKey, analysis);
+  return analysis;
 }
 
 function formatCanslimScore(score) {
