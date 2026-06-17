@@ -13,6 +13,7 @@ DATA_FILES = [
     "data/market-price-data.js",
 ]
 COMMIT_FILES = DATA_FILES + ["index.html"]
+MAX_UPDATE_ATTEMPTS = 2
 PIP_PACKAGES = [
     "pandas",
     "yfinance",
@@ -82,16 +83,32 @@ def has_changes(paths: list[str]) -> bool:
     return result.returncode != 0
 
 
-def main() -> int:
-    scrub_proxy_environment()
-    ensure_dependencies()
+def ensure_clean_worktree() -> None:
+    result = subprocess.run(
+        ["git", "-c", "http.sslBackend=openssl", "-c", "http.proxy=", "-c", "https.proxy=", "status", "--porcelain"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.stdout.strip():
+        raise RuntimeError("Worktree is not clean before Daily Briefing update; refusing to overwrite local changes.")
+
+
+def reset_to_origin_main() -> None:
+    run(["git", "rebase", "--abort"], check=False)
+    run(["git", "fetch", "origin", "main"])
+    run(["git", "reset", "--hard", "origin/main"])
+
+
+def refresh_and_commit() -> bool:
     run(["git", "pull", "--ff-only", "origin", "main"])
     run([sys.executable, "scripts/update_market_prices.py"])
     run([sys.executable, "scripts/update_market_briefing.py"])
 
     if not has_changes(DATA_FILES):
         print("No market briefing or market price changes detected.")
-        return 0
+        return False
 
     run([sys.executable, "scripts/bump_data_cache_versions.py", *DATA_FILES])
     run(["git", "add", *COMMIT_FILES])
@@ -107,10 +124,37 @@ def main() -> int:
     ], check=False)
     if commit.returncode != 0:
         print("No commit created after staging; exiting.")
-        return 0
-    run(["git", "pull", "--rebase", "origin", "main"])
-    run(["git", "push", "origin", "main"])
-    return 0
+        return False
+    return True
+
+
+def main() -> int:
+    scrub_proxy_environment()
+    ensure_dependencies()
+    ensure_clean_worktree()
+
+    for attempt in range(1, MAX_UPDATE_ATTEMPTS + 1):
+        if attempt > 1:
+            print(f"Retrying Daily Briefing update from fresh origin/main state, attempt {attempt}.", flush=True)
+            reset_to_origin_main()
+
+        has_commit = refresh_and_commit()
+        if not has_commit:
+            return 0
+
+        rebase = run(["git", "pull", "--rebase", "origin", "main"], check=False)
+        if rebase.returncode != 0:
+            print("Rebase failed after commit; will retry from fresh origin/main if attempts remain.", flush=True)
+            continue
+
+        push = run(["git", "push", "origin", "main"], check=False)
+        if push.returncode == 0:
+            return 0
+        print("Push failed after rebase; will retry from fresh origin/main if attempts remain.", flush=True)
+
+    print("Daily Briefing update failed after retry attempts.", flush=True)
+    reset_to_origin_main()
+    return 1
 
 
 if __name__ == "__main__":
