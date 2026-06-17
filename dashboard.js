@@ -4789,41 +4789,6 @@ function buildTtmCapexToOcfPanel() {
   return { labels, series };
 }
 
-function buildTtmCapexToFcfPanel() {
-  const labels = capexDashboardData.quarterLabels ?? [];
-  const capexSeries = capexDashboardData.quarterlyCapex?.series ?? [];
-  const fcfSeries = capexDashboardData.quarterlyFcf?.series ?? [];
-
-  const series = capexSeries
-    .map((capexCompanySeries) => {
-      const fcfCompanySeries = fcfSeries.find((item) => item.key === capexCompanySeries.key);
-      if (!fcfCompanySeries) {
-        return null;
-      }
-
-      const values = labels.map((_, index) => {
-        if (index < 3) {
-          return null;
-        }
-        const capexTtm = sumTrailingWindow(capexCompanySeries.values, index, 4);
-        const fcfTtm = sumTrailingWindow(fcfCompanySeries.values, index, 4);
-        if (!Number.isFinite(capexTtm) || !Number.isFinite(fcfTtm) || fcfTtm === 0) {
-          return null;
-        }
-        return Number(((capexTtm / fcfTtm) * 100).toFixed(1));
-      });
-
-      return {
-        key: capexCompanySeries.key,
-        name: `${capexCompanySeries.name} TTM`,
-        values,
-      };
-    })
-    .filter(Boolean);
-
-  return { labels, series };
-}
-
 function createCapexAggregateComboChart(canvas, panel) {
   if (typeof Chart === "undefined" || !panel) {
     return;
@@ -11539,7 +11504,6 @@ function renderCapexOverview() {
   companyGrid.classList.add("hidden");
   const annualBig5Panel = buildAnnualBig5CapexPanel();
   const ttmCapexToOcfPanel = buildTtmCapexToOcfPanel();
-  const ttmCapexToFcfPanel = buildTtmCapexToFcfPanel();
 
   usOverviewRoot.innerHTML = `
     <section class="cloud-overview">
@@ -11568,17 +11532,6 @@ function renderCapexOverview() {
           </div>
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-capex-chart="ttm-capex-to-ocf"></canvas>
-          </div>
-        </article>
-        <article class="cloud-panel cloud-panel-wide">
-          <div class="us-panel-head">
-            <div>
-              <h3>TTM Capex / FCF</h3>
-              <p>Trailing 4-quarter capex over trailing 4-quarter free cash flow</p>
-            </div>
-          </div>
-          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
-            <canvas data-capex-chart="ttm-capex-to-fcf"></canvas>
           </div>
         </article>
         <article class="cloud-panel cloud-panel-wide">
@@ -11664,7 +11617,6 @@ function renderCapexOverview() {
 
   const annualBig5CapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-big5-capex"]');
   const ttmCapexToOcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="ttm-capex-to-ocf"]');
-  const ttmCapexToFcfCanvas = usOverviewRoot.querySelector('[data-capex-chart="ttm-capex-to-fcf"]');
   const quarterlyCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-capex"]');
   const quarterlyYoyCanvas = usOverviewRoot.querySelector('[data-capex-chart="quarterly-yoy"]');
   const annualCapexCanvas = usOverviewRoot.querySelector('[data-capex-chart="annual-capex"]');
@@ -11678,9 +11630,6 @@ function renderCapexOverview() {
   }
   if (ttmCapexToOcfCanvas) {
     createCapexLineChart(ttmCapexToOcfCanvas, ttmCapexToOcfPanel.labels, ttmCapexToOcfPanel, (value) => `${Number(value).toFixed(0)}%`);
-  }
-  if (ttmCapexToFcfCanvas) {
-    createCapexLineChart(ttmCapexToFcfCanvas, ttmCapexToFcfPanel.labels, ttmCapexToFcfPanel, (value) => `${Number(value).toFixed(0)}%`, -100);
   }
   if (quarterlyCapexCanvas) {
     createCapexBarChart(quarterlyCapexCanvas, capexDashboardData.quarterLabels, capexDashboardData.quarterlyCapex, (value) => `$${Number(value).toFixed(1)}B`);
