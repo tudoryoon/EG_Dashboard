@@ -3,8 +3,8 @@ name: Update Market Briefing Morning
 on:
   workflow_dispatch:
   schedule:
-    # 21:27 UTC = 06:27 KST. Backup run after the 06:00 Codex automation.
-    - cron: "27 21 * * *"
+    # 01:30 UTC = 10:30 KST. Backup run after the 09:59 KST Codex automation.
+    - cron: "30 1 * * *"
 
 permissions:
   contents: write
