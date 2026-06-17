@@ -6501,6 +6501,13 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
   if (typeof Chart === "undefined" || !canvas || !distribution?.points?.length) {
     return;
   }
+  const getDistributionPointRadius = (raw) => {
+    const value = Math.abs(Number(raw?.excessReturns?.["1m"]));
+    if (!Number.isFinite(value)) {
+      return 6;
+    }
+    return Math.max(5, Math.min(10, 5 + value / 2.8));
+  };
   const alignmentPlugin = {
     id: "briefingRotationDistributionGuides",
     beforeDatasetsDraw(chart) {
@@ -6555,15 +6562,9 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
           borderColor: (context) => getRotationHistoryBorderColor(context.raw?.classification),
           backgroundColor: (context) => getRotationHistoryShadeColor(context.raw?.classification),
           borderWidth: 1.7,
-          pointRadius: (context) => {
-            const value = Math.abs(Number(context.raw?.excessReturns?.["1m"]));
-            if (!Number.isFinite(value)) {
-              return 6;
-            }
-            return Math.max(5, Math.min(10, 5 + value / 2.8));
-          },
-          pointHoverRadius: 10,
-          pointHitRadius: 14,
+          pointRadius: (context) => getDistributionPointRadius(context.raw),
+          pointHoverRadius: (context) => getDistributionPointRadius(context.raw) + 2,
+          pointHitRadius: (context) => getDistributionPointRadius(context.raw) + 2,
         },
       ],
     },
@@ -6573,6 +6574,8 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
       maintainAspectRatio: false,
       animation: false,
       parsing: false,
+      interaction: { mode: "nearest", intersect: true },
+      hover: { mode: "nearest", intersect: true },
       onClick: (_event, elements) => {
         const point = elements?.[0];
         const raw = point ? chart.data.datasets[point.datasetIndex]?.data?.[point.index] : null;
