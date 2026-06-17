@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import time
 from datetime import datetime, timezone
@@ -49,6 +50,7 @@ FEDWATCH_SNAPSHOT = {
         {"meetingDate": "2027-12-08", "probabilities": [0.0, 0.3, 2.4, 10.0, 22.7, 29.3, 22.3, 10.0, 2.6, 0.4]},
     ],
 }
+FEDWATCH_DYNAMIC_SOURCE = "CME FedWatch proxy: CME Fed Funds Futures settlements + FRED EFFR"
 ROTATION_WEIGHTS = {
     "1d": 0.20,
     "1w": 0.40,
@@ -1406,7 +1408,23 @@ def build_movers(snapshots: list[dict[str, object]]) -> list[dict[str, object]]:
     return output
 
 
-def build_fedwatch_snapshot() -> dict[str, object]:
+def normalize_fedwatch_range_label(label: str) -> str:
+    match = re.match(r"^\s*(\d+(?:\.\d+)?)%-\s*(\d+(?:\.\d+)?)%\s*$", str(label))
+    if not match:
+        return str(label)
+    lower = int(round(float(match.group(1)) * 100))
+    upper = int(round(float(match.group(2)) * 100))
+    return f"{lower}-{upper}"
+
+
+def fedwatch_column_sort_key(label: str) -> tuple[int, str]:
+    match = re.match(r"^(\d+)-(\d+)$", str(label))
+    if not match:
+        return (10_000, str(label))
+    return (int(match.group(1)), str(label))
+
+
+def build_static_fedwatch_snapshot(reason: str = "") -> dict[str, object]:
     rows = []
     for row in FEDWATCH_SNAPSHOT["rows"]:
         probabilities = [round(float(value), 1) for value in row["probabilities"]]
@@ -1427,7 +1445,72 @@ def build_fedwatch_snapshot() -> dict[str, object]:
         "title": FEDWATCH_SNAPSHOT["title"],
         "columns": FEDWATCH_SNAPSHOT["columns"],
         "rows": rows,
+        "isFallback": True,
+        "fallbackReason": reason,
     }
+
+
+def build_dynamic_fedwatch_snapshot() -> dict[str, object]:
+    from cme_fedwatch import get_probabilities
+
+    payload = get_probabilities()
+    meetings = payload.get("meetings") or []
+    if not meetings:
+        raise RuntimeError("cme-fedwatch returned no meetings")
+
+    columns = sorted(
+        {
+            normalize_fedwatch_range_label(rate_range)
+            for meeting in meetings
+            for rate_range in (meeting.get("probabilities") or {}).keys()
+        },
+        key=fedwatch_column_sort_key,
+    )
+    if not columns:
+        raise RuntimeError("cme-fedwatch returned no probability columns")
+
+    rows = []
+    for meeting in meetings:
+        raw_probabilities = meeting.get("probabilities") or {}
+        normalized_probabilities = {
+            normalize_fedwatch_range_label(rate_range): round(float(value), 1)
+            for rate_range, value in raw_probabilities.items()
+        }
+        probabilities = [normalized_probabilities.get(column, 0.0) for column in columns]
+        max_probability = max(probabilities) if probabilities else None
+        max_index = probabilities.index(max_probability) if max_probability is not None else None
+        rows.append(
+            {
+                "meetingDate": meeting["date"],
+                "contract": meeting.get("contract", ""),
+                "probabilities": probabilities,
+                "maxProbability": max_probability,
+                "maxRange": columns[max_index] if max_index is not None else None,
+            }
+        )
+
+    return {
+        "source": FEDWATCH_DYNAMIC_SOURCE,
+        "sourceUrl": FEDWATCH_SOURCE_URL,
+        "asOf": datetime.now(timezone.utc).date().isoformat(),
+        "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
+        "columns": columns,
+        "rows": rows,
+        "effr": payload.get("effr"),
+        "currentTarget": payload.get("current_target"),
+        "scheduleStatus": payload.get("schedule_status"),
+        "isFallback": False,
+    }
+
+
+def build_fedwatch_snapshot() -> dict[str, object]:
+    try:
+        return build_dynamic_fedwatch_snapshot()
+    except Exception as error:
+        if os.environ.get("FEDWATCH_ALLOW_STATIC_FALLBACK") != "1":
+            raise RuntimeError(f"FedWatch dynamic update failed: {error}") from error
+        print(f"FedWatch dynamic update failed; using static fallback: {error}", flush=True)
+        return build_static_fedwatch_snapshot(str(error))
 
 
 def build_payload() -> dict[str, object]:
