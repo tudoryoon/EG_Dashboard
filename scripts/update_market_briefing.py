@@ -833,6 +833,8 @@ def compute_period_return(series: pd.Series, periods: int) -> float | None:
 
 def compute_period_return_at(series: pd.Series, end_date: pd.Timestamp, periods: int) -> float | None:
     history = series.loc[:end_date].dropna()
+    if history.empty or not is_same_price_date(history.index[-1], end_date):
+        return None
     if len(history) <= periods:
         return None
     current = normalize_number(history.iloc[-1])
@@ -856,6 +858,12 @@ def compute_ytd_return(series: pd.Series) -> float | None:
     if base is None or base == 0:
         return None
     return round((current / base - 1) * 100, 2)
+
+
+def is_same_price_date(left: pd.Timestamp | None, right: pd.Timestamp | None) -> bool:
+    if left is None or right is None:
+        return False
+    return pd.Timestamp(left).normalize() == pd.Timestamp(right).normalize()
 
 
 def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object], pd.DataFrame]:
@@ -885,10 +893,13 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         symbol = company["ticker"]
         series = close_frame[symbol].loc[:latest_timestamp].dropna() if symbol in close_frame.columns else pd.Series(dtype=float)
         price = previous_close = day_change_pct = None
+        price_date = series.index.max() if not series.empty else None
+        is_current_price = is_same_price_date(price_date, latest_timestamp)
         range_returns = {key: None for key in MAP_RANGE_LABELS}
         if len(series) >= 2:
-            day_change_pct, price, previous_close = compute_recent_day_change(series)
-        if not series.empty:
+            computed_day_change_pct, price, previous_close = compute_recent_day_change(series)
+            day_change_pct = computed_day_change_pct if is_current_price else None
+        if not series.empty and is_current_price:
             range_returns.update({key: compute_period_return(series, periods) for key, periods in MAP_RANGE_PERIODS.items()})
             range_returns["1d"] = day_change_pct
             range_returns["ytd"] = compute_ytd_return(series)
@@ -914,6 +925,8 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
             "currency": "KRW" if symbol.endswith(".KS") else "USD",
             "price": round(price, 2) if price is not None else None,
             "previousClose": round(previous_close, 2) if previous_close is not None else None,
+            "priceDate": price_date.strftime("%Y-%m-%d") if price_date is not None else None,
+            "isStalePrice": not is_current_price,
             "dayChangePct": day_change_pct,
             "marketCap": round(market_cap) if market_cap is not None else None,
             "marketCapUsd": round(market_cap_usd) if market_cap_usd is not None else None,
@@ -1074,6 +1087,33 @@ def build_sector_excess_returns(
     return excess_by_range
 
 
+def build_sector_returns(items: list[dict[str, object]]) -> dict[str, float | None]:
+    returns_by_range: dict[str, float | None] = {}
+    for key in ROTATION_WEIGHTS:
+        numerator = 0.0
+        denominator = 0.0
+        equal_weight_values = []
+        for item in items:
+            item_returns = item.get("returns")
+            value = safe_float(item_returns.get(key) if isinstance(item_returns, dict) else None)
+            if value is None:
+                continue
+            weight = safe_float(item.get("marketCapUsd")) or 0.0
+            if weight > 0:
+                numerator += value * weight
+                denominator += weight
+            equal_weight_values.append(value)
+        if denominator > 0:
+            cap_weighted = numerator / denominator
+            equal_weighted = sum(equal_weight_values) / len(equal_weight_values) if equal_weight_values else cap_weighted
+            returns_by_range[key] = round((cap_weighted * 0.5) + (equal_weighted * 0.5), 2)
+        elif equal_weight_values:
+            returns_by_range[key] = round(sum(equal_weight_values) / len(equal_weight_values), 2)
+        else:
+            returns_by_range[key] = None
+    return returns_by_range
+
+
 def build_rotation_history(
     close_frame: pd.DataFrame,
     sector_panels: list[dict[str, object]],
@@ -1148,6 +1188,7 @@ def build_rotation_signal(
         items = [enriched_by_ticker[item["ticker"]] for item in score_source_items if item["ticker"] in enriched_by_ticker]
         item_excess_by_ticker = {str(item["ticker"]): item.get("excessReturns", {}) for item in items}
         excess_by_range = build_sector_excess_returns(items, item_excess_by_ticker)
+        returns_by_range = build_sector_returns(items)
         score = compute_rotation_score(excess_by_range)
         classification = classify_rotation(excess_by_range)
         ranked_items = sorted(
@@ -1164,6 +1205,7 @@ def build_rotation_signal(
                 "label": sector["label"],
                 "score": score,
                 "classification": classification,
+                "returns": returns_by_range,
                 "excessReturns": excess_by_range,
                 "top": [
                     {
