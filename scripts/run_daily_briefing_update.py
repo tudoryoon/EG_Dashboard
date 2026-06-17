@@ -63,6 +63,8 @@ def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProces
     env = os.environ.copy()
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GCM_INTERACTIVE"] = "Never"
+    env["GIT_SSH"] = r"C:\Windows\System32\OpenSSH\ssh.exe"
+    env["GIT_SSH_VARIANT"] = "ssh"
     return subprocess.run(command, cwd=REPO_ROOT, text=True, check=check, env=env)
 
 
