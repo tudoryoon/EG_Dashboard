@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -30,11 +31,35 @@ IMPORT_CHECKS = {
     "openpyxl": "openpyxl",
     "xlrd": "xlrd",
 }
+PROXY_ENV_KEYS = [
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "GIT_PROXY_COMMAND",
+]
 
 
 def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
+    if command and command[0] == "git":
+        command = [
+            "git",
+            "-c",
+            "http.proxy=",
+            "-c",
+            "https.proxy=",
+            *command[1:],
+        ]
     print("+ " + " ".join(command), flush=True)
     return subprocess.run(command, cwd=REPO_ROOT, text=True, check=check)
+
+
+def scrub_proxy_environment() -> None:
+    removed = [key for key in PROXY_ENV_KEYS if os.environ.pop(key, None)]
+    if removed:
+        print(f"Removed proxy environment variables: {', '.join(removed)}", flush=True)
 
 
 def ensure_dependencies() -> None:
@@ -56,6 +81,7 @@ def has_changes(paths: list[str]) -> bool:
 
 
 def main() -> int:
+    scrub_proxy_environment()
     ensure_dependencies()
     run(["git", "pull", "--ff-only", "origin", "main"])
     run([sys.executable, "scripts/update_market_prices.py"])
