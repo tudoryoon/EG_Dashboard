@@ -277,6 +277,9 @@ const state = {
   marketVixFamilyRange: "3y",
   marketVixFamilyCustomStart: "",
   marketVixFamilyCustomEnd: "",
+  marketVixFixedIncomeRange: "3y",
+  marketVixFixedIncomeCustomStart: "",
+  marketVixFixedIncomeCustomEnd: "",
   marketBreadthRange: marketBreadthData.defaultRange ?? "3y",
   marketBreadthSeriesSelection: [],
   marketBreadthIndexSelection: [],
@@ -1466,13 +1469,16 @@ function getMarketVixUpdatedAt() {
 
 function getMarketVixBounds(type = "all") {
   const familyDates = Object.values(marketVixData?.family ?? {}).flatMap((item) => item.dates ?? []);
+  const fixedIncomeDates = Object.values(marketVixData?.fixedIncome ?? {}).flatMap((item) => item.dates ?? []);
   const metricDates = marketVixData?.curve?.historyDates ?? [];
   const allDates =
     type === "family"
       ? [...new Set(familyDates)].sort()
+      : type === "fixedIncome"
+        ? [...new Set(fixedIncomeDates)].sort()
       : type === "metrics"
         ? [...new Set(metricDates)].sort()
-        : [...new Set([...familyDates, ...metricDates])].sort();
+        : [...new Set([...familyDates, ...fixedIncomeDates, ...metricDates])].sort();
   return {
     min: allDates[0] ?? "",
     max: allDates[allDates.length - 1] ?? "",
@@ -1630,6 +1636,61 @@ function buildMarketVixMetricsPayload(rangeKey) {
   return { labels: slicedLabels, datasets };
 }
 
+function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
+  const item = marketVixData?.fixedIncome?.[seriesKey];
+  const labels = (item?.dates ?? []).filter(Boolean);
+  if (!labels.length) {
+    return { item, labels: [], datasets: [] };
+  }
+
+  const selectedWindow = getMarketVixSelectedWindow(
+    rangeKey,
+    labels,
+    labels[0],
+    state.marketVixFixedIncomeCustomStart,
+    state.marketVixFixedIncomeCustomEnd,
+  );
+  const selectedLabels = selectedWindow.labels;
+  const dateIndex = new Map();
+  labels.forEach((date, index) => {
+    dateIndex.set(date, index);
+  });
+
+  return {
+    item,
+    labels: selectedLabels,
+    datasets: [
+      {
+        key: seriesKey,
+        label: item.label,
+        data: selectedLabels.map((label) => {
+          const pointIndex = dateIndex.get(label);
+          return pointIndex === undefined ? null : item.values?.[pointIndex] ?? null;
+        }),
+        borderColor: item.color ?? "#111827",
+        backgroundColor: item.color ?? "#111827",
+        borderWidth: 2.6,
+        tension: 0.16,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
+        spanGaps: true,
+      },
+    ],
+  };
+}
+
+function formatFixedIncomeVixValue(value, unit) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (unit === "%") {
+    return `${numeric.toFixed(2)}%`;
+  }
+  return numeric.toFixed(2);
+}
+
 function createMarketVixFamilyChart(canvas, rangeKey) {
   if (typeof Chart === "undefined") {
     return;
@@ -1745,6 +1806,82 @@ function createMarketVixFamilyChart(canvas, rangeKey) {
             color: "#8d8d86",
           },
           grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMarketVixFixedIncomeChart(canvas, seriesKey, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildMarketVixFixedIncomePayload(seriesKey, rangeKey);
+  const values = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const minValue = values.length ? Math.min(...values) : 0;
+  const maxValue = values.length ? Math.max(...values) : payload.item?.unit === "%" ? 5 : 100;
+  const minSpread = payload.item?.unit === "%" ? 0.5 : 5;
+  const spread = Math.max(maxValue - minValue, minSpread);
+  const yMin = Math.max(0, minValue - spread * 0.12);
+  const yMax = maxValue + spread * 0.12;
+
+  const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const selectedTickSet = new Set(selectedTickIndexes);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: payload.labels, datasets: payload.datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) =>
+              `${context.dataset.label}: ${formatFixedIncomeVixValue(context.parsed.y, payload.item?.unit)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (selectedTickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatFixedIncomeVixValue(value, payload.item?.unit),
+            maxTicksLimit: 6,
+          },
+          title: {
+            display: true,
+            text: payload.item?.unit === "%" ? "Spread (%)" : "Index level",
+            color: "#8d8d86",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
         },
       },
@@ -12911,6 +13048,7 @@ function renderMarketVixOverview() {
   const vixUpdatedAt = getMarketVixUpdatedAt();
   const familyBounds = getMarketVixBounds("family");
   const metricsBounds = getMarketVixBounds("metrics");
+  const fixedIncomeBounds = getMarketVixBounds("fixedIncome");
   const metricsRangeMarkup = (marketVixData.ranges ?? [])
     .map(
       (range) => `
@@ -12930,6 +13068,18 @@ function renderMarketVixOverview() {
           type="button"
           class="m7-range-chip${state.marketVixFamilyRange === range.key ? " active" : ""}"
           data-market-vix-family-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+  const fixedIncomeRangeMarkup = (marketVixData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketVixFixedIncomeRange === range.key ? " active" : ""}"
+          data-market-vix-fixed-income-range="${range.key}"
         >
           ${range.label}
         </button>`,
@@ -13067,6 +13217,53 @@ function renderMarketVixOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
+            <h2>Bond Volatility & Credit Spread</h2>
+            <p>채권 변동성 MOVE Index와 High Yield Spread를 기존 VIX history와 같은 기간 선택 방식으로 표시합니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${fixedIncomeRangeMarkup}</div>
+            <div class="us-price-updated">${marketVixData.source?.fixedIncome ?? ""}</div>
+          </div>
+        </div>
+        <div class="total-date-row">
+          <label class="total-date-field">
+            <span>Start</span>
+            <input
+              type="date"
+              data-vix-fixed-income-start
+              min="${fixedIncomeBounds.min}"
+              max="${fixedIncomeBounds.max}"
+              value="${state.marketVixFixedIncomeCustomStart || ""}"
+            />
+          </label>
+          <label class="total-date-field">
+            <span>End</span>
+            <input
+              type="date"
+              data-vix-fixed-income-end
+              min="${fixedIncomeBounds.min}"
+              max="${fixedIncomeBounds.max}"
+              value="${state.marketVixFixedIncomeCustomEnd || ""}"
+            />
+          </label>
+          <div class="total-date-actions">
+            <button type="button" class="total-date-button" data-vix-fixed-income-apply>Apply</button>
+            <button type="button" class="total-date-button total-date-button-secondary" data-vix-fixed-income-reset>Reset</button>
+          </div>
+        </div>
+        <div class="vix-fixed-income-grid">
+          <div class="us-price-chart-wrap">
+            <canvas data-market-vix="move"></canvas>
+          </div>
+          <div class="us-price-chart-wrap">
+            <canvas data-market-vix="hy-spread"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="us-panel us-price-panel">
+        <div class="us-section-head us-price-head">
+          <div>
             <h2>VIX Family History</h2>
             <p>2018-01-01 이후 수집 가능한 VIX spot 및 term index history입니다.</p>
           </div>
@@ -13126,10 +13323,23 @@ function renderMarketVixOverview() {
     });
   });
 
+  usOverviewRoot.querySelectorAll("[data-market-vix-fixed-income-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketVixFixedIncomeRange = button.dataset.marketVixFixedIncomeRange || marketVixData.defaultRange || "3y";
+      state.marketVixFixedIncomeCustomStart = "";
+      state.marketVixFixedIncomeCustomEnd = "";
+      render();
+    });
+  });
+
   const vixMetricsStartInput = usOverviewRoot.querySelector("[data-vix-metrics-start]");
   const vixMetricsEndInput = usOverviewRoot.querySelector("[data-vix-metrics-end]");
   const vixMetricsApplyButton = usOverviewRoot.querySelector("[data-vix-metrics-apply]");
   const vixMetricsResetButton = usOverviewRoot.querySelector("[data-vix-metrics-reset]");
+  const vixFixedIncomeStartInput = usOverviewRoot.querySelector("[data-vix-fixed-income-start]");
+  const vixFixedIncomeEndInput = usOverviewRoot.querySelector("[data-vix-fixed-income-end]");
+  const vixFixedIncomeApplyButton = usOverviewRoot.querySelector("[data-vix-fixed-income-apply]");
+  const vixFixedIncomeResetButton = usOverviewRoot.querySelector("[data-vix-fixed-income-reset]");
   const vixFamilyStartInput = usOverviewRoot.querySelector("[data-vix-family-start]");
   const vixFamilyEndInput = usOverviewRoot.querySelector("[data-vix-family-end]");
   const vixFamilyApplyButton = usOverviewRoot.querySelector("[data-vix-family-apply]");
@@ -13152,6 +13362,27 @@ function renderMarketVixOverview() {
     vixMetricsResetButton.addEventListener("click", () => {
       state.marketVixMetricsCustomStart = "";
       state.marketVixMetricsCustomEnd = "";
+      render();
+    });
+  }
+
+  if (vixFixedIncomeApplyButton && vixFixedIncomeStartInput && vixFixedIncomeEndInput) {
+    vixFixedIncomeApplyButton.addEventListener("click", () => {
+      const startValue = vixFixedIncomeStartInput.value || "";
+      const endValue = vixFixedIncomeEndInput.value || "";
+      if (startValue && endValue && startValue > endValue) {
+        return;
+      }
+      state.marketVixFixedIncomeCustomStart = startValue;
+      state.marketVixFixedIncomeCustomEnd = endValue;
+      render();
+    });
+  }
+
+  if (vixFixedIncomeResetButton) {
+    vixFixedIncomeResetButton.addEventListener("click", () => {
+      state.marketVixFixedIncomeCustomStart = "";
+      state.marketVixFixedIncomeCustomEnd = "";
       render();
     });
   }
@@ -13185,6 +13416,16 @@ function renderMarketVixOverview() {
   const metricsCanvas = usOverviewRoot.querySelector('[data-market-vix="metrics"]');
   if (metricsCanvas) {
     createMarketVixMetricsChart(metricsCanvas, state.marketVixMetricsRange);
+  }
+
+  const moveCanvas = usOverviewRoot.querySelector('[data-market-vix="move"]');
+  if (moveCanvas) {
+    createMarketVixFixedIncomeChart(moveCanvas, "move", state.marketVixFixedIncomeRange);
+  }
+
+  const hySpreadCanvas = usOverviewRoot.querySelector('[data-market-vix="hy-spread"]');
+  if (hySpreadCanvas) {
+    createMarketVixFixedIncomeChart(hySpreadCanvas, "hySpread", state.marketVixFixedIncomeRange);
   }
 
   const familyCanvas = usOverviewRoot.querySelector('[data-market-vix="family"]');

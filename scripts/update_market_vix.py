@@ -15,6 +15,8 @@ START_DATE = "2018-01-01"
 CURVE_START_DATE = "2025-05-01"
 MAX_CURVE_CONTRACTS = 8
 MONTHLY_VX_PATTERN = re.compile(r"^VX/[FGHJKMNQUVXZ]\d+$")
+FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
+FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 
 RANGES = [
     {"key": "1m", "label": "1M"},
@@ -33,6 +35,25 @@ VIX_FAMILY = [
     {"key": "vix3m", "symbol": "^VIX3M", "label": "VIX 3M", "color": "#2563eb"},
     {"key": "vix6m", "symbol": "^VIX6M", "label": "VIX 6M", "color": "#7c3aed"},
     {"key": "vix1y", "symbol": "^VIX1Y", "label": "VIX 1Y", "color": "#0f766e"},
+]
+
+FIXED_INCOME_SERIES = [
+    {
+        "key": "move",
+        "label": "MOVE Index",
+        "symbol": "^MOVE",
+        "source": "Yahoo Finance delayed close",
+        "color": "#111827",
+        "unit": "index",
+    },
+    {
+        "key": "hySpread",
+        "label": "High Yield Spread",
+        "fredId": "BAMLH0A0HYM2",
+        "source": "FRED / ICE BofA US High Yield OAS",
+        "color": "#b91c1c",
+        "unit": "%",
+    },
 ]
 
 
@@ -68,6 +89,13 @@ def yahoo_chart_url(symbol: str) -> str:
         f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}"
         f"?period1={period1}&period2={period2}&interval=1d&includeAdjustedClose=true&events=div%2Csplits"
     )
+
+
+def fred_csv_urls(series_id: str) -> list[str]:
+    return [
+        f"{FRED_GATEWAY_BASE}{series_id}",
+        f"{FRED_GRAPH_BASE}{series_id}&cosd={START_DATE}",
+    ]
 
 
 def cboe_settlement_csv_url(day: str) -> str:
@@ -124,6 +152,100 @@ def parse_vix_family_item(meta: dict[str, str]) -> dict[str, object]:
         "change": delta,
         "changePct": pct,
     }
+
+
+def parse_yahoo_history_item(meta: dict[str, str]) -> dict[str, object]:
+    payload = fetch_json(yahoo_chart_url(meta["symbol"]))
+    result = payload["chart"]["result"][0]
+    timestamps = result.get("timestamp") or []
+    quote_data = (result.get("indicators") or {}).get("quote") or [{}]
+    adjclose_data = (result.get("indicators") or {}).get("adjclose") or [{}]
+    closes = adjclose_data[0].get("adjclose") or quote_data[0].get("close") or []
+
+    by_date: dict[str, float] = {}
+    for timestamp, close in zip(timestamps, closes):
+        if close is None:
+            continue
+        date_key = datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime("%Y-%m-%d")
+        if date_key < START_DATE:
+            continue
+        by_date[date_key] = round(float(close), 4)
+
+    dates = sorted(by_date)
+    values = [by_date[day] for day in dates]
+    latest = values[-1] if values else None
+    previous = values[-2] if len(values) > 1 else None
+    delta = round(latest - previous, 4) if latest is not None and previous is not None else None
+    pct = round((delta / previous) * 100, 2) if previous not in {None, 0} and delta is not None else None
+
+    return {
+        "label": meta["label"],
+        "symbol": meta["symbol"],
+        "source": meta["source"],
+        "color": meta["color"],
+        "unit": meta["unit"],
+        "dates": dates,
+        "values": values,
+        "latestDate": dates[-1] if dates else "",
+        "latestValue": latest,
+        "previousValue": previous,
+        "change": delta,
+        "changePct": pct,
+    }
+
+
+def parse_fred_history_item(meta: dict[str, str]) -> dict[str, object]:
+    series_id = meta["fredId"]
+    last_error: Exception | None = None
+    for url in fred_csv_urls(series_id):
+        try:
+            reader = csv.DictReader(fetch_text(url).splitlines())
+            by_date: dict[str, float] = {}
+            for row in reader:
+                lower_row = {str(key).lower(): value for key, value in row.items()}
+                raw_date = (row.get("DATE") or lower_row.get("yyyymmdd") or "").strip()
+                raw_value = (row.get(series_id) or lower_row.get(series_id.lower()) or "").strip()
+                if not raw_date or raw_value in {"", "."}:
+                    continue
+                if len(raw_date) == 8 and raw_date.isdigit():
+                    date_key = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
+                else:
+                    date_key = raw_date[:10]
+                if date_key < START_DATE:
+                    continue
+                by_date[date_key] = round(float(raw_value), 4)
+            if by_date:
+                dates = sorted(by_date)
+                values = [by_date[day] for day in dates]
+                latest = values[-1] if values else None
+                previous = values[-2] if len(values) > 1 else None
+                delta = round(latest - previous, 4) if latest is not None and previous is not None else None
+                pct = round((delta / previous) * 100, 2) if previous not in {None, 0} and delta is not None else None
+                return {
+                    "label": meta["label"],
+                    "fredId": series_id,
+                    "source": meta["source"],
+                    "color": meta["color"],
+                    "unit": meta["unit"],
+                    "dates": dates,
+                    "values": values,
+                    "latestDate": dates[-1] if dates else "",
+                    "latestValue": latest,
+                    "previousValue": previous,
+                    "change": delta,
+                    "changePct": pct,
+                }
+        except Exception as error:  # pragma: no cover - network variability
+            last_error = error
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"No FRED observations returned for {series_id}")
+
+
+def parse_fixed_income_item(meta: dict[str, str]) -> dict[str, object]:
+    if meta.get("symbol"):
+        return parse_yahoo_history_item(meta)
+    return parse_fred_history_item(meta)
 
 
 def parse_curve_for_day(day: str) -> CurveSnapshot | None:
@@ -392,11 +514,13 @@ def build_snapshot_cards(vix_family: dict[str, dict[str, object]], curve_payload
 
 def main() -> None:
     vix_family = {meta["key"]: parse_vix_family_item(meta) for meta in VIX_FAMILY}
+    fixed_income = {meta["key"]: parse_fixed_income_item(meta) for meta in FIXED_INCOME_SERIES}
     existing_curves = load_existing_curve_history()
     merged_curves = fetch_curve_history(existing_curves)
     curve_payload = build_curve_payload(merged_curves, vix_family["vix"])
 
     latest_dates = [item.get("latestDate") for item in vix_family.values() if item.get("latestDate")]
+    latest_dates.extend(item.get("latestDate") for item in fixed_income.values() if item.get("latestDate"))
     if curve_payload.get("latestDate"):
         latest_dates.append(curve_payload["latestDate"])
 
@@ -409,8 +533,10 @@ def main() -> None:
         "source": {
             "family": "Yahoo Finance delayed close",
             "futures": "CBOE delayed futures settlement CSV",
+            "fixedIncome": "Yahoo Finance ^MOVE / FRED BAMLH0A0HYM2",
         },
         "family": vix_family,
+        "fixedIncome": fixed_income,
         "curve": curve_payload,
         "snapshots": build_snapshot_cards(vix_family, curve_payload),
     }
