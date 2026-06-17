@@ -56,7 +56,10 @@ def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProces
             *command[1:],
         ]
     print("+ " + " ".join(command), flush=True)
-    return subprocess.run(command, cwd=REPO_ROOT, text=True, check=check)
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "Never"
+    return subprocess.run(command, cwd=REPO_ROOT, text=True, check=check, env=env)
 
 
 def scrub_proxy_environment() -> None:
