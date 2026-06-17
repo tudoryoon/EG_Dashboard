@@ -152,6 +152,7 @@ def dulwich_pull_main() -> None:
         refspecs=MAIN_REFSPEC,
         ff_only=True,
     )
+    sync_origin_main_to_head()
 
 
 def dulwich_push_main() -> int:
@@ -167,7 +168,12 @@ def dulwich_push_main() -> int:
     except Exception as exc:
         print(f"Dulwich push failed: {exc}", flush=True)
         return 1
+    sync_origin_main_to_head()
     return 0
+
+
+def sync_origin_main_to_head() -> None:
+    run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"])
 
 
 def reset_to_origin_main() -> None:
