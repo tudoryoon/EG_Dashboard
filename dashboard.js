@@ -11617,6 +11617,7 @@ function renderCapexOverview() {
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-capex-chart="quarterly-fcf"></canvas>
           </div>
+          ${capexDashboardData.quarterlyFcf.sourceNote ? `<p class="capex-source-note">${capexDashboardData.quarterlyFcf.sourceNote}</p>` : ""}
         </article>
         <article class="cloud-panel">
           <div class="us-panel-head">

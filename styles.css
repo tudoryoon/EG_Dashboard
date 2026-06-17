@@ -2641,6 +2641,13 @@ h1 {
   text-align: center;
 }
 
+.capex-source-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
 .macro-indicator-grid {
   margin-top: 14px;
 }

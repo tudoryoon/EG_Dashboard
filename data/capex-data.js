@@ -78,11 +78,12 @@ window.capexDashboardData = {
     ],
   },
   quarterlyFcf: {
-    title: "Free Cash Flow",
-    subtitle: "Quarterly FCF calculated as OCF minus capex, using the same CY-adjusted quarter buckets",
+    title: "Quarterly Free Cash Flow",
+    subtitle: "Company-reported quarterly FCF where disclosed; otherwise OCF minus cash capex on the same CY-adjusted quarter buckets",
+    sourceNote: "Note: MSFT official FCF uses cash paid for PP&E, not total capex including finance leases. GOOGL Q1 2026 official FCF is $10.1B; the larger financecharts figure is TTM FCF.",
     unit: "$B",
     series: [
-      { key: "msft", name: "MSFT", values: [8.6, 7.7, 9.7, 4.6, 8.7, 7.3, 9.4, 5.0, 10.1, 10.8, 9.0, 6.2, 13.6, 12.9, 13.8, 7.1, 16.2, 15.4, 17.1, 7.7, 19.1, 15.9, 16.6, 4.4, 16.6, 18.1, 19.4, 7.4, 17.9, 18.2, 14.2, -0.3, 15.6, 18.4, 10.2, -1.7, 14.8] },
+      { key: "msft", name: "MSFT", values: [8.6, 7.7, 9.7, 4.6, 8.7, 7.3, 9.4, 5.0, 10.1, 10.8, 9.0, 6.2, 13.6, 12.9, 13.8, 7.1, 16.2, 15.4, 17.1, 7.7, 19.1, 15.9, 16.6, 4.4, 16.6, 18.1, 19.4, 7.4, 17.9, 18.2, 14.2, -0.3, 15.6, 25.6, 25.7, 5.9, 15.8] },
       { key: "googl", name: "GOOGL", values: [6.99, 4.57, 6.36, 5.99, 4.3, 4.62, 7.92, 5.92, 7.36, 6.48, 8.77, 8.35, 5.49, 8.61, 11.59, 17.22, 13.36, 16.4, 18.68, 18.52, 15.31, 12.57, 16.12, 16.0, 17.21, 21.81, 22.64, 7.88, 16.79, 13.41, 17.64, 24.82, 19.0, 5.25, 24.45, 24.55, 10.13] },
       { key: "meta", name: "META", values: [3.83, 3.96, 4.34, 5.44, 5.09, 2.84, 4.16, 3.23, 5.34, 4.82, 5.62, 4.86, 7.34, 0.54, 5.92, 9.18, 7.78, 8.46, 9.56, 12.56, 8.55, 4.45, 0.18, 5.28, 6.91, 10.95, 13.64, 11.5, 12.48, 10.93, 15.5, 13.16, 10.31, 8.59, 10.63, 14.06, 12.36] },
       { key: "amzn", name: "AMZN", values: [-3.75, 0.69, 0.72, 8.78, -4.9, 4.16, 5.25, 12.77, -1.49, 5.54, 3.2, 14.39, -3.7, 13.14, 0.94, 15.58, -7.88, -1.59, -8.45, 3.17, -17.75, -6.72, -4.98, 12.61, -9.41, 5.04, 8.72, 27.91, 4.07, 7.68, 3.38, 17.77, -8.02, 0.32, 0.4, 16.1, -18.2] },
