@@ -875,6 +875,38 @@ h1 {
   gap: 12px;
 }
 
+.briefing-rotation-distribution-side {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.briefing-rotation-distribution-controls {
+  display: inline-flex;
+  gap: 6px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 4px;
+}
+
+.briefing-rotation-distribution-benchmark {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #62625b;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  padding: 6px 11px;
+}
+
+.briefing-rotation-distribution-benchmark.active {
+  background: #20201d;
+  color: #fff;
+}
+
 .briefing-rotation-distribution-head strong {
   display: block;
   color: var(--text);
@@ -4854,6 +4886,19 @@ h1 {
   .briefing-rotation-distribution-stats {
     display: grid;
     justify-content: stretch;
+  }
+
+  .briefing-rotation-distribution-side {
+    justify-items: stretch;
+  }
+
+  .briefing-rotation-distribution-controls {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .briefing-rotation-distribution-benchmark {
+    flex: 1;
   }
 
   .briefing-rotation-distribution-stats {
