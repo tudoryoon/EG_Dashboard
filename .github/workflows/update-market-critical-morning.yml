@@ -3,8 +3,11 @@ name: Update Market Briefing Morning
 on:
   workflow_dispatch:
   schedule:
-    # 21:11 UTC = 06:11 KST. Backup run for Daily Briefing if local automation is unavailable.
+    # Backup runs for Daily Briefing if local automation is unavailable.
+    # 20:51/21:11/21:31 UTC = 05:51/06:11/06:31 KST.
+    - cron: "51 20 * * *"
     - cron: "11 21 * * *"
+    - cron: "31 21 * * *"
 
 permissions:
   contents: write
