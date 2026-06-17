@@ -65,7 +65,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.backup-guard.outputs.should_run == 'true'
-        run: python -m pip install pandas yfinance requests cme-fedwatch
+        run: python -m pip install pandas yfinance requests
 
       - name: Refresh market prices and briefing
         if: steps.backup-guard.outputs.should_run == 'true'

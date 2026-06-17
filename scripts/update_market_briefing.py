@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import re
 import time
 from datetime import datetime, timezone
@@ -28,12 +27,14 @@ BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
 FEDWATCH_SOURCE_URL = "https://www.cmegroup.com/ko/markets/interest-rates/cme-fedwatch-tool.html"
+FEDWATCH_MIRROR_URL = "https://www.oanda.jp/lab-education/dictionary/fedwatchtool/"
+FEDWATCH_DISPLAY_COLUMNS = ["250-275", "275-300", "300-325", "325-350", "350-375", "375-400", "400-425", "425-450", "450-475", "475-500"]
 FEDWATCH_SNAPSHOT = {
     "source": "CME FedWatch",
     "sourceUrl": FEDWATCH_SOURCE_URL,
     "asOf": "2026-06-12",
     "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
-    "columns": ["250-275", "275-300", "300-325", "325-350", "350-375", "375-400", "400-425", "425-450", "450-475", "475-500"],
+    "columns": FEDWATCH_DISPLAY_COLUMNS,
     "rows": [
         {"meetingDate": "2026-06-17", "probabilities": [0.0, 0.0, 0.0, 1.5, 98.5, 0.0, 0.0, 0.0, 0.0, 0.0]},
         {"meetingDate": "2026-07-29", "probabilities": [0.0, 0.0, 0.0, 1.4, 91.3, 7.4, 0.0, 0.0, 0.0, 0.0]},
@@ -50,7 +51,6 @@ FEDWATCH_SNAPSHOT = {
         {"meetingDate": "2027-12-08", "probabilities": [0.0, 0.3, 2.4, 10.0, 22.7, 29.3, 22.3, 10.0, 2.6, 0.4]},
     ],
 }
-FEDWATCH_DYNAMIC_SOURCE = "CME FedWatch proxy: CME Fed Funds Futures settlements + FRED EFFR"
 ROTATION_WEIGHTS = {
     "1d": 0.20,
     "1w": 0.40,
@@ -1424,6 +1424,50 @@ def fedwatch_column_sort_key(label: str) -> tuple[int, str]:
     return (int(match.group(1)), str(label))
 
 
+def strip_html_tags(value: str) -> str:
+    value = re.sub(r"<br\s*/?>", " ", value, flags=re.IGNORECASE)
+    value = re.sub(r"<[^>]+>", "", value)
+    return unescape(value).replace("\xa0", " ").strip()
+
+
+def parse_percent_cell(value: object) -> float:
+    text = strip_html_tags(str(value)).replace("%", "").replace(",", "").strip()
+    if not text or text in {"-", "--"}:
+        return 0.0
+    return round(float(text), 1)
+
+
+def normalize_fedwatch_date(value: object) -> str:
+    text = strip_html_tags(str(value)).strip()
+    match = re.search(r"(\d{4})[/-](\d{1,2})[/-](\d{1,2})", text)
+    if not match:
+        raise ValueError(f"unrecognized FedWatch meeting date: {text!r}")
+    year, month, day = (int(part) for part in match.groups())
+    return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def extract_html_table_cells(row_html: str) -> list[str]:
+    return [
+        strip_html_tags(match.group(2))
+        for match in re.finditer(r"<(t[dh])\b[^>]*>(.*?)</\1>", row_html, flags=re.IGNORECASE | re.DOTALL)
+    ]
+
+
+def find_fedwatch_table(html: str) -> list[list[str]]:
+    for table_match in re.finditer(r"<table\b[^>]*>.*?</table>", html, flags=re.IGNORECASE | re.DOTALL):
+        table_html = table_match.group(0)
+        if "300-325" not in table_html or "FOMC" not in table_html:
+            continue
+        rows = []
+        for row_match in re.finditer(r"<tr\b[^>]*>.*?</tr>", table_html, flags=re.IGNORECASE | re.DOTALL):
+            cells = extract_html_table_cells(row_match.group(0))
+            if cells:
+                rows.append(cells)
+        if len(rows) >= 2:
+            return rows
+    raise RuntimeError("FedWatch probability table was not found in OANDA mirror HTML")
+
+
 def build_static_fedwatch_snapshot(reason: str = "") -> dict[str, object]:
     rows = []
     for row in FEDWATCH_SNAPSHOT["rows"]:
@@ -1450,66 +1494,50 @@ def build_static_fedwatch_snapshot(reason: str = "") -> dict[str, object]:
     }
 
 
-def build_dynamic_fedwatch_snapshot() -> dict[str, object]:
-    from cme_fedwatch import get_probabilities
-
-    payload = get_probabilities()
-    meetings = payload.get("meetings") or []
-    if not meetings:
-        raise RuntimeError("cme-fedwatch returned no meetings")
-
-    columns = sorted(
-        {
-            normalize_fedwatch_range_label(rate_range)
-            for meeting in meetings
-            for rate_range in (meeting.get("probabilities") or {}).keys()
-        },
-        key=fedwatch_column_sort_key,
-    )
-    if not columns:
-        raise RuntimeError("cme-fedwatch returned no probability columns")
-
+def build_mirror_fedwatch_snapshot() -> dict[str, object]:
+    response = requests.get(FEDWATCH_MIRROR_URL, headers=USER_AGENT, timeout=30)
+    response.raise_for_status()
+    table_rows = find_fedwatch_table(response.text)
+    source_columns = [normalize_fedwatch_range_label(column) for column in table_rows[0][1:]]
+    columns = sorted(set(FEDWATCH_DISPLAY_COLUMNS + source_columns), key=fedwatch_column_sort_key)
     rows = []
-    for meeting in meetings:
-        raw_probabilities = meeting.get("probabilities") or {}
-        normalized_probabilities = {
-            normalize_fedwatch_range_label(rate_range): round(float(value), 1)
-            for rate_range, value in raw_probabilities.items()
-        }
-        probabilities = [normalized_probabilities.get(column, 0.0) for column in columns]
+    for table_row in table_rows[1:]:
+        if len(table_row) < 2:
+            continue
+        meeting_date = normalize_fedwatch_date(table_row[0])
+        by_column = {}
+        for column, value in zip(source_columns, table_row[1:]):
+            by_column[column] = parse_percent_cell(value)
+        probabilities = [by_column.get(column, 0.0) for column in columns]
         max_probability = max(probabilities) if probabilities else None
         max_index = probabilities.index(max_probability) if max_probability is not None else None
         rows.append(
             {
-                "meetingDate": meeting["date"],
-                "contract": meeting.get("contract", ""),
+                "meetingDate": meeting_date,
                 "probabilities": probabilities,
                 "maxProbability": max_probability,
                 "maxRange": columns[max_index] if max_index is not None else None,
             }
         )
-
+    if not rows:
+        raise RuntimeError("FedWatch mirror table had no meeting rows")
     return {
-        "source": FEDWATCH_DYNAMIC_SOURCE,
+        "source": "CME FedWatch via OANDA mirror",
         "sourceUrl": FEDWATCH_SOURCE_URL,
+        "mirrorSourceUrl": FEDWATCH_MIRROR_URL,
         "asOf": datetime.now(timezone.utc).date().isoformat(),
         "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
         "columns": columns,
         "rows": rows,
-        "effr": payload.get("effr"),
-        "currentTarget": payload.get("current_target"),
-        "scheduleStatus": payload.get("schedule_status"),
         "isFallback": False,
     }
 
 
 def build_fedwatch_snapshot() -> dict[str, object]:
     try:
-        return build_dynamic_fedwatch_snapshot()
+        return build_mirror_fedwatch_snapshot()
     except Exception as error:
-        if os.environ.get("FEDWATCH_ALLOW_STATIC_FALLBACK") != "1":
-            raise RuntimeError(f"FedWatch dynamic update failed: {error}") from error
-        print(f"FedWatch dynamic update failed; using static fallback: {error}", flush=True)
+        print(f"FedWatch mirror update failed; using static fallback: {error}", flush=True)
         return build_static_fedwatch_snapshot(str(error))
 
 
