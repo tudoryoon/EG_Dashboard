@@ -53,6 +53,10 @@ def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProces
             "http.proxy=",
             "-c",
             "https.proxy=",
+            "-c",
+            "user.name=github-actions[bot]",
+            "-c",
+            "user.email=41898282+github-actions[bot]@users.noreply.github.com",
             *command[1:],
         ]
     print("+ " + " ".join(command), flush=True)
@@ -88,7 +92,21 @@ def has_changes(paths: list[str]) -> bool:
 
 def ensure_clean_worktree() -> None:
     result = subprocess.run(
-        ["git", "-c", "http.sslBackend=openssl", "-c", "http.proxy=", "-c", "https.proxy=", "status", "--porcelain"],
+        [
+            "git",
+            "-c",
+            "http.sslBackend=openssl",
+            "-c",
+            "http.proxy=",
+            "-c",
+            "https.proxy=",
+            "-c",
+            "user.name=github-actions[bot]",
+            "-c",
+            "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+            "status",
+            "--porcelain",
+        ],
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,
