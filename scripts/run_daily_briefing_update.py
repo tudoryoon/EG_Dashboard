@@ -94,10 +94,17 @@ def main() -> int:
         return 0
 
     run([sys.executable, "scripts/bump_data_cache_versions.py", *DATA_FILES])
-    run(["git", "config", "user.name", "github-actions[bot]"])
-    run(["git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"])
     run(["git", "add", *COMMIT_FILES])
-    commit = run(["git", "commit", "-m", "Update market briefing and market prices"], check=False)
+    commit = run([
+        "git",
+        "-c",
+        "user.name=github-actions[bot]",
+        "-c",
+        "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+        "commit",
+        "-m",
+        "Update market briefing and market prices",
+    ], check=False)
     if commit.returncode != 0:
         print("No commit created after staging; exiting.")
         return 0
