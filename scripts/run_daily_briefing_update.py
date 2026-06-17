@@ -15,6 +15,7 @@ DATA_FILES = [
 COMMIT_FILES = DATA_FILES + ["index.html"]
 MAX_UPDATE_ATTEMPTS = 2
 PIP_PACKAGES = [
+    "dulwich",
     "pandas",
     "yfinance",
     "requests",
@@ -24,6 +25,7 @@ PIP_PACKAGES = [
     "xlrd",
 ]
 IMPORT_CHECKS = {
+    "dulwich": "dulwich",
     "pandas": "pandas",
     "yfinance": "yfinance",
     "requests": "requests",
@@ -32,6 +34,9 @@ IMPORT_CHECKS = {
     "openpyxl": "openpyxl",
     "xlrd": "xlrd",
 }
+REMOTE_URL = "git@github.com:tudoryoon/EG_Dashboard.git"
+MAIN_REFSPEC = b"refs/heads/main:refs/remotes/origin/main"
+PUSH_REFSPEC = b"refs/heads/main:refs/heads/main"
 PROXY_ENV_KEYS = [
     "HTTP_PROXY",
     "HTTPS_PROXY",
@@ -137,14 +142,42 @@ def ensure_clean_worktree() -> None:
         raise RuntimeError("Worktree is not clean before Daily Briefing update; refusing to overwrite local changes.")
 
 
+def dulwich_pull_main() -> None:
+    from dulwich import porcelain
+
+    print("+ dulwich pull --ff-only origin main", flush=True)
+    porcelain.pull(
+        REPO_ROOT,
+        remote_location=REMOTE_URL,
+        refspecs=MAIN_REFSPEC,
+        ff_only=True,
+    )
+
+
+def dulwich_push_main() -> int:
+    from dulwich import porcelain
+
+    print("+ dulwich push origin main", flush=True)
+    try:
+        porcelain.push(
+            REPO_ROOT,
+            remote_location=REMOTE_URL,
+            refspecs=PUSH_REFSPEC,
+        )
+    except Exception as exc:
+        print(f"Dulwich push failed: {exc}", flush=True)
+        return 1
+    return 0
+
+
 def reset_to_origin_main() -> None:
     run(["git", "rebase", "--abort"], check=False)
-    run(["git", "fetch", "origin", "main"])
+    dulwich_pull_main()
     run(["git", "reset", "--hard", "origin/main"])
 
 
 def refresh_and_commit() -> bool:
-    run(["git", "pull", "--ff-only", "origin", "main"])
+    dulwich_pull_main()
     run([sys.executable, "scripts/update_market_prices.py"])
     run([sys.executable, "scripts/update_market_briefing.py"])
 
@@ -184,13 +217,14 @@ def main() -> int:
         if not has_commit:
             return 0
 
-        rebase = run(["git", "pull", "--rebase", "origin", "main"], check=False)
-        if rebase.returncode != 0:
-            print("Rebase failed after commit; will retry from fresh origin/main if attempts remain.", flush=True)
+        try:
+            dulwich_pull_main()
+        except Exception as exc:
+            print(f"Pull failed after commit; will retry from fresh origin/main if attempts remain: {exc}", flush=True)
             continue
 
-        push = run(["git", "push", "origin", "main"], check=False)
-        if push.returncode == 0:
+        push_returncode = dulwich_push_main()
+        if push_returncode == 0:
             return 0
         print("Push failed after rebase; will retry from fresh origin/main if attempts remain.", flush=True)
 
