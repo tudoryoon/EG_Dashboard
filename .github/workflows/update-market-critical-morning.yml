@@ -2,6 +2,15 @@ name: Update Market Briefing Morning
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run update and diff checks without committing or pushing"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
   schedule:
     # Daily Briefing primary run and retry runs.
     # 20:00 UTC = 05:00 KST primary run.
@@ -76,7 +85,7 @@ jobs:
         run: python scripts/update_market_briefing.py
 
       - name: Commit updated market briefing
-        if: steps.backup-guard.outputs.should_run == 'true'
+        if: steps.backup-guard.outputs.should_run == 'true' && inputs.dry_run != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -112,3 +121,13 @@ jobs:
 
           echo "Failed to push Daily Briefing after 3 attempts."
           exit 1
+
+      - name: Report dry run diff
+        if: steps.backup-guard.outputs.should_run == 'true' && inputs.dry_run == 'true'
+        run: |
+          echo "Dry run enabled. Skipping commit and push."
+          if git diff --quiet -- data/market-briefing-data.js; then
+            echo "No market briefing changes detected."
+            exit 0
+          fi
+          git diff --stat -- data/market-briefing-data.js
