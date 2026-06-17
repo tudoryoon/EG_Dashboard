@@ -47,6 +47,8 @@ def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProces
         command = [
             "git",
             "-c",
+            "http.sslBackend=openssl",
+            "-c",
             "http.proxy=",
             "-c",
             "https.proxy=",
