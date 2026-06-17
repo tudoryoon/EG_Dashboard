@@ -718,7 +718,62 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
         close = repair_price_scale_jumps(close)
         if len(close) >= 2:
             close_map[symbol] = close.rename(symbol)
+    fill_latest_chart_close_gaps(close_map)
     return pd.concat(close_map.values(), axis=1).sort_index() if close_map else pd.DataFrame()
+
+
+def fetch_chart_latest_close(symbol: str, target_date: pd.Timestamp) -> float | None:
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote_plus(symbol)}"
+    try:
+        response = requests.get(
+            url,
+            params={"range": "5d", "interval": "1d", "includePrePost": "false", "events": "history"},
+            headers=USER_AGENT,
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        result = (payload.get("chart", {}).get("result") or [None])[0]
+        if not result:
+            return None
+        timestamps = result.get("timestamp") or []
+        indicators = result.get("indicators") or {}
+        quote = (indicators.get("quote") or [{}])[0]
+        closes = quote.get("close") or []
+        adjusted_closes = (indicators.get("adjclose") or [{}])[0].get("adjclose") or []
+        meta = result.get("meta") or {}
+    except Exception:
+        return None
+
+    target_day = pd.Timestamp(target_date).date()
+    for index, raw_timestamp in enumerate(timestamps):
+        timestamp = pd.Timestamp(datetime.fromtimestamp(raw_timestamp, timezone.utc)).date()
+        if timestamp != target_day:
+            continue
+        value = adjusted_closes[index] if index < len(adjusted_closes) else None
+        if value is None and index < len(closes):
+            value = closes[index]
+        if value is None and index == len(timestamps) - 1:
+            value = meta.get("regularMarketPrice")
+        return normalize_number(value)
+    return None
+
+
+def fill_latest_chart_close_gaps(close_map: dict[str, pd.Series]) -> None:
+    benchmark = close_map.get(ROTATION_BENCHMARK_SYMBOL)
+    if benchmark is None or benchmark.empty:
+        return
+
+    target_date = benchmark.index.max()
+    for symbol, series in list(close_map.items()):
+        if series.empty or is_same_price_date(series.index.max(), target_date):
+            continue
+        latest_close = fetch_chart_latest_close(symbol, target_date)
+        if latest_close is None:
+            continue
+        filled = pd.concat([series, pd.Series([latest_close], index=[target_date], name=symbol)]).sort_index().dropna()
+        filled = filled[~filled.index.duplicated(keep="last")]
+        close_map[symbol] = filled.rename(symbol)
 
 
 def closest_price_scale_factor(ratio: float) -> float | None:
@@ -863,7 +918,7 @@ def compute_ytd_return(series: pd.Series) -> float | None:
 def is_same_price_date(left: pd.Timestamp | None, right: pd.Timestamp | None) -> bool:
     if left is None or right is None:
         return False
-    return pd.Timestamp(left).normalize() == pd.Timestamp(right).normalize()
+    return pd.Timestamp(left).date() == pd.Timestamp(right).date()
 
 
 def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object], pd.DataFrame]:
