@@ -1158,6 +1158,9 @@ def build_rotation_signal(
             key=lambda item: float(item["rotationScore"]),
             reverse=True,
         )
+        top_items = ranked_items[:3]
+        top_tickers = {str(item.get("ticker")) for item in top_items}
+        bottom_items = [item for item in reversed(ranked_items) if str(item.get("ticker")) not in top_tickers][:3]
         sectors.append(
             {
                 "key": sector["key"],
@@ -1174,7 +1177,7 @@ def build_rotation_signal(
                         "excessReturns": item["excessReturns"],
                         "returns": item["returns"],
                     }
-                    for item in ranked_items[:3]
+                    for item in top_items
                 ],
                 "bottom": [
                     {
@@ -1185,7 +1188,7 @@ def build_rotation_signal(
                         "excessReturns": item["excessReturns"],
                         "returns": item["returns"],
                     }
-                    for item in list(reversed(ranked_items[-3:]))
+                    for item in bottom_items
                 ],
             }
         )

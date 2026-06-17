@@ -6423,8 +6423,13 @@ function buildBriefingRotationDistribution(sectors, historyBySector, benchmarkKe
   const benchmarkMeta = getBriefingDistributionBenchmarkMeta(benchmarkKey);
   const qqqReturnsByDate = getBriefingIndexDailyReturnsByDate("nasdaq100");
   const benchmarkReturnsByDate = getBriefingIndexDailyReturnsByDate(benchmarkMeta.itemKey);
-  const points = (sectors ?? [])
+  const seenSectorKeys = new Set();
+  const rawPoints = (sectors ?? [])
     .map((sector) => {
+      if (!sector?.key || seenSectorKeys.has(sector.key)) {
+        return null;
+      }
+      seenSectorKeys.add(sector.key);
       const history = (historyBySector?.[sector.key] ?? []).slice(-63);
       const sectorReturns = [];
       const benchmarkReturns = [];
@@ -6446,20 +6451,39 @@ function buildBriefingRotationDistribution(sectors, historyBySector, benchmarkKe
       if (!Number.isFinite(score)) {
         return null;
       }
+      const rawCorrelationPct = correlation * 100;
       return {
         x: score,
-        y: correlation * 100,
+        y: Math.max(rawCorrelationPct, -25),
         key: sector.key,
         label: sector.label,
         classification: sector.classification,
         score,
         sampleSize: sectorReturns.length,
         correlation,
+        rawCorrelationPct,
         benchmarkLabel: benchmarkMeta.label,
         excessReturns: sector.excessReturns ?? {},
       };
     })
     .filter(Boolean);
+  const occupiedBuckets = new Map();
+  const points = rawPoints.map((point) => {
+    const bucketKey = `${Math.round(point.x * 10)}|${Math.round(point.y * 2)}`;
+    const bucketCount = occupiedBuckets.get(bucketKey) ?? 0;
+    occupiedBuckets.set(bucketKey, bucketCount + 1);
+    if (!bucketCount) {
+      return point;
+    }
+    const offsetDirection = bucketCount % 2 === 0 ? 1 : -1;
+    const offsetMagnitude = Math.ceil(bucketCount / 2);
+    return {
+      ...point,
+      x: point.x + offsetDirection * offsetMagnitude * 0.16,
+      y: Math.min(100, Math.max(-25, point.y + offsetDirection * offsetMagnitude * 2.2)),
+      isJittered: true,
+    };
+  });
 
   const scores = points.map((point) => point.x).filter(Number.isFinite);
   const minScore = scores.length ? Math.min(...scores, -2) : -6;
@@ -6567,7 +6591,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
               const item = context.raw ?? {};
               return [
                 `Score ${formatSignedScore(item.score)}`,
-                `${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"} corr ${formatOneDecimal(Number(item.correlation) * 100)}% (${item.sampleSize} sessions)`,
+                `${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"} corr ${formatOneDecimal(Number(item.rawCorrelationPct))}% (${item.sampleSize} sessions)`,
                 `${getRotationClassLabel(item.classification)} / ${getRotationClassKorean(item.classification)}`,
                 `1W vs QQQ ${formatSignedPercent(item.excessReturns?.["1w"])}`,
                 `1M vs QQQ ${formatSignedPercent(item.excessReturns?.["1m"])}`,
@@ -6590,7 +6614,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
           border: { color: "#d8d8d2" },
         },
         y: {
-          min: -100,
+          min: -25,
           max: 100,
           title: { display: true, text: `63D correlation with ${distribution.benchmark?.label ?? "QQQ"}`, color: "#6b6b64" },
           ticks: {
@@ -6977,6 +7001,11 @@ function renderMarketBriefingOverview() {
               <span><b>${independentLeaderCount}</b> independent leaders</span>
             </div>
           </div>
+        </div>
+        <div class="briefing-rotation-distribution-guide">
+          <span><b>-100%</b> ${selectedDistributionBenchmark.label}와 반대로 움직인다는 뜻입니다. 방어/헤지 성격이 강하지만 지속성 확인이 필요합니다.</span>
+          <span><b>0%</b> 같이 움직인 정도가 낮다는 뜻입니다. Rotation Score가 양수면 분산효과가 있는 주도 후보로 볼 수 있습니다.</span>
+          <span><b>100%</b> ${selectedDistributionBenchmark.label}와 거의 같이 움직인다는 뜻입니다. 지수 베타가 높아 분산효과는 낮습니다.</span>
         </div>
         <div class="briefing-rotation-distribution-legend">
           <span><i class="is-leading"></i>주도</span>

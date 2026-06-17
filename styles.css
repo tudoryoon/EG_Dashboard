@@ -945,6 +945,29 @@ h1 {
   font-size: 1rem;
 }
 
+.briefing-rotation-distribution-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.briefing-rotation-distribution-guide span {
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.70);
+  color: #5f5f58;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.45;
+  padding: 8px 10px;
+}
+
+.briefing-rotation-distribution-guide b {
+  color: #20201d;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.82rem;
+}
+
 .briefing-rotation-distribution-legend {
   justify-content: flex-start;
   flex-wrap: wrap;
@@ -4908,6 +4931,10 @@ h1 {
   .briefing-rotation-distribution-stats span {
     min-width: 0;
     text-align: left;
+  }
+
+  .briefing-rotation-distribution-guide {
+    grid-template-columns: 1fr;
   }
 
   .briefing-rotation-history-stats {
