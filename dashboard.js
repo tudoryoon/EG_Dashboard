@@ -13132,12 +13132,14 @@ function renderMarketVixOverview() {
   const latestContractsMarkup = ((marketVixData.curve?.latestContracts ?? []) || [])
     .map(
       (contract) => `
-        <tr>
-          <td>${contract.label}</td>
-          <td>${contract.symbol}</td>
-          <td>${contract.expiration}</td>
-          <td>${formatVixLevel(contract.price)}</td>
-        </tr>
+        <article class="vix-contract-row">
+          <div class="vix-contract-id">
+            <strong>${contract.label || "-"}</strong>
+            <span>${contract.symbol || "-"}</span>
+          </div>
+          <span class="vix-contract-expiry">${contract.expiration || "-"}</span>
+          <strong class="vix-contract-price">${formatVixLevel(contract.price)}</strong>
+        </article>
       `,
     )
     .join("");
@@ -13173,21 +13175,18 @@ function renderMarketVixOverview() {
           <div class="us-price-chart-wrap">
             <canvas data-market-vix="curve"></canvas>
           </div>
-          <div class="vix-contract-table-wrap">
-            <table class="macro-release-table vix-contract-table">
-              <thead>
-                <tr>
-                  <th>Expiry</th>
-                  <th>Symbol</th>
-                  <th>Date</th>
-                  <th>Settlement</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${latestContractsMarkup}
-              </tbody>
-            </table>
-          </div>
+          <aside class="vix-contract-panel">
+            <div class="vix-contract-panel-head">
+              <div>
+                <strong>Latest Settlements</strong>
+                <span>VX monthly futures</span>
+              </div>
+              <span>${marketVixData.curve?.latestDate || "-"}</span>
+            </div>
+            <div class="vix-contract-list">
+              ${latestContractsMarkup || '<div class="vix-contract-empty">No curve data</div>'}
+            </div>
+          </aside>
         </div>
       </section>
 

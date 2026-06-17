@@ -2537,8 +2537,9 @@ h1 {
 
 .vix-curve-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+  grid-template-columns: minmax(0, 1.65fr) minmax(220px, 300px);
   gap: 14px;
+  align-items: stretch;
 }
 
 .vix-fixed-income-grid {
@@ -2547,13 +2548,97 @@ h1 {
   gap: 14px;
 }
 
-.vix-contract-table-wrap {
-  overflow: auto;
+.vix-contract-panel {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(31, 38, 33, 0.1);
+  border-radius: 14px;
+  background: rgba(249, 249, 245, 0.92);
 }
 
-.vix-contract-table th,
-.vix-contract-table td {
+.vix-contract-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 10px;
+  color: var(--ink);
+}
+
+.vix-contract-panel-head div {
+  display: grid;
+  gap: 2px;
+}
+
+.vix-contract-panel-head strong {
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
+.vix-contract-panel-head span {
+  color: var(--muted);
+  font-size: 0.68rem;
   white-space: nowrap;
+}
+
+.vix-contract-list {
+  display: grid;
+  gap: 6px;
+  max-height: 342px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.vix-contract-row {
+  display: grid;
+  grid-template-columns: minmax(52px, 0.9fr) minmax(68px, 1fr) minmax(48px, auto);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid rgba(31, 38, 33, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.vix-contract-id {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.vix-contract-id strong,
+.vix-contract-price {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.vix-contract-id strong {
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.vix-contract-id span,
+.vix-contract-expiry {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vix-contract-price {
+  font-size: 0.95rem;
+  line-height: 1;
+  text-align: right;
+}
+
+.vix-contract-empty {
+  padding: 18px 10px;
+  border: 1px dashed rgba(31, 38, 33, 0.16);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
 }
 
 .macro-indicator-grid {
@@ -3222,6 +3307,10 @@ h1 {
   .vix-curve-layout,
   .vix-fixed-income-grid {
     grid-template-columns: 1fr;
+  }
+
+  .vix-contract-list {
+    max-height: none;
   }
 
   .macro-snapshot-grid,
