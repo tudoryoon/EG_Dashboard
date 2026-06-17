@@ -1182,13 +1182,15 @@ def build_rotation_history(
     history: dict[str, list[dict[str, object]]] = {str(sector["key"]): [] for sector in sector_panels}
     for end_date in history_dates:
         benchmark_returns = compute_series_rotation_returns(close_frame, ROTATION_BENCHMARK_SYMBOL, end_date)
+        item_returns_by_ticker: dict[str, dict[str, float | None]] = {}
         item_excess_by_ticker: dict[str, dict[str, float | None]] = {}
         for sector in sector_panels:
             for item in get_sector_scoring_items(sector):
                 ticker = str(item.get("ticker"))
-                if ticker in item_excess_by_ticker:
+                if ticker in item_returns_by_ticker:
                     continue
                 item_returns = compute_series_rotation_returns(close_frame, ticker, end_date)
+                item_returns_by_ticker[ticker] = item_returns
                 item_excess_by_ticker[ticker] = {
                     key: round(item_return - benchmark_return, 2)
                     if item_return is not None and benchmark_return is not None
@@ -1199,7 +1201,15 @@ def build_rotation_history(
         for sector in sector_panels:
             sector_key = str(sector["key"])
             items = get_sector_scoring_items(sector)
+            history_items = [
+                {
+                    **item,
+                    "returns": item_returns_by_ticker.get(str(item.get("ticker")), {}),
+                }
+                for item in items
+            ]
             excess_by_range = build_sector_excess_returns(items, item_excess_by_ticker)
+            returns_by_range = build_sector_returns(history_items)
             score = compute_rotation_score(excess_by_range)
             classification = classify_rotation(excess_by_range)
             history[sector_key].append(
@@ -1207,6 +1217,7 @@ def build_rotation_history(
                     "date": end_date.strftime("%Y-%m-%d"),
                     "score": score,
                     "classification": classification,
+                    "returns": returns_by_range,
                     "excessReturns": excess_by_range,
                 }
             )

@@ -6434,14 +6434,18 @@ function buildBriefingRotationDistribution(sectors, historyBySector, benchmarkKe
       const sectorReturns = [];
       const benchmarkReturns = [];
       history.forEach((item) => {
-        const qqqReturn = qqqReturnsByDate.get(item.date);
         const benchmarkReturn = benchmarkReturnsByDate.get(item.date);
-        const excessReturn = Number(item.excessReturns?.["1d"]);
-        if (!Number.isFinite(qqqReturn) || !Number.isFinite(benchmarkReturn) || !Number.isFinite(excessReturn)) {
+        let sectorReturn = Number(item.returns?.["1d"]);
+        if (!Number.isFinite(sectorReturn)) {
+          const qqqReturn = qqqReturnsByDate.get(item.date);
+          const excessReturn = Number(item.excessReturns?.["1d"]);
+          sectorReturn = Number.isFinite(qqqReturn) && Number.isFinite(excessReturn) ? qqqReturn + excessReturn : NaN;
+        }
+        if (!Number.isFinite(sectorReturn) || !Number.isFinite(benchmarkReturn)) {
           return;
         }
         benchmarkReturns.push(benchmarkReturn);
-        sectorReturns.push(qqqReturn + excessReturn);
+        sectorReturns.push(sectorReturn);
       });
       const correlation = calculatePearsonCorrelation(sectorReturns, benchmarkReturns);
       if (!Number.isFinite(correlation)) {
