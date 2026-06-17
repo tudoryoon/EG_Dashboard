@@ -867,16 +867,13 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         if ROTATION_BENCHMARK_SYMBOL in close_frame.columns
         else pd.Series(dtype=float)
     )
-    latest_date = (
-        benchmark_series.index.max().strftime("%Y-%m-%d")
-        if not benchmark_series.empty
-        else close_frame.index.max().strftime("%Y-%m-%d")
-    )
+    latest_timestamp = benchmark_series.index.max() if not benchmark_series.empty else close_frame.index.max()
+    latest_date = latest_timestamp.strftime("%Y-%m-%d")
     rotation_benchmark = build_rotation_benchmark(close_frame)
 
     fx_usd_per_krw = None
     if USD_PER_KRW_SYMBOL in close_frame.columns:
-        fx_values = close_frame[USD_PER_KRW_SYMBOL].dropna()
+        fx_values = close_frame[USD_PER_KRW_SYMBOL].loc[:latest_timestamp].dropna()
         if not fx_values.empty:
             fx_usd_per_krw = float(fx_values.iloc[-1])
 
@@ -886,7 +883,7 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
     snapshots: list[dict[str, object]] = []
     for company in companies:
         symbol = company["ticker"]
-        series = close_frame[symbol].dropna() if symbol in close_frame.columns else pd.Series(dtype=float)
+        series = close_frame[symbol].loc[:latest_timestamp].dropna() if symbol in close_frame.columns else pd.Series(dtype=float)
         price = previous_close = day_change_pct = None
         range_returns = {key: None for key in MAP_RANGE_LABELS}
         if len(series) >= 2:
