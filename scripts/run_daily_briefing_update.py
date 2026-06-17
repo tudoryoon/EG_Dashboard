@@ -65,7 +65,26 @@ def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProces
     env["GCM_INTERACTIVE"] = "Never"
     env["GIT_SSH"] = r"C:\Windows\System32\OpenSSH\ssh.exe"
     env["GIT_SSH_VARIANT"] = "ssh"
-    return subprocess.run(command, cwd=REPO_ROOT, text=True, check=check, env=env)
+    result = subprocess.run(
+        command,
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+    if result.stdout:
+        print(result.stdout, end="", flush=True)
+    if result.stderr:
+        print(result.stderr, end="", flush=True)
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            command,
+            output=result.stdout,
+            stderr=result.stderr,
+        )
+    return result
 
 
 def scrub_proxy_environment() -> None:
