@@ -217,12 +217,6 @@ def main() -> int:
         if not has_commit:
             return 0
 
-        try:
-            dulwich_pull_main()
-        except Exception as exc:
-            print(f"Pull failed after commit; will retry from fresh origin/main if attempts remain: {exc}", flush=True)
-            continue
-
         push_returncode = dulwich_push_main()
         if push_returncode == 0:
             return 0
