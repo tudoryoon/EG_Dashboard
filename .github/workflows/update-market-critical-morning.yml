@@ -17,20 +17,64 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check whether backup run is needed
+        id: backup-guard
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import re
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          event_name = "${{ github.event_name }}"
+          should_run = True
+          reason = "manual run always refreshes data"
+
+          if event_name == "schedule":
+              text = Path("data/market-briefing-data.js").read_text(encoding="utf-8")
+              match = re.search(r"window\.marketBriefingData\s*=\s*(\{.*\});\s*$", text, re.S)
+              payload = json.loads(match.group(1)) if match else {}
+              generated_at = payload.get("generatedAt")
+              if generated_at:
+                  generated_dt = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+                  kst = ZoneInfo("Asia/Seoul")
+                  generated_kst = generated_dt.astimezone(kst)
+                  now_kst = datetime.now(kst)
+                  if generated_kst.date() == now_kst.date():
+                      should_run = False
+                      reason = f"Daily Briefing already generated today KST at {generated_kst.isoformat()}"
+                  else:
+                      reason = f"latest Daily Briefing generatedAt is {generated_kst.isoformat()}, so backup should run"
+              else:
+                  reason = "generatedAt missing, so backup should run"
+
+          print(f"should_run={'true' if should_run else 'false'}")
+          print(f"reason={reason}")
+          PY
+
+      - name: Report backup guard
+        run: echo "${{ steps.backup-guard.outputs.reason }}"
+
       - name: Set up Python
+        if: steps.backup-guard.outputs.should_run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
+        if: steps.backup-guard.outputs.should_run == 'true'
         run: python -m pip install pandas yfinance requests cme-fedwatch
 
       - name: Refresh market prices and briefing
+        if: steps.backup-guard.outputs.should_run == 'true'
         run: |
           python scripts/update_market_prices.py
           python scripts/update_market_briefing.py
 
       - name: Commit updated market briefing
+        if: steps.backup-guard.outputs.should_run == 'true'
         run: |
           if git diff --quiet -- data/market-briefing-data.js data/market-price-data.js; then
             echo "No market briefing or market price changes detected."
