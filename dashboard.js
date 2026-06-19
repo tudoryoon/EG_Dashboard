@@ -6530,30 +6530,56 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
         return;
       }
       const occupiedRects = [];
+      const pointObstacles = meta.data
+        .map((element, index) => {
+          const raw = dataset.data[index];
+          if (!element || !raw) {
+            return null;
+          }
+          const radius = getDistributionPointRadius(raw) + 7;
+          return {
+            left: element.x - radius,
+            right: element.x + radius,
+            top: element.y - radius,
+            bottom: element.y + radius,
+          };
+        })
+        .filter(Boolean);
       const candidates = [
-        { x: 0, y: 18, align: "center" },
-        { x: 0, y: -18, align: "center" },
-        { x: 24, y: 0, align: "left" },
-        { x: -24, y: 0, align: "right" },
-        { x: 22, y: 17, align: "left" },
-        { x: -22, y: 17, align: "right" },
-        { x: 22, y: -17, align: "left" },
-        { x: -22, y: -17, align: "right" },
-        { x: 0, y: 34, align: "center" },
-        { x: 0, y: -34, align: "center" },
+        { x: 0, y: 24, align: "center" },
+        { x: 0, y: -24, align: "center" },
+        { x: 32, y: 0, align: "left" },
+        { x: -32, y: 0, align: "right" },
+        { x: 30, y: 22, align: "left" },
+        { x: -30, y: 22, align: "right" },
+        { x: 30, y: -22, align: "left" },
+        { x: -30, y: -22, align: "right" },
+        { x: 0, y: 42, align: "center" },
+        { x: 0, y: -42, align: "center" },
+        { x: 46, y: 16, align: "left" },
+        { x: -46, y: 16, align: "right" },
+        { x: 46, y: -16, align: "left" },
+        { x: -46, y: -16, align: "right" },
+        { x: 62, y: 0, align: "left" },
+        { x: -62, y: 0, align: "right" },
+        { x: 62, y: 32, align: "left" },
+        { x: -62, y: 32, align: "right" },
+        { x: 62, y: -32, align: "left" },
+        { x: -62, y: -32, align: "right" },
+        { x: 0, y: 60, align: "center" },
+        { x: 0, y: -60, align: "center" },
       ];
       const orderedElements = meta.data
         .map((element, index) => ({ element, raw: dataset.data[index], index }))
         .filter((item) => item.element && item.raw)
         .sort((a, b) => Number(b.raw.score ?? 0) - Number(a.raw.score ?? 0));
-      const intersects = (rect) =>
-        occupiedRects.some(
-          (other) =>
-            rect.left < other.right &&
-            rect.right > other.left &&
-            rect.top < other.bottom &&
-            rect.bottom > other.top,
-        );
+      const rectIntersects = (rect, other) =>
+        rect.left < other.right &&
+        rect.right > other.left &&
+        rect.top < other.bottom &&
+        rect.bottom > other.top;
+      const countIntersections = (rect, rects) =>
+        rects.reduce((count, other) => count + (rectIntersects(rect, other) ? 1 : 0), 0);
       const clampRect = (rect) => ({
         ...rect,
         outside:
@@ -6584,18 +6610,30 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
                 ? pointX + candidate.x - pillWidth / 2
                 : pointX + candidate.x;
           const centerY = pointY + candidate.y;
+          const unclampedLeft = centerX - pillWidth / 2;
+          const unclampedTop = centerY - pillHeight / 2;
+          const adjustedLeft = Math.max(chartArea.left + 4, Math.min(unclampedLeft, chartArea.right - pillWidth - 4));
+          const adjustedTop = Math.max(chartArea.top + 4, Math.min(unclampedTop, chartArea.bottom - pillHeight - 4));
           const rect = clampRect({
-            left: centerX - pillWidth / 2,
-            right: centerX + pillWidth / 2,
-            top: centerY - pillHeight / 2,
-            bottom: centerY + pillHeight / 2,
+            left: adjustedLeft,
+            right: adjustedLeft + pillWidth,
+            top: adjustedTop,
+            bottom: adjustedTop + pillHeight,
             centerX,
             centerY,
             candidate,
+            wasShifted: Math.abs(adjustedLeft - unclampedLeft) > 0.5 || Math.abs(adjustedTop - unclampedTop) > 0.5,
           });
-          const overlapPenalty = intersects(rect) ? 1000 : 0;
-          const outsidePenalty = rect.outside ? 500 : 0;
-          const score = overlapPenalty + outsidePenalty + candidateIndex * 4 + Math.abs(candidate.y) + Math.abs(candidate.x) * 0.35;
+          const labelOverlapPenalty = countIntersections(rect, occupiedRects) * 6000;
+          const bubbleOverlapPenalty = countIntersections(rect, pointObstacles) * 4500;
+          const outsidePenalty = rect.outside || rect.wasShifted ? 500 : 0;
+          const score =
+            labelOverlapPenalty +
+            bubbleOverlapPenalty +
+            outsidePenalty +
+            candidateIndex * 4 +
+            Math.abs(candidate.y) +
+            Math.abs(candidate.x) * 0.35;
           if (!best || score < best.score) {
             best = { ...rect, score };
           }
@@ -6603,15 +6641,13 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
         if (!best) {
           return;
         }
-        const adjustedLeft = Math.max(chartArea.left + 4, Math.min(best.left, chartArea.right - pillWidth - 4));
-        const adjustedTop = Math.max(chartArea.top + 4, Math.min(best.top, chartArea.bottom - pillHeight - 4));
         const rect = {
-          left: adjustedLeft,
-          right: adjustedLeft + pillWidth,
-          top: adjustedTop,
-          bottom: adjustedTop + pillHeight,
-          centerX: adjustedLeft + pillWidth / 2,
-          centerY: adjustedTop + pillHeight / 2,
+          left: best.left,
+          right: best.right,
+          top: best.top,
+          bottom: best.bottom,
+          centerX: best.left + pillWidth / 2,
+          centerY: best.top + pillHeight / 2,
         };
         occupiedRects.push(rect);
         const needsLeader = Math.hypot(rect.centerX - pointX, rect.centerY - pointY) > 19;
