@@ -14417,7 +14417,7 @@ function renderOpenrouterOverview() {
   state.openrouterLeaderboardView = activeView;
   const rows = openrouterRankingsData.leaderboards?.[activeView] ?? [];
   const latestRows = rows.slice(0, 6);
-  const secondaryKeys = ["marketShare", "tools", "images", "imageOutput", "audio"];
+  const secondaryKeys = ["marketShare", "tools", "images", "imageOutput", "naturalLanguage"];
   const latestDate = topChart?.dates?.length
     ? topChart.dates[topChart.dates.length - 1]
     : openrouterRankingsData.updatedAt ?? "-";

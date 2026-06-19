@@ -9,6 +9,7 @@ import requests
 
 
 BASE_URL = "https://openrouter.ai"
+RANKINGS_API_BASE = "/api/frontend/v1/rankings"
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "openrouter-rankings-data.js"
 HEADERS = {
     "Accept": "application/json",
@@ -18,43 +19,43 @@ CHART_ENDPOINTS = {
     "models": {
         "title": "Top Models",
         "subtitle": "Weekly usage of models across OpenRouter",
-        "endpoint": "/api/frontend/rankings/model-rankings-chart",
+        "endpoint": f"{RANKINGS_API_BASE}/model-rankings-chart",
         "unit": "tokens",
         "topN": 12,
     },
     "marketShare": {
         "title": "Market Share",
         "subtitle": "OpenRouter token share by model author",
-        "endpoint": "/api/frontend/rankings/market-share",
+        "endpoint": f"{RANKINGS_API_BASE}/market-share",
         "unit": "tokens",
         "topN": 10,
     },
     "tools": {
         "title": "Tool Calls",
         "subtitle": "Tool usage across models on OpenRouter",
-        "endpoint": "/api/frontend/rankings/tools",
+        "endpoint": f"{RANKINGS_API_BASE}/tools",
         "unit": "calls",
         "topN": 10,
     },
     "images": {
         "title": "Images",
         "subtitle": "Total images processed on OpenRouter",
-        "endpoint": "/api/frontend/rankings/images",
+        "endpoint": f"{RANKINGS_API_BASE}/images",
         "unit": "images",
         "topN": 10,
     },
     "imageOutput": {
         "title": "Image Output",
         "subtitle": "Total images generated on OpenRouter",
-        "endpoint": "/api/frontend/rankings/image-output",
+        "endpoint": f"{RANKINGS_API_BASE}/image-output",
         "unit": "images",
         "topN": 10,
     },
-    "audio": {
-        "title": "Audio Input",
-        "subtitle": "Total audio prompts processed on OpenRouter",
-        "endpoint": "/api/frontend/rankings/audio",
-        "unit": "prompts",
+    "naturalLanguage": {
+        "title": "Natural Language",
+        "subtitle": "Usage by natural language prompt category on OpenRouter",
+        "endpoint": f"{RANKINGS_API_BASE}/natural-language",
+        "unit": "tokens",
         "topN": 10,
     },
 }
@@ -179,7 +180,7 @@ def build_payload() -> dict[str, Any]:
 
     leaderboards = {}
     for view in LEADERBOARD_VIEWS:
-        data = fetch_json("/api/frontend/rankings/models", {"view": view}).get("data", [])
+        data = fetch_json(f"{RANKINGS_API_BASE}/models", {"view": view}).get("data", [])
         rows = [normalize_leaderboard_row(row, index + 1, model_names) for index, row in enumerate(data)]
         rows.sort(key=lambda row: row["tokens"], reverse=True)
         for index, row in enumerate(rows, start=1):
@@ -199,7 +200,7 @@ def build_payload() -> dict[str, Any]:
         "source": {
             "name": "OpenRouter Rankings",
             "url": "https://openrouter.ai/rankings",
-            "apiBase": "https://openrouter.ai/api/frontend/rankings",
+            "apiBase": f"https://openrouter.ai{RANKINGS_API_BASE}",
             "cadence": "daily",
         },
         "defaultLeaderboard": "week",
