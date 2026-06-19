@@ -6687,9 +6687,19 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
       }
       ctx.save();
       const zeroX = scales.x.getPixelForValue(0);
+      const negativeZoneRight = Math.max(chartArea.left, Math.min(zeroX, chartArea.right));
+      const positiveZoneLeft = Math.max(chartArea.left, Math.min(zeroX, chartArea.right));
+      if (negativeZoneRight > chartArea.left) {
+        ctx.fillStyle = "rgba(248, 113, 113, 0.075)";
+        ctx.fillRect(chartArea.left, chartArea.top, negativeZoneRight - chartArea.left, chartArea.bottom - chartArea.top);
+      }
+      if (positiveZoneLeft < chartArea.right) {
+        ctx.fillStyle = "rgba(22, 163, 74, 0.075)";
+        ctx.fillRect(positiveZoneLeft, chartArea.top, chartArea.right - positiveZoneLeft, chartArea.bottom - chartArea.top);
+      }
       if (zeroX >= chartArea.left && zeroX <= chartArea.right) {
-        ctx.strokeStyle = "rgba(31, 41, 55, 0.22)";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(31, 41, 55, 0.40)";
+        ctx.lineWidth = 1.2;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(zeroX, chartArea.top);
@@ -7185,7 +7195,7 @@ function renderMarketBriefingOverview() {
           <span><i class="is-improving"></i>개선</span>
           <span><i class="is-weakening"></i>둔화</span>
           <span><i class="is-lagging"></i>소외</span>
-          <em>대각선은 회귀선이 아니라 점수 방향과 ${selectedDistributionBenchmark.label} 연동성의 정렬 정도를 보는 시각 보조선입니다.</em>
+          <em>배경색은 Rotation Score 0 기준입니다. 붉은 영역은 음수, 초록 영역은 양수입니다. 대각선은 회귀선이 아니라 점수 방향과 ${selectedDistributionBenchmark.label} 연동성의 정렬 정도를 보는 시각 보조선입니다.</em>
         </div>
         <div class="briefing-rotation-distribution-chart-wrap">
           <canvas data-briefing-rotation-distribution></canvas>
