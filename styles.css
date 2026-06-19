@@ -540,19 +540,33 @@ h1 {
 }
 
 .briefing-daily-leader-card {
+  appearance: none;
+  color: inherit;
+  cursor: pointer;
   display: grid;
+  font: inherit;
   grid-template-columns: 32px minmax(0, 1fr) 108px;
   border: 1px solid rgba(22, 163, 74, 0.20);
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(236, 253, 245, 0.96), rgba(209, 250, 229, 0.74));
   box-shadow: 0 8px 18px rgba(22, 101, 52, 0.08);
   padding: 10px;
+  text-align: left;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  width: 100%;
 }
 
 .briefing-daily-leader-card.is-laggard {
   border-color: rgba(220, 38, 38, 0.16);
   background: rgba(255, 250, 250, 0.82);
   box-shadow: none;
+}
+
+.briefing-daily-leader-card:hover,
+.briefing-daily-leader-card.active {
+  border-color: rgba(17, 24, 39, 0.38);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.10);
+  transform: translateY(-1px);
 }
 
 .briefing-daily-leader-card > span {

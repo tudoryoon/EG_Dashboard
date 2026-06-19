@@ -7066,7 +7066,12 @@ function renderMarketBriefingOverview() {
         .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.overviewReturns?.["1d"] ?? item.excessReturns?.["1d"])}`)
         .join(" · ");
       return `
-        <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()}">
+        <button
+          type="button"
+          class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()}${sector.key === selectedRotationSectorKey ? " active" : ""}"
+          data-rotation-sector="${sector.key}"
+          data-rotation-scroll-history="true"
+        >
           <span>#${index + 1}</span>
           <div>
             <strong>${sector.label}</strong>
@@ -7074,7 +7079,7 @@ function renderMarketBriefingOverview() {
             <small>${topNames || getRotationClassKorean(sector.classification)}</small>
           </div>
           <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)} <em>(vs QQQ)</em></b>
-        </article>
+        </button>
       `;
     })
     .join("");
@@ -7085,7 +7090,12 @@ function renderMarketBriefingOverview() {
         .map((item) => `${item.ticker} ${formatSignedPercent(item.returns?.["1d"] ?? item.overviewReturns?.["1d"] ?? item.excessReturns?.["1d"])}`)
         .join(" · ");
       return `
-        <article class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()} is-laggard">
+        <button
+          type="button"
+          class="briefing-daily-leader-card is-${String(sector.classification ?? "neutral").toLowerCase()} is-laggard${sector.key === selectedRotationSectorKey ? " active" : ""}"
+          data-rotation-sector="${sector.key}"
+          data-rotation-scroll-history="true"
+        >
           <span>#${index + 1}</span>
           <div>
             <strong>${sector.label}</strong>
@@ -7093,7 +7103,7 @@ function renderMarketBriefingOverview() {
             <small>${bottomNames || getRotationClassKorean(sector.classification)}</small>
           </div>
           <b class="${getSignedValueClass(sector.excessReturn1d)}">${formatSignedPercent(sector.excessReturn1d)} <em>(vs QQQ)</em></b>
-        </article>
+        </button>
       `;
     })
     .join("");
@@ -7396,7 +7406,16 @@ function renderMarketBriefingOverview() {
   usOverviewRoot.querySelectorAll("[data-rotation-sector]").forEach((button) => {
     button.addEventListener("click", () => {
       state.briefingRotationSectorKey = button.dataset.rotationSector || "";
+      const shouldScrollHistory = button.dataset.rotationScrollHistory === "true";
       render();
+      if (shouldScrollHistory) {
+        requestAnimationFrame(() => {
+          document.querySelector(".briefing-rotation-history-panel")?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+          });
+        });
+      }
     });
   });
   usOverviewRoot.querySelectorAll("[data-briefing-rotation-distribution-benchmark]").forEach((button) => {
