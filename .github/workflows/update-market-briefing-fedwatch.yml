@@ -1,0 +1,68 @@
+name: Update Market Briefing FedWatch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # CME FedWatch End-of-Day forecasts are documented as updating at 01:45 UTC
+    # on business days. Run at 10:55/11:20 KST to refresh only the FedWatch table.
+    - cron: "55 1 * * 1-5"
+    - cron: "20 2 * * 1-5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-market-briefing-fedwatch
+  cancel-in-progress: false
+
+jobs:
+  update-market-briefing-fedwatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install requests
+
+      - name: Refresh FedWatch probabilities
+        run: python scripts/update_market_briefing_fedwatch.py
+
+      - name: Commit updated FedWatch probabilities
+        run: |
+          if git diff --quiet -- data/market-briefing-data.js; then
+            echo "No FedWatch changes detected."
+            exit 0
+          fi
+          python scripts/bump_data_cache_versions.py data/market-briefing-data.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/market-briefing-data.js index.html
+          git commit -m "Update FedWatch probabilities" || exit 0
+
+          for attempt in 1 2 3; do
+            if git pull --rebase origin main && git push; then
+              exit 0
+            fi
+            echo "Push attempt ${attempt} failed. Rebuilding FedWatch on top of origin/main."
+            git rebase --abort || true
+            git fetch origin main
+            git reset --hard origin/main
+            python scripts/update_market_briefing_fedwatch.py
+            if git diff --quiet -- data/market-briefing-data.js; then
+              echo "No FedWatch changes detected after rebuild."
+              exit 0
+            fi
+            python scripts/bump_data_cache_versions.py data/market-briefing-data.js
+            git add data/market-briefing-data.js index.html
+            git commit -m "Update FedWatch probabilities" || exit 0
+          done
+
+          echo "Failed to push FedWatch update after 3 attempts."
+          exit 1
