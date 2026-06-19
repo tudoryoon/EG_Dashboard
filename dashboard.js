@@ -6505,12 +6505,142 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
   if (typeof Chart === "undefined" || !canvas || !distribution?.points?.length) {
     return;
   }
+  const getDistributionLabel = (raw) => {
+    const label = String(raw?.label ?? "");
+    const cleaned = label.replace(/\s*\([^)]*\)\s*/g, "").trim();
+    if (cleaned.length <= 8) {
+      return cleaned;
+    }
+    return `${cleaned.slice(0, 8)}…`;
+  };
   const getDistributionPointRadius = (raw) => {
     const value = Math.abs(Number(raw?.excessReturns?.["1m"]));
     if (!Number.isFinite(value)) {
       return 6;
     }
     return Math.max(5, Math.min(10, 5 + value / 2.8));
+  };
+  const labelPlugin = {
+    id: "briefingRotationDistributionLabels",
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea } = chart;
+      const dataset = chart.data.datasets?.[0];
+      const meta = chart.getDatasetMeta(0);
+      if (!chartArea || !dataset || !meta?.data?.length) {
+        return;
+      }
+      const occupiedRects = [];
+      const candidates = [
+        { x: 0, y: 18, align: "center" },
+        { x: 0, y: -18, align: "center" },
+        { x: 24, y: 0, align: "left" },
+        { x: -24, y: 0, align: "right" },
+        { x: 22, y: 17, align: "left" },
+        { x: -22, y: 17, align: "right" },
+        { x: 22, y: -17, align: "left" },
+        { x: -22, y: -17, align: "right" },
+        { x: 0, y: 34, align: "center" },
+        { x: 0, y: -34, align: "center" },
+      ];
+      const orderedElements = meta.data
+        .map((element, index) => ({ element, raw: dataset.data[index], index }))
+        .filter((item) => item.element && item.raw)
+        .sort((a, b) => Number(b.raw.score ?? 0) - Number(a.raw.score ?? 0));
+      const intersects = (rect) =>
+        occupiedRects.some(
+          (other) =>
+            rect.left < other.right &&
+            rect.right > other.left &&
+            rect.top < other.bottom &&
+            rect.bottom > other.top,
+        );
+      const clampRect = (rect) => ({
+        ...rect,
+        outside:
+          rect.left < chartArea.left + 4 ||
+          rect.right > chartArea.right - 4 ||
+          rect.top < chartArea.top + 4 ||
+          rect.bottom > chartArea.bottom - 4,
+      });
+      ctx.save();
+      ctx.font = "700 10px Inter, sans-serif";
+      ctx.textBaseline = "middle";
+      orderedElements.forEach(({ element, raw }) => {
+        const label = getDistributionLabel(raw);
+        if (!label) {
+          return;
+        }
+        const pointX = element.x;
+        const pointY = element.y;
+        const textWidth = Math.min(74, ctx.measureText(label).width);
+        const pillWidth = textWidth + 12;
+        const pillHeight = 17;
+        let best = null;
+        candidates.forEach((candidate, candidateIndex) => {
+          const centerX =
+            candidate.align === "left"
+              ? pointX + candidate.x + pillWidth / 2
+              : candidate.align === "right"
+                ? pointX + candidate.x - pillWidth / 2
+                : pointX + candidate.x;
+          const centerY = pointY + candidate.y;
+          const rect = clampRect({
+            left: centerX - pillWidth / 2,
+            right: centerX + pillWidth / 2,
+            top: centerY - pillHeight / 2,
+            bottom: centerY + pillHeight / 2,
+            centerX,
+            centerY,
+            candidate,
+          });
+          const overlapPenalty = intersects(rect) ? 1000 : 0;
+          const outsidePenalty = rect.outside ? 500 : 0;
+          const score = overlapPenalty + outsidePenalty + candidateIndex * 4 + Math.abs(candidate.y) + Math.abs(candidate.x) * 0.35;
+          if (!best || score < best.score) {
+            best = { ...rect, score };
+          }
+        });
+        if (!best) {
+          return;
+        }
+        const adjustedLeft = Math.max(chartArea.left + 4, Math.min(best.left, chartArea.right - pillWidth - 4));
+        const adjustedTop = Math.max(chartArea.top + 4, Math.min(best.top, chartArea.bottom - pillHeight - 4));
+        const rect = {
+          left: adjustedLeft,
+          right: adjustedLeft + pillWidth,
+          top: adjustedTop,
+          bottom: adjustedTop + pillHeight,
+          centerX: adjustedLeft + pillWidth / 2,
+          centerY: adjustedTop + pillHeight / 2,
+        };
+        occupiedRects.push(rect);
+        const needsLeader = Math.hypot(rect.centerX - pointX, rect.centerY - pointY) > 19;
+        if (needsLeader) {
+          ctx.strokeStyle = "rgba(75, 85, 99, 0.42)";
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(pointX, pointY);
+          ctx.lineTo(rect.centerX, rect.centerY);
+          ctx.stroke();
+        }
+        ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+        ctx.strokeStyle = getRotationHistoryBorderColor(raw.classification);
+        ctx.lineWidth = 0.8;
+        if (typeof ctx.roundRect === "function") {
+          ctx.beginPath();
+          ctx.roundRect(rect.left, rect.top, pillWidth, pillHeight, 8);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillRect(rect.left, rect.top, pillWidth, pillHeight);
+          ctx.strokeRect(rect.left, rect.top, pillWidth, pillHeight);
+        }
+        ctx.fillStyle = "#1f2937";
+        ctx.textAlign = "center";
+        ctx.fillText(label, rect.centerX, rect.centerY + 0.5, pillWidth - 8);
+      });
+      ctx.restore();
+    },
   };
   const alignmentPlugin = {
     id: "briefingRotationDistributionGuides",
@@ -6572,7 +6702,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
         },
       ],
     },
-    plugins: [alignmentPlugin],
+    plugins: [alignmentPlugin, labelPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
