@@ -56,7 +56,7 @@ def strip_html_tags(value: str) -> str:
 
 def parse_percent_cell(value: object) -> float:
     text = strip_html_tags(str(value)).replace("%", "").replace(",", "").strip()
-    if not text or text in {"-", "--"}:
+    if not text or text in {"-", "--", "–", "—", "−"}:
         return 0.0
     return round(float(text), 1)
 
