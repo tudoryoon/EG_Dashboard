@@ -13,10 +13,10 @@ on:
           - "true"
   schedule:
     # Daily Briefing primary run and retry runs.
-    # 18:48/19:18 UTC = 03:48/04:18 KST early runs.
+    # 18:58/19:18 UTC = 03:58/04:18 KST early runs.
     # 19:47 UTC = 04:47 KST primary run.
     # 20:21/20:35 UTC = 05:21/05:35 KST retry runs.
-    - cron: "48 18 * * *"
+    - cron: "58 18 * * *"
     - cron: "18 19 * * *"
     - cron: "47 19 * * *"
     - cron: "21 20 * * *"
