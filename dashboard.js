@@ -7017,7 +7017,7 @@ function renderMarketBriefingOverview() {
               ${rsLinkAttrs}
             >
               <span class="briefing-tile-ticker">${item.label}</span>
-              <span class="briefing-tile-change">${formatSignedPercent(oneDayChange)}</span>
+              <span class="briefing-tile-change">${formatSignedPercent(overviewChange)}</span>
               <div class="briefing-tile-tooltip">
                 <strong>${item.name}</strong>
                 <span>${sector.label}</span>
