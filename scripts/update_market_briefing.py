@@ -138,13 +138,15 @@ SECTOR_GROUPS = [
     },
     {
         "key": "semi_equipment",
-        "label": "반도체 장비",
+        "label": "반도체 장비/후공정",
         "items": [
             {"ticker": "ASML", "label": "ASML US", "name": "ASML", "query": "ASML stock"},
             {"ticker": "LRCX", "label": "LRCX US", "name": "Lam Research", "query": "Lam Research stock"},
             {"ticker": "AMAT", "label": "AMAT US", "name": "Applied Materials", "query": "Applied Materials stock"},
             {"ticker": "KLAC", "label": "KLAC US", "name": "KLA", "query": "KLA stock"},
             {"ticker": "TER", "label": "TER US", "name": "Teradyne", "query": "Teradyne stock"},
+            {"ticker": "AMKR", "label": "AMKR US", "name": "Amkor Technology", "query": "Amkor Technology stock"},
+            {"ticker": "ASX", "label": "ASX US", "name": "ASE Technology", "query": "ASE Technology stock"},
         ],
     },
     {

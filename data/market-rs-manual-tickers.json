@@ -23,6 +23,17 @@
       "sharesOutstanding": 171407939
     },
     {
+      "ticker": "AMKR",
+      "name": "Amkor Technology, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 247872518
+    },
+    {
       "ticker": "APLD",
       "name": "Applied Digital Corporation",
       "memberships": {
@@ -43,6 +54,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 298746383
+    },
+    {
+      "ticker": "ASX",
+      "name": "ASE Technology Holding Co., Ltd.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 2193945789
     },
     {
       "ticker": "AXTI",
