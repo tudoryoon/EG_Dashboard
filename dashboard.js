@@ -333,10 +333,10 @@ const state = {
   rsTableSortDirection: "desc",
   rsChartSeries: {
     rs: true,
-    ema10: true,
+    ema10: false,
     ema20: true,
-    ema50: true,
-    ema200: true,
+    ema50: false,
+    ema200: false,
   },
   trendScoreUniverse: "all",
   trendScoreRange: "1y",
