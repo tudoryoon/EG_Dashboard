@@ -482,6 +482,53 @@ def parse_tga_daily_balance() -> tuple[list[str], list[float]]:
     return dates, [values_by_date[date] for date in dates]
 
 
+def build_fed_net_liquidity_series(
+    tga_dates: list[str],
+    tga_values: list[float],
+) -> dict[str, tuple[list[str], list[float | None]]]:
+    fed_assets_dates, fed_assets_values = parse_fred_series("WALCL", "2002-12-18")
+    rrp_dates, rrp_values = parse_fred_series("RRPONTSYD", "2002-12-18")
+    weekly_tga_dates, weekly_tga_values = parse_fred_series("WTREGEN", "2002-12-18")
+
+    fed_assets_bn = [round(value / 1000, 2) for value in fed_assets_values]
+    weekly_tga_bn = [round(value / 1000, 2) for value in weekly_tga_values]
+    merged_tga_dates, merged_tga_values = merge_series_prefer_recent(
+        (tga_dates, tga_values),
+        (weekly_tga_dates, weekly_tga_bn),
+    )
+
+    start_date = max("2002-12-18", LIQUIDITY_START_DATE)
+    daily_assets_dates, daily_assets_values = build_daily_forward_series(
+        fed_assets_dates,
+        fed_assets_bn,
+        start_date,
+    )
+    daily_tga_dates, daily_tga_values = build_daily_forward_series(
+        merged_tga_dates,
+        merged_tga_values,
+        start_date,
+    )
+    daily_rrp_dates, daily_rrp_values = build_daily_forward_series(
+        rrp_dates,
+        rrp_values,
+        start_date,
+    )
+
+    net_values: list[float | None] = []
+    for fed_assets, tga, rrp in zip(daily_assets_values, daily_tga_values, daily_rrp_values):
+        if fed_assets is None or tga is None or rrp is None:
+            net_values.append(None)
+        else:
+            net_values.append(round(fed_assets - tga - rrp, 2))
+
+    return {
+        "net_liquidity": (daily_assets_dates, net_values),
+        "fed_assets": (daily_assets_dates, daily_assets_values),
+        "tga": (daily_tga_dates, daily_tga_values),
+        "rrp": (daily_rrp_dates, daily_rrp_values),
+    }
+
+
 def build_spread_series(
     first_dates: list[str],
     first_values: list[float],
@@ -572,6 +619,7 @@ def main() -> None:
     )
     global_m2_dates, global_m2_values = parse_streetstats_global_m2_proxy()
     tga_dates, tga_values = parse_tga_daily_balance()
+    net_liquidity_series = build_fed_net_liquidity_series(tga_dates, tga_values)
     sofr_iorb_dates, sofr_iorb_values = parse_sofr_iorb_spread_bps()
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
     real_5y_dates, real_5y_values = build_spread_series(
@@ -668,6 +716,21 @@ def main() -> None:
             "formatter": "number1",
             "series": {
                 "global_m2_usd": build_series_item("Global M2 Proxy (USD)", "#2563eb", global_m2_dates, global_m2_values),
+            },
+        },
+        "liquidity_net": {
+            "title": "Fed Net Liquidity",
+            "subtitle": "Fed assets minus Treasury General Account and ON RRP drains. WALCL and WTREGEN are weekly forward-filled; daily TGA from FiscalData is preferred where available.",
+            "source": "FRED WALCL / RRPONTSYD / WTREGEN and U.S. Treasury FiscalData",
+            "mode": "raw",
+            "connectGaps": False,
+            "yAxisLabel": "USD bn",
+            "formatter": "number1",
+            "series": {
+                "net_liquidity": build_series_item("Fed Net Liquidity", "#111827", *net_liquidity_series["net_liquidity"]),
+                "fed_assets": build_series_item("Fed Assets", "#2563eb", *net_liquidity_series["fed_assets"], [6, 4]),
+                "tga": build_series_item("TGA Drain", "#0f766e", *net_liquidity_series["tga"], [2, 4]),
+                "rrp": build_series_item("ON RRP Drain", "#dc2626", *net_liquidity_series["rrp"], [2, 4]),
             },
         },
         "liquidity_sofr_iorb": {
