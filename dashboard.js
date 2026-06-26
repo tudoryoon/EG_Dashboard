@@ -7976,8 +7976,8 @@ function renderMarketCanslimEarningsSurprise(row) {
   const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
   const quarters = earningsProfile?.quarters ?? [];
   const coverageText = marketCanslimEarningsData.scope?.tickerCount
-    ? `${marketCanslimEarningsData.scope.coveredCount ?? 0}/${marketCanslimEarningsData.scope.tickerCount} Daily Briefing names covered`
-    : "Daily Briefing EPS coverage";
+    ? `${marketCanslimEarningsData.scope.coveredCount ?? 0}/${marketCanslimEarningsData.scope.tickerCount} EPS coverage names covered`
+    : "EPS surprise coverage";
   if (!quarters.length) {
     return `
       <div class="market-rs-financial-panel market-canslim-surprise-panel">
@@ -9696,7 +9696,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark Daily Briefing surprise events where available.</p>
+          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark covered surprise events where available.</p>
         </article>
       </section>
 

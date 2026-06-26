@@ -13,6 +13,7 @@ import yfinance as yf
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = ROOT / "data" / "market-canslim-earnings-data.js"
 BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
+MARKET_RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 FALLBACK_TICKERS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"]
 MAX_WORKERS = 8
 
@@ -89,6 +90,37 @@ def load_daily_briefing_tickers() -> list[str]:
     return tickers or FALLBACK_TICKERS
 
 
+def load_market_rs_universe_tickers(membership_key: str) -> list[str]:
+    payload = parse_js_payload(MARKET_RS_DATA_PATH, "marketRsData")
+    tickers: list[str] = []
+    seen: set[str] = set()
+    for row in payload.get("rows", []):
+        if not isinstance(row, dict):
+            continue
+        memberships = row.get("memberships")
+        if not isinstance(memberships, dict) or not memberships.get(membership_key):
+            continue
+        ticker = str(row.get("ticker") or "").strip()
+        if not ticker or ticker in seen:
+            continue
+        seen.add(ticker)
+        tickers.append(ticker)
+    return tickers
+
+
+def merge_ticker_lists(*ticker_lists: list[str]) -> list[str]:
+    tickers: list[str] = []
+    seen: set[str] = set()
+    for ticker_list in ticker_lists:
+        for ticker in ticker_list:
+            normalized = str(ticker or "").strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            tickers.append(normalized)
+    return tickers
+
+
 def build_ticker_payload(ticker: str) -> dict[str, object]:
     symbol = ticker
     yf_ticker = yf.Ticker(symbol)
@@ -135,7 +167,9 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
 
 
 def main() -> None:
-    tickers = load_daily_briefing_tickers()
+    briefing_tickers = load_daily_briefing_tickers()
+    nasdaq100_tickers = load_market_rs_universe_tickers("nasdaq100")
+    tickers = merge_ticker_lists(briefing_tickers, nasdaq100_tickers) or FALLBACK_TICKERS
     existing_profiles = load_existing_profiles()
     profiles: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -155,10 +189,14 @@ def main() -> None:
     payload = {
         "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "scope": {
-            "universe": "Daily Briefing sector map",
+            "universe": "Daily Briefing sector map + NASDAQ 100",
             "source": "Yahoo Finance via yfinance earnings_dates",
             "tickerCount": len(tickers),
             "coveredCount": covered_count,
+            "sources": {
+                "dailyBriefing": len(briefing_tickers),
+                "nasdaq100": len(nasdaq100_tickers),
+            },
             "basis": "Recent 4 reported quarters. EPS estimate, reported EPS, EPS beat/shock value, and surprise percentage only.",
         },
         "profiles": profiles,
@@ -172,6 +210,7 @@ def main() -> None:
     )
     print(f"Wrote {OUTPUT_PATH}")
     print(f"Tickers: {len(tickers)} / EPS profiles with data: {covered_count}")
+    print(f"Sources: Daily Briefing {len(briefing_tickers)} / NASDAQ 100 {len(nasdaq100_tickers)}")
 
 
 if __name__ == "__main__":
