@@ -7975,13 +7975,16 @@ function getCanslimEarningsTone(value) {
 function renderMarketCanslimEarningsSurprise(row) {
   const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
   const quarters = earningsProfile?.quarters ?? [];
+  const coverageText = marketCanslimEarningsData.scope?.tickerCount
+    ? `${marketCanslimEarningsData.scope.coveredCount ?? 0}/${marketCanslimEarningsData.scope.tickerCount} Daily Briefing names covered`
+    : "Daily Briefing EPS coverage";
   if (!quarters.length) {
     return `
       <div class="market-rs-financial-panel market-canslim-surprise-panel">
         <div class="market-rs-financial-head">
           <div>
             <strong>Earnings Surprise</strong>
-            <p>M7 시범 데이터만 연결되어 있습니다.</p>
+            <p>${coverageText}</p>
           </div>
         </div>
         <p class="market-rs-empty">EPS estimate vs actual 데이터가 아직 없습니다.</p>
@@ -8010,7 +8013,7 @@ function renderMarketCanslimEarningsSurprise(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>Earnings Surprise</strong>
-          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스만 표시합니다.</p>
+          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스만 표시합니다. ${coverageText}</p>
         </div>
         <span>Updated ${formatShortIsoDate(marketCanslimEarningsData.updatedAt)}</span>
       </div>
@@ -9693,7 +9696,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark M7 surprise events where available.</p>
+          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark Daily Briefing surprise events where available.</p>
         </article>
       </section>
 

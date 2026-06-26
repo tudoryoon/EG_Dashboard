@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,7 +12,9 @@ import yfinance as yf
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = ROOT / "data" / "market-canslim-earnings-data.js"
-TICKERS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"]
+BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
+FALLBACK_TICKERS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"]
+MAX_WORKERS = 8
 
 
 def clean_number(value: object, digits: int = 4) -> float | None:
@@ -50,6 +53,40 @@ def load_existing_profiles() -> dict[str, object]:
         return {}
     profiles = payload.get("profiles")
     return profiles if isinstance(profiles, dict) else {}
+
+
+def parse_js_payload(path: Path, variable_name: str) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    text = path.read_text(encoding="utf-8").strip()
+    prefix = f"window.{variable_name} = "
+    if text.startswith(prefix):
+        text = text[len(prefix) :]
+    if text.endswith(";"):
+        text = text[:-1]
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def load_daily_briefing_tickers() -> list[str]:
+    payload = parse_js_payload(BRIEFING_DATA_PATH, "marketBriefingData")
+    tickers: list[str] = []
+    seen: set[str] = set()
+    for sector in payload.get("sectorPanels", []):
+        if not isinstance(sector, dict):
+            continue
+        for item in sector.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            ticker = str(item.get("ticker") or "").strip()
+            if not ticker or ticker in seen:
+                continue
+            seen.add(ticker)
+            tickers.append(ticker)
+    return tickers or FALLBACK_TICKERS
 
 
 def build_ticker_payload(ticker: str) -> dict[str, object]:
@@ -98,19 +135,30 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
 
 
 def main() -> None:
+    tickers = load_daily_briefing_tickers()
     existing_profiles = load_existing_profiles()
     profiles: dict[str, object] = {}
-    for ticker in TICKERS:
-        profile = build_ticker_payload(ticker)
-        if not profile.get("quarters") and ticker in existing_profiles:
-            profile = existing_profiles[ticker]
-            profile["fallback"] = True
-        profiles[ticker] = profile
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {executor.submit(build_ticker_payload, ticker): ticker for ticker in tickers}
+        for future in as_completed(futures):
+            ticker = futures[future]
+            try:
+                profile = future.result()
+            except Exception as exc:
+                profile = {"ticker": ticker, "sourceTicker": ticker, "quarters": [], "error": str(exc)}
+            if not profile.get("quarters") and ticker in existing_profiles:
+                profile = dict(existing_profiles[ticker])
+                profile["fallback"] = True
+            profiles[ticker] = profile
+    profiles = {ticker: profiles[ticker] for ticker in tickers if ticker in profiles}
+    covered_count = sum(1 for profile in profiles.values() if profile.get("quarters"))
     payload = {
         "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "scope": {
-            "universe": "M7 prototype",
+            "universe": "Daily Briefing sector map",
             "source": "Yahoo Finance via yfinance earnings_dates",
+            "tickerCount": len(tickers),
+            "coveredCount": covered_count,
             "basis": "Recent 4 reported quarters. EPS estimate, reported EPS, EPS beat/shock value, and surprise percentage only.",
         },
         "profiles": profiles,
@@ -123,6 +171,7 @@ def main() -> None:
         newline="\n",
     )
     print(f"Wrote {OUTPUT_PATH}")
+    print(f"Tickers: {len(tickers)} / EPS profiles with data: {covered_count}")
 
 
 if __name__ == "__main__":
