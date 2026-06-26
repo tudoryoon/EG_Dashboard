@@ -8000,8 +8000,6 @@ function renderMarketCanslimEarningsSurprise(row) {
           <td>${formatRsFinancialEps(eps.actual)}</td>
           <td><span class="${getCanslimEarningsTone(eps.surpriseValue)}">${formatCanslimEarningsValue(eps.surpriseValue)}</span></td>
           <td><span class="${getCanslimEarningsTone(eps.surprisePct)}">${formatCanslimEarningsPercent(eps.surprisePct)}</span></td>
-          <td><span class="market-canslim-pending">Pending</span></td>
-          <td><span class="market-canslim-pending">Pending</span></td>
         </tr>
       `;
     })
@@ -8012,7 +8010,7 @@ function renderMarketCanslimEarningsSurprise(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>Earnings Surprise</strong>
-          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스. 매출/영업이익 consensus는 안정 소스 연결 전까지 보류.</p>
+          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스만 표시합니다.</p>
         </div>
         <span>Updated ${formatShortIsoDate(marketCanslimEarningsData.updatedAt)}</span>
       </div>
@@ -8026,8 +8024,6 @@ function renderMarketCanslimEarningsSurprise(row) {
               <th>EPS Actual</th>
               <th>EPS Beat</th>
               <th>EPS %</th>
-              <th>Revenue Surprise</th>
-              <th>OP Surprise</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>

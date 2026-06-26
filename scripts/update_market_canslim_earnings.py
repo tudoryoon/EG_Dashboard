@@ -91,20 +91,6 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
                     "surpriseValue": surprise_value,
                     "surprisePct": surprise_pct,
                 },
-                "revenue": {
-                    "estimate": None,
-                    "actual": None,
-                    "surpriseValue": None,
-                    "surprisePct": None,
-                    "status": "pending",
-                },
-                "operatingIncome": {
-                    "estimate": None,
-                    "actual": None,
-                    "surpriseValue": None,
-                    "surprisePct": None,
-                    "status": "pending",
-                },
             }
         )
 
@@ -125,7 +111,7 @@ def main() -> None:
         "scope": {
             "universe": "M7 prototype",
             "source": "Yahoo Finance via yfinance earnings_dates",
-            "basis": "Recent 4 reported quarters. EPS estimate, reported EPS, and surprise percentage are populated. Revenue and operating-income consensus fields are reserved until a stable free source is connected.",
+            "basis": "Recent 4 reported quarters. EPS estimate, reported EPS, EPS beat/shock value, and surprise percentage only.",
         },
         "profiles": profiles,
     }
