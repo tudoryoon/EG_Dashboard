@@ -338,10 +338,22 @@ SECTOR_GROUPS = [
             {"ticker": "CAT", "label": "CAT US", "name": "Caterpillar", "query": "Caterpillar stock"},
             {"ticker": "GE", "label": "GE US", "name": "GE Aerospace", "query": "GE Aerospace stock"},
             {"ticker": "HWM", "label": "HWM US", "name": "Howmet Aerospace", "query": "Howmet Aerospace stock"},
-            {"ticker": "BA", "label": "BA US", "name": "Boeing", "query": "Boeing stock"},
             {"ticker": "FTAI", "label": "FTAI US", "name": "FTAI Aviation", "query": "FTAI Aviation stock"},
             {"ticker": "ATI", "label": "ATI US", "name": "ATI", "query": "ATI stock"},
             {"ticker": "CRS", "label": "CRS US", "name": "Carpenter Technology", "query": "Carpenter Technology stock"},
+        ],
+    },
+    {
+        "key": "air_transport",
+        "label": "항공/운송",
+        "items": [
+            {"ticker": "BA", "label": "BA US", "name": "Boeing", "query": "Boeing stock"},
+            {"ticker": "DAL", "label": "DAL US", "name": "Delta Air Lines", "query": "Delta Air Lines stock"},
+            {"ticker": "UAL", "label": "UAL US", "name": "United Airlines", "query": "United Airlines stock"},
+            {"ticker": "LUV", "label": "LUV US", "name": "Southwest Airlines", "query": "Southwest Airlines stock"},
+            {"ticker": "FDX", "label": "FDX US", "name": "FedEx", "query": "FedEx stock"},
+            {"ticker": "UPS", "label": "UPS US", "name": "UPS", "query": "UPS stock"},
+            {"ticker": "UNP", "label": "UNP US", "name": "Union Pacific", "query": "Union Pacific stock"},
         ],
     },
     {
