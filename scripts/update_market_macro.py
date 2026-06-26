@@ -20,6 +20,9 @@ FOOD_START_DATE = "2001-01-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 STREETSTATS_BASE = "https://streetstats.finance"
+GLOBAL_M2_BLOOMBERG_CALIBRATION_DATE = "2026-05-17"
+GLOBAL_M2_BLOOMBERG_CALIBRATION_TN = 121.2711
+GLOBAL_M2_BLOOMBERG_CALIBRATION_FACTOR = 1.1900981354
 FISCALDATA_TGA_URL = (
     "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/dts/"
     "operating_cash_balance"
@@ -573,6 +576,17 @@ def build_series_item(
     return item
 
 
+def build_bloomberg_style_global_m2_series(
+    dates: list[str],
+    values: list[float | None],
+) -> tuple[list[str], list[float | None]]:
+    calibrated_values = [
+        round((value * GLOBAL_M2_BLOOMBERG_CALIBRATION_FACTOR) / 1000, 4) if value is not None else None
+        for value in values
+    ]
+    return dates, calibrated_values
+
+
 def filter_series_start(
     dates: list[str],
     values: list[float],
@@ -618,6 +632,10 @@ def main() -> None:
         LIQUIDITY_START_DATE,
     )
     global_m2_dates, global_m2_values = parse_streetstats_global_m2_proxy()
+    global_m2_bloomberg_dates, global_m2_bloomberg_values = build_bloomberg_style_global_m2_series(
+        global_m2_dates,
+        global_m2_values,
+    )
     tga_dates, tga_values = parse_tga_daily_balance()
     net_liquidity_series = build_fed_net_liquidity_series(tga_dates, tga_values)
     sofr_iorb_dates, sofr_iorb_values = parse_sofr_iorb_spread_bps()
@@ -707,15 +725,20 @@ def main() -> None:
             "series": rates_series,
         },
         "liquidity_global_m2": {
-            "title": "Global Money Supply Proxy",
-            "subtitle": "Daily forward-filled proxy for GLMOSUPP-style global M2 in USD, using US, Eurozone, China, and Japan M2 converted to USD where available.",
-            "source": "StreetStats public Global M2 proxy / central bank sources",
+            "title": "Global M2 Proxy (Bloomberg-style)",
+            "subtitle": f"StreetStats Global M2 flow calibrated to the Bloomberg GLMOSUPP-style level shown in the reference chart. Calibration: {GLOBAL_M2_BLOOMBERG_CALIBRATION_DATE} = {GLOBAL_M2_BLOOMBERG_CALIBRATION_TN:.4f}T.",
+            "source": "StreetStats public Global M2 proxy, calibrated to Bloomberg GLMOSUPP reference",
             "mode": "raw",
             "connectGaps": False,
-            "yAxisLabel": "USD bn",
-            "formatter": "number1",
+            "yAxisLabel": "USD tn",
+            "formatter": "trillion1",
             "series": {
-                "global_m2_usd": build_series_item("Global M2 Proxy (USD)", "#2563eb", global_m2_dates, global_m2_values),
+                "global_m2_bloomberg_style": build_series_item(
+                    "Global M2 Proxy (Bloomberg-style)",
+                    "#111827",
+                    global_m2_bloomberg_dates,
+                    global_m2_bloomberg_values,
+                ),
             },
         },
         "liquidity_net": {
