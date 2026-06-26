@@ -210,6 +210,17 @@
       "sharesOutstanding": 102582972
     },
     {
+      "ticker": "GH",
+      "name": "Guardant Health, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 132599929
+    },
+    {
       "ticker": "GLXY",
       "name": "Galaxy Digital",
       "memberships": {
@@ -219,6 +230,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 191491823
+    },
+    {
+      "ticker": "ILMN",
+      "name": "Illumina, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 151300000
     },
     {
       "ticker": "IREN",
