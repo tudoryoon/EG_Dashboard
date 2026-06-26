@@ -9152,6 +9152,8 @@ function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
     ? priceMin + (priceMax - priceMin) * 0.08
     : row?.price ?? 0;
   const byIndex = new Map();
+  const rotations = [];
+  const colors = [];
   const data = quarters
     .map((quarter) => {
       const releaseDate = quarter.releaseDate;
@@ -9166,13 +9168,16 @@ function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
         return null;
       }
       byIndex.set(index, quarter);
+      const surprisePct = Number(quarter.eps?.surprisePct);
+      rotations.push(Number.isFinite(surprisePct) && surprisePct < 0 ? 180 : 0);
+      colors.push(Number.isFinite(surprisePct) && surprisePct < 0 ? "#dc2626" : "#16a34a");
       return {
         x: selectedLabels[index],
         y: markerY,
       };
     })
     .filter(Boolean);
-  return { data, byIndex };
+  return { data, byIndex, rotations, colors };
 }
 
 function createMarketRsChart(canvas, row) {
@@ -9269,9 +9274,10 @@ function createMarketRsChart(canvas, row) {
       type: "scatter",
       label: "EPS Surprise",
       data: earningsMarkers.data,
-      borderColor: "#7c3aed",
-      backgroundColor: "#7c3aed",
+      borderColor: earningsMarkers.colors,
+      backgroundColor: earningsMarkers.colors,
       pointStyle: "triangle",
+      pointRotation: earningsMarkers.rotations,
       pointRadius: earningsMarkers.data.length ? 7 : 0,
       pointHoverRadius: 9,
       yAxisID: "y1",
@@ -9311,10 +9317,12 @@ function createMarketRsChart(canvas, row) {
                 const index = selectedLabels.indexOf(context.raw?.x ?? context.label);
                 const event = earningsMarkers.byIndex.get(index);
                 const eps = event?.eps ?? {};
+                const surprisePct = Number(eps.surprisePct);
+                const label = Number.isFinite(surprisePct) && surprisePct < 0 ? "EPS Shock" : "EPS Beat";
                 return [
-                  `EPS ${formatCanslimEarningsPercent(eps.surprisePct)}`,
+                  `${label} ${formatCanslimEarningsPercent(eps.surprisePct)}`,
                   `Actual ${formatRsFinancialEps(eps.actual)} / Est ${formatRsFinancialEps(eps.estimate)}`,
-                  `Beat ${formatCanslimEarningsValue(eps.surpriseValue)}`,
+                  `Diff ${formatCanslimEarningsValue(eps.surpriseValue)}`,
                 ];
               }
               if (context.dataset.yAxisID === "y") {
