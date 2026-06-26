@@ -7975,6 +7975,7 @@ function getCanslimEarningsTone(value) {
 function renderMarketCanslimEarningsSurprise(row) {
   const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
   const quarters = earningsProfile?.quarters ?? [];
+  const sourceText = "Yahoo Finance / yfinance EPS consensus proxy";
   const coverageText = marketCanslimEarningsData.scope?.tickerCount
     ? `${marketCanslimEarningsData.scope.coveredCount ?? 0}/${marketCanslimEarningsData.scope.tickerCount} EPS coverage names covered`
     : "EPS surprise coverage";
@@ -7984,7 +7985,7 @@ function renderMarketCanslimEarningsSurprise(row) {
         <div class="market-rs-financial-head">
           <div>
             <strong>Earnings Surprise</strong>
-            <p>${coverageText}</p>
+            <p>${sourceText}. ${coverageText}</p>
           </div>
         </div>
         <p class="market-rs-empty">EPS estimate vs actual 데이터가 아직 없습니다.</p>
@@ -8013,7 +8014,7 @@ function renderMarketCanslimEarningsSurprise(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>Earnings Surprise</strong>
-          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스만 표시합니다. ${coverageText}</p>
+          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스만 표시합니다. ${sourceText}. ${coverageText}</p>
         </div>
         <span>Updated ${formatShortIsoDate(marketCanslimEarningsData.updatedAt)}</span>
       </div>
@@ -8032,7 +8033,7 @@ function renderMarketCanslimEarningsSurprise(row) {
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <p class="market-rs-financial-note">${marketCanslimEarningsData.scope?.basis ?? ""}</p>
+      <p class="market-rs-financial-note">${marketCanslimEarningsData.scope?.basis ?? ""} Source: ${sourceText}; GAAP/Non-GAAP is not explicitly classified by this feed.</p>
     </div>
   `;
 }
@@ -9696,7 +9697,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark covered surprise events where available.</p>
+          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark Yahoo Finance / yfinance EPS surprise proxy events where available.</p>
         </article>
       </section>
 
