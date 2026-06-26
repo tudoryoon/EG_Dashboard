@@ -50,6 +50,7 @@ const marketRsData = window.marketRsData ?? {
   histories: {},
 };
 const marketCanslimData = window.marketCanslimData ?? { updatedAt: "", scope: {}, profiles: {} };
+const marketCanslimEarningsData = window.marketCanslimEarningsData ?? { updatedAt: "", scope: {}, profiles: {} };
 const marketTrendScoreData = window.marketTrendScoreData ?? {
   updatedAt: "",
   historyDates: [],
@@ -7932,6 +7933,109 @@ function getMarketCanslimProfile(ticker) {
   );
 }
 
+function getMarketCanslimEarningsProfile(ticker) {
+  const normalized = normalizeCanslimTicker(ticker);
+  return marketCanslimEarningsData.profiles?.[normalized] ?? marketCanslimEarningsData.profiles?.[ticker] ?? null;
+}
+
+function formatCanslimEarningsPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(1)}%`;
+}
+
+function formatCanslimEarningsValue(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(2)}`;
+}
+
+function getCanslimEarningsTone(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "";
+  }
+  if (numeric > 0) {
+    return " is-positive";
+  }
+  if (numeric < 0) {
+    return " is-negative";
+  }
+  return "";
+}
+
+function renderMarketCanslimEarningsSurprise(row) {
+  const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
+  const quarters = earningsProfile?.quarters ?? [];
+  if (!quarters.length) {
+    return `
+      <div class="market-rs-financial-panel market-canslim-surprise-panel">
+        <div class="market-rs-financial-head">
+          <div>
+            <strong>Earnings Surprise</strong>
+            <p>M7 시범 데이터만 연결되어 있습니다.</p>
+          </div>
+        </div>
+        <p class="market-rs-empty">EPS estimate vs actual 데이터가 아직 없습니다.</p>
+      </div>
+    `;
+  }
+
+  const rows = quarters
+    .map((quarter) => {
+      const eps = quarter.eps ?? {};
+      return `
+        <tr>
+          <td>${quarter.period ?? "-"}</td>
+          <td>${formatFullIsoDate(quarter.releaseDate)}</td>
+          <td>${formatRsFinancialEps(eps.estimate)}</td>
+          <td>${formatRsFinancialEps(eps.actual)}</td>
+          <td><span class="${getCanslimEarningsTone(eps.surpriseValue)}">${formatCanslimEarningsValue(eps.surpriseValue)}</span></td>
+          <td><span class="${getCanslimEarningsTone(eps.surprisePct)}">${formatCanslimEarningsPercent(eps.surprisePct)}</span></td>
+          <td><span class="market-canslim-pending">Pending</span></td>
+          <td><span class="market-canslim-pending">Pending</span></td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="market-rs-financial-panel market-canslim-surprise-panel">
+      <div class="market-rs-financial-head">
+        <div>
+          <strong>Earnings Surprise</strong>
+          <p>최근 4개 발표 분기 EPS 실제치 vs 컨센서스. 매출/영업이익 consensus는 안정 소스 연결 전까지 보류.</p>
+        </div>
+        <span>Updated ${formatShortIsoDate(marketCanslimEarningsData.updatedAt)}</span>
+      </div>
+      <div class="market-rs-financial-table-wrap">
+        <table class="market-rs-financial-table market-canslim-surprise-table">
+          <thead>
+            <tr>
+              <th>Quarter</th>
+              <th>Release</th>
+              <th>EPS Est</th>
+              <th>EPS Actual</th>
+              <th>EPS Beat</th>
+              <th>EPS %</th>
+              <th>Revenue Surprise</th>
+              <th>OP Surprise</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p class="market-rs-financial-note">${marketCanslimEarningsData.scope?.basis ?? ""}</p>
+    </div>
+  `;
+}
+
 function getCanslimStatusLabel(status) {
   if (status === "pass") {
     return "Pass";
@@ -8216,6 +8320,7 @@ function renderMarketRsCanslim(row) {
     return "";
   }
   const { profile, checks, score } = analysis;
+  const earningsSurpriseMarkup = renderMarketCanslimEarningsSurprise(row);
   const rows = checks.map((item) => `
     <div class="market-canslim-item${getCanslimStatusClass(item.status)}">
       <div class="market-canslim-letter">${item.key}</div>
@@ -8242,6 +8347,7 @@ function renderMarketRsCanslim(row) {
       <div class="market-canslim-grid">${rows}</div>
       <p class="market-rs-financial-note">${profile.generated ? "Auto proxy uses RS data and the existing S&P500/NASDAQ100 financial dataset. Do not treat Pending N/I/A as a fail." : marketCanslimData.scope?.basis ?? ""}</p>
     </div>
+    ${earningsSurpriseMarkup}
   `;
 }
 
@@ -9034,6 +9140,39 @@ function isMarketRsChartSeriesVisible(key) {
   return state.rsChartSeries?.[key] !== false;
 }
 
+function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
+  const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
+  const quarters = earningsProfile?.quarters ?? [];
+  if (!quarters.length || !selectedLabels.length) {
+    return { data: [], byIndex: new Map() };
+  }
+  const markerY = Number.isFinite(priceMin) && Number.isFinite(priceMax)
+    ? priceMin + (priceMax - priceMin) * 0.08
+    : row?.price ?? 0;
+  const byIndex = new Map();
+  const data = quarters
+    .map((quarter) => {
+      const releaseDate = quarter.releaseDate;
+      if (!releaseDate) {
+        return null;
+      }
+      let index = selectedLabels.findIndex((label) => label >= releaseDate);
+      if (index < 0) {
+        index = selectedLabels.length - 1;
+      }
+      if (index < 0) {
+        return null;
+      }
+      byIndex.set(index, quarter);
+      return {
+        x: selectedLabels[index],
+        y: markerY,
+      };
+    })
+    .filter(Boolean);
+  return { data, byIndex };
+}
+
 function createMarketRsChart(canvas, row) {
   if (typeof Chart === "undefined" || !row) {
     return;
@@ -9085,6 +9224,7 @@ function createMarketRsChart(canvas, row) {
       priceMax += pad;
     }
   }
+  const earningsMarkers = buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax);
 
   const chartDatasets = [
     {
@@ -9123,6 +9263,20 @@ function createMarketRsChart(canvas, row) {
       yAxisID: "y1",
       hidden: !isMarketRsChartSeriesVisible(series.key),
     })),
+    {
+      type: "scatter",
+      label: "EPS Surprise",
+      data: earningsMarkers.data,
+      borderColor: "#7c3aed",
+      backgroundColor: "#7c3aed",
+      pointStyle: "triangle",
+      pointRadius: earningsMarkers.data.length ? 7 : 0,
+      pointHoverRadius: 9,
+      yAxisID: "y1",
+      showLine: false,
+      order: -1,
+      isEarningsSurprise: true,
+    },
   ];
 
   const chart = new Chart(canvas, {
@@ -9151,6 +9305,16 @@ function createMarketRsChart(canvas, row) {
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => {
+              if (context.dataset.isEarningsSurprise) {
+                const index = selectedLabels.indexOf(context.raw?.x ?? context.label);
+                const event = earningsMarkers.byIndex.get(index);
+                const eps = event?.eps ?? {};
+                return [
+                  `EPS ${formatCanslimEarningsPercent(eps.surprisePct)}`,
+                  `Actual ${formatRsFinancialEps(eps.actual)} / Est ${formatRsFinancialEps(eps.estimate)}`,
+                  `Beat ${formatCanslimEarningsValue(eps.surpriseValue)}`,
+                ];
+              }
               if (context.dataset.yAxisID === "y") {
                 return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(0)}`;
               }
@@ -9523,7 +9687,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price and price-based 10/20/50/200 EMA.</p>
+          <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price and price-based 10/20/50/200 EMA. Purple triangles mark M7 EPS surprise events where available.</p>
         </article>
       </section>
 

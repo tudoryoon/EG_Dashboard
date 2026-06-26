@@ -4342,6 +4342,27 @@ h1 {
   background: #fbfcf8;
 }
 
+.market-canslim-surprise-panel {
+  background: #fffefa;
+}
+
+.market-canslim-surprise-table {
+  min-width: 860px;
+}
+
+.market-canslim-pending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f0f0ea;
+  color: #7b7b73;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .market-canslim-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
