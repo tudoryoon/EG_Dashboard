@@ -9127,7 +9127,7 @@ function calculateEmaSeries(values, period) {
 }
 
 const MARKET_RS_CHART_SERIES = [
-  { key: "rs", label: "RS Rating", color: "#111827" },
+  { key: "rs", label: "RS Rating(L)", color: "#d93025" },
   { key: "ema10", label: "10EMA", period: 10, color: "#2563eb" },
   { key: "ema20", label: "20EMA", period: 20, color: "#d97706" },
   { key: "ema50", label: "50EMA", period: 50, color: "#16a34a" },
@@ -9231,10 +9231,10 @@ function createMarketRsChart(canvas, row) {
 
   const chartDatasets = [
     {
-      label: `RS Rating (${getMarketRsUniverseLabel(state.rsUniverse)})`,
+      label: `RS Rating(L) (${getMarketRsUniverseLabel(state.rsUniverse)})`,
       data: selectedRatings,
-      borderColor: "#111827",
-      backgroundColor: "#111827",
+      borderColor: "#d93025",
+      backgroundColor: "#d93025",
       borderWidth: 2.6,
       tension: 0.18,
       pointRadius: 0,
@@ -9243,10 +9243,10 @@ function createMarketRsChart(canvas, row) {
       hidden: !isMarketRsChartSeriesVisible("rs"),
     },
     {
-      label: "Stock Price",
+      label: "Stock Price(R)",
       data: selectedPrice,
-      borderColor: "#d93025",
-      backgroundColor: "#d93025",
+      borderColor: "#111827",
+      backgroundColor: "#111827",
       borderWidth: 2,
       tension: 0.18,
       pointRadius: 0,
@@ -9353,7 +9353,7 @@ function createMarketRsChart(canvas, row) {
           max: ratingMax,
           grid: { color: "rgba(28,28,26,0.08)" },
           ticks: {
-            color: "#66665f",
+            color: "#a12620",
             stepSize: ratingMax - ratingMin <= 20 ? 5 : 10,
             callback: (value) => value,
           },
@@ -9364,7 +9364,7 @@ function createMarketRsChart(canvas, row) {
           max: priceMax,
           grid: { drawOnChartArea: false },
           ticks: {
-            color: "#a12620",
+            color: "#111827",
             callback: (value) => formatUsStockPrice(Number(value), value >= 100 ? 0 : 2),
           },
         },
@@ -9693,7 +9693,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: current-universe RS Rating 1-99. Right axis: stock price and price-based 10/20/50/200 EMA. Purple triangles mark M7 EPS surprise events where available.</p>
+          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark M7 surprise events where available.</p>
         </article>
       </section>
 
