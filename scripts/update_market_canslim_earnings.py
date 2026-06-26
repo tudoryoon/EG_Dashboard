@@ -169,7 +169,8 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
 def main() -> None:
     briefing_tickers = load_daily_briefing_tickers()
     nasdaq100_tickers = load_market_rs_universe_tickers("nasdaq100")
-    tickers = merge_ticker_lists(briefing_tickers, nasdaq100_tickers) or FALLBACK_TICKERS
+    sp500_tickers = load_market_rs_universe_tickers("sp500")
+    tickers = merge_ticker_lists(briefing_tickers, nasdaq100_tickers, sp500_tickers) or FALLBACK_TICKERS
     existing_profiles = load_existing_profiles()
     profiles: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -189,13 +190,14 @@ def main() -> None:
     payload = {
         "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "scope": {
-            "universe": "Daily Briefing sector map + NASDAQ 100",
+            "universe": "Daily Briefing sector map + NASDAQ 100 + S&P 500",
             "source": "Yahoo Finance via yfinance earnings_dates",
             "tickerCount": len(tickers),
             "coveredCount": covered_count,
             "sources": {
                 "dailyBriefing": len(briefing_tickers),
                 "nasdaq100": len(nasdaq100_tickers),
+                "sp500": len(sp500_tickers),
             },
             "basis": "Recent 4 reported quarters. EPS estimate, reported EPS, EPS beat/shock value, and surprise percentage only.",
         },
@@ -210,7 +212,7 @@ def main() -> None:
     )
     print(f"Wrote {OUTPUT_PATH}")
     print(f"Tickers: {len(tickers)} / EPS profiles with data: {covered_count}")
-    print(f"Sources: Daily Briefing {len(briefing_tickers)} / NASDAQ 100 {len(nasdaq100_tickers)}")
+    print(f"Sources: Daily Briefing {len(briefing_tickers)} / NASDAQ 100 {len(nasdaq100_tickers)} / S&P 500 {len(sp500_tickers)}")
 
 
 if __name__ == "__main__":
