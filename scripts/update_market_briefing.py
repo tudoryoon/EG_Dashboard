@@ -340,6 +340,8 @@ SECTOR_GROUPS = [
             {"ticker": "HWM", "label": "HWM US", "name": "Howmet Aerospace", "query": "Howmet Aerospace stock"},
             {"ticker": "BA", "label": "BA US", "name": "Boeing", "query": "Boeing stock"},
             {"ticker": "FTAI", "label": "FTAI US", "name": "FTAI Aviation", "query": "FTAI Aviation stock"},
+            {"ticker": "ATI", "label": "ATI US", "name": "ATI", "query": "ATI stock"},
+            {"ticker": "CRS", "label": "CRS US", "name": "Carpenter Technology", "query": "Carpenter Technology stock"},
         ],
     },
     {

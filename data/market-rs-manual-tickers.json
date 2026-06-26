@@ -67,6 +67,17 @@
       "sharesOutstanding": 2193945789
     },
     {
+      "ticker": "ATI",
+      "name": "ATI Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 136470427
+    },
+    {
       "ticker": "AXTI",
       "name": "AXT, Inc.",
       "memberships": {
@@ -175,6 +186,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 248576030
+    },
+    {
+      "ticker": "CRS",
+      "name": "Carpenter Technology Corporation",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 49685612
     },
     {
       "ticker": "CRWV",
