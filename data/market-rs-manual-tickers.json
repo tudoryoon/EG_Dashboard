@@ -441,6 +441,17 @@
       "sharesOutstanding": 104451974
     },
     {
+      "ticker": "SPCX",
+      "name": "Space Exploration Technologies Corp.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 13174187298
+    },
+    {
       "ticker": "SPOT",
       "name": "Spotify Technology S.A.",
       "memberships": {

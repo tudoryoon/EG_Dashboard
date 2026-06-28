@@ -89,6 +89,7 @@ SECTOR_GROUPS = [
             {"ticker": "AMZN", "label": "AMZN US", "name": "Amazon", "query": "Amazon stock"},
             {"ticker": "META", "label": "META US", "name": "Meta", "query": "Meta stock"},
             {"ticker": "TSLA", "label": "TSLA US", "name": "Tesla", "query": "Tesla stock"},
+            {"ticker": "SPCX", "label": "SPCX US", "name": "SpaceX", "query": "Space Exploration Technologies stock"},
         ],
     },
     {
