@@ -92,10 +92,27 @@ def find_fedwatch_table(html: str) -> list[list[str]]:
     raise RuntimeError("FedWatch probability table was not found in OANDA mirror HTML")
 
 
+def extract_oanda_modified_time(html: str) -> str | None:
+    match = re.search(
+        r'<meta\s+property=["\']article:modified_time["\']\s+content=["\']([^"\']+)["\']',
+        html,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+    raw_value = match.group(1).strip()
+    try:
+        return datetime.fromisoformat(raw_value.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat()
+    except ValueError:
+        return raw_value
+
+
 def build_mirror_fedwatch_snapshot() -> dict[str, object]:
     response = requests.get(FEDWATCH_MIRROR_URL, headers=USER_AGENT, timeout=30)
     response.raise_for_status()
     table_rows = find_fedwatch_table(response.text)
+    source_updated_at = extract_oanda_modified_time(response.text)
+    now = datetime.now(timezone.utc)
     source_columns = [normalize_fedwatch_range_label(column) for column in table_rows[0][1:]]
     columns = sorted(set(FEDWATCH_DISPLAY_COLUMNS + source_columns), key=fedwatch_column_sort_key)
     rows = []
@@ -120,12 +137,14 @@ def build_mirror_fedwatch_snapshot() -> dict[str, object]:
     if not rows:
         raise RuntimeError("FedWatch mirror table had no meeting rows")
     return {
-        "source": "CME FedWatch via OANDA mirror",
+        "source": "CME FedWatch via OANDA mirror (delayed)",
         "sourceUrl": FEDWATCH_SOURCE_URL,
         "mirrorSourceUrl": FEDWATCH_MIRROR_URL,
-        "asOf": datetime.now(timezone.utc).date().isoformat(),
-        "refreshedAt": datetime.now(timezone.utc).isoformat(),
+        "asOf": (source_updated_at or now.isoformat())[:10],
+        "sourceUpdatedAt": source_updated_at,
+        "refreshedAt": now.isoformat(),
         "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
+        "sourceNote": "CME live-page and intraday values require CME FedWatch API access; this public mirror can lag the official CME page.",
         "columns": columns,
         "rows": rows,
         "isFallback": False,

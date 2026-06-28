@@ -7106,6 +7106,8 @@ function renderMarketBriefingOverview() {
   const fedWatch = briefing.fedWatch ?? null;
   const fedWatchColumns = fedWatch?.columns ?? [];
   const fedWatchRows = fedWatch?.rows ?? [];
+  const fedWatchSourceUpdated = fedWatch?.sourceUpdatedAt ? formatFullIsoDate(fedWatch.sourceUpdatedAt) : null;
+  const fedWatchRefreshed = fedWatch?.refreshedAt ? formatFullIsoDate(fedWatch.refreshedAt) : null;
   const fedWatchMarkup = fedWatchRows.length
     ? `
       <div class="briefing-fedwatch-scroll">
@@ -7487,9 +7489,10 @@ function renderMarketBriefingOverview() {
         </div>
         ${fedWatchMarkup}
         <div class="briefing-fedwatch-source">
-          <span>Source: ${fedWatch?.source ?? "CME FedWatch"}</span>
+          <span>Source: ${fedWatch?.source ?? "CME FedWatch"}${fedWatchSourceUpdated ? ` · source updated ${fedWatchSourceUpdated}` : ""}${fedWatchRefreshed ? ` · refreshed ${fedWatchRefreshed}` : ""}</span>
           ${fedWatch?.sourceUrl ? `<a href="${fedWatch.sourceUrl}" target="_blank" rel="noreferrer">Open CME</a>` : ""}
         </div>
+        ${fedWatch?.sourceNote ? `<p class="briefing-fedwatch-note">${fedWatch.sourceNote}</p>` : ""}
       </article>
       </section>
 

@@ -4,9 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     # CME FedWatch End-of-Day forecasts are documented as updating at 01:45 UTC
-    # on business days. Run at 10:55/11:20 KST to refresh only the FedWatch table.
+    # on business days. The public OANDA mirror can lag CME live, so refresh
+    # the FedWatch-only block at 10:55/11:20/13:05 KST.
     - cron: "55 1 * * 1-5"
     - cron: "20 2 * * 1-5"
+    - cron: "05 4 * * 1-5"
 
 permissions:
   contents: write
