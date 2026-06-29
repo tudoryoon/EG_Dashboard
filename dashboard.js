@@ -337,6 +337,7 @@ const state = {
     ema10: false,
     ema20: true,
     ema50: false,
+    ema100: true,
     ema200: false,
   },
   trendScoreUniverse: "all",
@@ -9155,6 +9156,7 @@ const MARKET_RS_CHART_SERIES = [
   { key: "ema10", label: "10EMA", period: 10, color: "#2563eb" },
   { key: "ema20", label: "20EMA", period: 20, color: "#d97706" },
   { key: "ema50", label: "50EMA", period: 50, color: "#16a34a" },
+  { key: "ema100", label: "100EMA", period: 100, color: "#0f766e" },
   { key: "ema200", label: "200EMA", period: 200, color: "#7c3aed" },
 ];
 
@@ -9717,7 +9719,7 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/200 EMA. EPS triangles mark Yahoo Finance / yfinance EPS surprise proxy events where available.</p>
+          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/100/200 EMA. EPS triangles mark Yahoo Finance / yfinance EPS surprise proxy events where available.</p>
         </article>
       </section>
 
