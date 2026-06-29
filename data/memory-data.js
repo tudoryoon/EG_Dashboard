@@ -244,7 +244,7 @@ window.memoryData = {
     updatedAt: "2026-06-29",
     title: "Spot vs Contract Dollar Check",
     subtitle: "Direct same-item comparisons where public TrendForce/DRAMeXchange pages or broker reports show both spot and contract dollar levels.",
-    note: "DDR4 rows use TrendForce's public 2H Apr. 2026 contract averages. DDR5 uses a public TrendForce News/Seoul Economic Daily reference for recent server DDR5 16Gb fixed contract pricing. NAND contract dollars still use Kiwoom's 2026-05-11 TrendForce-based table because the free TrendForce page gates newer contract details. TrendForce lists May/June DRAM/NAND contract-price reports, but the full dollar tables are paid/gated; no unverified paid-database values are filled in here. HBM dollar-level contract data remains unavailable in public sources.",
+    note: "DDR4 rows use TrendForce's public 2H Apr. 2026 contract averages. DDR5 and NAND contract dollars use Kiwoom's 2026-05-11 TrendForce-based memory price table because the free TrendForce page gates newer same-unit contract details. TrendForce lists May/June DRAM/NAND contract-price reports, but the full dollar tables are paid/gated; no news-only or unverified paid-database values are filled in here. HBM dollar-level contract data remains unavailable in public sources.",
     sourceTitle: "TrendForce DRAM Price Trends",
     sourceUrl: "https://www.trendforce.com/price/dram/dram_spot",
     secondarySourceTitle: "Kiwoom Semiconductor Update, 2026-05-11",
@@ -257,10 +257,6 @@ window.memoryData = {
       {
         title: "TrendForce NAND Flash Price Trends",
         url: "https://www.trendforce.com/price/flash/flash_spot",
-      },
-      {
-        title: "TrendForce News: DDR5 contract reference",
-        url: "https://www.trendforce.com/news/2026/06/11/news-south-korea-chip-export-volume-falls-yet-revenue-surges-may-dram-370-nand-207/",
       },
       {
         title: "Kiwoom Semiconductor Update, 2026-05-11",
@@ -298,11 +294,11 @@ window.memoryData = {
         spotDate: "2026-06-29",
         spotPrice: 46.733,
         spotUnit: "USD/chip",
-        contractDate: "2026-06",
-        contractPrice: 42,
+        contractDate: "2026-04",
+        contractPrice: 35,
         contractUnit: "USD/chip",
-        premiumPct: 11.3,
-        note: "Contract is a public TrendForce News/Seoul Economic Daily reference for recent server DDR5 16Gb fixed contract pricing; spot updates daily, so timing and market segment are not perfectly matched.",
+        premiumPct: 33.5,
+        note: "Contract price remains the latest public same-unit Apr. 2026 reference from Kiwoom's TrendForce-based table. A later TrendForce News article mentions a server DDR5 16Gb fixed contract reference, but it is not the public TrendForce contract table and is not used here.",
       },
       {
         item: "512Gb TLC wafer",
