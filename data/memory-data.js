@@ -244,7 +244,7 @@ window.memoryData = {
     updatedAt: "2026-06-29",
     title: "Spot vs Contract Dollar Check",
     subtitle: "Direct same-item comparisons where public TrendForce/DRAMeXchange pages or broker reports show both spot and contract dollar levels.",
-    note: "DDR4 rows use TrendForce's public 2H Apr. 2026 contract averages. DDR5 and NAND contract dollars use Kiwoom's 2026-05-11 TrendForce-based memory price table because the free TrendForce page gates newer same-unit contract details. TrendForce lists May/June DRAM/NAND contract-price reports, but the full dollar tables are paid/gated; no news-only or unverified paid-database values are filled in here. HBM dollar-level contract data remains unavailable in public sources.",
+    note: "DDR4 rows use TrendForce's public 2H Apr. 2026 contract averages. DDR5 and NAND contract dollars use Kiwoom's 2026-05-11 TrendForce-based memory price table because the free TrendForce page gates newer same-unit contract details. A TrendForce official News article says server-grade DDR5 16Gb fixed contract pricing recently reached US$42, but that is a news-based server-grade reference rather than the public DDR5 contract table, so it is monitored in the row note instead of used as the main comparable contract price. TrendForce lists May/June DRAM/NAND contract-price reports, but the full dollar tables are paid/gated; no unverified paid-database values are filled in here. HBM dollar-level contract data remains unavailable in public sources.",
     sourceTitle: "TrendForce DRAM Price Trends",
     sourceUrl: "https://www.trendforce.com/price/dram/dram_spot",
     secondarySourceTitle: "Kiwoom Semiconductor Update, 2026-05-11",
@@ -257,6 +257,10 @@ window.memoryData = {
       {
         title: "TrendForce NAND Flash Price Trends",
         url: "https://www.trendforce.com/price/flash/flash_spot",
+      },
+      {
+        title: "TrendForce News: server DDR5 reference",
+        url: "https://www.trendforce.com/news/2026/06/11/news-south-korea-chip-export-volume-falls-yet-revenue-surges-may-dram-370-nand-207/",
       },
       {
         title: "Kiwoom Semiconductor Update, 2026-05-11",
@@ -298,7 +302,7 @@ window.memoryData = {
         contractPrice: 35,
         contractUnit: "USD/chip",
         premiumPct: 33.5,
-        note: "Contract price remains the latest public same-unit Apr. 2026 reference from Kiwoom's TrendForce-based table. A later TrendForce News article mentions a server DDR5 16Gb fixed contract reference, but it is not the public TrendForce contract table and is not used here.",
+        note: "Contract price remains the latest same-unit Apr. 2026 reference from Kiwoom's TrendForce-based table. TrendForce News separately cites server-grade DDR5 16Gb fixed contract pricing at US$42, but that appears to be a premium server-grade reference and is not used as the main comparable contract row.",
       },
       {
         item: "512Gb TLC wafer",
