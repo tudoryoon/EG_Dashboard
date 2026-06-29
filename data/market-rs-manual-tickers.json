@@ -12,6 +12,17 @@
       "sharesOutstanding": 263889875
     },
     {
+      "ticker": "AAOI",
+      "name": "Applied Optoelectronics, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 80242767
+    },
+    {
       "ticker": "ALAB",
       "name": "Astera Labs, Inc.",
       "memberships": {
@@ -109,6 +120,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 2399133995
+    },
+    {
+      "ticker": "BE",
+      "name": "Bloom Energy Corporation",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 284443868
     },
     {
       "ticker": "BHP",
@@ -276,6 +298,17 @@
       "sharesOutstanding": 151300000
     },
     {
+      "ticker": "IONQ",
+      "name": "IonQ, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 373269948
+    },
+    {
       "ticker": "IREN",
       "name": "IREN Limited",
       "memberships": {
@@ -296,6 +329,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 132526299
+    },
+    {
+      "ticker": "KTOS",
+      "name": "Kratos Defense & Security Solutions, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 187519984
     },
     {
       "ticker": "MDB",
@@ -364,6 +408,28 @@
       "sharesOutstanding": 1908091965
     },
     {
+      "ticker": "NXT",
+      "name": "Nextpower Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 150274472
+    },
+    {
+      "ticker": "OKLO",
+      "name": "Oklo Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 173990987
+    },
+    {
       "ticker": "OWL",
       "name": "Blue Owl Capital Inc.",
       "memberships": {
@@ -373,6 +439,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 675802413
+    },
+    {
+      "ticker": "PL",
+      "name": "Planet Labs PBC",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 356402526
     },
     {
       "ticker": "RBLX",
@@ -417,6 +494,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 624818725
+    },
+    {
+      "ticker": "SATS",
+      "name": "EchoStar Corporation",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 289813488
     },
     {
       "ticker": "SCCO",
@@ -518,6 +606,17 @@
       "sharesOutstanding": 436534997
     },
     {
+      "ticker": "VICR",
+      "name": "Vicor Corporation",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 45581407
+    },
+    {
       "ticker": "VIK",
       "name": "Viking Holdings Ltd",
       "memberships": {
@@ -538,6 +637,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 287458734
+    },
+    {
+      "ticker": "ZS",
+      "name": "Zscaler, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 161709525
     }
   ]
 }
