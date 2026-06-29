@@ -11804,14 +11804,20 @@ function renderMemorySpotOverview() {
             <h3>${spotContractChecks.title ?? "Spot vs Contract Dollar Check"}</h3>
             <p>${spotContractChecks.subtitle ?? ""}</p>
           </div>
-          <a class="market-breadth-link" href="${spotContractChecks.sourceUrl ?? "https://www.trendforce.com/price/dram/dram_spot"}" target="_blank" rel="noreferrer">
-            ${spotContractChecks.sourceTitle ?? "TrendForce price page"}
-          </a>
-          ${spotContractChecks.secondarySourceUrl ? `
-            <a class="market-breadth-link" href="${spotContractChecks.secondarySourceUrl}" target="_blank" rel="noreferrer">
-              ${spotContractChecks.secondarySourceTitle ?? "Secondary source"}
+          ${(spotContractChecks.sources ?? [
+            {
+              title: spotContractChecks.sourceTitle ?? "TrendForce price page",
+              url: spotContractChecks.sourceUrl ?? "https://www.trendforce.com/price/dram/dram_spot",
+            },
+            spotContractChecks.secondarySourceUrl ? {
+              title: spotContractChecks.secondarySourceTitle ?? "Secondary source",
+              url: spotContractChecks.secondarySourceUrl,
+            } : null,
+          ]).filter(Boolean).map((source) => `
+            <a class="market-breadth-link" href="${source.url}" target="_blank" rel="noreferrer">
+              ${source.title}
             </a>
-          ` : ""}
+          `).join("")}
         </div>
         <div class="memory-spot-contract-table">
           <div class="memory-spot-contract-head">
