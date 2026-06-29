@@ -188,6 +188,17 @@
       "sharesOutstanding": 248576030
     },
     {
+      "ticker": "CRDO",
+      "name": "Credo Technology Group Holding Ltd",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": true
+      },
+      "sharesOutstanding": 184449940
+    },
+    {
       "ticker": "CRS",
       "name": "Carpenter Technology Corporation",
       "memberships": {

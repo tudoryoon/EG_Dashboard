@@ -355,7 +355,7 @@ const state = {
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   canslimSelectedTicker: "",
-  canslimUniverse: "sp500",
+  canslimUniverse: "all",
   canslimSort: "canslimDesc",
   macroIndicatorKey: "",
   macroSeriesKey: "",
@@ -469,6 +469,25 @@ function formatShortIsoDate(dateText) {
   }
   const [year, month] = dateText.split("-");
   return `${year.slice(2)}/${month}`;
+}
+
+function normalizeMarketTickerSearch(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\.(us|uw|uq|un|n|o)$/i, "")
+    .replace(/\s+(us|equity)$/i, "");
+}
+
+function marketTickerSearchTerms(ticker, name = "") {
+  const normalizedTicker = normalizeMarketTickerSearch(ticker);
+  const terms = [
+    normalizedTicker,
+    `${normalizedTicker} us`,
+    String(ticker ?? "").trim().toLowerCase(),
+    String(name ?? "").trim().toLowerCase(),
+  ];
+  return [...new Set(terms.filter(Boolean))];
 }
 
 function formatFullIsoDate(dateText) {
@@ -8357,7 +8376,7 @@ function renderMarketRsCanslim(row) {
 }
 
 function getMarketCanslimRows() {
-  const query = state.query.trim().toLowerCase();
+  const query = normalizeMarketTickerSearch(state.query);
   const universe = state.canslimUniverse || "all";
   return (marketRsData.rows ?? [])
     .filter((row) => {
@@ -8395,8 +8414,7 @@ function getMarketCanslimRows() {
         return true;
       }
       return [
-        entry.ticker,
-        entry.name,
+        ...marketTickerSearchTerms(entry.ticker, entry.name),
         entry.profile?.catalyst,
       ]
         .map((value) => String(value ?? "").toLowerCase())
@@ -8970,7 +8988,7 @@ function matchesTrendScoreClimaxRange(row) {
 }
 
 function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorData()) {
-  const query = (state.query ?? "").trim().toLowerCase();
+  const query = normalizeMarketTickerSearch(state.query);
   return (marketRsData.rows ?? [])
     .filter((row) => {
       if (!matchesMarketRsCapRange(row)) {
@@ -8997,8 +9015,7 @@ function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorDa
       if (!query) {
         return matchesMarketRsNewHighFilter(row, state.rsUniverse);
       }
-      const ticker = row.ticker?.toLowerCase?.() ?? "";
-      const matchesQuery = ticker.includes(query);
+      const matchesQuery = marketTickerSearchTerms(row.ticker, row.name).some((term) => term.includes(query));
       if (!matchesQuery) {
         return false;
       }
@@ -9006,8 +9023,8 @@ function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorDa
     })
     .sort((left, right) => {
       if (query) {
-        const leftTicker = String(left.ticker ?? "").toLowerCase();
-        const rightTicker = String(right.ticker ?? "").toLowerCase();
+        const leftTicker = normalizeMarketTickerSearch(left.ticker);
+        const rightTicker = normalizeMarketTickerSearch(right.ticker);
         const scoreMatch = (ticker) => {
           if (ticker === query) {
             return 3;
@@ -9898,7 +9915,7 @@ function matchesTrendScoreBriefingSector(row, sectorData) {
 }
 
 function getVisibleTrendScoreRows(briefingSectorData = getMarketRsBriefingSectorData()) {
-  const query = state.query.trim().toLowerCase();
+  const query = normalizeMarketTickerSearch(state.query);
   const rows = getTrendScoreRows().filter((row) => {
     if (!matchesTrendScoreCapRange(row)) {
       return false;
@@ -9915,7 +9932,7 @@ function getVisibleTrendScoreRows(briefingSectorData = getMarketRsBriefingSector
     if (!query) {
       return true;
     }
-    return String(row.ticker ?? "").toLowerCase().includes(query);
+    return marketTickerSearchTerms(row.ticker, row.name).some((term) => term.includes(query));
   });
   return sortTrendScoreRows(rows);
 }
