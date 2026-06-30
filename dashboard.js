@@ -10323,7 +10323,7 @@ function renderMarketTrendScoreOverview() {
     .join("");
 
   usOverviewRoot.innerHTML = `
-    <section class="market-rs-overview">
+    <section class="market-rs-overview trend-score-overview">
       <article class="us-panel">
         <div class="us-section-head market-rs-head">
           <div>
@@ -10397,7 +10397,7 @@ function renderMarketTrendScoreOverview() {
         </div>
       </article>
 
-      <section class="market-rs-layout">
+      <section class="market-rs-layout trend-score-layout">
         <article class="us-panel market-rs-leaders">
           <div class="us-section-head">
             <div>
@@ -10408,7 +10408,7 @@ function renderMarketTrendScoreOverview() {
               ${leaderSortControls}
             </div>
           </div>
-          <div class="market-rs-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+          <div class="market-rs-card-grid trend-score-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
         </article>
 
         <article class="us-panel market-rs-detail">
@@ -10496,7 +10496,7 @@ function renderMarketTrendScoreOverview() {
           </div>
         </div>
         <div class="market-rs-table-wrap">
-          <table class="market-rs-table">
+          <table class="market-rs-table trend-score-table">
             <thead>
               <tr>
                 <th>${renderTrendScoreSortHeader("Rank", "rank")}</th>

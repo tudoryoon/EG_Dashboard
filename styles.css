@@ -3978,6 +3978,17 @@ h1 {
   gap: 14px;
 }
 
+.trend-score-overview,
+.trend-score-overview .us-panel,
+.trend-score-overview .market-rs-layout > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.trend-score-layout {
+  grid-template-columns: minmax(260px, 0.62fr) minmax(0, 1.38fr);
+}
+
 .market-rs-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3986,6 +3997,25 @@ h1 {
   max-height: 860px;
   overflow-y: auto;
   padding-right: 6px;
+}
+
+.trend-score-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 720px;
+}
+
+.trend-score-overview .market-rs-card {
+  padding: 12px;
+}
+
+.trend-score-overview .market-rs-card-name {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.trend-score-overview .market-rs-card-meta {
+  font-size: 0.84rem;
 }
 
 .market-rs-card {
@@ -4209,6 +4239,10 @@ h1 {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+}
+
+.trend-score-overview .market-rs-extension-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .market-rs-extension-stats span {
@@ -4469,12 +4503,63 @@ h1 {
   min-width: 760px;
 }
 
+.trend-score-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.trend-score-overview .market-rs-table-wrap {
+  width: 100%;
+  max-width: 100%;
+}
+
 .market-rs-table th,
 .market-rs-table td {
   padding: 12px 10px;
   border-bottom: 1px solid #ecece7;
   text-align: left;
   white-space: nowrap;
+}
+
+.trend-score-table th,
+.trend-score-table td {
+  padding: 9px 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.trend-score-table th:nth-child(1),
+.trend-score-table td:nth-child(1) {
+  width: 5%;
+}
+
+.trend-score-table th:nth-child(2),
+.trend-score-table td:nth-child(2) {
+  width: 6%;
+}
+
+.trend-score-table th:nth-child(3),
+.trend-score-table td:nth-child(3) {
+  width: 15%;
+}
+
+.trend-score-table th:nth-child(4),
+.trend-score-table td:nth-child(4),
+.trend-score-table th:nth-child(11),
+.trend-score-table td:nth-child(11),
+.trend-score-table th:nth-child(12),
+.trend-score-table td:nth-child(12),
+.trend-score-table th:nth-child(13),
+.trend-score-table td:nth-child(13) {
+  width: 7%;
+}
+
+.trend-score-table th:nth-child(14),
+.trend-score-table td:nth-child(14),
+.trend-score-table th:nth-child(15),
+.trend-score-table td:nth-child(15) {
+  width: 12%;
 }
 
 .market-rs-table th {
