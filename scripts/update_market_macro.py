@@ -638,6 +638,12 @@ def main() -> None:
     )
     tga_dates, tga_values = parse_tga_daily_balance()
     net_liquidity_series = build_fed_net_liquidity_series(tga_dates, tga_values)
+    tga_chart_dates, tga_chart_values = build_daily_forward_series(
+        tga_dates,
+        tga_values,
+        tga_dates[0] if tga_dates else LIQUIDITY_START_DATE,
+        net_liquidity_series["tga"][0][-1] if net_liquidity_series["tga"][0] else None,
+    )
     sofr_iorb_dates, sofr_iorb_values = parse_sofr_iorb_spread_bps()
     inflation_5y_dates, inflation_5y_values = parse_fred_series("T5YIE")
     real_5y_dates, real_5y_values = build_spread_series(
@@ -770,14 +776,14 @@ def main() -> None:
         },
         "liquidity_tga": {
             "title": "Treasury General Account",
-            "subtitle": "Daily TGA cash balance from the Daily Treasury Statement, shown in USD billions.",
+            "subtitle": "Daily TGA cash balance from the Daily Treasury Statement, shown in USD billions. Latest official observation is carried forward until the next DTS release.",
             "source": "U.S. Treasury FiscalData Daily Treasury Statement",
             "mode": "raw",
             "connectGaps": False,
             "yAxisLabel": "USD bn",
             "formatter": "number1",
             "series": {
-                "tga_balance": build_series_item("TGA Balance", "#0f766e", tga_dates, tga_values),
+                "tga_balance": build_series_item("TGA Balance", "#0f766e", tga_chart_dates, tga_chart_values),
             },
         },
         "liquidity_policy_2y": {
