@@ -289,13 +289,15 @@ const state = {
   marketBreadthSeriesSelection: [],
   marketBreadthIndexSelection: [],
   marketMacroRanges: Object.fromEntries(
-    Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, "3y"]),
+    Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, key === "liquidity_net" ? "max" : "3y"]),
   ),
   marketMacroCustomRanges: {},
   marketMacroSelections: Object.fromEntries(
     Object.entries(marketMacroData?.panels ?? {}).map(([panelKey, panel]) => [
       panelKey,
-      Object.keys(panel?.series ?? {}),
+      panelKey === "liquidity_net" && panel?.series?.fed_assets
+        ? ["fed_assets"]
+        : Object.keys(panel?.series ?? {}),
     ]),
   ),
   marketValuationRange: "3y",

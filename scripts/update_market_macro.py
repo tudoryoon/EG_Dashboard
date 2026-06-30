@@ -742,7 +742,7 @@ def main() -> None:
             },
         },
         "liquidity_net": {
-            "title": "Fed Net Liquidity",
+            "title": "Fed Liquidity",
             "subtitle": "Fed assets minus Treasury General Account and ON RRP drains. WALCL and WTREGEN are weekly forward-filled; daily TGA from FiscalData is preferred where available.",
             "source": "FRED WALCL / RRPONTSYD / WTREGEN and U.S. Treasury FiscalData",
             "mode": "raw",
