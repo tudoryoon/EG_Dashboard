@@ -3,10 +3,10 @@ name: Update Market RS
 on:
   workflow_dispatch:
   schedule:
-    # 20:55 UTC = 05:55 KST. Separate RS run after the lighter 05:25 critical dashboards.
-    - cron: "55 20 * * *"
-    # 21:35 UTC = 06:35 KST. Backup run before the Korea 07:00 morning window.
-    - cron: "35 21 * * *"
+    # 19:48 UTC = 04:48 KST. Main RS / Trend Score run.
+    - cron: "48 19 * * *"
+    # 20:31 UTC = 05:31 KST. Backup RS / Trend Score run.
+    - cron: "31 20 * * *"
 
 permissions:
   contents: write
