@@ -3,10 +3,10 @@ name: Update Market RS
 on:
   workflow_dispatch:
   schedule:
-    # 19:48 UTC = 04:48 KST. Main RS / Trend Score run.
-    - cron: "48 19 * * *"
-    # 20:31 UTC = 05:31 KST. Backup RS / Trend Score run.
-    - cron: "31 20 * * *"
+    # 19:27 UTC = 04:27 KST. Main RS / Trend Score run.
+    - cron: "27 19 * * *"
+    # 20:03 UTC = 05:03 KST. Backup RS / Trend Score run.
+    - cron: "03 20 * * *"
 
 permissions:
   contents: write
