@@ -389,6 +389,7 @@ const state = {
 };
 const marketCanslimAnalysisCache = new Map();
 let marketCanslimDirectionCache = null;
+const marketRsRowByTicker = new Map((marketRsData.rows ?? []).map((row) => [row.ticker, row]));
 
 const charts = [];
 
@@ -9166,6 +9167,24 @@ function isMarketRsChartSeriesVisible(key) {
   return state.rsChartSeries?.[key] !== false;
 }
 
+function refreshMarketRsChartOnly() {
+  const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
+  const selected = marketRsRowByTicker.get(state.rsSelectedTicker) ?? marketRsData.rows?.[0] ?? null;
+  if (!detailCanvas || !selected) {
+    return;
+  }
+  destroyCharts();
+  createMarketRsChart(detailCanvas, selected);
+}
+
+function syncMarketRsChartSeriesButtons() {
+  usOverviewRoot.querySelectorAll("[data-rs-chart-series]").forEach((button) => {
+    const seriesKey = button.dataset.rsChartSeries;
+    button.classList.toggle("active", isMarketRsChartSeriesVisible(seriesKey));
+    button.setAttribute("aria-pressed", isMarketRsChartSeriesVisible(seriesKey) ? "true" : "false");
+  });
+}
+
 function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
   const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
   const quarters = earningsProfile?.quarters ?? [];
@@ -9858,7 +9877,8 @@ function renderMarketRsOverview() {
         ...state.rsChartSeries,
         [seriesKey]: !isMarketRsChartSeriesVisible(seriesKey),
       };
-      render();
+      syncMarketRsChartSeriesButtons();
+      refreshMarketRsChartOnly();
     });
   });
   usOverviewRoot.querySelectorAll("[data-rs-sort]").forEach((button) => {
@@ -15065,7 +15085,7 @@ searchInput.addEventListener("input", (event) => {
     window.clearTimeout(searchRenderTimer);
     searchRenderTimer = null;
   }
-  if (state.tab === "Market" && (state.marketView === "TrendScore" || state.marketView === "Canslim")) {
+  if (state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore" || state.marketView === "Canslim")) {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
       render();
