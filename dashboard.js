@@ -261,7 +261,7 @@ const MARKET_RS_CAP_RANGES = [
 ];
 
 const ENABLE_TREND_SCORE_LIMITED_CARDS = true;
-const TREND_SCORE_CARD_BATCH_SIZE = 300;
+const TREND_SCORE_CARD_BATCH_SIZE = 100;
 
 const state = {
   tab: "DailyBriefing",
