@@ -262,6 +262,10 @@ const MARKET_RS_CAP_RANGES = [
 
 const ENABLE_TREND_SCORE_LIMITED_CARDS = true;
 const TREND_SCORE_CARD_BATCH_SIZE = 100;
+const ENABLE_RS_LIMITED_CARDS = true;
+const RS_CARD_BATCH_SIZE = 100;
+const ENABLE_CANSLIM_LIMITED_CARDS = true;
+const CANSLIM_CARD_BATCH_SIZE = 100;
 
 const state = {
   tab: "DailyBriefing",
@@ -337,6 +341,7 @@ const state = {
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
+  rsVisibleCardCount: RS_CARD_BATCH_SIZE,
   rsChartSeries: {
     rs: true,
     ema10: false,
@@ -363,7 +368,9 @@ const state = {
   trendScoreVisibleCardCount: TREND_SCORE_CARD_BATCH_SIZE,
   canslimSelectedTicker: "",
   canslimUniverse: "all",
+  canslimBriefingSector: "all",
   canslimSort: "canslimDesc",
+  canslimVisibleCardCount: CANSLIM_CARD_BATCH_SIZE,
   macroIndicatorKey: "",
   macroSeriesKey: "",
   macroHistoryMode: "common",
@@ -414,6 +421,14 @@ let searchRenderTimer = null;
 
 function resetTrendScoreCardLimit() {
   state.trendScoreVisibleCardCount = TREND_SCORE_CARD_BATCH_SIZE;
+}
+
+function resetRsCardLimit() {
+  state.rsVisibleCardCount = RS_CARD_BATCH_SIZE;
+}
+
+function resetCanslimCardLimit() {
+  state.canslimVisibleCardCount = CANSLIM_CARD_BATCH_SIZE;
 }
 
 function formatKstDateTime(dateText) {
@@ -8387,7 +8402,7 @@ function renderMarketRsCanslim(row) {
   `;
 }
 
-function getMarketCanslimRows() {
+function getMarketCanslimRows(briefingSectorData = getMarketRsBriefingSectorData()) {
   const query = normalizeMarketTickerSearch(state.query);
   const universe = state.canslimUniverse || "all";
   return (marketRsData.rows ?? [])
@@ -8406,6 +8421,7 @@ function getMarketCanslimRows() {
       }
       return true;
     })
+    .filter((row) => matchesBriefingSectorKey(row, state.canslimBriefingSector, briefingSectorData))
     .map((row) => {
       const profile = getMarketCanslimProfile(row.ticker);
       const analysis = buildMarketCanslimAnalysis(row);
@@ -8496,7 +8512,15 @@ function renderMarketCanslimOverview() {
   if (!marketRsData.universes?.[state.canslimUniverse]) {
     state.canslimUniverse = "all";
   }
-  const rows = getMarketCanslimRows();
+  const briefingSectorData = getMarketRsBriefingSectorData();
+  if (
+    state.canslimBriefingSector !== "all" &&
+    state.canslimBriefingSector !== "briefingAll" &&
+    !briefingSectorData.groups.some((sector) => sector.key === state.canslimBriefingSector)
+  ) {
+    state.canslimBriefingSector = "all";
+  }
+  const rows = getMarketCanslimRows(briefingSectorData);
   const selected = getSelectedMarketCanslimRow(rows);
   if (selected) {
     state.canslimSelectedTicker = selected.ticker;
@@ -8517,6 +8541,25 @@ function renderMarketCanslimOverview() {
           class="market-rs-chip${state.canslimUniverse === key ? " active" : ""}"
           data-canslim-universe="${key}"
         >${meta.label}</button>
+      `,
+    )
+    .join("");
+  const briefingSectorChips = [
+    { key: "all", label: "All CANSLIM", count: marketRsData.rows?.length ?? 0 },
+    { key: "briefingAll", label: "Daily Briefing 전체", count: briefingSectorData.allTickers.length },
+    ...briefingSectorData.groups.map((sector) => ({
+      key: sector.key,
+      label: sector.label,
+      count: sector.tickers.length,
+    })),
+  ]
+    .map(
+      (sector) => `
+        <button
+          type="button"
+          class="market-rs-chip market-rs-sector-chip${state.canslimBriefingSector === sector.key ? " active" : ""}"
+          data-canslim-briefing-sector="${sector.key}"
+        >${sector.label}<small>${sector.count}</small></button>
       `,
     )
     .join("");
@@ -8541,7 +8584,12 @@ function renderMarketCanslimOverview() {
       },
     )
     .join("");
-  const cards = rows
+  const canslimCardLimit = ENABLE_CANSLIM_LIMITED_CARDS
+    ? Math.max(CANSLIM_CARD_BATCH_SIZE, Number(state.canslimVisibleCardCount) || CANSLIM_CARD_BATCH_SIZE)
+    : rows.length;
+  const canslimCardRows = ENABLE_CANSLIM_LIMITED_CARDS ? rows.slice(0, canslimCardLimit) : rows;
+  const hasMoreCanslimCards = ENABLE_CANSLIM_LIMITED_CARDS && canslimCardRows.length < rows.length;
+  const cards = canslimCardRows
     .map((entry) => `
       <button
         type="button"
@@ -8565,6 +8613,16 @@ function renderMarketCanslimOverview() {
       </button>
     `)
     .join("");
+  const cardsMoreMarkup = hasMoreCanslimCards
+    ? `
+      <div class="market-rs-card-more">
+        <span>${canslimCardRows.length} / ${rows.length} names</span>
+        <button type="button" class="total-date-button" data-canslim-show-more>더 보기 +${Math.min(CANSLIM_CARD_BATCH_SIZE, rows.length - canslimCardRows.length)}</button>
+      </div>
+    `
+    : ENABLE_CANSLIM_LIMITED_CARDS && rows.length
+      ? `<p class="market-rs-empty market-rs-card-count">${rows.length} names all loaded.</p>`
+      : "";
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -8577,6 +8635,7 @@ function renderMarketCanslimOverview() {
           <div class="market-rs-summary-pills">
             <span class="market-rs-pill">As of ${marketRsData.updatedAt ?? "-"}</span>
             <span class="market-rs-pill">${getMarketRsUniverseLabel(state.canslimUniverse)}</span>
+            <span class="market-rs-pill">${getMarketRsBriefingSectorLabel(state.canslimBriefingSector, briefingSectorData).replace("RS", "CANSLIM")}</span>
             <span class="market-rs-pill">${rows.length} RS names</span>
             <span class="market-rs-pill">${financialCoveredCount} financials</span>
             <span class="market-rs-pill">${profileCoveredCount} manual profiles</span>
@@ -8587,6 +8646,10 @@ function renderMarketCanslimOverview() {
           <div class="market-rs-control-block">
             <span class="market-rs-control-label">Universe</span>
             <div class="market-rs-chip-row">${universeChips}</div>
+          </div>
+          <div class="market-rs-control-block">
+            <span class="market-rs-control-label">Daily Briefing Sector</span>
+            <div class="market-rs-chip-row market-rs-briefing-sector-row">${briefingSectorChips}</div>
           </div>
         </div>
       </article>
@@ -8601,6 +8664,7 @@ function renderMarketCanslimOverview() {
             <div class="market-rs-chip-row">${sortChips}</div>
           </div>
           <div class="market-rs-card-grid">${cards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+          ${cardsMoreMarkup}
         </article>
 
         <article class="us-panel market-rs-detail">
@@ -8646,6 +8710,15 @@ function renderMarketCanslimOverview() {
     button.addEventListener("click", () => {
       state.canslimUniverse = button.dataset.canslimUniverse || "all";
       state.canslimSelectedTicker = "";
+      resetCanslimCardLimit();
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-canslim-briefing-sector]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.canslimBriefingSector = button.dataset.canslimBriefingSector || "all";
+      state.canslimSelectedTicker = "";
+      resetCanslimCardLimit();
       render();
     });
   });
@@ -8657,9 +8730,20 @@ function renderMarketCanslimOverview() {
       const nextDirection = currentField === field && currentDirection === "desc" ? "asc" : "desc";
       state.canslimSort = buildCanslimSortKey(field, nextDirection);
       state.canslimSelectedTicker = "";
+      resetCanslimCardLimit();
       render();
     });
   });
+  const canslimShowMoreButton = usOverviewRoot.querySelector("[data-canslim-show-more]");
+  if (canslimShowMoreButton) {
+    canslimShowMoreButton.addEventListener("click", () => {
+      state.canslimVisibleCardCount = Math.min(
+        rows.length,
+        Math.max(CANSLIM_CARD_BATCH_SIZE, Number(state.canslimVisibleCardCount) || CANSLIM_CARD_BATCH_SIZE) + CANSLIM_CARD_BATCH_SIZE,
+      );
+      render();
+    });
+  }
 }
 
 function formatUsStockPrice(value, maximumFractionDigits = 2) {
@@ -8822,18 +8906,22 @@ function formatMarketRsBriefingSectorLabels(row, sectorData, limit = 2) {
   return labels.length > limit ? `${visible} +${labels.length - limit}` : visible;
 }
 
-function matchesMarketRsBriefingSector(row, sectorData) {
-  if (state.rsBriefingSector === "all") {
+function matchesBriefingSectorKey(row, sectorKey, sectorData) {
+  if (sectorKey === "all") {
     return true;
   }
-  if (state.rsBriefingSector === "briefingAll") {
+  if (sectorKey === "briefingAll") {
     return sectorData.allTickers.includes(row.ticker);
   }
-  const sector = sectorData.groups.find((item) => item.key === state.rsBriefingSector);
+  const sector = sectorData.groups.find((item) => item.key === sectorKey);
   if (!sector) {
     return true;
   }
   return sector.tickers.includes(row.ticker);
+}
+
+function matchesMarketRsBriefingSector(row, sectorData) {
+  return matchesBriefingSectorKey(row, state.rsBriefingSector, sectorData);
 }
 
 function getMarketRsHistoryRatings(history, universeKey) {
@@ -9533,10 +9621,15 @@ function renderMarketRsOverview() {
   const tableSortRows = sortMarketRsTableRows(rows);
   const sortedLeaderRows = sortMarketRsLeaderRows(rows);
   const leaderRows = sortedLeaderRows;
+  const rsCardLimit = ENABLE_RS_LIMITED_CARDS
+    ? Math.max(RS_CARD_BATCH_SIZE, Number(state.rsVisibleCardCount) || RS_CARD_BATCH_SIZE)
+    : leaderRows.length;
+  const rsCardRows = ENABLE_RS_LIMITED_CARDS ? leaderRows.slice(0, rsCardLimit) : leaderRows;
+  const hasMoreRsCards = ENABLE_RS_LIMITED_CARDS && rsCardRows.length < leaderRows.length;
   const activeNewHighKind = getMarketRsFilterNewHighKind() ?? "rs";
   const activeNewHighWindow = getMarketRsFilterNewHighWindow() ?? "1y";
   const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow, activeNewHighKind);
-  const leaderCards = leaderRows
+  const leaderCards = rsCardRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
       const briefingSectorLabel = formatMarketRsBriefingSectorLabels(row, briefingSectorData);
@@ -9573,6 +9666,16 @@ function renderMarketRsOverview() {
       `;
     })
     .join("");
+  const leaderCardMoreMarkup = hasMoreRsCards
+    ? `
+      <div class="market-rs-card-more">
+        <span>${rsCardRows.length} / ${leaderRows.length} names</span>
+        <button type="button" class="total-date-button" data-rs-show-more>더 보기 +${Math.min(RS_CARD_BATCH_SIZE, leaderRows.length - rsCardRows.length)}</button>
+      </div>
+    `
+    : ENABLE_RS_LIMITED_CARDS && leaderRows.length
+      ? `<p class="market-rs-empty market-rs-card-count">${leaderRows.length} names all loaded.</p>`
+      : "";
   const tableRows = tableSortRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -9692,6 +9795,7 @@ function renderMarketRsOverview() {
             <div class="market-rs-chip-row">${leaderSortChips}</div>
           </div>
           <div class="market-rs-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+          ${leaderCardMoreMarkup}
         </article>
 
         <article class="us-panel market-rs-detail">
@@ -9787,6 +9891,7 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-universe]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsUniverse = button.dataset.rsUniverse;
+      resetRsCardLimit();
       render();
     });
   });
@@ -9799,6 +9904,7 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsFilter = button.dataset.rsFilter;
+      resetRsCardLimit();
       render();
     });
   });
@@ -9806,6 +9912,7 @@ function renderMarketRsOverview() {
     button.addEventListener("click", () => {
       state.rsBriefingSector = button.dataset.rsBriefingSector || "all";
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   });
@@ -9815,6 +9922,7 @@ function renderMarketRsOverview() {
       state.rsCustomMarketCapMin = "";
       state.rsCustomMarketCapMax = "";
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   });
@@ -9827,6 +9935,7 @@ function renderMarketRsOverview() {
       state.rsCustomMarketCapMin = rsMarketCapMinInput.value.trim();
       state.rsCustomMarketCapMax = rsMarketCapMaxInput.value.trim();
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   }
@@ -9836,6 +9945,7 @@ function renderMarketRsOverview() {
       state.rsCustomMarketCapMax = "";
       state.rsMarketCapRange = "all";
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   }
@@ -9845,6 +9955,7 @@ function renderMarketRsOverview() {
       state.rsCustomScoreMin = "";
       state.rsCustomScoreMax = "";
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   });
@@ -9857,6 +9968,7 @@ function renderMarketRsOverview() {
       state.rsCustomScoreMin = rsScoreMinInput.value.trim();
       state.rsCustomScoreMax = rsScoreMaxInput.value.trim();
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   }
@@ -9866,12 +9978,14 @@ function renderMarketRsOverview() {
       state.rsCustomScoreMax = "";
       state.rsScoreRange = "all";
       state.rsSelectedTicker = "";
+      resetRsCardLimit();
       render();
     });
   }
   usOverviewRoot.querySelectorAll("[data-rs-leader-sort]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsLeaderSort = button.dataset.rsLeaderSort || "rs";
+      resetRsCardLimit();
       render();
     });
   });
@@ -9901,6 +10015,16 @@ function renderMarketRsOverview() {
       render();
     });
   });
+  const rsShowMoreButton = usOverviewRoot.querySelector("[data-rs-show-more]");
+  if (rsShowMoreButton) {
+    rsShowMoreButton.addEventListener("click", () => {
+      state.rsVisibleCardCount = Math.min(
+        leaderRows.length,
+        Math.max(RS_CARD_BATCH_SIZE, Number(state.rsVisibleCardCount) || RS_CARD_BATCH_SIZE) + RS_CARD_BATCH_SIZE,
+      );
+      render();
+    });
+  }
   usOverviewRoot.querySelectorAll("[data-rs-ticker]").forEach((element) => {
     element.addEventListener("click", () => {
       state.rsSelectedTicker = element.dataset.rsTicker;
@@ -15136,6 +15260,12 @@ searchInput.addEventListener("input", (event) => {
       searchRenderTimer = null;
       if (state.marketView === "TrendScore") {
         resetTrendScoreCardLimit();
+      }
+      if (state.marketView === "RS") {
+        resetRsCardLimit();
+      }
+      if (state.marketView === "Canslim") {
+        resetCanslimCardLimit();
       }
       render();
     }, 120);

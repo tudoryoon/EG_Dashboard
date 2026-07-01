@@ -4018,6 +4018,7 @@ h1 {
   font-size: 0.84rem;
 }
 
+.market-rs-card-more,
 .trend-score-card-more {
   display: flex;
   align-items: center;
@@ -4028,6 +4029,7 @@ h1 {
   font-size: 0.86rem;
 }
 
+.market-rs-card-count,
 .trend-score-card-count {
   text-align: center;
 }
