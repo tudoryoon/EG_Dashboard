@@ -260,6 +260,9 @@ const MARKET_RS_CAP_RANGES = [
   { key: "100b-plus", label: "$100B+", min: 100_000_000_000, max: Number.POSITIVE_INFINITY },
 ];
 
+const ENABLE_TREND_SCORE_LIMITED_CARDS = true;
+const TREND_SCORE_CARD_BATCH_SIZE = 300;
+
 const state = {
   tab: "DailyBriefing",
   marketView: "Overview",
@@ -357,6 +360,7 @@ const state = {
   trendScoreBriefingSector: "all",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
+  trendScoreVisibleCardCount: TREND_SCORE_CARD_BATCH_SIZE,
   canslimSelectedTicker: "",
   canslimUniverse: "all",
   canslimSort: "canslimDesc",
@@ -407,6 +411,10 @@ const usOverviewRoot = document.querySelector("#us-overview");
 const toolbarRow = document.querySelector(".toolbar .toolbar-row-filters");
 const brandMeta = document.querySelector(".brand-meta");
 let searchRenderTimer = null;
+
+function resetTrendScoreCardLimit() {
+  state.trendScoreVisibleCardCount = TREND_SCORE_CARD_BATCH_SIZE;
+}
 
 function formatKstDateTime(dateText) {
   if (!dateText) {
@@ -10287,7 +10295,12 @@ function renderMarketTrendScoreOverview() {
   ]
     .map(([label, sortKey]) => renderTrendLeaderSortButton(label, sortKey))
     .join("");
-  const leaderCards = rows
+  const trendScoreCardLimit = ENABLE_TREND_SCORE_LIMITED_CARDS
+    ? Math.max(TREND_SCORE_CARD_BATCH_SIZE, Number(state.trendScoreVisibleCardCount) || TREND_SCORE_CARD_BATCH_SIZE)
+    : rows.length;
+  const trendScoreCardRows = ENABLE_TREND_SCORE_LIMITED_CARDS ? rows.slice(0, trendScoreCardLimit) : rows;
+  const hasMoreTrendScoreCards = ENABLE_TREND_SCORE_LIMITED_CARDS && trendScoreCardRows.length < rows.length;
+  const leaderCards = trendScoreCardRows
     .map(
       (row) => `
         <button
@@ -10318,6 +10331,16 @@ function renderMarketTrendScoreOverview() {
       `,
     )
     .join("");
+  const leaderCardMoreMarkup = hasMoreTrendScoreCards
+    ? `
+      <div class="trend-score-card-more">
+        <span>${trendScoreCardRows.length} / ${rows.length} names</span>
+        <button type="button" class="total-date-button" data-trend-score-show-more>더 보기 +${Math.min(TREND_SCORE_CARD_BATCH_SIZE, rows.length - trendScoreCardRows.length)}</button>
+      </div>
+    `
+    : ENABLE_TREND_SCORE_LIMITED_CARDS && rows.length
+      ? `<p class="market-rs-empty trend-score-card-count">${rows.length} names all loaded.</p>`
+      : "";
   const tableRows = rows
     .map(
       (row) => `
@@ -10429,6 +10452,7 @@ function renderMarketTrendScoreOverview() {
             </div>
           </div>
           <div class="market-rs-card-grid trend-score-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
+          ${leaderCardMoreMarkup}
         </article>
 
         <article class="us-panel market-rs-detail">
@@ -10547,6 +10571,7 @@ function renderMarketTrendScoreOverview() {
     button.addEventListener("click", () => {
       state.trendScoreUniverse = button.dataset.trendScoreUniverse || "all";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   });
@@ -10554,6 +10579,7 @@ function renderMarketTrendScoreOverview() {
     button.addEventListener("click", () => {
       state.trendScoreBriefingSector = button.dataset.trendScoreBriefingSector || "all";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   });
@@ -10563,6 +10589,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomMarketCapMin = "";
       state.trendScoreCustomMarketCapMax = "";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   });
@@ -10575,6 +10602,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomMarketCapMin = trendScoreMarketCapMinInput.value.trim();
       state.trendScoreCustomMarketCapMax = trendScoreMarketCapMaxInput.value.trim();
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   }
@@ -10584,6 +10612,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomMarketCapMax = "";
       state.trendScoreMarketCapRange = "all";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   }
@@ -10593,6 +10622,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomScoreMin = "";
       state.trendScoreCustomScoreMax = "";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   });
@@ -10605,6 +10635,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomScoreMin = trendScoreScoreMinInput.value.trim();
       state.trendScoreCustomScoreMax = trendScoreScoreMaxInput.value.trim();
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   }
@@ -10614,6 +10645,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomScoreMax = "";
       state.trendScoreScoreRange = "all";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   }
@@ -10623,6 +10655,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomClimaxMin = "";
       state.trendScoreCustomClimaxMax = "";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   });
@@ -10635,6 +10668,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomClimaxMin = trendScoreClimaxMinInput.value.trim();
       state.trendScoreCustomClimaxMax = trendScoreClimaxMaxInput.value.trim();
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   }
@@ -10644,6 +10678,7 @@ function renderMarketTrendScoreOverview() {
       state.trendScoreCustomClimaxMax = "";
       state.trendScoreClimaxRange = "all";
       state.trendScoreSelectedTicker = "";
+      resetTrendScoreCardLimit();
       render();
     });
   }
@@ -10656,9 +10691,20 @@ function renderMarketTrendScoreOverview() {
         state.trendScoreTableSortKey = nextSortKey || "rank";
         state.trendScoreTableSortDirection = nextSortKey === "rank" || nextSortKey === "ticker" || nextSortKey === "name" ? "asc" : "desc";
       }
+      resetTrendScoreCardLimit();
       render();
     });
   });
+  const trendScoreShowMoreButton = usOverviewRoot.querySelector("[data-trend-score-show-more]");
+  if (trendScoreShowMoreButton) {
+    trendScoreShowMoreButton.addEventListener("click", () => {
+      state.trendScoreVisibleCardCount = Math.min(
+        rows.length,
+        Math.max(TREND_SCORE_CARD_BATCH_SIZE, Number(state.trendScoreVisibleCardCount) || TREND_SCORE_CARD_BATCH_SIZE) + TREND_SCORE_CARD_BATCH_SIZE,
+      );
+      render();
+    });
+  }
   usOverviewRoot.querySelectorAll("[data-trend-score-ticker]").forEach((element) => {
     element.addEventListener("click", () => {
       state.trendScoreSelectedTicker = element.dataset.trendScoreTicker;
@@ -15088,6 +15134,9 @@ searchInput.addEventListener("input", (event) => {
   if (state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore" || state.marketView === "Canslim")) {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
+      if (state.marketView === "TrendScore") {
+        resetTrendScoreCardLimit();
+      }
       render();
     }, 120);
     return;
