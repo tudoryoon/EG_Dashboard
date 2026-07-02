@@ -567,6 +567,58 @@ def ensure_symbol_price_frames(
     )
 
 
+def restore_existing_history_gaps(
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+    volume_frame: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    existing = load_existing_payload()
+    history_dates = existing.get("historyDates") or []
+    histories = existing.get("histories") or {}
+    if not history_dates or not histories:
+        return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+    price_frames = {
+        "price": raw_close_frame,
+        "open": open_frame,
+        "high": high_frame,
+        "low": low_frame,
+        "volume": volume_frame,
+    }
+    restored = 0
+    for ticker, history in histories.items():
+        ticker = normalize_ticker(ticker)
+        if ticker not in raw_close_frame.columns:
+            continue
+        existing_prices = history.get("price") or []
+        for index, date_label in enumerate(history_dates):
+            timestamp = pd.Timestamp(date_label)
+            if timestamp not in raw_close_frame.index:
+                continue
+            existing_price = safe_float(existing_prices[index]) if index < len(existing_prices) else None
+            if existing_price is not None and (
+                ticker in adjusted_close_frame.columns
+                and (pd.isna(adjusted_close_frame.at[timestamp, ticker]))
+            ):
+                adjusted_close_frame.at[timestamp, ticker] = existing_price
+                restored += 1
+            for key, frame in price_frames.items():
+                values = history.get(key) or []
+                if index >= len(values) or ticker not in frame.columns:
+                    continue
+                existing_value = safe_float(values[index])
+                if existing_value is None or not pd.isna(frame.at[timestamp, ticker]):
+                    continue
+                frame.at[timestamp, ticker] = existing_value
+                restored += 1
+    if restored:
+        print(f"Restored {restored} missing OHLCV points from existing market RS history.")
+    return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+
 def load_existing_rows() -> dict[str, dict[str, object]]:
     if not OUTPUT_PATH.exists():
         return {}
@@ -1235,6 +1287,14 @@ def main() -> None:
     manual_symbols = [normalize_ticker(member["ticker"]) for member in get_manual_universe_members()]
     raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = ensure_symbol_price_frames(
         manual_symbols,
+        raw_close_frame,
+        adjusted_close_frame,
+        open_frame,
+        high_frame,
+        low_frame,
+        volume_frame,
+    )
+    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = restore_existing_history_gaps(
         raw_close_frame,
         adjusted_close_frame,
         open_frame,
