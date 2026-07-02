@@ -904,11 +904,17 @@ h1 {
 
 .briefing-rotation-distribution-controls {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 6px;
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.78);
   padding: 4px;
+}
+
+.briefing-rotation-distribution-controls.is-axis {
+  max-width: 410px;
+  justify-content: flex-end;
 }
 
 .briefing-rotation-distribution-benchmark {

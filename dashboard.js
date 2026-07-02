@@ -252,6 +252,21 @@ const BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS = [
   { key: "qqq", label: "QQQ", itemKey: "nasdaq100", couplingLabel: "high QQQ" },
   { key: "sox", label: "SOX", itemKey: "sox", couplingLabel: "high SOX" },
 ];
+const BRIEFING_ROTATION_DISTRIBUTION_X_AXES = [
+  { key: "score", label: "Score", title: "Rotation Score", kind: "score" },
+  { key: "1w", label: "1W", title: "1W relative return", kind: "return" },
+  { key: "2w", label: "2W", title: "2W relative return", kind: "return" },
+  { key: "1m", label: "1M", title: "1M relative return", kind: "return" },
+  { key: "3m", label: "3M", title: "3M relative return", kind: "return" },
+  { key: "6m", label: "6M", title: "6M relative return", kind: "return" },
+];
+const BRIEFING_ROTATION_DISTRIBUTION_PERIODS = {
+  "1w": 5,
+  "2w": 10,
+  "1m": 21,
+  "3m": 63,
+  "6m": 126,
+};
 const MARKET_RS_CAP_RANGES = [
   { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
   { key: "200m-1b", label: "$200M-$1B", min: 200_000_000, max: 1_000_000_000 },
@@ -327,6 +342,7 @@ const state = {
   briefingMapRange: "1d",
   briefingRotationSectorKey: "",
   briefingRotationDistributionBenchmark: "qqq",
+  briefingRotationDistributionXAxis: "score",
   rsUniverse: "all",
   rsHistoryRange: "3y",
   rsSelectedTicker: "",
@@ -6452,6 +6468,13 @@ function getBriefingDistributionBenchmarkMeta(benchmarkKey = state.briefingRotat
   );
 }
 
+function getBriefingDistributionXAxisMeta(axisKey = state.briefingRotationDistributionXAxis) {
+  return (
+    BRIEFING_ROTATION_DISTRIBUTION_X_AXES.find((item) => item.key === axisKey) ??
+    BRIEFING_ROTATION_DISTRIBUTION_X_AXES[0]
+  );
+}
+
 function getBriefingIndexDailyReturnsByDate(itemKey) {
   const item = window.marketPriceData?.items?.[itemKey];
   const dates = item?.dates ?? [];
@@ -6468,8 +6491,46 @@ function getBriefingIndexDailyReturnsByDate(itemKey) {
   return returns;
 }
 
-function buildBriefingRotationDistribution(sectors, historyBySector, benchmarkKey = state.briefingRotationDistributionBenchmark) {
+function getBriefingIndexPeriodReturn(itemKey, periodKey) {
+  const period = BRIEFING_ROTATION_DISTRIBUTION_PERIODS[periodKey];
+  if (!period) {
+    return null;
+  }
+  const item = window.marketPriceData?.items?.[itemKey];
+  const values = item?.values ?? [];
+  const finiteValues = values.map(Number).filter(Number.isFinite);
+  if (finiteValues.length <= period) {
+    return null;
+  }
+  const current = finiteValues.at(-1);
+  const base = finiteValues.at(-(period + 1));
+  if (!Number.isFinite(current) || !Number.isFinite(base) || base === 0) {
+    return null;
+  }
+  return ((current / base) - 1) * 100;
+}
+
+function getBriefingRotationDistributionXValue(sector, benchmarkMeta, xAxisMeta) {
+  if (xAxisMeta.kind === "score") {
+    const score = Number(sector?.score);
+    return Number.isFinite(score) ? score : null;
+  }
+  const sectorReturn = Number(sector?.returns?.[xAxisMeta.key]);
+  const benchmarkReturn = getBriefingIndexPeriodReturn(benchmarkMeta.itemKey, xAxisMeta.key);
+  if (!Number.isFinite(sectorReturn) || !Number.isFinite(benchmarkReturn)) {
+    return null;
+  }
+  return sectorReturn - benchmarkReturn;
+}
+
+function buildBriefingRotationDistribution(
+  sectors,
+  historyBySector,
+  benchmarkKey = state.briefingRotationDistributionBenchmark,
+  xAxisKey = state.briefingRotationDistributionXAxis,
+) {
   const benchmarkMeta = getBriefingDistributionBenchmarkMeta(benchmarkKey);
+  const xAxisMeta = getBriefingDistributionXAxisMeta(xAxisKey);
   const qqqReturnsByDate = getBriefingIndexDailyReturnsByDate("nasdaq100");
   const benchmarkReturnsByDate = getBriefingIndexDailyReturnsByDate(benchmarkMeta.itemKey);
   const seenSectorKeys = new Set();
@@ -6500,23 +6561,33 @@ function buildBriefingRotationDistribution(sectors, historyBySector, benchmarkKe
       if (!Number.isFinite(correlation)) {
         return null;
       }
-      const score = Number(sector.score);
-      if (!Number.isFinite(score)) {
+      const xValue = getBriefingRotationDistributionXValue(sector, benchmarkMeta, xAxisMeta);
+      if (!Number.isFinite(xValue)) {
         return null;
       }
+      const score = Number(sector.score);
       const rawCorrelationPct = correlation * 100;
       return {
-        x: score,
+        x: xValue,
         y: Math.max(rawCorrelationPct, -25),
         key: sector.key,
         label: sector.label,
         classification: sector.classification,
-        score,
+        score: Number.isFinite(score) ? score : null,
+        xValue,
+        xAxisKey: xAxisMeta.key,
+        xAxisKind: xAxisMeta.kind,
+        xAxisLabel: xAxisMeta.label,
         sampleSize: sectorReturns.length,
         correlation,
         rawCorrelationPct,
         benchmarkLabel: benchmarkMeta.label,
+        benchmarkReturn:
+          xAxisMeta.kind === "return"
+            ? getBriefingIndexPeriodReturn(benchmarkMeta.itemKey, xAxisMeta.key)
+            : null,
         excessReturns: sector.excessReturns ?? {},
+        returns: sector.returns ?? {},
       };
     })
     .filter(Boolean);
@@ -6547,6 +6618,7 @@ function buildBriefingRotationDistribution(sectors, historyBySector, benchmarkKe
     xMin: minScore - scoreSpread * 0.16,
     xMax: maxScore + scoreSpread * 0.16,
     benchmark: benchmarkMeta,
+    xAxis: xAxisMeta,
   };
 }
 
@@ -6563,7 +6635,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
     return `${cleaned.slice(0, 8)}…`;
   };
   const getDistributionPointRadius = (raw) => {
-    const value = Math.abs(Number(raw?.excessReturns?.["1m"]));
+    const value = Math.abs(Number(raw?.x));
     if (!Number.isFinite(value)) {
       return 6;
     }
@@ -6621,7 +6693,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
       const orderedElements = meta.data
         .map((element, index) => ({ element, raw: dataset.data[index], index }))
         .filter((item) => item.element && item.raw)
-        .sort((a, b) => Number(b.raw.score ?? 0) - Number(a.raw.score ?? 0));
+        .sort((a, b) => Number(b.raw.x ?? 0) - Number(a.raw.x ?? 0));
       const rectIntersects = (rect, other) =>
         rect.left < other.right &&
         rect.right > other.left &&
@@ -6776,7 +6848,11 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
       ctx.fillStyle = "rgba(31, 41, 55, 0.62)";
       ctx.font = "700 11px Inter, sans-serif";
       ctx.textAlign = "right";
-      ctx.fillText(`Score-${distribution.benchmark?.label ?? "QQQ"} alignment`, chartArea.right - 4, chartArea.top + 14);
+      const guideLabel =
+        distribution.xAxis?.kind === "score"
+          ? `Score-${distribution.benchmark?.label ?? "QQQ"} alignment`
+          : `${distribution.xAxis?.label ?? ""} rel return-${distribution.benchmark?.label ?? "QQQ"} alignment`;
+      ctx.fillText(guideLabel, chartArea.right - 4, chartArea.top + 14);
       ctx.restore();
     },
   };
@@ -6821,13 +6897,28 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
             title: (items) => items?.[0]?.raw?.label ?? "",
             label: (context) => {
               const item = context.raw ?? {};
-              return [
-                `Score ${formatSignedScore(item.score)}`,
+              const xAxisMeta = distribution.xAxis ?? getBriefingDistributionXAxisMeta();
+              const lines = [
+                `${xAxisMeta.kind === "score" ? "Score" : `${xAxisMeta.label} vs ${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"}`} ${xAxisMeta.kind === "score" ? formatSignedScore(item.x) : formatSignedPercent(item.x)}`,
                 `${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"} corr ${formatOneDecimal(Number(item.rawCorrelationPct))}% (${item.sampleSize} sessions)`,
                 `${getRotationClassLabel(item.classification)} / ${getRotationClassKorean(item.classification)}`,
-                `1W vs QQQ ${formatSignedPercent(item.excessReturns?.["1w"])}`,
-                `1M vs QQQ ${formatSignedPercent(item.excessReturns?.["1m"])}`,
               ];
+              if (xAxisMeta.kind === "return") {
+                lines.push(`Rotation Score ${formatSignedScore(item.score)}`);
+                lines.push(`Sector ${item.xAxisLabel ?? ""} ${formatSignedPercent(item.returns?.[item.xAxisKey])}`);
+                lines.push(`Benchmark ${item.xAxisLabel ?? ""} ${formatSignedPercent(item.benchmarkReturn)}`);
+              } else {
+                ["1w", "1m"].forEach((periodKey) => {
+                  const sectorReturn = Number(item.returns?.[periodKey]);
+                  const benchmarkReturn = getBriefingIndexPeriodReturn(distribution.benchmark?.itemKey, periodKey);
+                  const relativeReturn =
+                    Number.isFinite(sectorReturn) && Number.isFinite(benchmarkReturn)
+                      ? sectorReturn - benchmarkReturn
+                      : null;
+                  lines.push(`${periodKey.toUpperCase()} vs ${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"} ${formatSignedPercent(relativeReturn)}`);
+                });
+              }
+              return lines;
             },
           },
         },
@@ -6836,10 +6927,18 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
         x: {
           min: distribution.xMin,
           max: distribution.xMax,
-          title: { display: true, text: "Rotation Score", color: "#6b6b64" },
+          title: {
+            display: true,
+            text:
+              distribution.xAxis?.kind === "score"
+                ? "Rotation Score"
+                : `${distribution.xAxis?.title ?? "Relative return"} vs ${distribution.benchmark?.label ?? "QQQ"}`,
+            color: "#6b6b64",
+          },
           ticks: {
             color: "#8d8d86",
-            callback: (value) => formatSignedScore(value),
+            callback: (value) =>
+              distribution.xAxis?.kind === "score" ? formatSignedScore(value) : formatSignedPercent(value),
             maxTicksLimit: 7,
           },
           grid: { color: "rgba(70, 70, 66, 0.12)" },
@@ -7200,9 +7299,16 @@ function renderMarketBriefingOverview() {
   const rotationHistoryLatest = selectedRotationHistory.at(-1) ?? {};
   const selectedDistributionBenchmark = getBriefingDistributionBenchmarkMeta(state.briefingRotationDistributionBenchmark);
   state.briefingRotationDistributionBenchmark = selectedDistributionBenchmark.key;
-  const rotationDistribution = buildBriefingRotationDistribution(allRotationSectors, rotationHistory, selectedDistributionBenchmark.key);
+  const selectedDistributionXAxis = getBriefingDistributionXAxisMeta(state.briefingRotationDistributionXAxis);
+  state.briefingRotationDistributionXAxis = selectedDistributionXAxis.key;
+  const rotationDistribution = buildBriefingRotationDistribution(
+    allRotationSectors,
+    rotationHistory,
+    selectedDistributionBenchmark.key,
+    selectedDistributionXAxis.key,
+  );
   const highBenchmarkCouplingCount = rotationDistribution.points.filter((point) => point.correlation >= 0.65).length;
-  const independentLeaderCount = rotationDistribution.points.filter((point) => point.score > 0 && point.correlation < 0.35).length;
+  const independentLeaderCount = rotationDistribution.points.filter((point) => point.x > 0 && point.correlation < 0.35).length;
   const averageBenchmarkCorrelation = rotationDistribution.points.length
     ? rotationDistribution.points.reduce((sum, point) => sum + point.correlation, 0) / rotationDistribution.points.length
     : null;
@@ -7217,22 +7323,44 @@ function renderMarketBriefingOverview() {
       </button>
     `,
   ).join("");
+  const distributionXAxisControls = BRIEFING_ROTATION_DISTRIBUTION_X_AXES.map(
+    (axis) => `
+      <button
+        type="button"
+        class="briefing-rotation-distribution-benchmark${selectedDistributionXAxis.key === axis.key ? " active" : ""}"
+        data-briefing-rotation-distribution-x-axis="${axis.key}"
+      >
+        ${axis.label}
+      </button>
+    `,
+  ).join("");
+  const distributionXAxisDescription =
+    selectedDistributionXAxis.kind === "score"
+      ? `X축은 기존 가중 Rotation Score입니다. Score = QQQ 대비 초과수익률 가중합이며 섹터 수익률은 시총가중 50% + 동일가중 50% 혼합입니다.`
+      : `X축은 ${selectedDistributionXAxis.label} 섹터 혼합수익률에서 ${selectedDistributionBenchmark.label} ${selectedDistributionXAxis.label} 수익률을 뺀 초과수익률입니다.`;
+  const distributionXAxisLabel =
+    selectedDistributionXAxis.kind === "score"
+      ? "Rotation Score"
+      : `${selectedDistributionXAxis.label} vs ${selectedDistributionBenchmark.label}`;
   const rotationDistributionMarkup = rotationDistribution.points.length
     ? `
       <article class="briefing-rotation-distribution-panel">
         <div class="briefing-rotation-distribution-head">
           <div>
             <strong>Rotation Score Distribution</strong>
-            <span>X축은 최신 QQQ 대비 Rotation Score, Y축은 최근 63거래일 ${selectedDistributionBenchmark.label} 상관계수입니다. 점을 누르면 해당 섹터 히스토리로 이동합니다.</span>
+            <span>${distributionXAxisDescription} Y축은 최근 63거래일 ${selectedDistributionBenchmark.label} 상관계수입니다. 점을 누르면 해당 섹터 히스토리로 이동합니다.</span>
           </div>
           <div class="briefing-rotation-distribution-side">
             <div class="briefing-rotation-distribution-controls">
               ${distributionBenchmarkControls}
             </div>
+            <div class="briefing-rotation-distribution-controls is-axis">
+              ${distributionXAxisControls}
+            </div>
             <div class="briefing-rotation-distribution-stats">
               <span><b>${formatOneDecimal(Number(averageBenchmarkCorrelation) * 100)}%</b> avg corr</span>
               <span><b>${highBenchmarkCouplingCount}</b> ${selectedDistributionBenchmark.couplingLabel}</span>
-              <span><b>${independentLeaderCount}</b> independent leaders</span>
+              <span><b>${independentLeaderCount}</b> independent positives</span>
             </div>
           </div>
         </div>
@@ -7246,7 +7374,7 @@ function renderMarketBriefingOverview() {
           <span><i class="is-improving"></i>개선</span>
           <span><i class="is-weakening"></i>둔화</span>
           <span><i class="is-lagging"></i>소외</span>
-          <em>배경색은 Rotation Score 0 기준입니다. 붉은 영역은 음수, 초록 영역은 양수입니다. 대각선은 회귀선이 아니라 점수 방향과 ${selectedDistributionBenchmark.label} 연동성의 정렬 정도를 보는 시각 보조선입니다.</em>
+          <em>배경색은 ${distributionXAxisLabel} 0 기준입니다. 붉은 영역은 음수, 초록 영역은 양수입니다. 대각선은 회귀선이 아니라 X축 방향과 ${selectedDistributionBenchmark.label} 연동성의 정렬 정도를 보는 시각 보조선입니다.</em>
         </div>
         <div class="briefing-rotation-distribution-chart-wrap">
           <canvas data-briefing-rotation-distribution></canvas>
@@ -7649,6 +7777,12 @@ function renderMarketBriefingOverview() {
   usOverviewRoot.querySelectorAll("[data-briefing-rotation-distribution-benchmark]").forEach((button) => {
     button.addEventListener("click", () => {
       state.briefingRotationDistributionBenchmark = button.dataset.briefingRotationDistributionBenchmark || "qqq";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-briefing-rotation-distribution-x-axis]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingRotationDistributionXAxis = button.dataset.briefingRotationDistributionXAxis || "score";
       render();
     });
   });
