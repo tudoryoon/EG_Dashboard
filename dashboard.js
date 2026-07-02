@@ -6510,12 +6510,48 @@ function getBriefingIndexPeriodReturn(itemKey, periodKey) {
   return ((current / base) - 1) * 100;
 }
 
+function getBriefingSectorMixedReturnFromPanels(sectorKey, periodKey) {
+  const sector = (window.marketBriefingData?.sectorPanels ?? []).find((panel) => panel.key === sectorKey);
+  const items = sector?.items ?? [];
+  const values = [];
+  let weightedSum = 0;
+  let weightSum = 0;
+  items.forEach((item) => {
+    const value = Number(item?.overviewReturns?.[periodKey] ?? item?.returns?.[periodKey]);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    const weight = Number(item?.marketCapUsd ?? item?.marketCap);
+    if (Number.isFinite(weight) && weight > 0) {
+      weightedSum += value * weight;
+      weightSum += weight;
+    }
+    values.push(value);
+  });
+  if (!values.length) {
+    return null;
+  }
+  const equalWeighted = values.reduce((sum, value) => sum + value, 0) / values.length;
+  if (weightSum > 0) {
+    return (weightedSum / weightSum) * 0.5 + equalWeighted * 0.5;
+  }
+  return equalWeighted;
+}
+
+function getBriefingSectorDistributionReturn(sector, periodKey) {
+  const directValue = Number(sector?.returns?.[periodKey]);
+  if (Number.isFinite(directValue)) {
+    return directValue;
+  }
+  return getBriefingSectorMixedReturnFromPanels(sector?.key, periodKey);
+}
+
 function getBriefingRotationDistributionXValue(sector, benchmarkMeta, xAxisMeta) {
   if (xAxisMeta.kind === "score") {
     const score = Number(sector?.score);
     return Number.isFinite(score) ? score : null;
   }
-  const sectorReturn = Number(sector?.returns?.[xAxisMeta.key]);
+  const sectorReturn = getBriefingSectorDistributionReturn(sector, xAxisMeta.key);
   const benchmarkReturn = getBriefingIndexPeriodReturn(benchmarkMeta.itemKey, xAxisMeta.key);
   if (!Number.isFinite(sectorReturn) || !Number.isFinite(benchmarkReturn)) {
     return null;
@@ -6561,6 +6597,8 @@ function buildBriefingRotationDistribution(
       if (!Number.isFinite(correlation)) {
         return null;
       }
+      const sectorPeriodReturn =
+        xAxisMeta.kind === "return" ? getBriefingSectorDistributionReturn(sector, xAxisMeta.key) : null;
       const xValue = getBriefingRotationDistributionXValue(sector, benchmarkMeta, xAxisMeta);
       if (!Number.isFinite(xValue)) {
         return null;
@@ -6586,6 +6624,7 @@ function buildBriefingRotationDistribution(
           xAxisMeta.kind === "return"
             ? getBriefingIndexPeriodReturn(benchmarkMeta.itemKey, xAxisMeta.key)
             : null,
+        sectorPeriodReturn,
         excessReturns: sector.excessReturns ?? {},
         returns: sector.returns ?? {},
       };
@@ -6905,7 +6944,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
               ];
               if (xAxisMeta.kind === "return") {
                 lines.push(`Rotation Score ${formatSignedScore(item.score)}`);
-                lines.push(`Sector ${item.xAxisLabel ?? ""} ${formatSignedPercent(item.returns?.[item.xAxisKey])}`);
+                lines.push(`Sector ${item.xAxisLabel ?? ""} ${formatSignedPercent(item.sectorPeriodReturn)}`);
                 lines.push(`Benchmark ${item.xAxisLabel ?? ""} ${formatSignedPercent(item.benchmarkReturn)}`);
               } else {
                 ["1w", "1m"].forEach((periodKey) => {

@@ -1163,7 +1163,7 @@ def build_sector_excess_returns(
 
 def build_sector_returns(items: list[dict[str, object]]) -> dict[str, float | None]:
     returns_by_range: dict[str, float | None] = {}
-    for key in ROTATION_WEIGHTS:
+    for key in MAP_RANGE_LABELS:
         numerator = 0.0
         denominator = 0.0
         equal_weight_values = []
