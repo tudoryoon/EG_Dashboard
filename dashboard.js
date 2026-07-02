@@ -8924,23 +8924,47 @@ function matchesMarketRsBriefingSector(row, sectorData) {
   return matchesBriefingSectorKey(row, state.rsBriefingSector, sectorData);
 }
 
-function getMarketRsHistoryRatings(history, universeKey) {
+function hasFiniteSeriesValue(values) {
+  return Array.isArray(values) && values.some((value) => Number.isFinite(value));
+}
+
+function getLastFiniteSeriesIndex(values) {
+  if (!Array.isArray(values)) {
+    return -1;
+  }
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (Number.isFinite(values[index])) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function getMarketRsHistoryRatingSeries(history, universeKey) {
   if (!history) {
-    return [];
+    return { values: [], universeKey: "all", fallback: false };
   }
-  if (universeKey === "sp500") {
-    return history.rsRatingSp500 ?? history.rsRating ?? [];
+  const fallbackValues = history.rsRatingAll ?? history.rsRating ?? [];
+  const seriesByUniverse = {
+    sp500: history.rsRatingSp500,
+    nasdaq100: history.rsRatingNasdaq100,
+    dowjones: history.rsRatingDowjones,
+    russell2000: history.rsRatingRussell2000,
+    all: fallbackValues,
+  };
+  const selectedValues = seriesByUniverse[universeKey] ?? fallbackValues;
+  if (hasFiniteSeriesValue(selectedValues)) {
+    return { values: selectedValues, universeKey, fallback: false };
   }
-  if (universeKey === "nasdaq100") {
-    return history.rsRatingNasdaq100 ?? history.rsRating ?? [];
-  }
-  if (universeKey === "dowjones") {
-    return history.rsRatingDowjones ?? history.rsRating ?? [];
-  }
-  if (universeKey === "russell2000") {
-    return history.rsRatingRussell2000 ?? history.rsRating ?? [];
-  }
-  return history.rsRatingAll ?? history.rsRating ?? [];
+  return {
+    values: fallbackValues,
+    universeKey: "all",
+    fallback: universeKey !== "all" && hasFiniteSeriesValue(fallbackValues),
+  };
+}
+
+function getMarketRsHistoryRatings(history, universeKey) {
+  return getMarketRsHistoryRatingSeries(history, universeKey).values;
 }
 
 const MARKET_RS_SCORE_RANGES = [
@@ -9334,7 +9358,8 @@ function createMarketRsChart(canvas, row) {
   const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
-  const selectedRatings = getMarketRsHistoryRatings(history, state.rsUniverse).slice(startIndex);
+  const ratingSeries = getMarketRsHistoryRatingSeries(history, state.rsUniverse);
+  const selectedRatings = ratingSeries.values.slice(startIndex);
   const fullPrice = history.price ?? [];
   const selectedPrice = fullPrice.slice(startIndex);
   const emaSeries = Object.fromEntries(
@@ -9371,16 +9396,20 @@ function createMarketRsChart(canvas, row) {
     }
   }
   const earningsMarkers = buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax);
+  const ratingLatestIndex = getLastFiniteSeriesIndex(selectedRatings);
+  const priceLatestIndex = getLastFiniteSeriesIndex(selectedPrice);
+  const ratingLabelUniverse = getMarketRsUniverseLabel(ratingSeries.universeKey);
 
   const chartDatasets = [
     {
-      label: `RS Rating(L) (${getMarketRsUniverseLabel(state.rsUniverse)})`,
+      label: `RS Rating(L) (${ratingLabelUniverse})`,
       data: selectedRatings,
       borderColor: "#d93025",
       backgroundColor: "#d93025",
       borderWidth: 2.6,
       tension: 0.18,
-      pointRadius: 0,
+      spanGaps: true,
+      pointRadius: (context) => (context.dataIndex === ratingLatestIndex ? 3 : 0),
       pointHoverRadius: 4,
       yAxisID: "y",
       hidden: !isMarketRsChartSeriesVisible("rs"),
@@ -9392,7 +9421,8 @@ function createMarketRsChart(canvas, row) {
       backgroundColor: "#111827",
       borderWidth: 2,
       tension: 0.18,
-      pointRadius: 0,
+      spanGaps: true,
+      pointRadius: (context) => (context.dataIndex === priceLatestIndex ? 3 : 0),
       pointHoverRadius: 4,
       yAxisID: "y1",
     },
@@ -9404,7 +9434,8 @@ function createMarketRsChart(canvas, row) {
       borderWidth: series.period >= 50 ? 1.8 : 1.6,
       borderDash: [5, 5],
       tension: 0.18,
-      pointRadius: 0,
+      spanGaps: true,
+      pointRadius: (context) => (context.dataIndex === getLastFiniteSeriesIndex(emaSeries[series.key]) ? 2 : 0),
       pointHoverRadius: 3,
       yAxisID: "y1",
       hidden: !isMarketRsChartSeriesVisible(series.key),
