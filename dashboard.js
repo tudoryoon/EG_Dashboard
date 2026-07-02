@@ -267,6 +267,11 @@ const BRIEFING_ROTATION_DISTRIBUTION_PERIODS = {
   "3m": 63,
   "6m": 126,
 };
+const BRIEFING_ROTATION_DISTRIBUTION_CORR_WINDOWS = [
+  { key: "1m", label: "1M", sessions: 21 },
+  { key: "2m", label: "2M", sessions: 42 },
+  { key: "3m", label: "3M", sessions: 63 },
+];
 const MARKET_RS_CAP_RANGES = [
   { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
   { key: "200m-1b", label: "$200M-$1B", min: 200_000_000, max: 1_000_000_000 },
@@ -343,6 +348,7 @@ const state = {
   briefingRotationSectorKey: "",
   briefingRotationDistributionBenchmark: "qqq",
   briefingRotationDistributionXAxis: "score",
+  briefingRotationDistributionCorrWindow: "3m",
   rsUniverse: "all",
   rsHistoryRange: "3y",
   rsSelectedTicker: "",
@@ -6475,6 +6481,13 @@ function getBriefingDistributionXAxisMeta(axisKey = state.briefingRotationDistri
   );
 }
 
+function getBriefingDistributionCorrWindowMeta(windowKey = state.briefingRotationDistributionCorrWindow) {
+  return (
+    BRIEFING_ROTATION_DISTRIBUTION_CORR_WINDOWS.find((item) => item.key === windowKey) ??
+    BRIEFING_ROTATION_DISTRIBUTION_CORR_WINDOWS.at(-1)
+  );
+}
+
 function getBriefingIndexDailyReturnsByDate(itemKey) {
   const item = window.marketPriceData?.items?.[itemKey];
   const dates = item?.dates ?? [];
@@ -6564,9 +6577,11 @@ function buildBriefingRotationDistribution(
   historyBySector,
   benchmarkKey = state.briefingRotationDistributionBenchmark,
   xAxisKey = state.briefingRotationDistributionXAxis,
+  corrWindowKey = state.briefingRotationDistributionCorrWindow,
 ) {
   const benchmarkMeta = getBriefingDistributionBenchmarkMeta(benchmarkKey);
   const xAxisMeta = getBriefingDistributionXAxisMeta(xAxisKey);
+  const corrWindowMeta = getBriefingDistributionCorrWindowMeta(corrWindowKey);
   const qqqReturnsByDate = getBriefingIndexDailyReturnsByDate("nasdaq100");
   const benchmarkReturnsByDate = getBriefingIndexDailyReturnsByDate(benchmarkMeta.itemKey);
   const seenSectorKeys = new Set();
@@ -6576,7 +6591,7 @@ function buildBriefingRotationDistribution(
         return null;
       }
       seenSectorKeys.add(sector.key);
-      const history = (historyBySector?.[sector.key] ?? []).slice(-63);
+      const history = (historyBySector?.[sector.key] ?? []).slice(-corrWindowMeta.sessions);
       const sectorReturns = [];
       const benchmarkReturns = [];
       history.forEach((item) => {
@@ -6619,6 +6634,9 @@ function buildBriefingRotationDistribution(
         sampleSize: sectorReturns.length,
         correlation,
         rawCorrelationPct,
+        corrWindowKey: corrWindowMeta.key,
+        corrWindowLabel: corrWindowMeta.label,
+        corrWindowSessions: corrWindowMeta.sessions,
         benchmarkLabel: benchmarkMeta.label,
         benchmarkReturn:
           xAxisMeta.kind === "return"
@@ -6658,6 +6676,7 @@ function buildBriefingRotationDistribution(
     xMax: maxScore + scoreSpread * 0.16,
     benchmark: benchmarkMeta,
     xAxis: xAxisMeta,
+    corrWindow: corrWindowMeta,
   };
 }
 
@@ -6939,7 +6958,7 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
               const xAxisMeta = distribution.xAxis ?? getBriefingDistributionXAxisMeta();
               const lines = [
                 `${xAxisMeta.kind === "score" ? "Score" : `${xAxisMeta.label} vs ${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"}`} ${xAxisMeta.kind === "score" ? formatSignedScore(item.x) : formatSignedPercent(item.x)}`,
-                `${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"} corr ${formatOneDecimal(Number(item.rawCorrelationPct))}% (${item.sampleSize} sessions)`,
+                `${item.benchmarkLabel ?? distribution.benchmark?.label ?? "QQQ"} ${item.corrWindowLabel ?? distribution.corrWindow?.label ?? "3M"} corr ${formatOneDecimal(Number(item.rawCorrelationPct))}% (${item.sampleSize} sessions)`,
                 `${getRotationClassLabel(item.classification)} / ${getRotationClassKorean(item.classification)}`,
               ];
               if (xAxisMeta.kind === "return") {
@@ -6986,7 +7005,11 @@ function createBriefingRotationDistributionChart(canvas, distribution) {
         y: {
           min: -25,
           max: 100,
-          title: { display: true, text: `63D correlation with ${distribution.benchmark?.label ?? "QQQ"}`, color: "#6b6b64" },
+          title: {
+            display: true,
+            text: `${distribution.corrWindow?.label ?? "3M"} correlation with ${distribution.benchmark?.label ?? "QQQ"}`,
+            color: "#6b6b64",
+          },
           ticks: {
             color: "#8d8d86",
             callback: (value) => `${Math.round(value)}%`,
@@ -7340,11 +7363,14 @@ function renderMarketBriefingOverview() {
   state.briefingRotationDistributionBenchmark = selectedDistributionBenchmark.key;
   const selectedDistributionXAxis = getBriefingDistributionXAxisMeta(state.briefingRotationDistributionXAxis);
   state.briefingRotationDistributionXAxis = selectedDistributionXAxis.key;
+  const selectedDistributionCorrWindow = getBriefingDistributionCorrWindowMeta(state.briefingRotationDistributionCorrWindow);
+  state.briefingRotationDistributionCorrWindow = selectedDistributionCorrWindow.key;
   const rotationDistribution = buildBriefingRotationDistribution(
     allRotationSectors,
     rotationHistory,
     selectedDistributionBenchmark.key,
     selectedDistributionXAxis.key,
+    selectedDistributionCorrWindow.key,
   );
   const highBenchmarkCouplingCount = rotationDistribution.points.filter((point) => point.correlation >= 0.65).length;
   const independentLeaderCount = rotationDistribution.points.filter((point) => point.x > 0 && point.correlation < 0.35).length;
@@ -7373,6 +7399,17 @@ function renderMarketBriefingOverview() {
       </button>
     `,
   ).join("");
+  const distributionCorrWindowControls = BRIEFING_ROTATION_DISTRIBUTION_CORR_WINDOWS.map(
+    (windowMeta) => `
+      <button
+        type="button"
+        class="briefing-rotation-distribution-benchmark${selectedDistributionCorrWindow.key === windowMeta.key ? " active" : ""}"
+        data-briefing-rotation-distribution-corr-window="${windowMeta.key}"
+      >
+        ${windowMeta.label}
+      </button>
+    `,
+  ).join("");
   const distributionXAxisDescription =
     selectedDistributionXAxis.kind === "score"
       ? `X축은 기존 가중 Rotation Score입니다. Score = QQQ 대비 초과수익률 가중합이며 섹터 수익률은 시총가중 50% + 동일가중 50% 혼합입니다.`
@@ -7387,11 +7424,14 @@ function renderMarketBriefingOverview() {
         <div class="briefing-rotation-distribution-head">
           <div>
             <strong>Rotation Score Distribution</strong>
-            <span>${distributionXAxisDescription} Y축은 최근 63거래일 ${selectedDistributionBenchmark.label} 상관계수입니다. 점을 누르면 해당 섹터 히스토리로 이동합니다.</span>
+            <span>${distributionXAxisDescription} Y축은 ${selectedDistributionCorrWindow.label}=${selectedDistributionCorrWindow.sessions}거래일 ${selectedDistributionBenchmark.label} 일간수익률 상관계수입니다. 점을 누르면 해당 섹터 히스토리로 이동합니다.</span>
           </div>
           <div class="briefing-rotation-distribution-side">
             <div class="briefing-rotation-distribution-controls">
               ${distributionBenchmarkControls}
+            </div>
+            <div class="briefing-rotation-distribution-controls is-corr">
+              ${distributionCorrWindowControls}
             </div>
             <div class="briefing-rotation-distribution-controls is-axis">
               ${distributionXAxisControls}
@@ -7822,6 +7862,12 @@ function renderMarketBriefingOverview() {
   usOverviewRoot.querySelectorAll("[data-briefing-rotation-distribution-x-axis]").forEach((button) => {
     button.addEventListener("click", () => {
       state.briefingRotationDistributionXAxis = button.dataset.briefingRotationDistributionXAxis || "score";
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-briefing-rotation-distribution-corr-window]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingRotationDistributionCorrWindow = button.dataset.briefingRotationDistributionCorrWindow || "3m";
       render();
     });
   });

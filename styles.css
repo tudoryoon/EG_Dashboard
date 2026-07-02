@@ -917,6 +917,10 @@ h1 {
   justify-content: flex-end;
 }
 
+.briefing-rotation-distribution-controls.is-corr {
+  justify-content: flex-end;
+}
+
 .briefing-rotation-distribution-benchmark {
   border: 0;
   border-radius: 999px;
