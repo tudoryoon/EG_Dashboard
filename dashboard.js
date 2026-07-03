@@ -3926,6 +3926,27 @@ function getMacroDashboardItems() {
       color: "#7c3aed",
     }),
     buildMacroIndicatorDashboardItem({
+      key: "indicator:core_cpi_yoy",
+      label: "Core CPI YoY",
+      seriesKey: "core_cpi",
+      kind: "yoy",
+      color: "#db2777",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:headline_pce_yoy",
+      label: "PCE YoY",
+      seriesKey: "headline_pce",
+      kind: "yoy",
+      color: "#0f766e",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:core_pce_yoy",
+      label: "Core PCE YoY",
+      seriesKey: "core_pce",
+      kind: "yoy",
+      color: "#14b8a6",
+    }),
+    buildMacroIndicatorDashboardItem({
       key: "indicator:final_demand_ppi_yoy",
       label: "PPI YoY",
       seriesKey: "final_demand_ppi",
