@@ -4325,6 +4325,11 @@ h1 {
   margin-top: 14px;
 }
 
+.market-rs-mdd-chart-wrap {
+  height: 190px;
+  margin-top: 18px;
+}
+
 .trend-score-overview .market-rs-chart-wrap {
   height: 300px;
 }

@@ -9508,12 +9508,14 @@ function isMarketRsChartSeriesVisible(key) {
 
 function refreshMarketRsChartOnly() {
   const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
+  const mddCanvas = usOverviewRoot.querySelector('[data-rs-chart="mdd"]');
   const selected = marketRsRowByTicker.get(state.rsSelectedTicker) ?? marketRsData.rows?.[0] ?? null;
   if (!detailCanvas || !selected) {
     return;
   }
   destroyCharts();
   createMarketRsChart(detailCanvas, selected);
+  createMarketRsMddChart(mddCanvas, selected);
 }
 
 function syncMarketRsChartSeriesButtons() {
@@ -9560,6 +9562,21 @@ function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
     })
     .filter(Boolean);
   return { data, byIndex, rotations, colors };
+}
+
+function calculateDrawdownSeries(values = []) {
+  let runningHigh = null;
+  return values.map((value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return null;
+    }
+    runningHigh = runningHigh === null ? numeric : Math.max(runningHigh, numeric);
+    if (!runningHigh) {
+      return null;
+    }
+    return Number(((numeric / runningHigh - 1) * 100).toFixed(2));
+  });
 }
 
 function createMarketRsChart(canvas, row) {
@@ -9759,6 +9776,104 @@ function createMarketRsChart(canvas, row) {
           ticks: {
             color: "#111827",
             callback: (value) => formatUsStockPrice(Number(value), value >= 100 ? 0 : 2),
+          },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMarketRsMddChart(canvas, row) {
+  if (typeof Chart === "undefined" || !canvas || !row) {
+    return;
+  }
+  const history = marketRsData.histories?.[row.ticker];
+  const labels = marketRsData.historyDates ?? [];
+  if (!history || !labels.length) {
+    return;
+  }
+
+  const minStart = labels[0];
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
+  const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
+  const selectedLabels = labels.slice(startIndex);
+  const selectedPrice = (history.price ?? []).slice(startIndex);
+  const drawdownSeries = calculateDrawdownSeries(selectedPrice);
+  const drawdownValues = drawdownSeries.filter((value) => Number.isFinite(value));
+  const latestDrawdownIndex = getLastFiniteSeriesIndex(drawdownSeries);
+  let minDrawdown = drawdownValues.length ? Math.floor((Math.min(...drawdownValues) - 2) / 5) * 5 : -10;
+  minDrawdown = Math.min(-5, minDrawdown);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: selectedLabels,
+      datasets: [
+        {
+          label: "Stock MDD",
+          data: drawdownSeries,
+          borderColor: "#b42318",
+          backgroundColor: "rgba(220, 38, 38, 0.13)",
+          borderWidth: 2.2,
+          fill: "origin",
+          tension: 0.16,
+          spanGaps: true,
+          pointRadius: (context) => (context.dataIndex === latestDrawdownIndex ? 3 : 0),
+          pointHoverRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `Stock MDD: ${formatSignedPercent(Number(context.parsed.y))}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            const indexes = buildRegularDateTickIndexes(selectedLabels, state.rsHistoryRange);
+            axis.ticks = indexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8a8a83",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index, ticks) => {
+              const labelIndex = ticks?.[index]?.value;
+              return formatRangeAxisDate(selectedLabels[labelIndex], state.rsHistoryRange);
+            },
+          },
+        },
+        y: {
+          min: minDrawdown,
+          max: 0,
+          grid: { color: "rgba(28,28,26,0.08)" },
+          ticks: {
+            color: "#9f1d1d",
+            callback: (value) => `${Number(value).toFixed(0)}%`,
           },
         },
       },
@@ -10103,6 +10218,10 @@ function renderMarketRsOverview() {
             <canvas data-rs-chart="detail"></canvas>
           </div>
           <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/100/200 EMA. EPS triangles mark Yahoo Finance / yfinance EPS surprise proxy events where available.</p>
+          <div class="chart-wrap market-rs-mdd-chart-wrap">
+            <canvas data-rs-chart="mdd"></canvas>
+          </div>
+          <p class="market-rs-chart-caption">Stock MDD: selected-period drawdown from each running stock-price high. 0% is the period high; negative values show the decline from that high.</p>
         </article>
       </section>
 
@@ -10285,6 +10404,7 @@ function renderMarketRsOverview() {
   const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
   if (detailCanvas && selected) {
     createMarketRsChart(detailCanvas, selected);
+    createMarketRsMddChart(usOverviewRoot.querySelector('[data-rs-chart="mdd"]'), selected);
   }
 }
 
