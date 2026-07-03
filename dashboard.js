@@ -10404,19 +10404,16 @@ function renderMarketRsOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/100/200 EMA. EPS triangles mark Yahoo Finance / yfinance EPS surprise proxy events where available.</p>
           <div class="market-rs-risk-chart-grid">
             <div>
               <div class="chart-wrap market-rs-mdd-chart-wrap">
                 <canvas data-rs-chart="mdd"></canvas>
               </div>
-              <p class="market-rs-chart-caption">Stock MDD: selected-period drawdown from each running stock-price high. 0% is the period high; negative values show the decline from that high.</p>
             </div>
             <div>
               <div class="chart-wrap market-rs-mdd-chart-wrap">
                 <canvas data-rs-chart="atr"></canvas>
               </div>
-              <p class="market-rs-chart-caption">21D ATR%: 21-session average true range divided by close. Dashed line shows the selected-period average.</p>
             </div>
           </div>
         </article>
