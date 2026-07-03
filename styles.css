@@ -4406,6 +4406,10 @@ h1 {
   font-size: 0.9rem;
 }
 
+.market-rs-detail:has([data-rs-chart]) .market-rs-chart-caption {
+  display: none;
+}
+
 .market-rs-financial-panel {
   margin-top: 18px;
   padding: 16px;
