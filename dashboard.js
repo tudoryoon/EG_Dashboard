@@ -9548,6 +9548,7 @@ function isMarketRsChartSeriesVisible(key) {
 function refreshMarketRsChartOnly() {
   const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
   const mddCanvas = usOverviewRoot.querySelector('[data-rs-chart="mdd"]');
+  const atrCanvas = usOverviewRoot.querySelector('[data-rs-chart="atr"]');
   const selected = marketRsRowByTicker.get(state.rsSelectedTicker) ?? marketRsData.rows?.[0] ?? null;
   if (!detailCanvas || !selected) {
     return;
@@ -9555,6 +9556,7 @@ function refreshMarketRsChartOnly() {
   destroyCharts();
   createMarketRsChart(detailCanvas, selected);
   createMarketRsMddChart(mddCanvas, selected);
+  createMarketRsAtrChart(atrCanvas, selected);
 }
 
 function syncMarketRsChartSeriesButtons() {
@@ -9615,6 +9617,38 @@ function calculateDrawdownSeries(values = []) {
       return null;
     }
     return Number(((numeric / runningHigh - 1) * 100).toFixed(2));
+  });
+}
+
+function calculateAtrPctSeries(highValues = [], lowValues = [], closeValues = [], window = 21) {
+  const trueRangePct = closeValues.map((closeValue, index) => {
+    const high = Number(highValues[index]);
+    const low = Number(lowValues[index]);
+    const close = Number(closeValue);
+    if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(close) || close <= 0) {
+      return null;
+    }
+    const previousClose = Number(closeValues[index - 1]);
+    const ranges = [high - low];
+    if (Number.isFinite(previousClose) && previousClose > 0) {
+      ranges.push(Math.abs(high - previousClose), Math.abs(low - previousClose));
+    }
+    const trueRange = Math.max(...ranges.filter((value) => Number.isFinite(value)));
+    if (!Number.isFinite(trueRange)) {
+      return null;
+    }
+    return (trueRange / close) * 100;
+  });
+
+  return trueRangePct.map((_, index) => {
+    const windowValues = trueRangePct
+      .slice(Math.max(0, index - window + 1), index + 1)
+      .filter((value) => Number.isFinite(value));
+    if (windowValues.length < window) {
+      return null;
+    }
+    const average = windowValues.reduce((sum, value) => sum + value, 0) / window;
+    return Number(average.toFixed(2));
   });
 }
 
@@ -9912,6 +9946,120 @@ function createMarketRsMddChart(canvas, row) {
           grid: { color: "rgba(28,28,26,0.08)" },
           ticks: {
             color: "#9f1d1d",
+            callback: (value) => `${Number(value).toFixed(0)}%`,
+          },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createMarketRsAtrChart(canvas, row) {
+  if (typeof Chart === "undefined" || !canvas || !row) {
+    return;
+  }
+  const history = marketRsData.histories?.[row.ticker];
+  const labels = marketRsData.historyDates ?? [];
+  if (!history || !labels.length) {
+    return;
+  }
+
+  const minStart = labels[0];
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
+  const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
+  const selectedLabels = labels.slice(startIndex);
+  const atrSeries = calculateAtrPctSeries(history.high ?? [], history.low ?? [], history.price ?? []);
+  const selectedAtr = atrSeries.slice(startIndex);
+  const atrValues = selectedAtr.filter((value) => Number.isFinite(value));
+  const latestAtrIndex = getLastFiniteSeriesIndex(selectedAtr);
+  const atrAverage = atrValues.length
+    ? atrValues.reduce((sum, value) => sum + value, 0) / atrValues.length
+    : null;
+  const averageSeries = selectedAtr.map((value) => (Number.isFinite(value) && Number.isFinite(atrAverage) ? Number(atrAverage.toFixed(2)) : null));
+  const atrMax = atrValues.length ? Math.max(...atrValues) : Number(row.atr21Pct);
+  const yMax = Number.isFinite(atrMax) ? Math.ceil((atrMax + 1) / 2) * 2 : 10;
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: selectedLabels,
+      datasets: [
+        {
+          label: "21D ATR%",
+          data: selectedAtr,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37, 99, 235, 0.12)",
+          borderWidth: 2.2,
+          fill: true,
+          tension: 0.16,
+          spanGaps: true,
+          pointRadius: (context) => (context.dataIndex === latestAtrIndex ? 3 : 0),
+          pointHoverRadius: 4,
+        },
+        {
+          label: "Selected-period avg",
+          data: averageSeries,
+          borderColor: "#94a3b8",
+          backgroundColor: "#94a3b8",
+          borderWidth: 1.4,
+          borderDash: [5, 5],
+          tension: 0,
+          spanGaps: true,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatAtrPercent(Number(context.parsed.y))}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            const indexes = buildRegularDateTickIndexes(selectedLabels, state.rsHistoryRange);
+            axis.ticks = indexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8a8a83",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index, ticks) => {
+              const labelIndex = ticks?.[index]?.value;
+              return formatRangeAxisDate(selectedLabels[labelIndex], state.rsHistoryRange);
+            },
+          },
+        },
+        y: {
+          min: 0,
+          max: yMax,
+          grid: { color: "rgba(28,28,26,0.08)" },
+          ticks: {
+            color: "#2563eb",
             callback: (value) => `${Number(value).toFixed(0)}%`,
           },
         },
@@ -10257,10 +10405,20 @@ function renderMarketRsOverview() {
             <canvas data-rs-chart="detail"></canvas>
           </div>
           <p class="market-rs-chart-caption">RS Rating(L): current-universe RS Rating 1-99. Stock Price(R): stock price and price-based 10/20/50/100/200 EMA. EPS triangles mark Yahoo Finance / yfinance EPS surprise proxy events where available.</p>
-          <div class="chart-wrap market-rs-mdd-chart-wrap">
-            <canvas data-rs-chart="mdd"></canvas>
+          <div class="market-rs-risk-chart-grid">
+            <div>
+              <div class="chart-wrap market-rs-mdd-chart-wrap">
+                <canvas data-rs-chart="mdd"></canvas>
+              </div>
+              <p class="market-rs-chart-caption">Stock MDD: selected-period drawdown from each running stock-price high. 0% is the period high; negative values show the decline from that high.</p>
+            </div>
+            <div>
+              <div class="chart-wrap market-rs-mdd-chart-wrap">
+                <canvas data-rs-chart="atr"></canvas>
+              </div>
+              <p class="market-rs-chart-caption">21D ATR%: 21-session average true range divided by close. Dashed line shows the selected-period average.</p>
+            </div>
           </div>
-          <p class="market-rs-chart-caption">Stock MDD: selected-period drawdown from each running stock-price high. 0% is the period high; negative values show the decline from that high.</p>
         </article>
       </section>
 
@@ -10444,6 +10602,7 @@ function renderMarketRsOverview() {
   if (detailCanvas && selected) {
     createMarketRsChart(detailCanvas, selected);
     createMarketRsMddChart(usOverviewRoot.querySelector('[data-rs-chart="mdd"]'), selected);
+    createMarketRsAtrChart(usOverviewRoot.querySelector('[data-rs-chart="atr"]'), selected);
   }
 }
 
