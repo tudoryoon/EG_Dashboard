@@ -900,6 +900,40 @@ h1 {
   display: grid;
   gap: 8px;
   justify-items: end;
+  min-width: min(560px, 100%);
+}
+
+.briefing-rotation-distribution-control-block {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  justify-items: end;
+}
+
+.briefing-rotation-distribution-control-block.is-axis {
+  max-width: 520px;
+}
+
+.briefing-rotation-distribution-control-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  color: #6b6b64;
+  text-align: right;
+}
+
+.briefing-rotation-distribution-control-label span {
+  color: #20201d;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.briefing-rotation-distribution-control-label em {
+  color: #85857d;
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 750;
 }
 
 .briefing-rotation-distribution-controls {
@@ -974,6 +1008,31 @@ h1 {
   color: #1f2937;
   font-family: "Space Grotesk", sans-serif;
   font-size: 1rem;
+}
+
+.briefing-rotation-distribution-explainer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.briefing-rotation-distribution-explainer span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #5f5f58;
+  font-size: 0.71rem;
+  font-weight: 750;
+  line-height: 1.45;
+  padding: 8px 10px;
+}
+
+.briefing-rotation-distribution-explainer b {
+  color: #20201d;
+  font-size: 0.74rem;
+  font-weight: 950;
 }
 
 .briefing-rotation-distribution-guide {
@@ -5164,6 +5223,19 @@ h1 {
     justify-items: stretch;
   }
 
+  .briefing-rotation-distribution-control-block,
+  .briefing-rotation-distribution-control-block.is-axis {
+    max-width: none;
+    justify-items: stretch;
+  }
+
+  .briefing-rotation-distribution-control-label {
+    display: grid;
+    justify-content: stretch;
+    gap: 2px;
+    text-align: left;
+  }
+
   .briefing-rotation-distribution-controls {
     justify-content: stretch;
     width: 100%;
@@ -5182,6 +5254,7 @@ h1 {
     text-align: left;
   }
 
+  .briefing-rotation-distribution-explainer,
   .briefing-rotation-distribution-guide {
     grid-template-columns: 1fr;
   }

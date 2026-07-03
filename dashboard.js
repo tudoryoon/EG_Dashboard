@@ -249,16 +249,28 @@ const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sox", label: "SOX" },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS = [
-  { key: "qqq", label: "QQQ", itemKey: "nasdaq100", couplingLabel: "high QQQ" },
-  { key: "sox", label: "SOX", itemKey: "sox", couplingLabel: "high SOX" },
+  {
+    key: "qqq",
+    label: "QQQ",
+    itemKey: "nasdaq100",
+    couplingLabel: "high QQQ",
+    description: "NASDAQ 100 기준입니다. 빅테크/성장주와 같이 움직이는지 보기에 좋습니다.",
+  },
+  {
+    key: "sox",
+    label: "SOX",
+    itemKey: "sox",
+    couplingLabel: "high SOX",
+    description: "필라델피아 반도체지수 기준입니다. 반도체 사이클과의 연동성을 봅니다.",
+  },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_X_AXES = [
-  { key: "score", label: "Score", title: "Rotation Score", kind: "score" },
-  { key: "1w", label: "1W", title: "1W relative return", kind: "return" },
-  { key: "2w", label: "2W", title: "2W relative return", kind: "return" },
-  { key: "1m", label: "1M", title: "1M relative return", kind: "return" },
-  { key: "3m", label: "3M", title: "3M relative return", kind: "return" },
-  { key: "6m", label: "6M", title: "6M relative return", kind: "return" },
+  { key: "score", label: "Score", title: "Rotation Score", kind: "score", description: "1D/1W/2W/1M 초과수익률을 가중한 기존 Rotation Score입니다." },
+  { key: "1w", label: "1W", title: "1W relative return", kind: "return", description: "최근 1주 섹터 혼합수익률에서 선택 지수 수익률을 뺀 값입니다." },
+  { key: "2w", label: "2W", title: "2W relative return", kind: "return", description: "최근 2주 섹터 혼합수익률에서 선택 지수 수익률을 뺀 값입니다." },
+  { key: "1m", label: "1M", title: "1M relative return", kind: "return", description: "최근 1개월 섹터 혼합수익률에서 선택 지수 수익률을 뺀 값입니다." },
+  { key: "3m", label: "3M", title: "3M relative return", kind: "return", description: "최근 3개월 섹터 혼합수익률에서 선택 지수 수익률을 뺀 값입니다." },
+  { key: "6m", label: "6M", title: "6M relative return", kind: "return", description: "최근 6개월 섹터 혼합수익률에서 선택 지수 수익률을 뺀 값입니다." },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_PERIODS = {
   "1w": 5,
@@ -268,9 +280,9 @@ const BRIEFING_ROTATION_DISTRIBUTION_PERIODS = {
   "6m": 126,
 };
 const BRIEFING_ROTATION_DISTRIBUTION_CORR_WINDOWS = [
-  { key: "1m", label: "1M", sessions: 21 },
-  { key: "2m", label: "2M", sessions: 42 },
-  { key: "3m", label: "3M", sessions: 63 },
+  { key: "1m", label: "1M", sessions: 21, description: "최근 21거래일 기준입니다. 짧은 국면 변화를 민감하게 봅니다." },
+  { key: "2m", label: "2M", sessions: 42, description: "최근 42거래일 기준입니다. 단기 노이즈와 추세의 균형을 봅니다." },
+  { key: "3m", label: "3M", sessions: 63, description: "최근 63거래일 기준입니다. 기본값이며 3개월 동행성을 봅니다." },
 ];
 const MARKET_RS_CAP_RANGES = [
   { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
@@ -7418,6 +7430,10 @@ function renderMarketBriefingOverview() {
     selectedDistributionXAxis.kind === "score"
       ? "Rotation Score"
       : `${selectedDistributionXAxis.label} vs ${selectedDistributionBenchmark.label}`;
+  const distributionMetricDescription =
+    selectedDistributionXAxis.kind === "score"
+      ? "Score 선택 시 가로축은 자체 로테이션 점수입니다. 1W~6M 선택 시 가로축은 선택 지수 대비 해당 기간 초과수익률입니다."
+      : `${selectedDistributionXAxis.label} 선택 중입니다. 가로축 0%보다 오른쪽이면 해당 기간에 ${selectedDistributionBenchmark.label}보다 강했다는 뜻입니다.`;
   const rotationDistributionMarkup = rotationDistribution.points.length
     ? `
       <article class="briefing-rotation-distribution-panel">
@@ -7427,14 +7443,32 @@ function renderMarketBriefingOverview() {
             <span>${distributionXAxisDescription} Y축은 ${selectedDistributionCorrWindow.label}=${selectedDistributionCorrWindow.sessions}거래일 ${selectedDistributionBenchmark.label} 일간수익률 상관계수입니다. 점을 누르면 해당 섹터 히스토리로 이동합니다.</span>
           </div>
           <div class="briefing-rotation-distribution-side">
-            <div class="briefing-rotation-distribution-controls">
-              ${distributionBenchmarkControls}
+            <div class="briefing-rotation-distribution-control-block">
+              <div class="briefing-rotation-distribution-control-label">
+                <span>비교 지수</span>
+                <em>Y축 상관계수와 기간별 초과수익률 기준</em>
+              </div>
+              <div class="briefing-rotation-distribution-controls">
+                ${distributionBenchmarkControls}
+              </div>
             </div>
-            <div class="briefing-rotation-distribution-controls is-corr">
-              ${distributionCorrWindowControls}
+            <div class="briefing-rotation-distribution-control-block">
+              <div class="briefing-rotation-distribution-control-label">
+                <span>상관기간</span>
+                <em>섹터와 선택 지수의 일간수익률 동행성 측정 기간</em>
+              </div>
+              <div class="briefing-rotation-distribution-controls is-corr">
+                ${distributionCorrWindowControls}
+              </div>
             </div>
-            <div class="briefing-rotation-distribution-controls is-axis">
-              ${distributionXAxisControls}
+            <div class="briefing-rotation-distribution-control-block is-axis">
+              <div class="briefing-rotation-distribution-control-label">
+                <span>가로축</span>
+                <em>Score 또는 기간별 상대성과 선택</em>
+              </div>
+              <div class="briefing-rotation-distribution-controls is-axis">
+                ${distributionXAxisControls}
+              </div>
             </div>
             <div class="briefing-rotation-distribution-stats">
               <span><b>${formatOneDecimal(Number(averageBenchmarkCorrelation) * 100)}%</b> avg corr</span>
@@ -7442,6 +7476,11 @@ function renderMarketBriefingOverview() {
               <span><b>${independentLeaderCount}</b> independent positives</span>
             </div>
           </div>
+        </div>
+        <div class="briefing-rotation-distribution-explainer">
+          <span><b>비교 지수</b>${selectedDistributionBenchmark.description}</span>
+          <span><b>상관기간</b>${selectedDistributionCorrWindow.description}</span>
+          <span><b>가로축</b>${distributionMetricDescription}</span>
         </div>
         <div class="briefing-rotation-distribution-guide">
           <span><b>-100%</b> ${selectedDistributionBenchmark.label}와 반대로 움직인다는 뜻입니다. 방어/헤지 성격이 강하지만 지속성 확인이 필요합니다.</span>
