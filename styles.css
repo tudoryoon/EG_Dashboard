@@ -458,8 +458,8 @@ h1 {
 
 .briefing-index-return-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .briefing-index-return-pill {
@@ -468,7 +468,7 @@ h1 {
   border: 1px solid rgba(28, 28, 26, 0.08);
   border-radius: 10px;
   background: rgba(245, 247, 244, 0.88);
-  padding: 7px 8px;
+  padding: 7px 6px;
 }
 
 .briefing-index-return-pill small {
@@ -488,6 +488,10 @@ h1 {
 
 .briefing-index-return-pill b.is-negative {
   color: #b42318;
+}
+
+.briefing-index-return-pill-atr b {
+  color: #1f2937;
 }
 
 .briefing-rotation-panel {

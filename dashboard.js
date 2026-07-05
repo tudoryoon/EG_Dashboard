@@ -6242,6 +6242,27 @@ function getBriefingIndexReturn(item, rangeKey) {
   return ((latestValue - baseValue) / baseValue) * 100;
 }
 
+function getBriefingIndexAtrPercent(item) {
+  if (!item?.values?.length) {
+    return null;
+  }
+  const atrSeries = calculateAtrPercentSeries(
+    item.values ?? [],
+    item.highs ?? item.values ?? [],
+    item.lows ?? item.values ?? [],
+    21,
+  );
+  const latestAtr = atrSeries.at(-1);
+  return Number.isFinite(Number(latestAtr)) ? Number(latestAtr) : null;
+}
+
+function formatBriefingAtrPercent(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toFixed(2)}%`;
+}
+
 function getBriefingOverviewColor(item, rangeKey) {
   if (!item) {
     return "#f3f4f6";
@@ -7343,6 +7364,7 @@ function renderMarketBriefingOverview() {
       const latestValue = values.at(-1);
       const latestDate = dates.at(-1);
       const rangeReturn = getBriefingIndexReturn(item, state.briefingMapRange);
+      const atr21Pct = getBriefingIndexAtrPercent(item);
       const fixedReturnMarkup = [
         { key: "1d", label: "1D" },
         { key: "1w", label: "1W" },
@@ -7357,7 +7379,12 @@ function renderMarketBriefingOverview() {
             </span>
           `;
         })
-        .join("");
+        .join("") + `
+          <span class="briefing-index-return-pill briefing-index-return-pill-atr">
+            <small>ATR21D</small>
+            <b>${formatBriefingAtrPercent(atr21Pct)}</b>
+          </span>
+        `;
       const changeClass =
         Number(rangeReturn) > 0 ? "is-up" : Number(rangeReturn) < 0 ? "is-down" : "";
 
