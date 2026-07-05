@@ -243,6 +243,17 @@
       "sharesOutstanding": 545570346
     },
     {
+      "ticker": "DRAM",
+      "name": "Roundhill Memory ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 228148921
+    },
+    {
       "ticker": "ELF",
       "name": "e.l.f. Beauty, Inc.",
       "memberships": {

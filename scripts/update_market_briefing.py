@@ -122,6 +122,7 @@ SECTOR_GROUPS = [
         "items": [
             {"ticker": "005930.KS", "label": "삼성전자 KR", "name": "Samsung Electronics", "query": "삼성전자 주가"},
             {"ticker": "000660.KS", "label": "SK하이닉스 KR", "name": "SK hynix", "query": "SK하이닉스 주가"},
+            {"ticker": "DRAM", "label": "DRAM US", "name": "Roundhill Memory ETF", "query": "Roundhill Memory ETF stock"},
             {"ticker": "MU", "label": "MU US", "name": "Micron", "query": "Micron stock"},
             {"ticker": "SNDK", "label": "SNDK US", "name": "Sandisk", "query": "Sandisk stock"},
             {"ticker": "WDC", "label": "WDC US", "name": "Western Digital", "query": "Western Digital stock"},
@@ -861,7 +862,7 @@ def fetch_meta(symbol: str) -> dict[str, float | None]:
         shares = normalize_number(fast_info.get("shares"))
         if market_cap is None or shares is None:
             info = ticker.get_info()
-            market_cap = market_cap or normalize_number(info.get("marketCap"))
+            market_cap = market_cap or normalize_number(info.get("marketCap") or info.get("totalAssets"))
             shares = shares or normalize_number(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
     except Exception:
         pass
