@@ -6256,6 +6256,26 @@ function getBriefingIndexAtrPercent(item) {
   return Number.isFinite(Number(latestAtr)) ? Number(latestAtr) : null;
 }
 
+function getBriefingIndexCard(key) {
+  return (window.marketBriefingData?.indexCards ?? []).find((item) => item.key === key) ?? null;
+}
+
+function getBriefingIndexCardReturn(card, fallbackItem, rangeKey) {
+  const directValue = card?.returns?.[rangeKey];
+  if (Number.isFinite(Number(directValue))) {
+    return Number(directValue);
+  }
+  return getBriefingIndexReturn(fallbackItem, rangeKey);
+}
+
+function getBriefingIndexCardAtrPercent(card, fallbackItem) {
+  const directValue = card?.atr21Pct;
+  if (Number.isFinite(Number(directValue))) {
+    return Number(directValue);
+  }
+  return getBriefingIndexAtrPercent(fallbackItem);
+}
+
 function formatBriefingAtrPercent(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -7358,20 +7378,19 @@ function renderMarketBriefingOverview() {
 
   const indexMarkup = briefingIndexConfigs
     .map(({ key, label }) => {
+      const card = getBriefingIndexCard(key);
       const item = window.marketPriceData?.items?.[key];
-      const dates = item?.dates ?? [];
-      const values = item?.values ?? [];
-      const latestValue = values.at(-1);
-      const latestDate = dates.at(-1);
-      const rangeReturn = getBriefingIndexReturn(item, state.briefingMapRange);
-      const atr21Pct = getBriefingIndexAtrPercent(item);
+      const latestValue = card?.price ?? item?.values?.at(-1);
+      const latestDate = card?.updatedAt ?? item?.dates?.at(-1);
+      const rangeReturn = getBriefingIndexCardReturn(card, item, state.briefingMapRange);
+      const atr21Pct = getBriefingIndexCardAtrPercent(card, item);
       const fixedReturnMarkup = [
         { key: "1d", label: "1D" },
         { key: "1w", label: "1W" },
         { key: "1m", label: "1M" },
       ]
         .map((range) => {
-          const value = getBriefingIndexReturn(item, range.key);
+          const value = getBriefingIndexCardReturn(card, item, range.key);
           return `
             <span class="briefing-index-return-pill">
               <small>${range.label}</small>

@@ -24,6 +24,14 @@ MAX_DAILY_RETURN_PCT = 300.0
 PRICE_SCALE_JUMP_THRESHOLD = 4.0
 PRICE_SCALE_FACTORS = (2.0, 3.0, 4.0, 5.0, 10.0, 20.0)
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
+INDEX_CARD_CONFIGS = [
+    {"key": "dowjones", "label": "Dow Jones (DIA)", "symbol": "^DJI"},
+    {"key": "sp500", "label": "S&P 500 (SPY)", "symbol": "^GSPC"},
+    {"key": "nasdaq", "label": "NASDAQ Composite", "symbol": "^IXIC"},
+    {"key": "nasdaq100", "label": "NASDAQ 100 (QQQ)", "symbol": "^NDX"},
+    {"key": "sox", "label": "필라델피아 반도체 (SOX)", "symbol": "^SOX"},
+    {"key": "russell2000", "label": "Russell 2000 (IWM)", "symbol": "^RUT"},
+]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
 FEDWATCH_SOURCE_URL = "https://www.cmegroup.com/ko/markets/interest-rates/cme-fedwatch-tool.html"
@@ -742,6 +750,38 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
     return pd.concat(close_map.values(), axis=1).sort_index() if close_map else pd.DataFrame()
 
 
+def fetch_ohlc_frames(symbols: list[str]) -> dict[str, pd.DataFrame]:
+    history = yf.download(
+        tickers=symbols,
+        period=PRICE_PERIOD,
+        auto_adjust=True,
+        progress=False,
+        threads=False,
+        group_by="ticker",
+        timeout=20,
+    )
+    if history.empty:
+        return {}
+
+    frames: dict[str, pd.DataFrame] = {}
+    multi = isinstance(history.columns, pd.MultiIndex)
+    for symbol in symbols:
+        try:
+            frame = history[symbol] if multi else history
+        except KeyError:
+            continue
+        if not {"High", "Low", "Close"}.issubset(set(frame.columns)):
+            continue
+        output = frame[["High", "Low", "Close"]].copy()
+        output.columns = ["high", "low", "close"]
+        output = output.dropna(subset=["close"]).sort_index()
+        output = output[~output.index.duplicated(keep="last")]
+        if len(output) >= 2:
+            output["close"] = repair_price_scale_jumps(pd.Series(output["close"], dtype=float))
+            frames[symbol] = output.dropna(subset=["high", "low", "close"])
+    return frames
+
+
 def fetch_chart_latest_close(symbol: str, target_date: pd.Timestamp) -> float | None:
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote_plus(symbol)}"
     try:
@@ -1067,6 +1107,59 @@ def build_rotation_benchmark(close_frame: pd.DataFrame) -> dict[str, object]:
         "price": round(price, 2) if price is not None else None,
         "returns": returns,
     }
+
+
+def compute_atr_percent_from_ohlc(frame: pd.DataFrame, period: int = 21) -> float | None:
+    if frame.empty or len(frame) < period:
+        return None
+    high = pd.Series(frame["high"], dtype=float)
+    low = pd.Series(frame["low"], dtype=float)
+    close = pd.Series(frame["close"], dtype=float)
+    previous_close = close.shift(1).fillna(close)
+    true_range = pd.concat(
+        [
+            high - low,
+            (high - previous_close).abs(),
+            (low - previous_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+    atr = true_range.rolling(period).mean().iloc[-1]
+    latest_close = close.iloc[-1]
+    if not math.isfinite(float(atr)) or not math.isfinite(float(latest_close)) or latest_close == 0:
+        return None
+    return round((float(atr) / float(latest_close)) * 100, 2)
+
+
+def build_index_cards() -> list[dict[str, object]]:
+    symbols = [str(item["symbol"]) for item in INDEX_CARD_CONFIGS]
+    frames = fetch_ohlc_frames(symbols)
+    cards: list[dict[str, object]] = []
+    for config in INDEX_CARD_CONFIGS:
+        symbol = str(config["symbol"])
+        frame = frames.get(symbol, pd.DataFrame())
+        close = pd.Series(frame.get("close", pd.Series(dtype=float)), dtype=float).dropna()
+        returns = {key: None for key in MAP_RANGE_LABELS}
+        price = previous_close = day_change_pct = None
+        if len(close) >= 2:
+            day_change_pct, price, previous_close = compute_recent_day_change(close)
+        if not close.empty:
+            returns.update({key: compute_period_return(close, periods) for key, periods in MAP_RANGE_PERIODS.items()})
+            returns["1d"] = day_change_pct
+            returns["ytd"] = compute_ytd_return(close)
+        cards.append(
+            {
+                "key": config["key"],
+                "label": config["label"],
+                "symbol": symbol,
+                "updatedAt": close.index.max().strftime("%Y-%m-%d") if not close.empty else None,
+                "price": round(price, 2) if price is not None else None,
+                "previousClose": round(previous_close, 2) if previous_close is not None else None,
+                "returns": returns,
+                "atr21Pct": compute_atr_percent_from_ohlc(frame, 21),
+            }
+        )
+    return cards
 
 
 def compute_rotation_score(excess: dict[str, float | None]) -> float | None:
@@ -1691,6 +1784,7 @@ def build_fedwatch_snapshot() -> dict[str, object]:
 
 def build_payload() -> dict[str, object]:
     snapshots, _, latest_date, rotation_benchmark, close_frame = build_company_snapshots()
+    index_cards = build_index_cards()
     major_news = build_major_news()
     movers = build_movers(snapshots)
     sector_panels = build_sector_panels(snapshots)
@@ -1704,6 +1798,7 @@ def build_payload() -> dict[str, object]:
             "size": "Tile size follows market-cap rank inside each sector",
         },
         "mapRanges": [{"key": key, "label": label} for key, label in MAP_RANGE_LABELS.items()],
+        "indexCards": index_cards,
         "sectorPanels": sector_panels,
         "rotationSignal": rotation_signal,
         "fedWatch": build_fedwatch_snapshot(),
