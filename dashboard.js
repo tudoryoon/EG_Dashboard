@@ -242,7 +242,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "indicator:final_demand_ppi_yoy": "#f97316",
   "indicator:core_ppi_yoy": "#dc2626",
 };
-const MARKET_PRICE_EMA_OPTIONS = [10, 20, 60, 120, 200];
+const MARKET_PRICE_EMA_OPTIONS = [20, 50, 100, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
   { key: "nasdaq100", label: "NASDAQ 100" },
@@ -312,7 +312,7 @@ const state = {
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
-  marketTrendEmas: [20],
+  marketTrendEmas: [20, 100],
   marketTrendCustomStart: "",
   marketTrendCustomEnd: "",
   marketVixMetricsRange: "3y",
@@ -1264,11 +1264,11 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       if (!ctx || !chartArea || !xScale) {
         return;
       }
-      const ema10 = payload.emaReferenceSeries?.[10] ?? [];
-      const ema60 = payload.emaReferenceSeries?.[60] ?? [];
-      const ema120 = payload.emaReferenceSeries?.[120] ?? [];
+      const ema20 = payload.emaReferenceSeries?.[20] ?? [];
+      const ema50 = payload.emaReferenceSeries?.[50] ?? [];
+      const ema100 = payload.emaReferenceSeries?.[100] ?? [];
       const ema200 = payload.emaReferenceSeries?.[200] ?? [];
-      if (!ema10.length || !ema60.length || !ema120.length || !ema200.length) {
+      if (!ema20.length || !ema50.length || !ema100.length || !ema200.length) {
         return;
       }
       let segmentStart = null;
@@ -1292,23 +1292,23 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       let fullBullStart = null;
       for (let index = 0; index < payload.labels.length; index += 1) {
         const isFullBearish =
-          Number.isFinite(ema10[index]) &&
-          Number.isFinite(ema60[index]) &&
-          Number.isFinite(ema120[index]) &&
-          Number(ema10[index]) < Number(ema60[index]) &&
-          Number(ema60[index]) < Number(ema120[index]);
+          Number.isFinite(ema20[index]) &&
+          Number.isFinite(ema50[index]) &&
+          Number.isFinite(ema100[index]) &&
+          Number(ema20[index]) < Number(ema50[index]) &&
+          Number(ema50[index]) < Number(ema100[index]);
         const isWeakBearish =
-          Number.isFinite(ema10[index]) &&
-          Number.isFinite(ema60[index]) &&
-          Number(ema10[index]) < Number(ema60[index]);
+          Number.isFinite(ema20[index]) &&
+          Number.isFinite(ema50[index]) &&
+          Number(ema20[index]) < Number(ema50[index]);
         const isFullBullish =
-          Number.isFinite(ema10[index]) &&
-          Number.isFinite(ema60[index]) &&
-          Number.isFinite(ema120[index]) &&
+          Number.isFinite(ema20[index]) &&
+          Number.isFinite(ema50[index]) &&
+          Number.isFinite(ema100[index]) &&
           Number.isFinite(ema200[index]) &&
-          Number(ema10[index]) > Number(ema60[index]) &&
-          Number(ema60[index]) > Number(ema120[index]) &&
-          Number(ema120[index]) > Number(ema200[index]);
+          Number(ema20[index]) > Number(ema50[index]) &&
+          Number(ema50[index]) > Number(ema100[index]) &&
+          Number(ema100[index]) > Number(ema200[index]);
 
         if (isFullBullish && fullBullStart === null) {
           fullBullStart = index;
@@ -13054,7 +13054,7 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500, NASDAQ 100, SOX의 일별 지수와 EMA(10, 20, 60, 120, 200)를 장기 시계열 기준으로 확인합니다.</p>
+            <p>S&P 500, NASDAQ 100, SOX의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
@@ -13103,15 +13103,15 @@ function renderMarketOverview() {
         <div class="market-trend-legend">
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-weak"></span>
-            EMA 10 &lt; EMA 60
+            EMA 20 &lt; EMA 50
           </span>
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-full"></span>
-            EMA 10 &lt; EMA 60 &lt; EMA 120
+            EMA 20 &lt; EMA 50 &lt; EMA 100
           </span>
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-bull"></span>
-            EMA 10 &gt; EMA 60 &gt; EMA 120 &gt; EMA 200
+            EMA 20 &gt; EMA 50 &gt; EMA 100 &gt; EMA 200
           </span>
         </div>
         <div class="us-price-chart-wrap">
