@@ -102,6 +102,7 @@ const gpuCloudRuntime = {
 
 const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing" },
+  IndexTrend: { label: "Index Trend" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
@@ -245,8 +246,10 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
 const MARKET_PRICE_EMA_OPTIONS = [20, 50, 100, 200];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
+  { key: "dowjones", label: "Dow Jones" },
   { key: "nasdaq100", label: "NASDAQ 100" },
   { key: "sox", label: "SOX" },
+  { key: "russell2000", label: "Russell 2000" },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS = [
   {
@@ -12946,25 +12949,12 @@ function renderCapexOverview() {
   }
 }
 
-function renderMarketOverview() {
+function renderIndexTrendOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  const rangeMarkup = ((marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [])
-    .map(
-      (range) => `
-        <button
-          type="button"
-          class="m7-range-chip${state.marketPriceRange === range.key ? " active" : ""}"
-          data-market-range="${range.key}"
-        >
-          ${range.label}
-        </button>`,
-    )
-    .join("");
-
-  const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const marketUpdatedAt = marketPriceData.updatedAt || "-";
   const marketTrendBounds = getMarketTrendBounds();
   const marketTrendStartValue = state.marketTrendCustomStart || "";
   const marketTrendEndValue = state.marketTrendCustomEnd || "";
@@ -13019,42 +13009,14 @@ function renderMarketOverview() {
         </span>`,
     )
     .join("");
-  const totalBounds = getTotalDashboardBounds();
-  const totalStartValue = state.totalDashboardCustomStart || "";
-  const totalEndValue = state.totalDashboardCustomEnd || "";
-  const totalSeriesItems = getTotalDashboardSeriesItems();
-  const totalSeriesMarkup = totalSeriesItems
-    .map(
-      (item) => `
-        <button
-          type="button"
-          class="total-series-chip${(state.totalDashboardSelection ?? []).includes(item.key) ? " active" : ""}"
-          data-total-series="${item.key}"
-        >
-          <span class="total-series-dot" style="background:${item.color}"></span>
-          ${item.label}
-        </button>`,
-    )
-    .join("");
-  const totalRangeMarkup = (marketMacroData.ranges ?? [])
-    .map(
-      (range) => `
-        <button
-          type="button"
-          class="m7-range-chip${state.totalDashboardRange === range.key ? " active" : ""}"
-          data-total-range="${range.key}"
-        >
-          ${range.label}
-        </button>`,
-    )
-    .join("");
+
   usOverviewRoot.innerHTML = `
     <section class="market-overview">
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500, NASDAQ 100, SOX의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
+            <p>S&P 500, Dow Jones, NASDAQ 100, SOX, Russell 2000의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
@@ -13114,7 +13076,7 @@ function renderMarketOverview() {
             EMA 20 &gt; EMA 50 &gt; EMA 100 &gt; EMA 200
           </span>
         </div>
-        <div class="us-price-chart-wrap">
+        <div class="us-price-chart-wrap us-price-chart-wrap-large">
           <canvas data-market-trend="ema"></canvas>
         </div>
         <div class="market-trend-risk-block">
@@ -13162,6 +13124,143 @@ function renderMarketOverview() {
           </div>
         </div>
       </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketTrendRange = button.dataset.marketTrendRange || "3y";
+      state.marketTrendCustomStart = "";
+      state.marketTrendCustomEnd = "";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.marketTrendIndex = button.dataset.marketTrendIndex || "sp500";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-ema]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const period = Number(button.dataset.marketTrendEma);
+      if (!Number.isFinite(period)) {
+        return;
+      }
+      const current = new Set(state.marketTrendEmas ?? []);
+      if (current.has(period)) {
+        if (current.size === 1) {
+          return;
+        }
+        current.delete(period);
+      } else {
+        current.add(period);
+      }
+      state.marketTrendEmas = [...current].sort((a, b) => a - b);
+      render();
+    });
+  });
+
+  const marketTrendStartInput = usOverviewRoot.querySelector("[data-market-trend-start]");
+  const marketTrendEndInput = usOverviewRoot.querySelector("[data-market-trend-end]");
+  const marketTrendApplyButton = usOverviewRoot.querySelector("[data-market-trend-apply]");
+  const marketTrendResetButton = usOverviewRoot.querySelector("[data-market-trend-reset]");
+
+  if (marketTrendApplyButton && marketTrendStartInput && marketTrendEndInput) {
+    marketTrendApplyButton.addEventListener("click", () => {
+      const startValue = marketTrendStartInput.value || "";
+      const endValue = marketTrendEndInput.value || "";
+      if (startValue && endValue && startValue > endValue) {
+        return;
+      }
+      state.marketTrendCustomStart = startValue;
+      state.marketTrendCustomEnd = endValue;
+      render();
+    });
+  }
+
+  if (marketTrendResetButton) {
+    marketTrendResetButton.addEventListener("click", () => {
+      state.marketTrendCustomStart = "";
+      state.marketTrendCustomEnd = "";
+      render();
+    });
+  }
+
+  const trendCanvas = usOverviewRoot.querySelector('[data-market-trend="ema"]');
+  if (trendCanvas) {
+    createMarketTrendChart(
+      trendCanvas,
+      state.marketTrendRange,
+      state.marketTrendIndex,
+      state.marketTrendCustomStart,
+      state.marketTrendCustomEnd,
+    );
+  }
+
+  usOverviewRoot.querySelectorAll('[data-market-trend="risk"]').forEach((trendRiskCanvas) => {
+    createMarketTrendRiskChart(
+      trendRiskCanvas,
+      state.marketTrendRange,
+      state.marketTrendIndex,
+      state.marketTrendCustomStart,
+      state.marketTrendCustomEnd,
+    );
+  });
+}
+
+function renderMarketOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const rangeMarkup = ((marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.marketPriceRange === range.key ? " active" : ""}"
+          data-market-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+
+  const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
+  const totalBounds = getTotalDashboardBounds();
+  const totalStartValue = state.totalDashboardCustomStart || "";
+  const totalEndValue = state.totalDashboardCustomEnd || "";
+  const totalSeriesItems = getTotalDashboardSeriesItems();
+  const totalSeriesMarkup = totalSeriesItems
+    .map(
+      (item) => `
+        <button
+          type="button"
+          class="total-series-chip${(state.totalDashboardSelection ?? []).includes(item.key) ? " active" : ""}"
+          data-total-series="${item.key}"
+        >
+          <span class="total-series-dot" style="background:${item.color}"></span>
+          ${item.label}
+        </button>`,
+    )
+    .join("");
+  const totalRangeMarkup = (marketMacroData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.totalDashboardRange === range.key ? " active" : ""}"
+          data-total-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview">
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
@@ -13231,68 +13330,6 @@ function renderMarketOverview() {
     });
   });
 
-  usOverviewRoot.querySelectorAll("[data-market-trend-range]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.marketTrendRange = button.dataset.marketTrendRange || "3y";
-      state.marketTrendCustomStart = "";
-      state.marketTrendCustomEnd = "";
-      render();
-    });
-  });
-
-  usOverviewRoot.querySelectorAll("[data-market-trend-index]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.marketTrendIndex = button.dataset.marketTrendIndex || "sp500";
-      render();
-    });
-  });
-
-  usOverviewRoot.querySelectorAll("[data-market-trend-ema]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const period = Number(button.dataset.marketTrendEma);
-      if (!Number.isFinite(period)) {
-        return;
-      }
-      const current = new Set(state.marketTrendEmas ?? []);
-      if (current.has(period)) {
-        if (current.size === 1) {
-          return;
-        }
-        current.delete(period);
-      } else {
-        current.add(period);
-      }
-      state.marketTrendEmas = [...current].sort((a, b) => a - b);
-      render();
-    });
-  });
-
-  const marketTrendStartInput = usOverviewRoot.querySelector("[data-market-trend-start]");
-  const marketTrendEndInput = usOverviewRoot.querySelector("[data-market-trend-end]");
-  const marketTrendApplyButton = usOverviewRoot.querySelector("[data-market-trend-apply]");
-  const marketTrendResetButton = usOverviewRoot.querySelector("[data-market-trend-reset]");
-
-  if (marketTrendApplyButton && marketTrendStartInput && marketTrendEndInput) {
-    marketTrendApplyButton.addEventListener("click", () => {
-      const startValue = marketTrendStartInput.value || "";
-      const endValue = marketTrendEndInput.value || "";
-      if (startValue && endValue && startValue > endValue) {
-        return;
-      }
-      state.marketTrendCustomStart = startValue;
-      state.marketTrendCustomEnd = endValue;
-      render();
-    });
-  }
-
-  if (marketTrendResetButton) {
-    marketTrendResetButton.addEventListener("click", () => {
-      state.marketTrendCustomStart = "";
-      state.marketTrendCustomEnd = "";
-      render();
-    });
-  }
-
   usOverviewRoot.querySelectorAll("[data-total-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.totalDashboardRange = button.dataset.totalRange || "3y";
@@ -13352,27 +13389,6 @@ function renderMarketOverview() {
   if (totalCanvas) {
     createTotalDashboardChart(totalCanvas, state.totalDashboardRange);
   }
-
-  const trendCanvas = usOverviewRoot.querySelector('[data-market-trend="ema"]');
-  if (trendCanvas) {
-    createMarketTrendChart(
-      trendCanvas,
-      state.marketTrendRange,
-      state.marketTrendIndex,
-      state.marketTrendCustomStart,
-      state.marketTrendCustomEnd,
-    );
-  }
-
-  usOverviewRoot.querySelectorAll('[data-market-trend="risk"]').forEach((trendRiskCanvas) => {
-    createMarketTrendRiskChart(
-      trendRiskCanvas,
-      state.marketTrendRange,
-      state.marketTrendIndex,
-      state.marketTrendCustomStart,
-      state.marketTrendCustomEnd,
-    );
-  });
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
   if (relativeCanvas) {
@@ -15267,7 +15283,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -15373,6 +15389,11 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
+  if (state.tab === "IndexTrend") {
+    summaryText.textContent = "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD";
+    return;
+  }
+
   if (state.tab === "Market") {
     if (state.marketView === "Overview") {
       summaryText.textContent = "Price dashboard for major indexes and cross-asset total dashboard";
@@ -15848,6 +15869,12 @@ function render() {
   if (state.tab === "DailyBriefing") {
     renderSummary([]);
     renderMarketBriefingOverview();
+    return;
+  }
+
+  if (state.tab === "IndexTrend") {
+    renderSummary([]);
+    renderIndexTrendOverview();
     return;
   }
 

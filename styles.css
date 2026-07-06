@@ -194,6 +194,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(63, 63, 58, 0.18);
 }
 
+.country-button.is-index-trend {
+  border-color: #b7d7c6;
+  background: linear-gradient(180deg, #edf8f2, #dff2e7);
+  color: #14532d;
+}
+
+.country-button.is-index-trend.active {
+  border-color: #15803d;
+  background: linear-gradient(135deg, #22a95f, #166534);
+  color: #f5fff8;
+  box-shadow: 0 14px 28px rgba(21, 128, 61, 0.2);
+}
+
 .country-button.is-data-trend {
   border-color: #f1d179;
   background: linear-gradient(180deg, #fff8db, #ffef9f);
@@ -3500,6 +3513,10 @@ h1 {
   display: block;
   width: 100%;
   height: 340px;
+}
+
+.us-price-chart-wrap-large canvas {
+  height: 560px;
 }
 
 .us-section-head {
