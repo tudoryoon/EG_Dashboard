@@ -1116,9 +1116,9 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
             ? "#dc2626"
             : period === 20
               ? "#d4a017"
-              : period === 60
+              : period === 50
                 ? "#2563eb"
-                : period === 120
+                : period === 100
                   ? "#16a34a"
                   : "#7c3aed",
         backgroundColor:
@@ -1126,12 +1126,12 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
             ? "#dc2626"
             : period === 20
               ? "#d4a017"
-              : period === 60
+              : period === 50
                 ? "#2563eb"
-                : period === 120
+                : period === 100
                   ? "#16a34a"
                   : "#7c3aed",
-        borderWidth: period >= 120 ? 2.6 : 2.1,
+        borderWidth: period >= 100 ? 2.6 : 2.1,
         tension: 0.12,
         pointRadius: 0,
         pointHoverRadius: 3,
