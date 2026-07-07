@@ -1102,7 +1102,7 @@ def build_payload(
             "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. Names with market cap at or below $200M are excluded.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
             "weights": RS_WEIGHTS,
-            "atr": "ATR% = 21-day average of each day's true range divided by that day's close.",
+            "atr": "ATR% = 21-day average true range divided by the current close.",
         },
         "rows": rows,
         "histories": histories,
@@ -1163,8 +1163,8 @@ def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_
         ],
         axis=1,
     ).max(axis=1)
-    true_range_pct = (true_range / frame["close"]) * 100
-    return true_range_pct.rolling(window).mean().dropna()
+    atr = true_range.rolling(window).mean()
+    return ((atr / frame["close"]) * 100).dropna()
 
 
 def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> float | None:

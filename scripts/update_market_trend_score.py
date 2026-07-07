@@ -244,7 +244,7 @@ def has_ohlcv(frame: pd.DataFrame) -> bool:
     return all(column in frame.columns and frame[column].dropna().any() for column in required)
 
 
-def compute_true_range_pct(frame: pd.DataFrame) -> pd.Series:
+def compute_atr_pct(frame: pd.DataFrame, window: int = 21) -> pd.Series:
     price = frame["price"].astype("float64")
     high = frame["high"].astype("float64") if "high" in frame else price
     low = frame["low"].astype("float64") if "low" in frame else price
@@ -257,7 +257,7 @@ def compute_true_range_pct(frame: pd.DataFrame) -> pd.Series:
         ],
         axis=1,
     ).max(axis=1)
-    return (true_range / price) * 100
+    return (true_range.rolling(window).mean() / price) * 100
 
 
 def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:
@@ -277,7 +277,7 @@ def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:
         low = frame["low"].astype("float64")
         volume = frame["volume"].astype("float64")
 
-        atr_pct = compute_true_range_pct(frame).rolling(21).mean()
+        atr_pct = compute_atr_pct(frame, 21)
         output["atrPct"] = atr_pct
         output["atrAvg30Pct"] = atr_pct.rolling(30).mean()
         output["atrSpike"] = output["atrPct"] >= output["atrAvg30Pct"] * 1.5

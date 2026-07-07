@@ -9725,11 +9725,10 @@ function calculateDrawdownSeries(values = []) {
 }
 
 function calculateAtrPctSeries(highValues = [], lowValues = [], closeValues = [], window = 21) {
-  const trueRangePct = closeValues.map((closeValue, index) => {
+  const trueRanges = closeValues.map((closeValue, index) => {
     const high = Number(highValues[index]);
     const low = Number(lowValues[index]);
-    const close = Number(closeValue);
-    if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(close) || close <= 0) {
+    if (!Number.isFinite(high) || !Number.isFinite(low)) {
       return null;
     }
     const previousClose = Number(closeValues[index - 1]);
@@ -9741,18 +9740,22 @@ function calculateAtrPctSeries(highValues = [], lowValues = [], closeValues = []
     if (!Number.isFinite(trueRange)) {
       return null;
     }
-    return (trueRange / close) * 100;
+    return trueRange;
   });
 
-  return trueRangePct.map((_, index) => {
-    const windowValues = trueRangePct
+  return closeValues.map((closeValue, index) => {
+    const close = Number(closeValue);
+    if (!Number.isFinite(close) || close <= 0) {
+      return null;
+    }
+    const windowValues = trueRanges
       .slice(Math.max(0, index - window + 1), index + 1)
       .filter((value) => Number.isFinite(value));
     if (windowValues.length < window) {
       return null;
     }
-    const average = windowValues.reduce((sum, value) => sum + value, 0) / window;
-    return Number(average.toFixed(2));
+    const atr = windowValues.reduce((sum, value) => sum + value, 0) / window;
+    return Number(((atr / close) * 100).toFixed(2));
   });
 }
 
