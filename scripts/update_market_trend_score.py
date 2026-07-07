@@ -13,6 +13,7 @@ RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 MARKET_PRICE_DATA_PATH = ROOT / "data" / "market-price-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-trend-score-data.js"
 HISTORY_POINTS = 252
+ATR_MIN_PERIODS = 2
 
 UNIVERSES = {
     "all": {
@@ -257,7 +258,8 @@ def compute_atr_pct(frame: pd.DataFrame, window: int = 21) -> pd.Series:
         ],
         axis=1,
     ).max(axis=1)
-    return (true_range.rolling(window).mean() / price) * 100
+    min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
+    return (true_range.rolling(window, min_periods=min_periods).mean() / price) * 100
 
 
 def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:
@@ -307,7 +309,8 @@ def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:
         output["source"] = "ohlcv"
     else:
         daily_range_proxy = price.pct_change().abs() * 100
-        atr_proxy = daily_range_proxy.rolling(21).mean()
+        min_periods = ATR_MIN_PERIODS if len(frame) < 22 else 21
+        atr_proxy = daily_range_proxy.rolling(21, min_periods=min_periods).mean()
         output["atrPct"] = atr_proxy
         output["atrAvg30Pct"] = atr_proxy.rolling(30).mean()
         output["atrSpike"] = output["atrPct"] >= output["atrAvg30Pct"] * 1.5

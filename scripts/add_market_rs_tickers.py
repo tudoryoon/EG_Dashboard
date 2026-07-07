@@ -439,15 +439,16 @@ def main() -> None:
             raise RuntimeError(f"Unable to fetch shares outstanding for {ticker}. Use manual config first.")
         if not args.dry_run:
             upsert_manual_config(ticker, name, shares)
-        if ticker in rows_by_ticker:
-            suffix = "manual config updated." if not args.dry_run else "no files changed."
-            print(f"{ticker}: already present in RS data; {suffix}")
-            continue
         frame = download_ohlcv(ticker)
         row, history = build_new_row_and_history(payload, ticker, frame, name, shares)
+        if ticker in rows_by_ticker:
+            existing_rows = [existing for existing in existing_rows if existing.get("ticker") != ticker]
+            payload.setdefault("histories", {}).pop(ticker, None)
+            print(f"{ticker}: refreshed existing RS row from {len(frame)} downloaded rows.")
+        else:
+            print(f"{ticker}: downloaded {len(frame)} rows; market cap ${row['marketCap']:,}.")
         new_rows.append(row)
         new_histories[ticker] = history
-        print(f"{ticker}: downloaded {len(frame)} rows; market cap ${row['marketCap']:,}.")
 
     if not new_rows:
         if not args.dry_run and not args.skip_trend:

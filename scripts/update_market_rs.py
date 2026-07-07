@@ -75,6 +75,7 @@ COLOR_BY_UNIVERSE = {
 }
 RS_WEIGHTS = {"1m": 0.20, "3m": 0.40, "6m": 0.20, "12m": 0.20}
 ATR_WINDOW = 21
+ATR_MIN_PERIODS = 2
 EXTENSION_ANCHORS = {
     "ema21": {
         "label": "21 EMA",
@@ -1102,7 +1103,7 @@ def build_payload(
             "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. Names with market cap at or below $200M are excluded.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
             "weights": RS_WEIGHTS,
-            "atr": "ATR% = 21-day average true range divided by the current close.",
+            "atr": "ATR% = up to 21 trading days of average true range divided by the current close; newly listed names use available history after two trading sessions.",
         },
         "rows": rows,
         "histories": histories,
@@ -1129,7 +1130,7 @@ def compute_atr_series(high_series: pd.Series, low_series: pd.Series, close_seri
         },
         axis=1,
     ).dropna()
-    if len(frame) < window + 1:
+    if len(frame) < ATR_MIN_PERIODS:
         return pd.Series(dtype=float)
     previous_close = frame["close"].shift(1)
     true_range = pd.concat(
@@ -1140,7 +1141,8 @@ def compute_atr_series(high_series: pd.Series, low_series: pd.Series, close_seri
         ],
         axis=1,
     ).max(axis=1)
-    return true_range.rolling(window).mean().dropna()
+    min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
+    return true_range.rolling(window, min_periods=min_periods).mean().dropna()
 
 
 def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> pd.Series:
@@ -1152,7 +1154,7 @@ def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_
         },
         axis=1,
     ).dropna()
-    if len(frame) < window + 1:
+    if len(frame) < ATR_MIN_PERIODS:
         return pd.Series(dtype=float)
     previous_close = frame["close"].shift(1)
     true_range = pd.concat(
@@ -1163,7 +1165,8 @@ def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_
         ],
         axis=1,
     ).max(axis=1)
-    atr = true_range.rolling(window).mean()
+    min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
+    atr = true_range.rolling(window, min_periods=min_periods).mean()
     return ((atr / frame["close"]) * 100).dropna()
 
 
@@ -1176,7 +1179,7 @@ def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series:
         },
         axis=1,
     ).dropna()
-    if len(frame) < window + 1:
+    if len(frame) < ATR_MIN_PERIODS:
         return None
     atr_series = compute_atr_pct_series(frame["high"], frame["low"], frame["close"], window)
     if atr_series.empty:
