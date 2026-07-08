@@ -3377,9 +3377,204 @@ h1 {
   margin-top: 12px;
 }
 
+.study-data-center-kpi-grid .study-kpi-card strong {
+  font-size: clamp(1.5rem, 2vw, 2.1rem);
+}
+
+.study-data-center-note {
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.study-deal-filter-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.study-deal-chip-row,
+.study-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.study-deal-chip {
+  padding: 9px 13px;
+  border: 1px solid #d8d8d2;
+  border-radius: 999px;
+  background: #fff;
+  color: #5a5a54;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.study-deal-chip.active {
+  border-color: #20201d;
+  background: #20201d;
+  color: #fff;
+}
+
+.study-deal-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #fffef8;
+}
+
+.study-deal-table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #20201d;
+  font-size: 0.82rem;
+}
+
+.study-deal-table th,
+.study-deal-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #ecebe4;
+  text-align: left;
+  vertical-align: top;
+}
+
+.study-deal-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f6f4ec;
+  color: #5a5a54;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.study-deal-table tbody tr:nth-child(even) td {
+  background: #fbfaf4;
+}
+
+.study-deal-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.study-deal-table strong {
+  display: block;
+  color: #20201d;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.study-deal-table small,
+.study-deal-note {
+  display: block;
+  margin-top: 5px;
+  color: #6f6f67;
+  line-height: 1.35;
+}
+
+.study-deal-title-cell {
+  min-width: 200px;
+}
+
+.study-company-badge,
+.study-partner-pill,
+.study-status-pill,
+.study-source-link {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.study-company-badge {
+  padding: 7px 9px;
+  border: 1px solid #20201d;
+  background: #20201d;
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.study-partner-list,
+.study-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.study-partner-pill {
+  padding: 7px 9px;
+  border: 1px solid #d8d8d2;
+  background: #fff;
+  color: #5a5a54;
+  font-size: 0.72rem;
+}
+
+.study-status-pill {
+  padding: 7px 9px;
+  border: 1px solid #d8d8d2;
+  background: #fff;
+  color: #5a5a54;
+  font-size: 0.72rem;
+}
+
+.study-status-green {
+  border-color: #9fd2b5;
+  background: #eaf8ef;
+  color: #166534;
+}
+
+.study-status-blue {
+  border-color: #a7c7f7;
+  background: #ecf4ff;
+  color: #1d4ed8;
+}
+
+.study-status-teal {
+  border-color: #8dd7d1;
+  background: #e9fbf8;
+  color: #0f766e;
+}
+
+.study-status-amber {
+  border-color: #f1c777;
+  background: #fff8e6;
+  color: #92400e;
+}
+
+.study-status-gray {
+  border-color: #d6d6cf;
+  background: #f5f5f0;
+  color: #5a5a54;
+}
+
+.study-source-link {
+  padding: 7px 9px;
+  border: 1px solid #c8d5f2;
+  background: #f4f7ff;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
+.study-source-link:hover {
+  border-color: #1d4ed8;
+}
+
 @media (max-width: 760px) {
   .study-kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .study-deal-filter-row {
+    flex-direction: column;
   }
 }
 

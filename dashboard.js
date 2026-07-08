@@ -18,6 +18,7 @@ const capexDashboardData = window.capexDashboardData ?? {
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", defaultRange: "max", ranges: [], dashboards: {} };
+const studyDataCenterDeals = window.studyDataCenterDeals ?? { updatedAt: "", scope: "", companies: [], statusLegend: [], deals: [] };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -137,6 +138,11 @@ const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore", "Cans
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
   GPUCloud: { label: "GPU Rental Price" },
+};
+
+const studySubtabMeta = {
+  MemoryCap: { label: "Memory Market Cap" },
+  DataCenter: { label: "Data Center" },
 };
 
 const dataTrendSubtabMeta = {
@@ -314,7 +320,9 @@ const state = {
   query: "",
   sort: "marketCapDesc",
   m7PriceRange: "3y",
+  studyView: "MemoryCap",
   studyRange: studyData.defaultRange ?? "max",
+  studyDataCenterCompany: "All",
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
@@ -13180,6 +13188,164 @@ function renderStudyOverview() {
   }
 }
 
+function getStudyDealStatusMeta(statusKey) {
+  return (
+    (studyDataCenterDeals.statusLegend ?? []).find((item) => item.key === statusKey) ?? {
+      key: statusKey || "planned",
+      label: statusKey || "Unknown",
+      tone: "gray",
+    }
+  );
+}
+
+function renderStudyDataCenterOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const allDeals = [...(studyDataCenterDeals.deals ?? [])].sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+  if (!allDeals.length) {
+    renderPlaceholderOverview("Data Center Deals", "Data center deal data is not available yet.");
+    return;
+  }
+
+  const companyOptions = studyDataCenterDeals.companies?.length
+    ? studyDataCenterDeals.companies
+    : [{ key: "All", label: "All" }, ...Array.from(new Set(allDeals.map((deal) => deal.company))).map((key) => ({ key, label: key }))];
+  const activeCompany = companyOptions.some((item) => item.key === state.studyDataCenterCompany) ? state.studyDataCenterCompany : "All";
+  state.studyDataCenterCompany = activeCompany;
+  const filteredDeals = activeCompany === "All" ? allDeals : allDeals.filter((deal) => deal.company === activeCompany);
+  const liveCount = allDeals.filter((deal) => deal.status === "operational").length;
+  const constructionCount = allDeals.filter((deal) => deal.status === "construction").length;
+  const disclosedCapacityCount = allDeals.filter((deal) => deal.capacity && !String(deal.capacity).includes("미공개")).length;
+  const disclosedAmountCount = allDeals.filter((deal) => deal.amount && !String(deal.amount).includes("미공개")).length;
+  const companyFilterMarkup = companyOptions
+    .map(
+      (company) => `
+        <button
+          type="button"
+          class="study-deal-chip${activeCompany === company.key ? " active" : ""}"
+          data-study-data-center-company="${escapeHtml(company.key)}"
+        >
+          ${escapeHtml(company.label)}
+        </button>`,
+    )
+    .join("");
+  const legendMarkup = (studyDataCenterDeals.statusLegend ?? [])
+    .map((item) => `<span class="study-status-pill study-status-${escapeHtml(item.tone)}">${escapeHtml(item.label)}</span>`)
+    .join("");
+  const rowMarkup = filteredDeals
+    .map((deal) => {
+      const statusMeta = getStudyDealStatusMeta(deal.status);
+      const partnerMarkup = (deal.partners ?? [])
+        .map((partner) => `<span class="study-partner-pill">${escapeHtml(partner)}</span>`)
+        .join("");
+      const sourceMarkup = (deal.sources ?? [])
+        .map(
+          (source) => `
+            <a class="study-source-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
+              ${escapeHtml(source.label)}
+            </a>`,
+        )
+        .join("");
+
+      return `
+        <tr>
+          <td>
+            <span class="study-company-badge">${escapeHtml(deal.company)}</span>
+          </td>
+          <td class="study-deal-title-cell">
+            <strong>${escapeHtml(deal.title)}</strong>
+            <small>${escapeHtml(deal.date)} · ${escapeHtml(deal.sourceNote || "")}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(deal.capacity || "-")}</strong>
+            <small>${escapeHtml(deal.amount || "-")}</small>
+          </td>
+          <td>
+            <div class="study-partner-list">${partnerMarkup || "-"}</div>
+          </td>
+          <td>${escapeHtml(deal.location || "-")}</td>
+          <td>
+            <span class="study-status-pill study-status-${escapeHtml(statusMeta.tone)}">${escapeHtml(statusMeta.label)}</span>
+            <small class="study-deal-note">${escapeHtml(deal.construction || "-")}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(deal.dcType || "-")}</strong>
+            <small>${escapeHtml(deal.equipment || "-")}</small>
+          </td>
+          <td>
+            <div class="study-source-list">${sourceMarkup || "-"}</div>
+          </td>
+        </tr>`;
+    })
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview study-overview study-data-center-overview">
+      <section class="us-panel study-panel study-data-center-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>AI Data Center Deals</h2>
+            <p>2025년 이후 GOOGL, AMZN, META, MSFT, OpenAI, Anthropic의 AI 데이터센터·전력·컴퓨트 capacity 딜을 정리합니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${escapeHtml(studyDataCenterDeals.updatedAt || "-")}</div>
+          </div>
+        </div>
+        <div class="study-kpi-grid study-data-center-kpi-grid">
+          <article class="study-kpi-card">
+            <span>Tracked deals</span>
+            <strong>${allDeals.length}</strong>
+            <small>${companyOptions.length - 1} companies</small>
+          </article>
+          <article class="study-kpi-card study-kpi-card-green">
+            <span>Online / construction</span>
+            <strong>${liveCount + constructionCount}</strong>
+            <small>${liveCount} operational · ${constructionCount} under construction</small>
+          </article>
+          <article class="study-kpi-card">
+            <span>Disclosed fields</span>
+            <strong>${disclosedCapacityCount}/${disclosedAmountCount}</strong>
+            <small>capacity rows / amount rows</small>
+          </article>
+        </div>
+        <div class="market-trend-meta study-data-center-note">
+          <span>${escapeHtml(studyDataCenterDeals.scope || "")}</span>
+        </div>
+        <div class="study-deal-filter-row">
+          <div class="study-deal-chip-row">${companyFilterMarkup}</div>
+          <div class="study-status-legend">${legendMarkup}</div>
+        </div>
+        <div class="study-deal-table-wrap">
+          <table class="study-deal-table">
+            <thead>
+              <tr>
+                <th>회사</th>
+                <th>딜 / 발표일</th>
+                <th>GW / 금액</th>
+                <th>파트너</th>
+                <th>위치</th>
+                <th>착공 현황</th>
+                <th>전력·장비 / 형태</th>
+                <th>출처</th>
+              </tr>
+            </thead>
+            <tbody>${rowMarkup}</tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-study-data-center-company]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studyDataCenterCompany = button.dataset.studyDataCenterCompany || "All";
+      render();
+    });
+  });
+}
+
 function renderIndexTrendOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -15544,6 +15710,9 @@ function renderSubtabs() {
   } else if (state.tab === "Semis") {
     entries = Object.entries(semisSubtabMeta);
     activeKey = state.semisView;
+  } else if (state.tab === "Study") {
+    entries = Object.entries(studySubtabMeta);
+    activeKey = state.studyView;
   } else if (state.tab === "DataTrend") {
     entries = Object.entries(dataTrendSubtabMeta);
     activeKey = state.dataTrendView;
@@ -15572,6 +15741,8 @@ function renderSubtabs() {
         state.bigTechView = viewKey;
       } else if (state.tab === "Semis") {
         state.semisView = viewKey;
+      } else if (state.tab === "Study") {
+        state.studyView = viewKey;
       } else if (state.tab === "DataTrend") {
         state.dataTrendView = viewKey;
       }
@@ -15626,7 +15797,10 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Study") {
-    summaryText.textContent = "Study dashboard for focused market-cap and cross-market comparisons";
+    summaryText.textContent =
+      state.studyView === "DataCenter"
+        ? "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status"
+        : "Study dashboard for focused market-cap and cross-market comparisons";
     return;
   }
 
@@ -16116,6 +16290,10 @@ function render() {
 
   if (state.tab === "Study") {
     renderSummary([]);
+    if (state.studyView === "DataCenter") {
+      renderStudyDataCenterOverview();
+      return;
+    }
     renderStudyOverview();
     return;
   }
