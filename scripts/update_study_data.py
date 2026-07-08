@@ -34,6 +34,7 @@ HEADERS = {
 
 KOREA_SYMBOLS = {
     "samsung": {"naver": "005930", "label": "Samsung Electronics", "ticker": "005930 KS"},
+    "samsungPreferred": {"naver": "005935", "label": "Samsung Electronics Pref.", "ticker": "005935 KS"},
     "skHynix": {"naver": "000660", "label": "SK Hynix", "ticker": "000660 KS"},
 }
 
@@ -174,11 +175,14 @@ def build_study_data() -> dict[str, Any]:
 
     fx = align_forward(krw_usd, all_dates)
     samsung_close = align_forward(korea_prices["samsung"], all_dates)
+    samsung_preferred_close = align_forward(korea_prices["samsungPreferred"], all_dates)
     hynix_close = align_forward(korea_prices["skHynix"], all_dates)
     mu_close = align_forward(mu_prices, all_dates)
     nvda_close = align_forward(nvda_prices, all_dates)
 
-    samsung_cap = samsung_close * korea_shares["samsung"] / fx
+    samsung_common_cap = samsung_close * korea_shares["samsung"] / fx
+    samsung_preferred_cap = samsung_preferred_close * korea_shares["samsungPreferred"] / fx
+    samsung_cap = samsung_common_cap + samsung_preferred_cap
     hynix_cap = hynix_close * korea_shares["skHynix"] / fx
     mu_cap = mu_close * mu_shares
     nvda_cap = nvda_close * nvda_shares
@@ -222,6 +226,7 @@ def build_study_data() -> dict[str, Any]:
         "source": {
             "koreaPrices": "Naver Finance siseJson daily close",
             "koreaShares": "Naver Finance realtime countOfListedStock",
+            "samsung": "Samsung market cap includes Samsung Electronics common (005930) and preferred (005935).",
             "nvdaPrice": "Existing data/m7-price-data.js",
             "usShares": "Existing data/market-rs-data.js sharesOutstanding",
             "muPrice": "Yahoo Finance daily close via yfinance because local RS history does not cover 2025-01",
@@ -230,13 +235,13 @@ def build_study_data() -> dict[str, Any]:
         },
         "dashboards": {
             "memoryVsNvda": {
-                "title": "Samsung + SK Hynix + Micron vs NVIDIA Market Cap",
+                "title": "Samsung* + SK Hynix + Micron vs NVIDIA Market Cap",
                 "subtitle": "Market cap in USD trillions, from 2025-01-01.",
                 "dates": selected_dates,
                 "latest": latest,
                 "series": {
                     "memoryBasket": {
-                        "label": "Samsung + SK Hynix + Micron",
+                        "label": "Samsung* + SK Hynix + Micron",
                         "values": values(basket_cap),
                         "color": "#111827",
                     },
@@ -246,9 +251,19 @@ def build_study_data() -> dict[str, Any]:
                         "color": "#16a34a",
                     },
                     "samsung": {
-                        "label": "Samsung Electronics",
+                        "label": "Samsung Electronics*",
                         "values": values(samsung_cap),
                         "color": "#2563eb",
+                    },
+                    "samsungCommon": {
+                        "label": "Samsung Electronics Common",
+                        "values": values(samsung_common_cap),
+                        "color": "#93c5fd",
+                    },
+                    "samsungPreferred": {
+                        "label": "Samsung Electronics Preferred",
+                        "values": values(samsung_preferred_cap),
+                        "color": "#1d4ed8",
                     },
                     "skHynix": {
                         "label": "SK Hynix",

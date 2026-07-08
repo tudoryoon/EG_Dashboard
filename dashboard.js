@@ -13140,7 +13140,7 @@ function renderStudyOverview() {
         </div>
         <div class="study-kpi-grid">
           <article class="study-kpi-card">
-            <span>Samsung + SK Hynix + MU</span>
+            <span>Samsung* + SK Hynix + MU</span>
             <strong>${formatStudyTrillion(latest.memoryBasketT, 3)}</strong>
             <small>${formatSignedPercent(latest.memoryBasketChangePct)} since 2025-01-01</small>
           </article>
@@ -13157,6 +13157,7 @@ function renderStudyOverview() {
         </div>
         <div class="market-trend-meta">
           <span>국내 종목: 네이버 일별 종가와 상장주식수</span>
+          <span>*Samsung은 삼성전자우 포함 시총</span>
           <span>미국 종목: 기존 대시보드 데이터 기반</span>
         </div>
         <div class="us-price-chart-wrap us-price-chart-wrap-large study-chart-wrap">
