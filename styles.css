@@ -207,6 +207,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(21, 128, 61, 0.2);
 }
 
+.country-button.is-study {
+  border-color: #b7d7d7;
+  background: linear-gradient(180deg, #edf8f8, #dff2f2);
+  color: #134e4a;
+}
+
+.country-button.is-study.active {
+  border-color: #0f766e;
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  color: #f4fffd;
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.2);
+}
+
 .country-button.is-data-trend {
   border-color: #f1d179;
   background: linear-gradient(180deg, #fff8db, #ffef9f);
@@ -3311,6 +3324,63 @@ h1 {
   border-color: #d8d8d2;
   background: #fff;
   color: #5a5a54;
+}
+
+.study-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 14px;
+}
+
+.study-kpi-card {
+  display: flex;
+  min-height: 104px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #fffef8;
+}
+
+.study-kpi-card span {
+  color: #66665f;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.study-kpi-card strong {
+  color: #20201d;
+  font-size: clamp(1.65rem, 2.2vw, 2.35rem);
+  line-height: 1;
+}
+
+.study-kpi-card small {
+  color: #7a7a72;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.study-kpi-card-green {
+  border-color: #b7d7c6;
+  background: #f1fbf5;
+}
+
+.study-kpi-card-green strong {
+  color: #166534;
+}
+
+.study-chart-wrap {
+  margin-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .study-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .total-series-chip {

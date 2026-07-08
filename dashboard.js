@@ -17,6 +17,7 @@ const capexDashboardData = window.capexDashboardData ?? {
 };
 const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
+const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", defaultRange: "max", ranges: [], dashboards: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -103,6 +104,7 @@ const gpuCloudRuntime = {
 const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing" },
   IndexTrend: { label: "Index Trend" },
+  Study: { label: "Study" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
@@ -312,6 +314,7 @@ const state = {
   query: "",
   sort: "marketCapDesc",
   m7PriceRange: "3y",
+  studyRange: studyData.defaultRange ?? "max",
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
@@ -957,6 +960,151 @@ function createM7RelativeChart(canvas, rangeKey) {
 
 function createMarketRelativeChart(canvas, rangeKey) {
   createRelativePriceChart(canvas, marketPriceData, rangeKey);
+}
+
+function formatStudyTrillion(value, digits = 2) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric < 0 ? "-" : "";
+  return `${sign}$${Math.abs(numeric).toFixed(digits)}T`;
+}
+
+function formatStudyRatio(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  return `${Number(value).toFixed(2)}x`;
+}
+
+function getStudyMemoryDashboard() {
+  return studyData?.dashboards?.memoryVsNvda ?? null;
+}
+
+function buildStudyMemoryPayload(rangeKey) {
+  const panel = getStudyMemoryDashboard();
+  const dates = panel?.dates ?? [];
+  if (!panel || !dates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = dates[dates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, studyData?.startDate ?? "2025-01-01");
+  const startIndex = Math.max(
+    0,
+    dates.findIndex((label) => label >= startDate),
+  );
+  const labels = dates.slice(startIndex >= 0 ? startIndex : 0);
+  const series = panel.series ?? {};
+  const seriesConfig = [
+    { key: "memoryBasket", width: 3.2, order: 1 },
+    { key: "nvda", width: 3.2, order: 2 },
+    { key: "samsung", width: 1.6, dash: [6, 5], order: 3 },
+    { key: "skHynix", width: 1.6, dash: [6, 5], order: 4 },
+    { key: "micron", width: 1.6, dash: [6, 5], order: 5 },
+  ];
+
+  const datasets = seriesConfig
+    .map((config) => {
+      const item = series[config.key];
+      if (!item?.values?.length) {
+        return null;
+      }
+      return {
+        label: item.label,
+        data: item.values.slice(startIndex >= 0 ? startIndex : 0),
+        borderColor: item.color,
+        backgroundColor: item.color,
+        borderWidth: config.width,
+        borderDash: config.dash ?? [],
+        tension: 0.22,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
+        spanGaps: true,
+        order: config.order,
+      };
+    })
+    .filter(Boolean);
+
+  return { labels, datasets };
+}
+
+function createStudyMemoryVsNvdaChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined" || !canvas) {
+    return;
+  }
+
+  const payload = buildStudyMemoryPayload(rangeKey);
+  const values = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(Number(value))));
+  const minValue = values.length ? Math.min(...values) : 0;
+  const maxValue = values.length ? Math.max(...values) : 5;
+  const yMin = Math.max(0, Math.floor((minValue - 0.1) * 10) / 10);
+  const yMax = Math.ceil((maxValue + 0.15) * 10) / 10;
+  const tickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
+  const tickSet = new Set(tickIndexes);
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatStudyTrillion(context.parsed.y, 3)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatStudyTrillion(value, 1),
+            maxTicksLimit: 7,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function calculateEmaSeries(values, period) {
@@ -12952,6 +13100,85 @@ function renderCapexOverview() {
   }
 }
 
+function renderStudyOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const panel = getStudyMemoryDashboard();
+  if (!panel?.dates?.length) {
+    renderPlaceholderOverview("Study", "Study dashboard data is not available yet.");
+    return;
+  }
+
+  const latest = panel.latest ?? {};
+  const rangeMarkup = (studyData.ranges ?? [])
+    .map(
+      (range) => `
+        <button
+          type="button"
+          class="m7-range-chip${state.studyRange === range.key ? " active" : ""}"
+          data-study-range="${range.key}"
+        >
+          ${range.label}
+        </button>`,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview study-overview">
+      <section class="us-panel study-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Memory Market Cap vs NVIDIA</h2>
+            <p>삼성전자 + SK하이닉스 + Micron 시가총액과 NVIDIA 시가총액을 2025년 1월 1일부터 USD 기준으로 비교합니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">Updated ${studyData.updatedAt || latest.date || "-"}</div>
+          </div>
+        </div>
+        <div class="study-kpi-grid">
+          <article class="study-kpi-card">
+            <span>Samsung + SK Hynix + MU</span>
+            <strong>${formatStudyTrillion(latest.memoryBasketT, 3)}</strong>
+            <small>${formatSignedPercent(latest.memoryBasketChangePct)} since 2025-01-01</small>
+          </article>
+          <article class="study-kpi-card study-kpi-card-green">
+            <span>NVIDIA</span>
+            <strong>${formatStudyTrillion(latest.nvdaT, 3)}</strong>
+            <small>${formatSignedPercent(latest.nvdaChangePct)} since 2025-01-01</small>
+          </article>
+          <article class="study-kpi-card">
+            <span>Basket / NVIDIA</span>
+            <strong>${formatStudyRatio(latest.ratio)}</strong>
+            <small>Gap ${formatStudyTrillion(latest.spreadT, 3)}</small>
+          </article>
+        </div>
+        <div class="market-trend-meta">
+          <span>국내 종목: 네이버 일별 종가와 상장주식수</span>
+          <span>미국 종목: 기존 대시보드 데이터 기반</span>
+        </div>
+        <div class="us-price-chart-wrap us-price-chart-wrap-large study-chart-wrap">
+          <canvas data-study-chart="memory-vs-nvda"></canvas>
+        </div>
+      </section>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-study-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studyRange = button.dataset.studyRange || studyData.defaultRange || "max";
+      render();
+    });
+  });
+
+  const canvas = usOverviewRoot.querySelector('[data-study-chart="memory-vs-nvda"]');
+  if (canvas) {
+    createStudyMemoryVsNvdaChart(canvas, state.studyRange || studyData.defaultRange || "max");
+  }
+}
+
 function renderIndexTrendOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -15286,7 +15513,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -15394,6 +15621,11 @@ function renderSectors() {
 function renderSummary(list) {
   if (state.tab === "IndexTrend") {
     summaryText.textContent = "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD";
+    return;
+  }
+
+  if (state.tab === "Study") {
+    summaryText.textContent = "Study dashboard for focused market-cap and cross-market comparisons";
     return;
   }
 
@@ -15878,6 +16110,12 @@ function render() {
   if (state.tab === "IndexTrend") {
     renderSummary([]);
     renderIndexTrendOverview();
+    return;
+  }
+
+  if (state.tab === "Study") {
+    renderSummary([]);
+    renderStudyOverview();
     return;
   }
 
