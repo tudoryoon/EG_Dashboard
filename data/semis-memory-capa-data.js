@@ -31,9 +31,178 @@ window.semisMemoryCapaData = {
       subtitle:
         "Samsung, SK hynix, Micron의 공개/보도 기반 DRAM wafer-start 증설 로드맵입니다. 숫자는 K WPM 기준이며, fab별 행은 중복될 수 있어 단순 합산하지 않습니다.",
       kpis: [
-        { label: "Tracked DRAM rows", value: "10", note: "IDM 3사 주요 fab / line" },
+        { label: "Tracked DRAM rows", value: "3", note: "IDM 3사 company-level view" },
         { label: "Largest disclosed single fab", value: "360K", note: "SK hynix Yongin Fab 1 full plan by 2030" },
         { label: "Near-term disclosed ramp", value: "2026", note: "Samsung 1c + SK hynix M15X 중심" },
+      ],
+      companyRows: [
+        {
+          company: "Samsung",
+          scope: "1c DRAM / P3 / P4 / P5",
+          summary: "1c DRAM reported ramp: 60K -> 140K -> 200K WPM. P3/P4/P5 details are kept as hover notes because several items overlap.",
+          cells: {
+            "2025Q4": {
+              status: "ramp",
+              value: "60K",
+              delta: "+60K",
+              detail: "Samsung 1c DRAM equipment-ready target. Reported by TrendForce citing ETNews.",
+            },
+            "2026Q2": {
+              status: "ramp",
+              value: "140K",
+              delta: "+80K",
+              detail: "Reported 1c DRAM cumulative capacity after another 80K WPM. P4 phase-2 60K timing overlaps with this broader 1c ramp.",
+            },
+            "2026Q4": {
+              status: "ramp",
+              value: "200K",
+              delta: "+60K",
+              detail: "Reported end-2026 1c DRAM run-rate target. Separate analyst note also points to P3 reaching 115K WPM by end-2026.",
+            },
+            "2028Q1": {
+              status: "planned",
+              value: "TBD",
+              delta: "P5-1",
+              detail: "P5-1 phased operation is reported around 2028, but WPM has not been disclosed.",
+            },
+          },
+          sources: [
+            {
+              label: "TrendForce / ETNews",
+              url: "https://www.trendforce.com/news/2025/11/19/news-samsung-reportedly-plans-200k-1c-dram-wafersmonth-by-2026-about-one-third-of-its-total-output/",
+            },
+            {
+              label: "TrendForce / Commercial Times",
+              url: "https://www.trendforce.com/news/2025/10/17/news-memory-giants-hbm-focus-could-limit-dram-growth-through-2026-taiwan-firms-boost-ddr4/",
+            },
+          ],
+        },
+        {
+          company: "SK hynix",
+          scope: "M15X / Yongin Fab 1",
+          summary: "Tracked new DRAM/HBM capa: M15X first, then Yongin adds 60K WPM phases every six months from 2027.",
+          cells: {
+            "2026Q1": {
+              status: "equipment",
+              value: "Wafer-in",
+              delta: "M15X",
+              detail: "M15X first cleanroom wafer loading and second cleanroom equipment move-in reported.",
+            },
+            "2026Q2": {
+              status: "ramp",
+              value: "10K",
+              delta: "M15X",
+              detail: "Reported initial M15X DRAM capacity in H1 2026.",
+            },
+            "2026Q4": {
+              status: "ramp",
+              value: "50K",
+              delta: "+40K",
+              detail: "Reported M15X ramp target by Q4 2026.",
+            },
+            "2027Q1": {
+              status: "equipment",
+              value: "Equip",
+              delta: "Yongin",
+              detail: "Yongin Fab 1 first cleanroom equipment move-in reportedly pulled forward to February 2027.",
+            },
+            "2027Q3": {
+              status: "ramp",
+              value: "110K",
+              delta: "+60K",
+              detail: "Tracked run-rate proxy: M15X 50K plus Yongin phase 1 at 60K WPM.",
+            },
+            "2027Q4": {
+              status: "online",
+              value: "140-150K",
+              delta: "M15X full",
+              detail: "M15X full utilization range of 80-90K plus Yongin phase 1 60K WPM.",
+            },
+            "2028Q1": {
+              status: "ramp",
+              value: "200-210K",
+              delta: "+60K",
+              detail: "Tracked proxy after Yongin phase 2. Assumes M15X full utilization and Yongin 120K WPM cumulative.",
+            },
+            "2028Q3": {
+              status: "ramp",
+              value: "260-270K",
+              delta: "+60K",
+              detail: "Tracked proxy after Yongin phase 3. Yongin full Fab 1 plan is 360K WPM by H1 2030.",
+            },
+          },
+          sources: [
+            {
+              label: "TrendForce / The Bell",
+              url: "https://www.trendforce.com/news/2025/10/02/news-sk-hynix-reportedly-to-double-dram-capacity-in-2h26-to-match-samsung-pulls-back-on-nand/",
+            },
+            {
+              label: "DBR / DongA",
+              url: "https://dbr.donga.com/kfocus/view/en/article_no/2274",
+            },
+            {
+              label: "TechTimes / The Elec",
+              url: "https://www.techtimes.com/articles/317859/20260606/sk-hynix-dram-capacity-roadmap-revealed-yongin-alone-adds-360k-wafers-monthly.htm",
+            },
+          ],
+        },
+        {
+          company: "Micron",
+          scope: "HBM / Manassas / Idaho / Taiwan / Hiroshima",
+          summary: "Micron has several disclosed construction and qualification milestones, but most WPM numbers are undisclosed except reported HBM wafer capacity.",
+          cells: {
+            "2025Q4": {
+              status: "online",
+              value: "60K",
+              delta: "HBM",
+              detail: "Reported HBM-oriented wafer capacity target. This is not total Micron DRAM capacity.",
+            },
+            "2026Q2": {
+              status: "construction",
+              value: "Close",
+              delta: "Taiwan P5",
+              detail: "Tongluo P5 transaction expected to close around Q2 2026; WPM not disclosed.",
+            },
+            "2026Q4": {
+              status: "equipment",
+              value: "Qual",
+              delta: "Manassas",
+              detail: "Qualified 1-alpha DDR4 production expected by end-CY2026; Micron says DDR4 wafer supply quadruples, but WPM is undisclosed.",
+            },
+            "2027Q2": {
+              status: "equipment",
+              value: "ID1",
+              delta: "Output",
+              detail: "Micron expects initial wafer output at first Idaho fab around mid-CY2027.",
+            },
+            "2027Q3": {
+              status: "ramp",
+              value: "TBD",
+              delta: "ID1/P5",
+              detail: "Idaho ID1 qualification/ramp and Taiwan P5 meaningful DRAM output begin in 2H 2027; WPM undisclosed.",
+            },
+            "2028Q3": {
+              status: "equipment",
+              value: "Equip",
+              delta: "Hiroshima",
+              detail: "Hiroshima expansion equipment delivery/installation begins in 2H 2028.",
+            },
+          },
+          sources: [
+            {
+              label: "Micron IR",
+              url: "https://investors.micron.com/news-releases/news-release-details/micron-advances-made-america-memory-manufacturing-expansion",
+            },
+            {
+              label: "NIST CHIPS",
+              url: "https://www.nist.gov/chips/micron-idaho-boise",
+            },
+            {
+              label: "Cleanroom Technology",
+              url: "https://cleanroomtechnology.com/micron-buys-taiwan-fab-for-1-8bn-to-boost",
+            },
+          ],
+        },
       ],
       rows: [
         {

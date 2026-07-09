@@ -3689,6 +3689,11 @@ h1 {
   font-size: 0.78rem;
 }
 
+.memory-capa-table-compact {
+  min-width: 1240px;
+  font-size: 0.76rem;
+}
+
 .memory-capa-table th,
 .memory-capa-table td {
   padding: 11px 10px;
@@ -3754,9 +3759,39 @@ h1 {
   text-align: center;
 }
 
+.memory-capa-table-compact .memory-capa-quarter-cell {
+  width: 72px;
+  min-width: 72px;
+  padding: 10px 6px;
+}
+
+.memory-capa-company-cell {
+  width: 105px;
+  min-width: 105px;
+}
+
+.memory-capa-scope-cell {
+  width: 260px;
+  min-width: 260px;
+}
+
 .memory-capa-quarter-cell strong,
 .memory-capa-quarter-cell small {
   text-align: center;
+}
+
+.memory-capa-quarter-cell[title] {
+  cursor: help;
+}
+
+.memory-capa-table-compact .memory-capa-quarter-cell strong {
+  font-size: 0.82rem;
+}
+
+.memory-capa-table-compact .memory-capa-quarter-cell small {
+  margin-top: 3px;
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 
 .memory-capa-empty {

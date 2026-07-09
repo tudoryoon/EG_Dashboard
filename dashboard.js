@@ -1149,6 +1149,40 @@ function renderMemoryCapaSourceLinks(sources) {
     .join("");
 }
 
+function renderMemoryCapaCompanyRows(section, quarters) {
+  return (section?.companyRows ?? [])
+    .map((row) => {
+      const cellMarkup = (quarters ?? [])
+        .map((quarter) => {
+          const cell = row.cells?.[quarter.key];
+          if (!cell) {
+            return `<td class="memory-capa-quarter-cell memory-capa-empty"></td>`;
+          }
+          const tooltip = [quarter.year, quarter.label, row.company, cell.value, cell.delta, cell.detail].filter(Boolean).join(" · ");
+          return `
+            <td class="memory-capa-quarter-cell memory-capa-${escapeHtml(cell.status || "planned")}" title="${escapeHtml(tooltip)}">
+              <strong>${escapeHtml(cell.value || "")}</strong>
+              <small>${escapeHtml(cell.delta || "")}</small>
+            </td>`;
+        })
+        .join("");
+      const sourceMarkup = renderMemoryCapaSourceLinks(row.sources);
+      return `
+        <tr>
+          <td class="memory-capa-company-cell">
+            <span class="study-company-badge">${escapeHtml(row.company || "-")}</span>
+          </td>
+          <td class="memory-capa-scope-cell">
+            <strong>${escapeHtml(row.scope || "-")}</strong>
+            <small>${escapeHtml(row.summary || "")}</small>
+            <div class="study-source-list memory-capa-source-list">${sourceMarkup || "-"}</div>
+          </td>
+          ${cellMarkup}
+        </tr>`;
+    })
+    .join("");
+}
+
 function renderMemoryCapaRows(section, quarters) {
   return (section?.rows ?? [])
     .map((row) => {
@@ -1192,8 +1226,18 @@ function renderMemoryCapaRows(section, quarters) {
 
 function renderMemoryCapaSection(sectionKey, section, quarters) {
   const isPlaceholder = sectionKey !== "dram";
+  const usesCompanyRows = Boolean(section?.companyRows?.length);
   const quarterHeader = (quarters ?? []).map((quarter) => `<th>${escapeHtml(quarter.label)}</th>`).join("");
-  const rowMarkup = renderMemoryCapaRows(section, quarters);
+  const rowMarkup = usesCompanyRows ? renderMemoryCapaCompanyRows(section, quarters) : renderMemoryCapaRows(section, quarters);
+  const baseHeadMarkup = usesCompanyRows
+    ? `
+              <th rowspan="2">회사</th>
+              <th rowspan="2">Scope / 근거</th>`
+    : `
+              <th rowspan="2">회사</th>
+              <th rowspan="2">Fab / 위치</th>
+              <th rowspan="2">제품 / 규모</th>
+              <th rowspan="2">근거 / 메모</th>`;
   return `
     <section class="memory-capa-section${isPlaceholder ? " memory-capa-section-placeholder" : ""}">
       <div class="us-section-head">
@@ -1203,13 +1247,10 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
         </div>
       </div>
       <div class="memory-capa-table-wrap">
-        <table class="memory-capa-table">
+        <table class="memory-capa-table${usesCompanyRows ? " memory-capa-table-compact" : ""}">
           <thead>
             <tr>
-              <th rowspan="2">회사</th>
-              <th rowspan="2">Fab / 위치</th>
-              <th rowspan="2">제품 / 규모</th>
-              <th rowspan="2">근거 / 메모</th>
+              ${baseHeadMarkup}
               ${buildMemoryCapaYearHeaders(quarters)}
             </tr>
             <tr>${quarterHeader}</tr>
