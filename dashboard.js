@@ -70,6 +70,7 @@ const marketRsFinancialsData = window.marketRsFinancialsData ?? {
 };
 const memorySpotData = window.memoryData ?? window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memoryDataHistoryData ?? window.memorySpotHistoryData ?? null;
+const semisMemoryCapaData = window.semisMemoryCapaData ?? { updatedAt: "", unit: "", scope: "", quarters: [], legend: [], sections: {} };
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
@@ -137,6 +138,7 @@ const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore", "Cans
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
+  MemoryCapa: { label: "Memory Capa" },
   GPUCloud: { label: "GPU Rental Price" },
 };
 
@@ -1119,6 +1121,154 @@ function createStudyMemoryVsNvdaChart(canvas, rangeKey) {
   });
 
   charts.push(chart);
+}
+
+function buildMemoryCapaYearHeaders(quarters) {
+  const groups = [];
+  (quarters ?? []).forEach((quarter) => {
+    const previous = groups[groups.length - 1];
+    if (previous?.year === quarter.year) {
+      previous.count += 1;
+    } else {
+      groups.push({ year: quarter.year, count: 1 });
+    }
+  });
+  return groups
+    .map((group) => `<th class="memory-capa-year-head" colspan="${group.count}">${escapeHtml(group.year)}</th>`)
+    .join("");
+}
+
+function renderMemoryCapaSourceLinks(sources) {
+  return (sources ?? [])
+    .map(
+      (source) => `
+        <a class="study-source-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
+          ${escapeHtml(source.label)}
+        </a>`,
+    )
+    .join("");
+}
+
+function renderMemoryCapaRows(section, quarters) {
+  return (section?.rows ?? [])
+    .map((row) => {
+      const cellMarkup = (quarters ?? [])
+        .map((quarter) => {
+          const cell = row.cells?.[quarter.key];
+          if (!cell) {
+            return `<td class="memory-capa-quarter-cell memory-capa-empty"></td>`;
+          }
+          return `
+            <td class="memory-capa-quarter-cell memory-capa-${escapeHtml(cell.status || "planned")}">
+              <strong>${escapeHtml(cell.label || "")}</strong>
+              <small>${escapeHtml(cell.note || "")}</small>
+            </td>`;
+        })
+        .join("");
+      const sourceMarkup = renderMemoryCapaSourceLinks(row.sources);
+      return `
+        <tr>
+          <td>
+            <span class="study-company-badge">${escapeHtml(row.company || "-")}</span>
+          </td>
+          <td>
+            <strong>${escapeHtml(row.fab || "-")}</strong>
+            <small>${escapeHtml(row.location || "-")}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(row.product || "-")}</strong>
+            <small>${escapeHtml(row.target || "-")}</small>
+          </td>
+          <td>
+            <span class="memory-capa-confidence">${escapeHtml(row.confidence || "pending")}</span>
+            <small>${escapeHtml(row.note || "")}</small>
+            <div class="study-source-list memory-capa-source-list">${sourceMarkup || "-"}</div>
+          </td>
+          ${cellMarkup}
+        </tr>`;
+    })
+    .join("");
+}
+
+function renderMemoryCapaSection(sectionKey, section, quarters) {
+  const isPlaceholder = sectionKey !== "dram";
+  const quarterHeader = (quarters ?? []).map((quarter) => `<th>${escapeHtml(quarter.label)}</th>`).join("");
+  const rowMarkup = renderMemoryCapaRows(section, quarters);
+  return `
+    <section class="memory-capa-section${isPlaceholder ? " memory-capa-section-placeholder" : ""}">
+      <div class="us-section-head">
+        <div>
+          <h3>${escapeHtml(section?.title || sectionKey)}</h3>
+          <p>${escapeHtml(section?.subtitle || "")}</p>
+        </div>
+      </div>
+      <div class="memory-capa-table-wrap">
+        <table class="memory-capa-table">
+          <thead>
+            <tr>
+              <th rowspan="2">회사</th>
+              <th rowspan="2">Fab / 위치</th>
+              <th rowspan="2">제품 / 규모</th>
+              <th rowspan="2">근거 / 메모</th>
+              ${buildMemoryCapaYearHeaders(quarters)}
+            </tr>
+            <tr>${quarterHeader}</tr>
+          </thead>
+          <tbody>${rowMarkup}</tbody>
+        </table>
+      </div>
+    </section>`;
+}
+
+function renderSemisMemoryCapaOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const quarters = semisMemoryCapaData.quarters ?? [];
+  const sections = semisMemoryCapaData.sections ?? {};
+  if (!quarters.length || !sections.dram) {
+    renderPlaceholderOverview("Memory Capa", "Memory capacity roadmap data is not available yet.");
+    return;
+  }
+
+  const legendMarkup = (semisMemoryCapaData.legend ?? [])
+    .map((item) => `<span class="memory-capa-legend-item memory-capa-legend-${escapeHtml(item.tone)}">${escapeHtml(item.label)}</span>`)
+    .join("");
+  const kpiMarkup = (sections.dram.kpis ?? [])
+    .map(
+      (item, index) => `
+        <article class="study-kpi-card${index === 1 ? " study-kpi-card-green" : ""}">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${escapeHtml(item.value)}</strong>
+          <small>${escapeHtml(item.note)}</small>
+        </article>`,
+    )
+    .join("");
+  const sectionMarkup = ["dram", "nand", "hdd"].map((key) => renderMemoryCapaSection(key, sections[key], quarters)).join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview study-overview memory-capa-overview">
+      <section class="us-panel study-panel memory-capa-panel">
+        <div class="us-section-head us-price-head">
+          <div>
+            <h2>Memory Capa</h2>
+            <p>DRAM, NAND, HDD 공급 증설 일정을 분기별로 정리합니다. 이번 버전은 DRAM 우선 완성, NAND/HDD는 틀만 잡아둔 상태입니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="us-price-updated">Updated ${escapeHtml(semisMemoryCapaData.updatedAt || "-")}</div>
+          </div>
+        </div>
+        <div class="study-kpi-grid memory-capa-kpi-grid">${kpiMarkup}</div>
+        <div class="market-trend-meta memory-capa-note">
+          <span>${escapeHtml(semisMemoryCapaData.unit || "")}</span>
+          <span>${escapeHtml(semisMemoryCapaData.scope || "")}</span>
+        </div>
+        <div class="memory-capa-legend">${legendMarkup}</div>
+        ${sectionMarkup}
+      </section>
+    </section>
+  `;
 }
 
 function calculateEmaSeries(values, period) {
@@ -16352,6 +16502,10 @@ function render() {
     renderSummary([]);
     if (state.semisView === "MemorySpot") {
       renderMemorySpotOverview();
+      return;
+    }
+    if (state.semisView === "MemoryCapa") {
+      renderSemisMemoryCapaOverview();
       return;
     }
     if (state.semisView === "GPUCloud") {
