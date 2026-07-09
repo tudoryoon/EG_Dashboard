@@ -3394,6 +3394,21 @@ h1 {
   margin: 16px 0;
 }
 
+.study-deal-control-group {
+  display: flex;
+  min-width: min(100%, 180px);
+  flex-direction: column;
+  gap: 7px;
+}
+
+.study-deal-control-group > span {
+  color: #6f6f67;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 .study-deal-chip-row,
 .study-status-legend {
   display: flex;
@@ -3417,6 +3432,10 @@ h1 {
   border-color: #20201d;
   background: #20201d;
   color: #fff;
+}
+
+.study-deal-sort-chip {
+  border-radius: 10px;
 }
 
 .study-deal-table-wrap {
@@ -3457,6 +3476,17 @@ h1 {
 
 .study-deal-table tbody tr:nth-child(even) td {
   background: #fbfaf4;
+}
+
+.study-deal-table .study-year-row td {
+  padding: 10px 12px;
+  border-top: 1px solid #d8d8d2;
+  border-bottom: 1px solid #d8d8d2;
+  background: #efece1 !important;
+  color: #20201d;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
 }
 
 .study-deal-table tbody tr:last-child td {

@@ -145,6 +145,11 @@ const studySubtabMeta = {
   DataCenter: { label: "Data Center" },
 };
 
+const studyDataCenterSortOptions = [
+  { key: "dateDesc", label: "최신순" },
+  { key: "dateAsc", label: "오래된순" },
+];
+
 const dataTrendSubtabMeta = {
   Openrouter: { label: "Openrouter" },
   Mentions: { label: "Mentions" },
@@ -323,6 +328,7 @@ const state = {
   studyView: "MemoryCap",
   studyRange: studyData.defaultRange ?? "max",
   studyDataCenterCompany: "All",
+  studyDataCenterSort: "dateDesc",
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
@@ -13203,7 +13209,7 @@ function renderStudyDataCenterOverview() {
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  const allDeals = [...(studyDataCenterDeals.deals ?? [])].sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+  const allDeals = [...(studyDataCenterDeals.deals ?? [])];
   if (!allDeals.length) {
     renderPlaceholderOverview("Data Center Deals", "Data center deal data is not available yet.");
     return;
@@ -13215,6 +13221,14 @@ function renderStudyDataCenterOverview() {
   const activeCompany = companyOptions.some((item) => item.key === state.studyDataCenterCompany) ? state.studyDataCenterCompany : "All";
   state.studyDataCenterCompany = activeCompany;
   const filteredDeals = activeCompany === "All" ? allDeals : allDeals.filter((deal) => deal.company === activeCompany);
+  const activeSort = studyDataCenterSortOptions.some((item) => item.key === state.studyDataCenterSort) ? state.studyDataCenterSort : "dateDesc";
+  state.studyDataCenterSort = activeSort;
+  const visibleDeals = [...filteredDeals].sort((left, right) => {
+    const leftDate = String(left.date ?? "");
+    const rightDate = String(right.date ?? "");
+    const dateSort = activeSort === "dateAsc" ? leftDate.localeCompare(rightDate) : rightDate.localeCompare(leftDate);
+    return dateSort || String(left.company ?? "").localeCompare(String(right.company ?? "")) || String(left.title ?? "").localeCompare(String(right.title ?? ""));
+  });
   const liveCount = allDeals.filter((deal) => deal.status === "operational").length;
   const constructionCount = allDeals.filter((deal) => deal.status === "construction").length;
   const disclosedCapacityCount = allDeals.filter((deal) => deal.capacity && !String(deal.capacity).includes("미공개")).length;
@@ -13231,10 +13245,23 @@ function renderStudyDataCenterOverview() {
         </button>`,
     )
     .join("");
+  const sortMarkup = studyDataCenterSortOptions
+    .map(
+      (sortOption) => `
+        <button
+          type="button"
+          class="study-deal-chip study-deal-sort-chip${activeSort === sortOption.key ? " active" : ""}"
+          data-study-data-center-sort="${escapeHtml(sortOption.key)}"
+        >
+          ${escapeHtml(sortOption.label)}
+        </button>`,
+    )
+    .join("");
   const legendMarkup = (studyDataCenterDeals.statusLegend ?? [])
     .map((item) => `<span class="study-status-pill study-status-${escapeHtml(item.tone)}">${escapeHtml(item.label)}</span>`)
     .join("");
-  const rowMarkup = filteredDeals
+  let currentYear = "";
+  const rowMarkup = visibleDeals
     .map((deal) => {
       const statusMeta = getStudyDealStatusMeta(deal.status);
       const partnerMarkup = (deal.partners ?? [])
@@ -13248,8 +13275,17 @@ function renderStudyDataCenterOverview() {
             </a>`,
         )
         .join("");
+      const year = String(deal.date ?? "").slice(0, 4) || "Unknown";
+      const yearMarkup =
+        year !== currentYear
+          ? `
+        <tr class="study-year-row">
+          <td colspan="8">${escapeHtml(year)}</td>
+        </tr>`
+          : "";
+      currentYear = year;
 
-      return `
+      return `${yearMarkup}
         <tr>
           <td>
             <span class="study-company-badge">${escapeHtml(deal.company)}</span>
@@ -13314,7 +13350,14 @@ function renderStudyDataCenterOverview() {
           <span>${escapeHtml(studyDataCenterDeals.scope || "")}</span>
         </div>
         <div class="study-deal-filter-row">
-          <div class="study-deal-chip-row">${companyFilterMarkup}</div>
+          <div class="study-deal-control-group">
+            <span>Company</span>
+            <div class="study-deal-chip-row">${companyFilterMarkup}</div>
+          </div>
+          <div class="study-deal-control-group">
+            <span>Sort</span>
+            <div class="study-deal-chip-row">${sortMarkup}</div>
+          </div>
           <div class="study-status-legend">${legendMarkup}</div>
         </div>
         <div class="study-deal-table-wrap">
@@ -13341,6 +13384,13 @@ function renderStudyDataCenterOverview() {
   usOverviewRoot.querySelectorAll("[data-study-data-center-company]").forEach((button) => {
     button.addEventListener("click", () => {
       state.studyDataCenterCompany = button.dataset.studyDataCenterCompany || "All";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-study-data-center-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studyDataCenterSort = button.dataset.studyDataCenterSort || "dateDesc";
       render();
     });
   });
