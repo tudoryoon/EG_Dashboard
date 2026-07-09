@@ -1,4 +1,4 @@
-window.semisMemoryCapaData = {
+window.studyMemoryCapaData = {
   updatedAt: "2026-07-09",
   unit: "12-inch wafer starts per month, K WPM",
   scope:

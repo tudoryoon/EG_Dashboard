@@ -70,7 +70,7 @@ const marketRsFinancialsData = window.marketRsFinancialsData ?? {
 };
 const memorySpotData = window.memoryData ?? window.memorySpotData ?? { updatedAt: "", source: {}, cadence: {}, groups: [], dashboards: { featuredKeys: [], basketPanels: [] } };
 const memorySpotHistoryData = window.memoryDataHistoryData ?? window.memorySpotHistoryData ?? null;
-const semisMemoryCapaData = window.semisMemoryCapaData ?? { updatedAt: "", unit: "", scope: "", quarters: [], legend: [], sections: {} };
+const studyMemoryCapaData = window.studyMemoryCapaData ?? { updatedAt: "", unit: "", scope: "", quarters: [], legend: [], sections: {} };
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
@@ -106,13 +106,13 @@ const gpuCloudRuntime = {
 const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing" },
   IndexTrend: { label: "Index Trend" },
-  Study: { label: "Study" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
   Infra: { label: "Infra" },
   Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   DataTrend: { label: "Data Trend" },
+  Study: { label: "Study" },
 };
 
 const bigTechSubtabMeta = {
@@ -138,13 +138,13 @@ const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore", "Cans
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
-  MemoryCapa: { label: "Memory Capa" },
   GPUCloud: { label: "GPU Rental Price" },
 };
 
 const studySubtabMeta = {
   MemoryCap: { label: "Memory Market Cap" },
   DataCenter: { label: "Data Center" },
+  MemoryCapa: { label: "Memory Capa" },
 };
 
 const studyDataCenterSortOptions = [
@@ -1261,19 +1261,19 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
     </section>`;
 }
 
-function renderSemisMemoryCapaOverview() {
+function renderStudyMemoryCapaOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  const quarters = semisMemoryCapaData.quarters ?? [];
-  const sections = semisMemoryCapaData.sections ?? {};
+  const quarters = studyMemoryCapaData.quarters ?? [];
+  const sections = studyMemoryCapaData.sections ?? {};
   if (!quarters.length || !sections.dram) {
     renderPlaceholderOverview("Memory Capa", "Memory capacity roadmap data is not available yet.");
     return;
   }
 
-  const legendMarkup = (semisMemoryCapaData.legend ?? [])
+  const legendMarkup = (studyMemoryCapaData.legend ?? [])
     .map((item) => `<span class="memory-capa-legend-item memory-capa-legend-${escapeHtml(item.tone)}">${escapeHtml(item.label)}</span>`)
     .join("");
   const kpiMarkup = (sections.dram.kpis ?? [])
@@ -1297,13 +1297,13 @@ function renderSemisMemoryCapaOverview() {
             <p>DRAM, NAND, HDD 공급 증설 일정을 분기별로 정리합니다. 이번 버전은 DRAM 우선 완성, NAND/HDD는 틀만 잡아둔 상태입니다.</p>
           </div>
           <div class="us-price-controls">
-            <div class="us-price-updated">Updated ${escapeHtml(semisMemoryCapaData.updatedAt || "-")}</div>
+            <div class="us-price-updated">Updated ${escapeHtml(studyMemoryCapaData.updatedAt || "-")}</div>
           </div>
         </div>
         <div class="study-kpi-grid memory-capa-kpi-grid">${kpiMarkup}</div>
         <div class="market-trend-meta memory-capa-note">
-          <span>${escapeHtml(semisMemoryCapaData.unit || "")}</span>
-          <span>${escapeHtml(semisMemoryCapaData.scope || "")}</span>
+          <span>${escapeHtml(studyMemoryCapaData.unit || "")}</span>
+          <span>${escapeHtml(studyMemoryCapaData.scope || "")}</span>
         </div>
         <div class="memory-capa-legend">${legendMarkup}</div>
         ${sectionMarkup}
@@ -16535,6 +16535,10 @@ function render() {
       renderStudyDataCenterOverview();
       return;
     }
+    if (state.studyView === "MemoryCapa") {
+      renderStudyMemoryCapaOverview();
+      return;
+    }
     renderStudyOverview();
     return;
   }
@@ -16543,10 +16547,6 @@ function render() {
     renderSummary([]);
     if (state.semisView === "MemorySpot") {
       renderMemorySpotOverview();
-      return;
-    }
-    if (state.semisView === "MemoryCapa") {
-      renderSemisMemoryCapaOverview();
       return;
     }
     if (state.semisView === "GPUCloud") {
