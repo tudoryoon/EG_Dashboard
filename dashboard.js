@@ -1154,11 +1154,11 @@ function parseMemoryCapaModelValue(value) {
   return normalized ? Number(normalized[0]) : null;
 }
 
-function renderMemoryCapaModelValue(values, index) {
+function renderMemoryCapaModelValue(values, index, showYoy = true) {
   const value = values?.[index] ?? "-";
   const current = parseMemoryCapaModelValue(value);
   const previous = index > 0 ? parseMemoryCapaModelValue(values?.[index - 1]) : null;
-  let yoyLabel = "YoY 기준";
+  let yoyLabel = index === 0 ? "기준" : "N/A";
   let yoyTone = "base";
   if (Number.isFinite(current) && Number.isFinite(previous) && previous !== 0) {
     const yoy = ((current / previous) - 1) * 100;
@@ -1168,7 +1168,7 @@ function renderMemoryCapaModelValue(values, index) {
   return `
     <td>
       <strong class="memory-capa-model-value">${escapeHtml(value)}</strong>
-      <small class="memory-capa-model-yoy memory-capa-model-yoy-${yoyTone}">${escapeHtml(yoyLabel)}</small>
+      ${showYoy ? `<small class="memory-capa-model-yoy memory-capa-model-yoy-${yoyTone}">${escapeHtml(yoyLabel)}</small>` : ""}
     </td>`;
 }
 
@@ -1184,7 +1184,7 @@ function renderMemoryCapaAnnualModel(section) {
       (row) => `
         <tr class="${row.total ? "memory-capa-model-total" : ""}">
           <th>${escapeHtml(row.label || "-")}</th>
-          ${(row.values ?? []).map((_, index) => renderMemoryCapaModelValue(row.values, index)).join("")}
+          ${(row.values ?? []).map((_, index) => renderMemoryCapaModelValue(row.values, index, model.showYoy !== false)).join("")}
         </tr>`,
     )
     .join("");
