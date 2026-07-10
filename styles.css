@@ -3430,6 +3430,235 @@ h1 {
   font-weight: 850;
 }
 
+.study-capacity-outlook {
+  border-color: #bdcfc5;
+  background: #fbfdfb;
+}
+
+.study-outlook-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.study-outlook-company-row,
+.study-outlook-type-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.study-outlook-company-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--study-company-color) 48%, #d8d8d2);
+  border-radius: 7px;
+  background: var(--study-company-soft);
+  color: var(--study-company-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.study-outlook-company-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--study-company-color);
+}
+
+.study-outlook-company-chip:hover,
+.study-outlook-company-chip:focus-visible {
+  border-color: var(--study-company-color);
+  outline: none;
+}
+
+.study-outlook-company-chip.is-muted {
+  border-color: #deded7;
+  background: #f6f6f2;
+  color: #9b9b94;
+}
+
+.study-outlook-company-chip.is-muted i {
+  background: #bdbdb5;
+}
+
+.study-outlook-type-legend {
+  justify-content: flex-end;
+}
+
+.study-outlook-type-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6f6f67;
+  font-size: 0.65rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.study-outlook-type-key i,
+.study-outlook-value i {
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border: 1.5px solid #6f6f67;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.study-outlook-type-official i,
+.study-outlook-value-official i {
+  border-color: #15803d;
+  background: #22a35a;
+}
+
+.study-outlook-type-reported i,
+.study-outlook-value-reported i {
+  border-color: #1d4ed8;
+  background: #3b82f6;
+}
+
+.study-outlook-type-consensus i,
+.study-outlook-value-consensus i {
+  border-color: #b45309;
+  border-radius: 2px;
+  background: #f59e0b;
+  transform: rotate(45deg);
+}
+
+.study-outlook-type-model i,
+.study-outlook-value-model i {
+  border-color: #787871;
+  background: #fff;
+}
+
+.study-outlook-grid {
+  display: grid;
+  grid-template-columns: minmax(440px, 1.25fr) minmax(470px, 0.75fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.study-outlook-chart-panel {
+  position: relative;
+  min-width: 0;
+  height: 360px;
+  padding: 10px 10px 2px;
+  border: 1px solid #e2e8e3;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.study-outlook-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid #e2e8e3;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.study-outlook-table {
+  width: 100%;
+  min-width: 470px;
+  height: 100%;
+  border-collapse: collapse;
+  color: #20201d;
+  font-size: 0.72rem;
+}
+
+.study-outlook-table th,
+.study-outlook-table td {
+  padding: 9px 6px;
+  border-bottom: 1px solid #ecebe4;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.study-outlook-table thead th {
+  background: #f2f6f3;
+  color: #6f6f67;
+  font-size: 0.64rem;
+  font-weight: 850;
+}
+
+.study-outlook-table th:first-child {
+  text-align: left;
+}
+
+.study-outlook-table tbody tr:last-child th,
+.study-outlook-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.study-outlook-table tbody tr.is-muted {
+  opacity: 0.38;
+}
+
+.study-outlook-table tbody th {
+  min-width: 102px;
+}
+
+.study-outlook-table tbody th .study-build-company-label {
+  margin-right: 7px;
+}
+
+.study-outlook-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.study-outlook-value strong {
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.study-outlook-basis-button {
+  padding: 4px 6px;
+  border: 1px solid #d5d5ce;
+  border-radius: 5px;
+  background: #fff;
+  color: #6f6f67;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.61rem;
+  font-weight: 850;
+}
+
+.study-outlook-basis-button:hover,
+.study-outlook-basis-button:focus-visible {
+  border-color: var(--study-company-color);
+  color: var(--study-company-text);
+  outline: none;
+}
+
+.study-outlook-warning {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid #b45309;
+  background: #fff8e8;
+  color: #5f5141;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.study-outlook-warning strong {
+  color: #92400e;
+  white-space: nowrap;
+}
+
 .study-data-center-summary-grid {
   display: grid;
   grid-template-columns: minmax(300px, 0.8fr) minmax(560px, 1.2fr);
@@ -3964,9 +4193,55 @@ h1 {
   font-size: 0.8rem;
 }
 
+.study-outlook-point-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.study-outlook-point {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e2e2db;
+  border-top: 3px solid var(--study-company-color);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.study-outlook-point > strong {
+  color: #6f6f67;
+  font-size: 0.68rem;
+}
+
+.study-outlook-point > b {
+  color: var(--study-company-text);
+  font-size: 0.9rem;
+}
+
+.study-outlook-point .study-status-pill {
+  padding: 5px 6px;
+  font-size: 0.58rem;
+}
+
+.study-outlook-point p {
+  margin: 0;
+  color: #71717a;
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
 @media (max-width: 1180px) {
-  .study-data-center-summary-grid {
+  .study-data-center-summary-grid,
+  .study-outlook-grid {
     grid-template-columns: 1fr;
+  }
+
+  .study-outlook-chart-panel {
+    height: 330px;
   }
 }
 
@@ -3978,6 +4253,27 @@ h1 {
   .study-summary-head {
     flex-direction: column;
     gap: 6px;
+  }
+
+  .study-outlook-toolbar {
+    flex-direction: column;
+  }
+
+  .study-outlook-type-legend {
+    justify-content: flex-start;
+  }
+
+  .study-outlook-chart-panel {
+    height: 290px;
+  }
+
+  .study-outlook-warning {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .study-outlook-point-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .study-build-chart-panel {

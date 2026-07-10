@@ -18,6 +18,137 @@ window.studyDataCenterDeals = {
     { key: "development", label: "개발/인허가", tone: "amber" },
     { key: "planned", label: "계획/부지선정", tone: "gray" },
   ],
+  capacityOutlook: {
+    updatedAt: "2026-07-10",
+    years: [2026, 2027, 2028, 2029, 2030],
+    metric: "연말 기준 활용 가능·통제할 것으로 예상되는 compute-linked power capacity (GW)",
+    methodology:
+      "회사 공식 발표와 신뢰도 높은 보도·산업 트래커의 공개 수치를 앵커로 사용하고, 중간 연도는 공개 앵커 사이 CAGR 또는 공개된 공급 일정을 반영한 base-case로 추정합니다. 정확한 회사 가이던스가 없는 값은 모델 추정으로 표시하며 실제 가동·전력 인입을 뜻하지 않습니다.",
+    warning:
+      "회사별 공개 범위와 정의가 다릅니다. AMZN·GOOGL·MSFT의 2026 앵커는 북미 owner/operator, 2030 앵커는 Aterio의 미국 self-built+leased 전망입니다. Meta는 더 최신인 글로벌 deploy 목표, OpenAI·Anthropic은 파트너 클라우드에 확보한 컴퓨트가 포함됩니다. OpenAI·Anthropic 용량은 AMZN·GOOGL·MSFT 안에 중복될 수 있으므로 회사 간 수치를 합산하면 안 됩니다.",
+    sourceTypes: [
+      { key: "official", label: "회사 공식 앵커", tone: "green" },
+      { key: "reported", label: "보도·트래커 앵커", tone: "blue" },
+      { key: "consensus", label: "산업 전망·계약 상단", tone: "amber" },
+      { key: "model", label: "보간·모델 추정", tone: "gray" },
+    ],
+    series: [
+      {
+        company: "GOOGL",
+        definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 방향성 전망",
+        calculation:
+          "2026년 Jefferies/Aterio 북미 5.2GW와 Aterio의 2030년 미국 self-built+leased 31GW를 앵커로 두고 2027~2029년을 CAGR 56.3%로 보간했습니다.",
+        values: [
+          { year: 2026, gw: 5.2, type: "reported", basis: "Jefferies/Aterio 북미 operator·owner capacity" },
+          { year: 2027, gw: 8.1, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2028, gw: 12.7, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2029, gw: 19.8, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2030, gw: 31.0, type: "consensus", basis: "Aterio 미국 self-built+leased total 전망" },
+        ],
+        sources: [
+          { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
+          { label: "Aterio · 2030 U.S. outlook", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
+          { label: "Google · India 1GW hub", url: "https://www.googlecloudpresscorner.com/2026-04-28-Google-Breaks-Ground-on-India-AI-Hub%2C-Launching-a-National-Industrial-Ecosystem-Alongside-Indias-Digital-Infrastructure-Milestone" },
+          { label: "Google · multi-GW energy parks", url: "https://blog.google/innovation-and-ai/infrastructure-and-cloud/global-network/new-approach-to-data-center-and-clean-energy-growth/" },
+        ],
+      },
+      {
+        company: "AMZN",
+        definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 방향성 전망",
+        calculation:
+          "2026년 Jefferies/Aterio 북미 10.6GW와 Aterio의 2030년 미국 self-built+leased 36GW를 앵커로 두고 2027~2029년을 CAGR 35.8%로 보간했습니다.",
+        values: [
+          { year: 2026, gw: 10.6, type: "reported", basis: "Jefferies/Aterio 북미 operator·owner capacity" },
+          { year: 2027, gw: 14.4, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2028, gw: 19.5, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2029, gw: 26.5, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2030, gw: 36.0, type: "consensus", basis: "Aterio 미국 self-built+leased total 전망" },
+        ],
+        sources: [
+          { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
+          { label: "Aterio · 2030 U.S. outlook", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
+          { label: "AWS · 2025 capacity additions", url: "https://www.datacenterdynamics.com/en/news/aws-says-it-added-more-data-center-capacity-than-any-other-company-in-2025-including-12gw-in-q4/" },
+          { label: "Amazon · Indiana 2.4GW", url: "https://www.aboutamazon.com/news/company-news/amazon-15-billion-indiana-data-centers" },
+        ],
+      },
+      {
+        company: "META",
+        definition: "Meta가 전 세계에 deploy하겠다고 밝힌 computing infrastructure 기준",
+        calculation:
+          "Reuters가 확인한 내부 메모의 2026년 7GW·2027년 14GW를 그대로 사용했습니다. 이후는 Zuckerberg의 'this decade tens of gigawatts'를 보수적 하단인 20GW로 수치화하고 2028~2030년을 CAGR 12.6%로 연결했습니다.",
+        values: [
+          { year: 2026, gw: 7.0, type: "reported", basis: "Reuters 확인 내부 메모: 2026년 7GW deploy" },
+          { year: 2027, gw: 14.0, type: "reported", basis: "Reuters 확인 내부 메모: 2027년 14GW로 확대" },
+          { year: 2028, gw: 15.8, type: "model", basis: "2027년 앵커와 2030년 보수적 하단 사이 보간" },
+          { year: 2029, gw: 17.8, type: "model", basis: "2027년 앵커와 2030년 보수적 하단 사이 보간" },
+          { year: 2030, gw: 20.0, type: "model", basis: "공식 'tens of gigawatts this decade'의 최소 수치화" },
+        ],
+        sources: [
+          { label: "Reuters · 7GW→14GW memo", url: "https://www.investing.com/news/stock-market-news/exclusivemeta-to-put-ai-chip-into-production-in-september-as-it-looks-to-double-computing-capacity-memo-shows-4783736" },
+          { label: "Reuters · Meta Compute", url: "https://archive.vn/2026.01.13-025505/https%3A/www.reuters.com/technology/meta-build-gigawatt-scale-computing-capacity-under-meta-compute-effort-2026-01-12/" },
+          { label: "Meta · data center capacity", url: "https://about.fb.com/news/2026/04/infrastructure-explained-meta-data-centers/" },
+        ],
+      },
+      {
+        company: "MSFT",
+        definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 방향성 전망",
+        calculation:
+          "2026년 Jefferies/Aterio 북미 5.5GW와 Aterio의 2030년 미국 self-built+leased 16GW를 앵커로 두고 2027~2029년을 CAGR 30.6%로 보간했습니다.",
+        values: [
+          { year: 2026, gw: 5.5, type: "reported", basis: "Jefferies/Aterio 북미 operator·owner capacity" },
+          { year: 2027, gw: 7.2, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2028, gw: 9.4, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2029, gw: 12.3, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2030, gw: 16.0, type: "consensus", basis: "Aterio 미국 self-built+leased total 전망" },
+        ],
+        sources: [
+          { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
+          { label: "Aterio · 2030 U.S. outlook", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
+          { label: "Microsoft · Pecos +2GW", url: "https://blogs.microsoft.com/blog/2026/06/22/powering-the-next-wave-of-ai-expanding-capacity-with-our-new-datacenter-in-pecos/" },
+          { label: "Microsoft · Fairwater 2GW", url: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1" },
+        ],
+      },
+      {
+        company: "OpenAI",
+        definition: "OpenAI가 직접 또는 파트너 데이터센터에 배치할 accelerator power envelope 기준",
+        calculation:
+          "2025년 약 1.9GW available compute에서 2026년 하반기 AMD·NVIDIA 각 최초 1GW와 Broadcom 초기 배치를 반영해 5GW로 추정했습니다. 2029년은 Broadcom 10GW, NVIDIA 최소 10GW, AMD 6GW의 발표 상단을 합산한 26GW이며, 계약 단계와 물리적 사이트 중복 위험 때문에 upper-envelope로 봐야 합니다.",
+        values: [
+          { year: 2026, gw: 5.0, type: "model", basis: "2025년 1.9GW actual + 2026년 각 공급사의 초기 ramp 추정" },
+          { year: 2027, gw: 12.0, type: "model", basis: "AMD·NVIDIA·Broadcom 다년 공급 일정의 base-case ramp" },
+          { year: 2028, gw: 19.0, type: "model", basis: "AMD·NVIDIA·Broadcom 다년 공급 일정의 base-case ramp" },
+          { year: 2029, gw: 26.0, type: "consensus", basis: "발표된 accelerator 계약 10GW+10GW+6GW 상단" },
+          { year: 2030, gw: 26.0, type: "model", basis: "2029년 공개 상단 유지; 추가 확장 규모 미공개" },
+        ],
+        sources: [
+          { label: "OpenAI · available compute", url: "https://cdn.openai.com/pdf/045aa967-ee96-4a09-94ee-3098ddf6db2c/OpenAI-US-House-Select-Cmte-Update-%5B021226%5D.pdf" },
+          { label: "OpenAI · Broadcom 10GW", url: "https://openai.com/index/openai-and-broadcom-announce-strategic-collaboration/" },
+          { label: "OpenAI · NVIDIA 10GW", url: "https://openai.com/index/openai-nvidia-systems-partnership/" },
+          { label: "OpenAI · AMD 6GW", url: "https://openai.com/index/openai-amd-strategic-partnership/" },
+          { label: "OpenAI · >10GW secured", url: "https://openai.com/index/building-the-compute-infrastructure-for-the-intelligence-age/" },
+        ],
+      },
+      {
+        company: "Anthropic",
+        definition: "AWS·Google·SpaceX 등 파트너 클라우드에서 Claude 전용으로 확보한 컴퓨트 기준",
+        calculation:
+          "2026년은 AWS nearly 1GW, 기존 Google TPU well over 1GW, SpaceX 0.3GW를 보수적으로 2.3GW로 합산했습니다. 이후 AWS up to 5GW와 Google/Broadcom 5GW 계약을 단계적으로 반영해 2030년 10.3GW 계약 상단에 도달하는 경로로 추정했습니다. Microsoft $30B와 Fluidstack은 GW 미공개라 제외했습니다.",
+        values: [
+          { year: 2026, gw: 2.3, type: "official", basis: "AWS 약 1GW + Google 1GW 이상 + SpaceX 0.3GW" },
+          { year: 2027, gw: 4.5, type: "model", basis: "Google/Broadcom 5GW 공급 개시와 AWS ramp 반영" },
+          { year: 2028, gw: 6.5, type: "model", basis: "AWS·Google 다년 계약의 단계적 ramp" },
+          { year: 2029, gw: 8.5, type: "model", basis: "AWS·Google 다년 계약의 단계적 ramp" },
+          { year: 2030, gw: 10.3, type: "model", basis: "AWS 5GW + Google 5GW + SpaceX 0.3GW 계약 상단" },
+        ],
+        sources: [
+          { label: "Anthropic · AWS up to 5GW", url: "https://www.anthropic.com/news/anthropic-amazon-compute" },
+          { label: "Anthropic · Google/Broadcom 5GW", url: "https://www.anthropic.com/news/google-broadcom-partnership-compute" },
+          { label: "Anthropic · SpaceX 0.3GW", url: "https://www.anthropic.com/news/higher-limits-spacex" },
+          { label: "Anthropic · 2026 Google TPU", url: "https://www.anthropic.com/news/expanding-our-use-of-google-cloud-tpus-and-services" },
+        ],
+      },
+    ],
+  },
   buildSchedule: {
     years: [2025, 2026, 2027, 2028],
     metric: "공개 수치 기반 신규 가동 critical IT / compute capacity (GW)",

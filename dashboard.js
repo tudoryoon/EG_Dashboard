@@ -13734,6 +13734,212 @@ function renderStudyDataCenterSourceLinks(sources) {
     .join("");
 }
 
+function getStudyDataCenterOutlookTypeMeta(typeKey) {
+  return (
+    (studyDataCenterDeals.capacityOutlook?.sourceTypes ?? []).find((item) => item.key === typeKey) ?? {
+      key: typeKey || "model",
+      label: typeKey || "모델 추정",
+      tone: "gray",
+    }
+  );
+}
+
+function formatStudyOutlookGw(value) {
+  return Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)} GW` : "-";
+}
+
+function renderStudyDataCenterCapacityOutlook() {
+  const outlook = studyDataCenterDeals.capacityOutlook ?? {};
+  const years = Array.isArray(outlook.years) ? outlook.years : [];
+  const series = Array.isArray(outlook.series) ? outlook.series : [];
+  if (!years.length || !series.length) {
+    return "";
+  }
+  const companyChipMarkup = series
+    .map((item) => {
+      const company = getStudyDealCompanyMeta(item.company);
+      return `
+        <button
+          type="button"
+          class="study-outlook-company-chip"
+          style="${getStudyDealCompanyStyle(item.company)}"
+          data-study-outlook-company="${escapeHtml(item.company)}"
+          aria-pressed="true"
+        >
+          <i></i>${escapeHtml(company.label)}
+        </button>`;
+    })
+    .join("");
+  const sourceTypeMarkup = (outlook.sourceTypes ?? [])
+    .map(
+      (item) => `
+        <span class="study-outlook-type-key study-outlook-type-${escapeHtml(item.key)}">
+          <i></i>${escapeHtml(item.label)}
+        </span>`,
+    )
+    .join("");
+  const tableHeaderMarkup = years.map((year) => `<th>${escapeHtml(year)}E</th>`).join("");
+  const tableRowMarkup = series
+    .map((item) => {
+      const company = getStudyDealCompanyMeta(item.company);
+      const valueMarkup = years
+        .map((year) => {
+          const point = (item.values ?? []).find((value) => Number(value.year) === Number(year));
+          const typeMeta = getStudyDataCenterOutlookTypeMeta(point?.type);
+          return `
+            <td title="${escapeHtml(typeMeta.label)} · ${escapeHtml(point?.basis || "")}">
+              <span class="study-outlook-value study-outlook-value-${escapeHtml(point?.type || "model")}">
+                <i></i><strong>${point ? Number(point.gw).toFixed(1) : "-"}</strong>
+              </span>
+            </td>`;
+        })
+        .join("");
+      return `
+        <tr data-study-outlook-row="${escapeHtml(item.company)}">
+          <th style="${getStudyDealCompanyStyle(item.company)}">
+            <span class="study-build-company-label"><i></i>${escapeHtml(company.label)}</span>
+            <button type="button" class="study-outlook-basis-button" data-study-outlook-detail="${escapeHtml(item.company)}">
+              근거
+            </button>
+          </th>
+          ${valueMarkup}
+        </tr>`;
+    })
+    .join("");
+  return `
+    <section class="study-data-center-summary study-capacity-outlook">
+      <div class="study-summary-head">
+        <div>
+          <h3>총 컴퓨팅 용량 로드맵</h3>
+          <p>${escapeHtml(outlook.metric || "")}</p>
+        </div>
+        <span>2026~2030 · 회사별 비합산</span>
+      </div>
+      <div class="study-outlook-toolbar">
+        <div class="study-outlook-company-row" aria-label="회사 표시 선택">${companyChipMarkup}</div>
+        <div class="study-outlook-type-legend">${sourceTypeMarkup}</div>
+      </div>
+      <div class="study-outlook-grid">
+        <div class="study-outlook-chart-panel">
+          <canvas data-study-chart="data-center-capacity-outlook"></canvas>
+        </div>
+        <div class="study-outlook-table-wrap">
+          <table class="study-outlook-table">
+            <thead>
+              <tr><th>Company / GW</th>${tableHeaderMarkup}</tr>
+            </thead>
+            <tbody>${tableRowMarkup}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="study-outlook-warning">
+        <strong>읽는 법</strong>
+        <span>${escapeHtml(outlook.warning || "")}</span>
+      </div>
+      <div class="market-trend-meta study-build-methodology">
+        <span>${escapeHtml(outlook.methodology || "")}</span>
+        <span>실선 구간은 공개 앵커를 연결하고, 점선 구간은 보간·모델 추정이 포함됐음을 뜻합니다.</span>
+      </div>
+    </section>`;
+}
+
+function createStudyDataCenterCapacityOutlookChart(canvas) {
+  const outlook = studyDataCenterDeals.capacityOutlook ?? {};
+  const years = Array.isArray(outlook.years) ? outlook.years : [];
+  const series = Array.isArray(outlook.series) ? outlook.series : [];
+  if (!canvas || typeof Chart === "undefined" || !years.length || !series.length) {
+    return null;
+  }
+  const datasets = series.map((item) => {
+    const company = getStudyDealCompanyMeta(item.company);
+    const points = years.map((year) => (item.values ?? []).find((value) => Number(value.year) === Number(year)) ?? null);
+    const types = points.map((point) => point?.type || "model");
+    return {
+      label: company.label,
+      data: points.map((point) => (Number.isFinite(Number(point?.gw)) ? Number(point.gw) : null)),
+      borderColor: company.color,
+      backgroundColor: company.color,
+      borderWidth: 2.25,
+      tension: 0.24,
+      spanGaps: true,
+      companyKey: item.company,
+      points,
+      pointRadius: 4.5,
+      pointHoverRadius: 6.5,
+      pointBorderWidth: 2,
+      pointBorderColor: company.color,
+      pointBackgroundColor: (context) => (types[context.dataIndex] === "model" ? "#fffefb" : company.color),
+      pointStyle: (context) => (types[context.dataIndex] === "consensus" ? "rectRot" : "circle"),
+      segment: {
+        borderDash: (context) =>
+          [types[context.p0DataIndex], types[context.p1DataIndex]].includes("model") ? [6, 4] : undefined,
+      },
+    };
+  });
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: years.map(String), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", axis: "x", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          displayColors: true,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatStudyOutlookGw(context.parsed.y)}`,
+            afterLabel: (context) => {
+              const point = context.dataset.points?.[context.dataIndex];
+              const typeMeta = getStudyDataCenterOutlookTypeMeta(point?.type);
+              return [`${typeMeta.label}`, point?.basis || ""].filter(Boolean);
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#5a5a54", font: { weight: 750 } },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: 40,
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          ticks: { color: "#8d8d86", callback: (value) => `${Number(value).toFixed(0)}GW` },
+          title: { display: true, text: "Year-end capacity roadmap (GW)", color: "#8d8d86" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+  return chart;
+}
+
+function bindStudyDataCenterCapacityOutlookChart(chart) {
+  if (!chart) {
+    return;
+  }
+  usOverviewRoot.querySelectorAll("[data-study-outlook-company]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const companyKey = button.dataset.studyOutlookCompany;
+      const datasetIndex = chart.data.datasets.findIndex((dataset) => dataset.companyKey === companyKey);
+      if (datasetIndex < 0) {
+        return;
+      }
+      const isVisible = chart.isDatasetVisible(datasetIndex);
+      chart.setDatasetVisibility(datasetIndex, !isVisible);
+      button.classList.toggle("is-muted", isVisible);
+      button.setAttribute("aria-pressed", String(!isVisible));
+      usOverviewRoot.querySelector(`[data-study-outlook-row="${companyKey}"]`)?.classList.toggle("is-muted", isVisible);
+      chart.update("none");
+    });
+  });
+}
+
 function renderStudyDataCenterBuildSummary(companyOptions, buildRows) {
   const companyColumns = companyOptions.filter((item) => item.key !== "All");
   const headerMarkup = companyColumns
@@ -13861,6 +14067,57 @@ function createStudyDataCenterBuildChart(canvas, companyOptions, buildRows) {
   charts.push(chart);
 }
 
+function openStudyDataCenterOutlookDetail(companyKey) {
+  const outlook = studyDataCenterDeals.capacityOutlook ?? {};
+  const series = (outlook.series ?? []).find((item) => item.company === companyKey);
+  const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
+  const body = dialog?.querySelector("[data-study-data-center-dialog-body]");
+  if (!series || !dialog || !body) {
+    return;
+  }
+  const company = getStudyDealCompanyMeta(series.company);
+  const pointMarkup = (series.values ?? [])
+    .map((point) => {
+      const typeMeta = getStudyDataCenterOutlookTypeMeta(point.type);
+      return `
+        <article class="study-outlook-point">
+          <strong>${escapeHtml(point.year)}E</strong>
+          <b>${formatStudyOutlookGw(point.gw)}</b>
+          <span class="study-status-pill study-status-${escapeHtml(typeMeta.tone)}">${escapeHtml(typeMeta.label)}</span>
+          <p>${escapeHtml(point.basis || "")}</p>
+        </article>`;
+    })
+    .join("");
+  const latestPoint = (series.values ?? []).at(-1);
+  body.style.cssText = getStudyDealCompanyStyle(series.company);
+  body.innerHTML = `
+    <div class="study-deal-dialog-kicker">
+      <span class="study-company-badge" style="${getStudyDealCompanyStyle(series.company)}">${escapeHtml(company.label)}</span>
+      <span>2026~2030 capacity roadmap</span>
+    </div>
+    <h3>${escapeHtml(company.label)} 총 컴퓨팅 용량 전망</h3>
+    <div class="study-deal-dialog-status">
+      <span class="study-status-pill study-status-amber">2030E</span>
+      <strong>${formatStudyOutlookGw(latestPoint?.gw)}</strong>
+      <small>${escapeHtml(series.definition || "")}</small>
+    </div>
+    <dl class="study-deal-dialog-facts">
+      <div><dt>정의</dt><dd>${escapeHtml(series.definition || "-")}</dd></div>
+      <div><dt>산출 방식</dt><dd>${escapeHtml(series.calculation || "-")}</dd></div>
+      <div><dt>비교 주의</dt><dd>${escapeHtml(outlook.warning || "-")}</dd></div>
+    </dl>
+    <div class="study-outlook-point-list">${pointMarkup}</div>
+    <div class="study-deal-dialog-sources">
+      <span>공식 발표 및 검증 근거</span>
+      <div class="study-source-list">${renderStudyDataCenterSourceLinks(series.sources) || "공개 링크 없음"}</div>
+    </div>`;
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
+}
+
 function openStudyDataCenterDealDetail(dealId) {
   const deal = (studyDataCenterDeals.deals ?? []).find((item) => item.id === dealId);
   const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
@@ -13950,6 +14207,9 @@ function openStudyDataCenterYearDetail(year) {
 
 function bindStudyDataCenterDetails() {
   const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
+  usOverviewRoot.querySelectorAll("[data-study-outlook-detail]").forEach((button) => {
+    button.addEventListener("click", () => openStudyDataCenterOutlookDetail(button.dataset.studyOutlookDetail));
+  });
   usOverviewRoot.querySelectorAll("[data-study-data-center-deal]").forEach((button) => {
     button.addEventListener("click", () => openStudyDataCenterDealDetail(button.dataset.studyDataCenterDeal));
   });
@@ -14086,6 +14346,7 @@ function renderStudyDataCenterOverview() {
             <div class="us-price-updated">Updated ${escapeHtml(studyDataCenterDeals.updatedAt || "-")}</div>
           </div>
         </div>
+        ${renderStudyDataCenterCapacityOutlook()}
         ${renderStudyDataCenterBuildSummary(companyOptions, buildRows)}
         <div class="study-kpi-grid study-data-center-kpi-grid">
           <article class="study-kpi-card">
@@ -14161,6 +14422,10 @@ function renderStudyDataCenterOverview() {
   });
 
   bindStudyDataCenterDetails();
+  const outlookChart = createStudyDataCenterCapacityOutlookChart(
+    usOverviewRoot.querySelector('[data-study-chart="data-center-capacity-outlook"]'),
+  );
+  bindStudyDataCenterCapacityOutlookChart(outlookChart);
   createStudyDataCenterBuildChart(usOverviewRoot.querySelector('[data-study-chart="data-center-build"]'), companyOptions, buildRows);
 }
 
