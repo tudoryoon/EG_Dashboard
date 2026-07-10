@@ -32,20 +32,21 @@ window.studyMemoryCapaData = {
       kpis: [
         { label: "Samsung 2026E", value: "740K", note: "2026-06-04/17 연말 WPM 추정" },
         { label: "SK hynix 2026E", value: "610K", note: "2026-06-04/17 연말 WPM 추정" },
-        { label: "Micron 2026E", value: "365K", note: "2026-06-04 연말 WPM 추정" },
+        { label: "Micron 2026E", value: "365K", note: "2027~2029은 증설 일정 기반 시나리오" },
       ],
       annualModel: {
         title: "연말 DRAM Wafer CAPA 최신 추정",
-        badge: "2026-06 refresh",
+        badge: "2026-07 refresh",
         unit: "K WPM · 2025A는 YoY 기준점",
         years: ["2025A", "2026E", "2027E", "2028E", "2029E"],
         rows: [
           { label: "Samsung", values: ["650", "740", "865", "975", "1,095"] },
           { label: "SK hynix", values: ["545", "610", "710", "760", "860"] },
-          { label: "Micron", values: ["340", "365", "N/D", "N/D", "N/D"] },
+          { label: "Micron", values: ["340", "365", "460", "560", "600*"] },
+          { label: "3사 합계", values: ["1,535", "1,715", "2,035", "2,295", "2,555*"], total: true },
         ],
         note:
-          "Samsung·SK hynix의 2025~2029 시계열은 2026-06-17 DS투자증권, Micron의 2025~2026은 2026-06-04 SK증권 추정입니다. Micron 2027년 이후는 같은 기준의 최신 공개 WPM 시계열을 찾지 못해 임의 연장하지 않았습니다. 회사 공시에는 WPM이 없습니다.",
+          "Samsung·SK hynix는 2026-06-17 DS투자증권 연말 추정입니다. Micron 2025~2026은 2026-06-04 SK증권, 2027~2028은 2026년 6월 공개 증설 모델과 ID1·ID2·Tongluo 일정을 교차 적용했습니다. 2029E 600K(*)는 late-2028 ID2 첫 wafer-out 이후의 완만한 램프를 반영한 대시보드 시나리오이며 회사 공시값이 아닙니다. 3사 합계와 YoY도 같은 시나리오의 산술 합계입니다.",
         sources: [
           {
             label: "2026-06-17 DS Securities",
@@ -56,8 +57,71 @@ window.studyMemoryCapaData = {
             url: "https://www.hankyung.com/koreamarket/consensus/pdf/2026-06-0397aa4d7f1d9c63edb010f68c702867",
           },
           {
+            label: "2026-06 DRAM capacity model",
+            url: "https://log.eurekapu.com/memory-makers/dram-fab-capacity/",
+          },
+          {
+            label: "2026-06-24 Micron supply roadmap",
+            url: "https://investors.micron.com/static-files/2354ecda-77a0-4ddd-8462-a631eb491356",
+          },
+          {
             label: "2026-06-29 SEMI 300mm Outlook",
             url: "https://www.semi.org/en/products-services/market-data/300mm-fab-outlook",
+          },
+        ],
+      },
+      hbmAllocation: {
+        title: "HBM Wafer Allocation Estimate",
+        badge: "Front-end wafer mix",
+        unit: "HBM용 WPM 범위 / 회사 DRAM CAPA 대비 비중",
+        years: ["2026E", "2027E", "2028E", "2029E"],
+        rows: [
+          {
+            label: "Samsung",
+            values: [
+              { wpm: "140-170K", share: "19-23%" },
+              { wpm: "230-250K", share: "27-29%" },
+              { wpm: "300-320K", share: "31-33%" },
+              { wpm: "380-400K", share: "35-37%" },
+            ],
+          },
+          {
+            label: "SK hynix",
+            values: [
+              { wpm: "160-180K", share: "26-30%" },
+              { wpm: "210-230K", share: "30-32%" },
+              { wpm: "250-270K", share: "33-36%" },
+              { wpm: "310-330K", share: "36-38%" },
+            ],
+          },
+          {
+            label: "Micron",
+            values: [
+              { wpm: "80-90K", share: "22-25%" },
+              { wpm: "100-110K", share: "22-24%" },
+              { wpm: "120-130K", share: "21-23%" },
+              { wpm: "N/D", share: "N/D" },
+            ],
+          },
+        ],
+        note:
+          "HBM 완제품 출하량이나 TSV·패키징 CAPA가 아니라 HBM core die 생산에 배정되는 DRAM 전공정 wafer input 추정입니다. Samsung·SK hynix는 DS투자증권의 2026-06-17 HBM/Non-HBM 연말 막대와 합산 비중을 범위로 재구성했고, Micron은 2026년 6월 공개 capacity model을 대시보드 총 CAPA 분모에 맞춰 범위화했습니다. 서로 집계 기준이 달라 단일 정밀값 대신 범위로 봐야 합니다.",
+        sources: [
+          {
+            label: "2026-06-17 DS Securities",
+            url: "https://file.alphasquare.co.kr/media/pdfs/market-report/%EB%B0%98%EB%8F%84%EC%B2%B4Higher%2C20260617DS%ED%88%AC%EC%9E%90%EC%A6%9D%EA%B6%8C.pdf",
+          },
+          {
+            label: "2026-06 DRAM/HBM capacity model",
+            url: "https://log.eurekapu.com/memory-makers/dram-fab-capacity/",
+          },
+          {
+            label: "2026-05-13 TrendForce HBM bulletin",
+            url: "https://www.trendforce.com/research/download/RP260513PF3",
+          },
+          {
+            label: "2026-06-24 Micron supply roadmap",
+            url: "https://investors.micron.com/static-files/2354ecda-77a0-4ddd-8462-a631eb491356",
           },
         ],
       },

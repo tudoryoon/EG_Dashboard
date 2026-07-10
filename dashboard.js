@@ -328,6 +328,7 @@ const state = {
   sort: "marketCapDesc",
   m7PriceRange: "3y",
   studyView: "MemoryCap",
+  studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
@@ -1214,6 +1215,56 @@ function renderMemoryCapaAnnualModel(section) {
     </div>`;
 }
 
+function renderMemoryCapaHbmAllocation(section) {
+  const model = section?.hbmAllocation;
+  if (!model?.rows?.length || !model?.years?.length) {
+    return "";
+  }
+
+  const yearHeadMarkup = model.years.map((year) => `<th>${escapeHtml(year)}</th>`).join("");
+  const rowMarkup = model.rows
+    .map(
+      (row) => `
+        <tr>
+          <th>${escapeHtml(row.label || "-")}</th>
+          ${(row.values ?? [])
+            .map(
+              (value) => `
+                <td>
+                  <strong class="memory-capa-hbm-wpm">${escapeHtml(value?.wpm || "-")}</strong>
+                  <small class="memory-capa-hbm-share">${escapeHtml(value?.share === "N/D" ? "비중 N/D" : `DRAM 중 ${value?.share || "-"}`)}</small>
+                </td>`,
+            )
+            .join("")}
+        </tr>`,
+    )
+    .join("");
+  const sourceMarkup = renderMemoryCapaSourceLinks(model.sources);
+
+  return `
+    <div class="memory-capa-model memory-capa-hbm-model">
+      <div class="memory-capa-model-head">
+        <div>
+          <strong>${escapeHtml(model.title || "HBM wafer allocation")}</strong>
+          <span>${escapeHtml(model.unit || "")}</span>
+        </div>
+        <span class="memory-capa-model-badge memory-capa-hbm-badge">${escapeHtml(model.badge || "Estimate")}</span>
+      </div>
+      <div class="memory-capa-model-table-wrap">
+        <table class="memory-capa-model-table memory-capa-hbm-table">
+          <thead>
+            <tr><th>회사</th>${yearHeadMarkup}</tr>
+          </thead>
+          <tbody>${rowMarkup}</tbody>
+        </table>
+      </div>
+      <div class="memory-capa-model-note">
+        <span>${escapeHtml(model.note || "")}</span>
+        <div class="study-source-list memory-capa-source-list">${sourceMarkup}</div>
+      </div>
+    </div>`;
+}
+
 function renderMemoryCapaCompanyRows(sectionKey, section, quarters) {
   return (section?.companyRows ?? [])
     .map((row, rowIndex) => {
@@ -1308,6 +1359,7 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
   const rowMarkup = usesCompanyRows ? renderMemoryCapaCompanyRows(sectionKey, section, quarters) : renderMemoryCapaRows(section, quarters);
   const isPlaceholder = !rowMarkup.trim();
   const annualModelMarkup = renderMemoryCapaAnnualModel(section);
+  const hbmAllocationMarkup = renderMemoryCapaHbmAllocation(section);
   const metricNoteMarkup = section?.metricNote
     ? `<div class="memory-capa-metric-note">${escapeHtml(section.metricNote)}</div>`
     : "";
@@ -1329,6 +1381,7 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
         </div>
       </div>
       ${annualModelMarkup}
+      ${hbmAllocationMarkup}
       ${metricNoteMarkup}
       <div class="memory-capa-table-wrap">
         <table class="memory-capa-table${usesCompanyRows ? " memory-capa-table-compact" : ""}">
@@ -1417,6 +1470,19 @@ function bindMemoryCapaCellDetails() {
   });
 }
 
+function bindMemoryCapaSectionTabs() {
+  usOverviewRoot.querySelectorAll("[data-memory-capa-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextSection = button.dataset.memoryCapaView;
+      if (!studyMemoryCapaData.sections?.[nextSection] || nextSection === state.studyMemoryCapaSection) {
+        return;
+      }
+      state.studyMemoryCapaSection = nextSection;
+      renderStudyMemoryCapaOverview();
+    });
+  });
+}
+
 function renderStudyMemoryCapaOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -1429,10 +1495,18 @@ function renderStudyMemoryCapaOverview() {
     return;
   }
 
+  const sectionOptions = [
+    { key: "dram", label: "DRAM" },
+    { key: "nand", label: "NAND" },
+    { key: "hdd", label: "HDD" },
+  ];
+  const activeSectionKey = sections[state.studyMemoryCapaSection] ? state.studyMemoryCapaSection : "dram";
+  const activeSection = sections[activeSectionKey];
+
   const legendMarkup = (studyMemoryCapaData.legend ?? [])
     .map((item) => `<span class="memory-capa-legend-item memory-capa-legend-${escapeHtml(item.tone)}">${escapeHtml(item.label)}</span>`)
     .join("");
-  const kpiMarkup = (sections.dram.kpis ?? [])
+  const kpiMarkup = (activeSection?.kpis ?? [])
     .map(
       (item, index) => `
         <article class="study-kpi-card${index === 1 ? " study-kpi-card-green" : ""}">
@@ -1442,7 +1516,20 @@ function renderStudyMemoryCapaOverview() {
         </article>`,
     )
     .join("");
-  const sectionMarkup = ["dram", "nand", "hdd"].map((key) => renderMemoryCapaSection(key, sections[key], quarters)).join("");
+  const kpiGridMarkup = kpiMarkup ? `<div class="study-kpi-grid memory-capa-kpi-grid">${kpiMarkup}</div>` : "";
+  const sectionTabMarkup = sectionOptions
+    .map(
+      (option) => `
+        <button
+          type="button"
+          class="memory-capa-subtab${option.key === activeSectionKey ? " active" : ""}"
+          data-memory-capa-view="${escapeHtml(option.key)}"
+          role="tab"
+          aria-selected="${option.key === activeSectionKey ? "true" : "false"}"
+        >${escapeHtml(option.label)}</button>`,
+    )
+    .join("");
+  const sectionMarkup = renderMemoryCapaSection(activeSectionKey, activeSection, quarters);
 
   usOverviewRoot.innerHTML = `
     <section class="market-overview study-overview memory-capa-overview">
@@ -1456,7 +1543,10 @@ function renderStudyMemoryCapaOverview() {
             <div class="us-price-updated">Updated ${escapeHtml(studyMemoryCapaData.updatedAt || "-")}</div>
           </div>
         </div>
-        <div class="study-kpi-grid memory-capa-kpi-grid">${kpiMarkup}</div>
+        <div class="memory-capa-subtabs" role="tablist" aria-label="Memory capacity category">
+          ${sectionTabMarkup}
+        </div>
+        ${kpiGridMarkup}
         <div class="market-trend-meta memory-capa-note">
           <span>${escapeHtml(studyMemoryCapaData.unit || "")}</span>
           <span>${escapeHtml(studyMemoryCapaData.scope || "")}</span>
@@ -1473,6 +1563,7 @@ function renderStudyMemoryCapaOverview() {
       <div class="memory-capa-dialog-body" data-memory-capa-dialog-body></div>
     </dialog>
   `;
+  bindMemoryCapaSectionTabs();
   bindMemoryCapaCellDetails();
 }
 

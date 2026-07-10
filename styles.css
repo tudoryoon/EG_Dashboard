@@ -4009,6 +4009,43 @@ h1 {
   max-width: 100%;
 }
 
+.memory-capa-subtabs {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 3px;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #f6f4ec;
+}
+
+.memory-capa-subtab {
+  min-width: 92px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #6f6f67;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.memory-capa-subtab:hover,
+.memory-capa-subtab:focus-visible {
+  background: #fff;
+  color: #20201d;
+  outline: none;
+}
+
+.memory-capa-subtab.active {
+  background: #20201d;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(32, 32, 29, 0.14);
+}
+
 .memory-capa-legend {
   display: flex;
   flex-wrap: wrap;
@@ -4209,19 +4246,58 @@ h1 {
 .memory-capa-model-note {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
+  flex-direction: column;
+  gap: 7px;
   margin-top: 7px;
   line-height: 1.45;
 }
 
 .memory-capa-model-note > span {
-  max-width: 900px;
+  max-width: 1100px;
 }
 
 .memory-capa-model-note .memory-capa-source-list {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   margin-top: 0;
+}
+
+.memory-capa-hbm-model {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5df;
+}
+
+.memory-capa-hbm-badge {
+  border-color: #9fd2b5;
+  background: #eaf8ef;
+  color: #166534 !important;
+}
+
+.memory-capa-hbm-table {
+  min-width: 760px;
+}
+
+.memory-capa-hbm-table td {
+  background: #fbfdfb;
+}
+
+.memory-capa-hbm-wpm,
+.memory-capa-hbm-share {
+  display: block;
+}
+
+.memory-capa-hbm-wpm {
+  color: #20201d;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.memory-capa-hbm-share {
+  margin-top: 4px;
+  color: #0f766e;
+  font-size: 0.66rem;
+  font-weight: 850;
+  line-height: 1.2;
 }
 
 .memory-capa-metric-note {
@@ -4569,12 +4645,19 @@ h1 {
     flex-direction: column;
   }
 
-  .memory-capa-model-note {
-    flex-direction: column;
-  }
-
   .memory-capa-model-note .memory-capa-source-list {
     margin-top: 2px;
+  }
+
+  .memory-capa-subtabs {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .memory-capa-subtab {
+    min-width: 0;
+    padding-inline: 10px;
   }
 }
 
