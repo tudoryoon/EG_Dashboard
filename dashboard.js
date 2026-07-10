@@ -1149,6 +1149,29 @@ function renderMemoryCapaSourceLinks(sources) {
     .join("");
 }
 
+function parseMemoryCapaModelValue(value) {
+  const normalized = String(value ?? "").replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  return normalized ? Number(normalized[0]) : null;
+}
+
+function renderMemoryCapaModelValue(values, index) {
+  const value = values?.[index] ?? "-";
+  const current = parseMemoryCapaModelValue(value);
+  const previous = index > 0 ? parseMemoryCapaModelValue(values?.[index - 1]) : null;
+  let yoyLabel = "YoY 기준";
+  let yoyTone = "base";
+  if (Number.isFinite(current) && Number.isFinite(previous) && previous !== 0) {
+    const yoy = ((current / previous) - 1) * 100;
+    yoyLabel = `YoY ${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}%`;
+    yoyTone = yoy > 0.05 ? "positive" : yoy < -0.05 ? "negative" : "flat";
+  }
+  return `
+    <td>
+      <strong class="memory-capa-model-value">${escapeHtml(value)}</strong>
+      <small class="memory-capa-model-yoy memory-capa-model-yoy-${yoyTone}">${escapeHtml(yoyLabel)}</small>
+    </td>`;
+}
+
 function renderMemoryCapaAnnualModel(section) {
   const model = section?.annualModel;
   if (!model?.rows?.length || !model?.years?.length) {
@@ -1161,7 +1184,7 @@ function renderMemoryCapaAnnualModel(section) {
       (row) => `
         <tr class="${row.total ? "memory-capa-model-total" : ""}">
           <th>${escapeHtml(row.label || "-")}</th>
-          ${(row.values ?? []).map((value) => `<td>${escapeHtml(value ?? "-")}</td>`).join("")}
+          ${(row.values ?? []).map((_, index) => renderMemoryCapaModelValue(row.values, index)).join("")}
         </tr>`,
     )
     .join("");
@@ -1191,9 +1214,9 @@ function renderMemoryCapaAnnualModel(section) {
     </div>`;
 }
 
-function renderMemoryCapaCompanyRows(section, quarters) {
+function renderMemoryCapaCompanyRows(sectionKey, section, quarters) {
   return (section?.companyRows ?? [])
-    .map((row) => {
+    .map((row, rowIndex) => {
       const cellMarkup = (quarters ?? [])
         .map((quarter) => {
           const cell = row.cells?.[quarter.key];
@@ -1202,9 +1225,19 @@ function renderMemoryCapaCompanyRows(section, quarters) {
           }
           const tooltip = [quarter.year, quarter.label, row.company, cell.value, cell.delta, cell.detail].filter(Boolean).join(" · ");
           return `
-            <td class="memory-capa-quarter-cell memory-capa-${escapeHtml(cell.status || "planned")}" title="${escapeHtml(tooltip)}">
-              <strong>${escapeHtml(cell.value || "")}</strong>
-              <small>${escapeHtml(cell.delta || "")}</small>
+            <td class="memory-capa-quarter-cell memory-capa-clickable memory-capa-${escapeHtml(cell.status || "planned")}" title="${escapeHtml(tooltip)}">
+              <button
+                type="button"
+                class="memory-capa-cell-button"
+                data-memory-capa-section="${escapeHtml(sectionKey)}"
+                data-memory-capa-row="${rowIndex}"
+                data-memory-capa-quarter="${escapeHtml(quarter.key)}"
+                aria-label="${escapeHtml(`${row.company} ${quarter.year} ${quarter.label} ${cell.value || ""} 근거 보기`)}"
+              >
+                <strong>${escapeHtml(cell.value || "")}</strong>
+                <small>${escapeHtml(cell.delta || "")}</small>
+                <span class="memory-capa-cell-indicator" aria-hidden="true">ⓘ</span>
+              </button>
             </td>`;
         })
         .join("");
@@ -1272,7 +1305,7 @@ function renderMemoryCapaRows(section, quarters) {
 function renderMemoryCapaSection(sectionKey, section, quarters) {
   const usesCompanyRows = Boolean(section?.companyRows?.length);
   const quarterHeader = (quarters ?? []).map((quarter) => `<th>${escapeHtml(quarter.label)}</th>`).join("");
-  const rowMarkup = usesCompanyRows ? renderMemoryCapaCompanyRows(section, quarters) : renderMemoryCapaRows(section, quarters);
+  const rowMarkup = usesCompanyRows ? renderMemoryCapaCompanyRows(sectionKey, section, quarters) : renderMemoryCapaRows(section, quarters);
   const isPlaceholder = !rowMarkup.trim();
   const annualModelMarkup = renderMemoryCapaAnnualModel(section);
   const metricNoteMarkup = section?.metricNote
@@ -1310,6 +1343,78 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
         </table>
       </div>
     </section>`;
+}
+
+function openMemoryCapaCellDetail(sectionKey, rowIndex, quarterKey) {
+  const section = studyMemoryCapaData.sections?.[sectionKey];
+  const row = section?.companyRows?.[rowIndex];
+  const cell = row?.cells?.[quarterKey];
+  const quarter = studyMemoryCapaData.quarters?.find((item) => item.key === quarterKey);
+  const dialog = usOverviewRoot.querySelector("[data-memory-capa-dialog]");
+  const body = dialog?.querySelector("[data-memory-capa-dialog-body]");
+  if (!dialog || !body || !row || !cell || !quarter) {
+    return;
+  }
+
+  const sources = Array.isArray(cell.sourceIndexes)
+    ? cell.sourceIndexes.map((index) => row.sources?.[index]).filter(Boolean)
+    : (row.sources ?? []);
+  const sourceMarkup = renderMemoryCapaSourceLinks(sources);
+  const sourceCaption = Array.isArray(cell.sourceIndexes) ? "이 수치의 직접 근거" : "행 단위 검증 자료";
+  body.innerHTML = `
+    <div class="memory-capa-dialog-period">${escapeHtml(`${quarter.year} ${quarter.label}`)}</div>
+    <h3>${escapeHtml(row.company || "-")}</h3>
+    <div class="memory-capa-dialog-value">
+      <strong>${escapeHtml(cell.value || "-")}</strong>
+      <span>${escapeHtml(cell.delta || "")}</span>
+    </div>
+    <dl class="memory-capa-dialog-facts">
+      <div>
+        <dt>대상</dt>
+        <dd>${escapeHtml(row.scope || "-")}</dd>
+      </div>
+      <div>
+        <dt>수치 해석</dt>
+        <dd>${escapeHtml(cell.detail || "세부 설명이 없습니다.")}</dd>
+      </div>
+      <div>
+        <dt>산정 기준</dt>
+        <dd>${escapeHtml(cell.basis || `${row.confidence || "공개자료"} 기반 일정·CAPA 추정`)}</dd>
+      </div>
+      <div>
+        <dt>신뢰도</dt>
+        <dd>${escapeHtml(row.confidence || "-")}</dd>
+      </div>
+    </dl>
+    <div class="memory-capa-dialog-sources">
+      <span>${escapeHtml(sourceCaption)}</span>
+      <div class="study-source-list">${sourceMarkup || "직접 연결된 공개 링크 없음"}</div>
+    </div>`;
+
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
+}
+
+function bindMemoryCapaCellDetails() {
+  const dialog = usOverviewRoot.querySelector("[data-memory-capa-dialog]");
+  usOverviewRoot.querySelectorAll("[data-memory-capa-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openMemoryCapaCellDetail(
+        button.dataset.memoryCapaSection,
+        Number(button.dataset.memoryCapaRow),
+        button.dataset.memoryCapaQuarter,
+      );
+    });
+  });
+  dialog?.querySelector("[data-memory-capa-dialog-close]")?.addEventListener("click", () => dialog.close());
+  dialog?.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      dialog.close();
+    }
+  });
 }
 
 function renderStudyMemoryCapaOverview() {
@@ -1360,7 +1465,15 @@ function renderStudyMemoryCapaOverview() {
         ${sectionMarkup}
       </section>
     </section>
+    <dialog class="memory-capa-dialog" data-memory-capa-dialog>
+      <div class="memory-capa-dialog-head">
+        <strong>CAPA 근거 상세</strong>
+        <button type="button" class="memory-capa-dialog-close" data-memory-capa-dialog-close aria-label="닫기">×</button>
+      </div>
+      <div class="memory-capa-dialog-body" data-memory-capa-dialog-body></div>
+    </dialog>
   `;
+  bindMemoryCapaCellDetails();
 }
 
 function calculateEmaSeries(values, period) {

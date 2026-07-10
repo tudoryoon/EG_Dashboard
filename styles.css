@@ -3778,6 +3778,34 @@ h1 {
   font-weight: 900;
 }
 
+.memory-capa-model-value {
+  display: block;
+  color: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.memory-capa-model-yoy {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.64rem;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.memory-capa-model-yoy-base,
+.memory-capa-model-yoy-flat {
+  color: #71717a;
+}
+
+.memory-capa-model-yoy-positive {
+  color: #15803d;
+}
+
+.memory-capa-model-yoy-negative {
+  color: #b42318;
+}
+
 .memory-capa-model-note {
   display: flex;
   align-items: flex-start;
@@ -3943,6 +3971,154 @@ h1 {
 
 .memory-capa-quarter-cell[title] {
   cursor: help;
+}
+
+.memory-capa-clickable {
+  padding: 0 !important;
+}
+
+.memory-capa-cell-button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 15px 10px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.memory-capa-cell-button:hover,
+.memory-capa-cell-button:focus-visible {
+  outline: 2px solid rgba(29, 78, 216, 0.45);
+  outline-offset: -2px;
+}
+
+.memory-capa-cell-indicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color: #64748b;
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.memory-capa-dialog {
+  width: min(560px, calc(100vw - 30px));
+  max-height: min(720px, calc(100vh - 32px));
+  padding: 0;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #fffefb;
+  color: #20201d;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.25);
+}
+
+.memory-capa-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.memory-capa-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e5df;
+  background: #f6f4ec;
+}
+
+.memory-capa-dialog-head strong {
+  font-size: 0.84rem;
+}
+
+.memory-capa-dialog-close {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  place-items: center;
+}
+
+.memory-capa-dialog-body {
+  max-height: calc(100vh - 120px);
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.memory-capa-dialog-period {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.memory-capa-dialog-body h3 {
+  margin: 4px 0 12px;
+  font-size: 1.12rem;
+}
+
+.memory-capa-dialog-value {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 12px 0;
+  border-top: 1px solid #ecebe4;
+  border-bottom: 1px solid #ecebe4;
+}
+
+.memory-capa-dialog-value strong {
+  font-size: 1.45rem;
+}
+
+.memory-capa-dialog-value span {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.memory-capa-dialog-facts {
+  margin: 14px 0 0;
+}
+
+.memory-capa-dialog-facts > div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f0efe9;
+}
+
+.memory-capa-dialog-facts dt {
+  color: #71717a;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.memory-capa-dialog-facts dd {
+  margin: 0;
+  color: #3f3f46;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.memory-capa-dialog-sources {
+  margin-top: 15px;
+}
+
+.memory-capa-dialog-sources > span {
+  color: #71717a;
+  font-size: 0.7rem;
+  font-weight: 850;
 }
 
 .memory-capa-table-compact .memory-capa-quarter-cell strong {
