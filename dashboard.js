@@ -13559,6 +13559,320 @@ function getStudyDealStatusMeta(statusKey) {
   );
 }
 
+function getStudyDealCompanyMeta(companyKey) {
+  return (
+    (studyDataCenterDeals.companies ?? []).find((item) => item.key === companyKey) ?? {
+      key: companyKey || "Unknown",
+      label: companyKey || "Unknown",
+      color: "#20201d",
+      softColor: "#f4f3ed",
+      textColor: "#20201d",
+    }
+  );
+}
+
+function getStudyDealCompanyStyle(companyKey) {
+  const company = getStudyDealCompanyMeta(companyKey);
+  const safeColor = /^#[0-9a-f]{6}$/i.test(company.color || "") ? company.color : "#20201d";
+  const safeSoftColor = /^#[0-9a-f]{6}$/i.test(company.softColor || "") ? company.softColor : "#f4f3ed";
+  const safeTextColor = /^#[0-9a-f]{6}$/i.test(company.textColor || "") ? company.textColor : safeColor;
+  return `--study-company-color:${safeColor};--study-company-soft:${safeSoftColor};--study-company-text:${safeTextColor}`;
+}
+
+function formatStudyCapacityGw(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  if (numeric === 0) {
+    return "-";
+  }
+  return `${numeric >= 1 ? numeric.toFixed(2) : numeric.toFixed(3)}GW`;
+}
+
+function getStudyDataCenterBuildRows() {
+  const schedule = studyDataCenterDeals.buildSchedule ?? {};
+  const years = Array.isArray(schedule.years) ? schedule.years : [];
+  const events = Array.isArray(schedule.events) ? schedule.events : [];
+  const companyKeys = (studyDataCenterDeals.companies ?? []).filter((item) => item.key !== "All").map((item) => item.key);
+  return years.map((year) => {
+    const yearEvents = events.filter((event) => Number(event.year) === Number(year));
+    const companyValues = Object.fromEntries(
+      companyKeys.map((companyKey) => [
+        companyKey,
+        yearEvents
+          .filter((event) => event.company === companyKey)
+          .reduce((sum, event) => sum + (Number(event.gw) || 0), 0),
+      ]),
+    );
+    return {
+      year,
+      events: yearEvents,
+      companyValues,
+      total: Object.values(companyValues).reduce((sum, value) => sum + value, 0),
+      note: schedule.yearNotes?.[year] || "",
+    };
+  });
+}
+
+function getStudyDealInference(deal, statusMeta) {
+  const statusBasis = {
+    operational: "원문에서 운영 시작·가동 중임을 확인해 '운영/가동'으로 분류했습니다.",
+    construction: "원문에서 착공·site work·construction underway 표현을 확인해 '착공/시공'으로 분류했습니다.",
+    contracted: "서명된 lease·PPA·capacity 계약이 있으나 물리적 착공이 확인되지 않아 '계약/전력확보'로 분류했습니다.",
+    development: "부지 개발·인허가·목표 시점은 공개됐지만 착공이 확정되지 않아 '개발/인허가'로 분류했습니다.",
+    planned: "투자·부지 계획만 발표되고 착공 근거가 없어 '계획/부지선정'으로 분류했습니다.",
+  };
+  let capacityBasis = "수치와 일정은 연결된 원문에 공개된 표현을 그대로 사용했습니다.";
+  if (String(deal.capacity || "").includes("미공개")) {
+    capacityBasis = "원문에 정확한 IT load가 없어 임의 환산하지 않았습니다.";
+  } else if (/추정|보도/.test(`${deal.capacity || ""} ${deal.amount || ""} ${deal.sourceNote || ""}`)) {
+    capacityBasis = "보도·추정 수치는 회사 확정 가이던스와 구분해 표시했으며 연도별 확정 합계에는 제한적으로만 반영합니다.";
+  }
+  return `${deal.sourceNote || "공개자료"} 기준. ${statusBasis[deal.status] || `${statusMeta.label} 상태로 정규화했습니다.`} ${capacityBasis}`;
+}
+
+function renderStudyDataCenterSourceLinks(sources) {
+  return (sources ?? [])
+    .map(
+      (source) => `
+        <a class="study-source-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
+          ${escapeHtml(source.label)}
+        </a>`,
+    )
+    .join("");
+}
+
+function renderStudyDataCenterBuildSummary(companyOptions, buildRows) {
+  const companyColumns = companyOptions.filter((item) => item.key !== "All");
+  const headerMarkup = companyColumns
+    .map(
+      (company) => `
+        <th style="${getStudyDealCompanyStyle(company.key)}">
+          <span class="study-build-company-label"><i></i>${escapeHtml(company.label)}</span>
+        </th>`,
+    )
+    .join("");
+  const rowMarkup = buildRows
+    .map(
+      (row) => `
+        <tr>
+          <th>${escapeHtml(row.year)}</th>
+          ${companyColumns
+            .map((company) => `<td>${formatStudyCapacityGw(row.companyValues[company.key])}</td>`)
+            .join("")}
+          <td><strong>${formatStudyCapacityGw(row.total)}</strong></td>
+          <td>
+            <button type="button" class="study-build-basis-button" data-study-data-center-year="${escapeHtml(row.year)}">
+              ${row.events.length}건 근거
+            </button>
+          </td>
+        </tr>`,
+    )
+    .join("");
+  return `
+    <section class="study-data-center-summary">
+      <div class="study-summary-head">
+        <div>
+          <h3>연도별 예정 가동 용량</h3>
+          <p>${escapeHtml(studyDataCenterDeals.buildSchedule?.metric || "")}</p>
+        </div>
+        <span>공개 최소치 · 중복 제거</span>
+      </div>
+      <div class="study-data-center-summary-grid">
+        <div class="study-build-chart-panel">
+          <canvas data-study-chart="data-center-build"></canvas>
+        </div>
+        <div class="study-build-table-wrap">
+          <table class="study-build-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                ${headerMarkup}
+                <th>Total</th>
+                <th>Basis</th>
+              </tr>
+            </thead>
+            <tbody>${rowMarkup}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="market-trend-meta study-build-methodology">
+        <span>${escapeHtml(studyDataCenterDeals.buildSchedule?.methodology || "")}</span>
+        <span>표의 '-'는 0GW가 아니라 해당 연도에 정량 반영할 공개 수치가 없다는 뜻입니다.</span>
+      </div>
+    </section>`;
+}
+
+function createStudyDataCenterBuildChart(canvas, companyOptions, buildRows) {
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+  const companyColumns = companyOptions.filter((item) => item.key !== "All");
+  const labels = buildRows.map((row) => String(row.year));
+  const datasets = companyColumns
+    .map((company) => ({
+      label: company.label,
+      data: buildRows.map((row) => Number((row.companyValues[company.key] || 0).toFixed(3))),
+      backgroundColor: company.color,
+      borderColor: company.color,
+      borderWidth: 0,
+      borderRadius: 3,
+      companyKey: company.key,
+      stack: "capacity",
+    }))
+    .filter((dataset) => dataset.data.some((value) => value > 0));
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#5a5a54", boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: "rectRounded" },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatStudyCapacityGw(context.parsed.y)}`,
+            footer: (items) => {
+              const row = buildRows[items?.[0]?.dataIndex];
+              if (!row?.events?.length) {
+                return "정량 반영 항목 없음";
+              }
+              return row.events.map((event) => `${event.label} ${formatStudyCapacityGw(event.gw)}`);
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { color: "#6f6f67", font: { weight: 700 } },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          ticks: { color: "#8d8d86", callback: (value) => `${Number(value).toFixed(1)}GW` },
+          title: { display: true, text: "New online capacity (GW)", color: "#8d8d86" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function openStudyDataCenterDealDetail(dealId) {
+  const deal = (studyDataCenterDeals.deals ?? []).find((item) => item.id === dealId);
+  const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
+  const body = dialog?.querySelector("[data-study-data-center-dialog-body]");
+  if (!deal || !dialog || !body) {
+    return;
+  }
+  const company = getStudyDealCompanyMeta(deal.company);
+  const statusMeta = getStudyDealStatusMeta(deal.status);
+  const partnerMarkup = (deal.partners ?? []).map((partner) => `<span class="study-partner-pill">${escapeHtml(partner)}</span>`).join("");
+  body.style.cssText = getStudyDealCompanyStyle(deal.company);
+  body.innerHTML = `
+    <div class="study-deal-dialog-kicker">
+      <span class="study-company-badge" style="${getStudyDealCompanyStyle(deal.company)}">${escapeHtml(company.label)}</span>
+      <span>${escapeHtml(deal.date || "-")}</span>
+    </div>
+    <h3>${escapeHtml(deal.title || "-")}</h3>
+    <div class="study-deal-dialog-status">
+      <span class="study-status-pill study-status-${escapeHtml(statusMeta.tone)}">${escapeHtml(statusMeta.label)}</span>
+      <strong>${escapeHtml(deal.capacity || "-")}</strong>
+      <small>${escapeHtml(deal.amount || "-")}</small>
+    </div>
+    <dl class="study-deal-dialog-facts">
+      <div><dt>위치</dt><dd>${escapeHtml(deal.location || "-")}</dd></div>
+      <div><dt>파트너</dt><dd><div class="study-partner-list">${partnerMarkup || "-"}</div></dd></div>
+      <div><dt>착공·가동 판단</dt><dd>${escapeHtml(deal.construction || "-")}</dd></div>
+      <div><dt>형태</dt><dd>${escapeHtml(deal.dcType || "-")}</dd></div>
+      <div><dt>전력·장비</dt><dd>${escapeHtml(deal.equipment || "-")}</dd></div>
+      <div><dt>추론·정규화 기준</dt><dd>${escapeHtml(getStudyDealInference(deal, statusMeta))}</dd></div>
+    </dl>
+    <div class="study-deal-dialog-sources">
+      <span>원문 및 검증 자료</span>
+      <div class="study-source-list">${renderStudyDataCenterSourceLinks(deal.sources) || "공개 링크 없음"}</div>
+    </div>`;
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
+}
+
+function openStudyDataCenterYearDetail(year) {
+  const buildRow = getStudyDataCenterBuildRows().find((row) => Number(row.year) === Number(year));
+  const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
+  const body = dialog?.querySelector("[data-study-data-center-dialog-body]");
+  if (!buildRow || !dialog || !body) {
+    return;
+  }
+  const eventMarkup = buildRow.events.length
+    ? buildRow.events
+        .map((event) => {
+          const company = getStudyDealCompanyMeta(event.company);
+          const dealSources = event.dealIds.flatMap((dealId) => {
+            const deal = (studyDataCenterDeals.deals ?? []).find((item) => item.id === dealId);
+            return deal?.sources ?? [];
+          });
+          return `
+            <article class="study-build-event" style="${getStudyDealCompanyStyle(event.company)}">
+              <div>
+                <span class="study-company-badge" style="${getStudyDealCompanyStyle(event.company)}">${escapeHtml(company.label)}</span>
+                <strong>${escapeHtml(event.label)}</strong>
+                <b>${formatStudyCapacityGw(event.gw)}</b>
+              </div>
+              <p>${escapeHtml(event.note || "")}</p>
+              <small>${escapeHtml(event.confidence || "")}</small>
+              <div class="study-source-list">${renderStudyDataCenterSourceLinks(dealSources)}</div>
+            </article>`;
+        })
+        .join("")
+    : '<p class="study-build-empty">정량 반영할 공개 GW가 없습니다.</p>';
+  body.removeAttribute("style");
+  body.innerHTML = `
+    <div class="study-deal-dialog-kicker"><span>${escapeHtml(year)} build schedule</span></div>
+    <h3>연도별 예정 가동 용량 · ${formatStudyCapacityGw(buildRow.total)}</h3>
+    <p class="study-build-year-note">${escapeHtml(buildRow.note || "")}</p>
+    <div class="study-build-event-list">${eventMarkup}</div>
+    <div class="study-deal-dialog-sources">
+      <span>집계 방법</span>
+      <p>${escapeHtml(studyDataCenterDeals.buildSchedule?.methodology || "")}</p>
+    </div>`;
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
+}
+
+function bindStudyDataCenterDetails() {
+  const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
+  usOverviewRoot.querySelectorAll("[data-study-data-center-deal]").forEach((button) => {
+    button.addEventListener("click", () => openStudyDataCenterDealDetail(button.dataset.studyDataCenterDeal));
+  });
+  usOverviewRoot.querySelectorAll("[data-study-data-center-year]").forEach((button) => {
+    button.addEventListener("click", () => openStudyDataCenterYearDetail(button.dataset.studyDataCenterYear));
+  });
+  dialog?.querySelector("[data-study-data-center-dialog-close]")?.addEventListener("click", () => dialog.close());
+  dialog?.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      dialog.close();
+    }
+  });
+}
+
 function renderStudyDataCenterOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -13573,6 +13887,8 @@ function renderStudyDataCenterOverview() {
   const companyOptions = studyDataCenterDeals.companies?.length
     ? studyDataCenterDeals.companies
     : [{ key: "All", label: "All" }, ...Array.from(new Set(allDeals.map((deal) => deal.company))).map((key) => ({ key, label: key }))];
+  const buildRows = getStudyDataCenterBuildRows();
+  const scheduledCapacityTotal = buildRows.reduce((sum, row) => sum + row.total, 0);
   const activeCompany = companyOptions.some((item) => item.key === state.studyDataCenterCompany) ? state.studyDataCenterCompany : "All";
   state.studyDataCenterCompany = activeCompany;
   const filteredDeals = activeCompany === "All" ? allDeals : allDeals.filter((deal) => deal.company === activeCompany);
@@ -13586,14 +13902,13 @@ function renderStudyDataCenterOverview() {
   });
   const liveCount = allDeals.filter((deal) => deal.status === "operational").length;
   const constructionCount = allDeals.filter((deal) => deal.status === "construction").length;
-  const disclosedCapacityCount = allDeals.filter((deal) => deal.capacity && !String(deal.capacity).includes("미공개")).length;
-  const disclosedAmountCount = allDeals.filter((deal) => deal.amount && !String(deal.amount).includes("미공개")).length;
   const companyFilterMarkup = companyOptions
     .map(
       (company) => `
         <button
           type="button"
-          class="study-deal-chip${activeCompany === company.key ? " active" : ""}"
+          class="study-deal-chip study-company-chip${activeCompany === company.key ? " active" : ""}"
+          style="${getStudyDealCompanyStyle(company.key)}"
           data-study-data-center-company="${escapeHtml(company.key)}"
         >
           ${escapeHtml(company.label)}
@@ -13622,14 +13937,7 @@ function renderStudyDataCenterOverview() {
       const partnerMarkup = (deal.partners ?? [])
         .map((partner) => `<span class="study-partner-pill">${escapeHtml(partner)}</span>`)
         .join("");
-      const sourceMarkup = (deal.sources ?? [])
-        .map(
-          (source) => `
-            <a class="study-source-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
-              ${escapeHtml(source.label)}
-            </a>`,
-        )
-        .join("");
+      const sourceMarkup = renderStudyDataCenterSourceLinks(deal.sources);
       const year = String(deal.date ?? "").slice(0, 4) || "Unknown";
       const yearMarkup =
         year !== currentYear
@@ -13641,12 +13949,15 @@ function renderStudyDataCenterOverview() {
       currentYear = year;
 
       return `${yearMarkup}
-        <tr>
+        <tr class="study-deal-row" style="${getStudyDealCompanyStyle(deal.company)}">
           <td>
-            <span class="study-company-badge">${escapeHtml(deal.company)}</span>
+            <span class="study-company-badge" style="${getStudyDealCompanyStyle(deal.company)}">${escapeHtml(deal.company)}</span>
           </td>
           <td class="study-deal-title-cell">
-            <strong>${escapeHtml(deal.title)}</strong>
+            <button type="button" class="study-deal-title-button" data-study-data-center-deal="${escapeHtml(deal.id)}">
+              <strong>${escapeHtml(deal.title)}</strong>
+              <span aria-hidden="true">ⓘ</span>
+            </button>
             <small>${escapeHtml(deal.date)} · ${escapeHtml(deal.sourceNote || "")}</small>
           </td>
           <td>
@@ -13684,6 +13995,7 @@ function renderStudyDataCenterOverview() {
             <div class="us-price-updated">Updated ${escapeHtml(studyDataCenterDeals.updatedAt || "-")}</div>
           </div>
         </div>
+        ${renderStudyDataCenterBuildSummary(companyOptions, buildRows)}
         <div class="study-kpi-grid study-data-center-kpi-grid">
           <article class="study-kpi-card">
             <span>Tracked deals</span>
@@ -13696,9 +14008,9 @@ function renderStudyDataCenterOverview() {
             <small>${liveCount} operational · ${constructionCount} under construction</small>
           </article>
           <article class="study-kpi-card">
-            <span>Disclosed fields</span>
-            <strong>${disclosedCapacityCount}/${disclosedAmountCount}</strong>
-            <small>capacity rows / amount rows</small>
+            <span>Dated online capacity</span>
+            <strong>${formatStudyCapacityGw(scheduledCapacityTotal)}</strong>
+            <small>2025~2028 공개 최소치 · ${studyDataCenterDeals.buildSchedule?.events?.length || 0} events</small>
           </article>
         </div>
         <div class="market-trend-meta study-data-center-note">
@@ -13733,6 +14045,13 @@ function renderStudyDataCenterOverview() {
           </table>
         </div>
       </section>
+      <dialog class="study-data-center-dialog" data-study-data-center-dialog>
+        <div class="study-data-center-dialog-head">
+          <strong>Data Center 근거 상세</strong>
+          <button type="button" class="study-data-center-dialog-close" data-study-data-center-dialog-close aria-label="닫기">×</button>
+        </div>
+        <div class="study-data-center-dialog-body" data-study-data-center-dialog-body></div>
+      </dialog>
     </section>
   `;
 
@@ -13749,6 +14068,9 @@ function renderStudyDataCenterOverview() {
       render();
     });
   });
+
+  bindStudyDataCenterDetails();
+  createStudyDataCenterBuildChart(usOverviewRoot.querySelector('[data-study-chart="data-center-build"]'), companyOptions, buildRows);
 }
 
 function renderIndexTrendOverview() {
