@@ -3603,6 +3603,12 @@ h1 {
   margin-bottom: 12px;
 }
 
+.memory-capa-overview,
+.memory-capa-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .memory-capa-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3671,6 +3677,133 @@ h1 {
 
 .memory-capa-section-placeholder {
   opacity: 0.82;
+}
+
+.memory-capa-model {
+  margin: 8px 0 14px;
+}
+
+.memory-capa-model-head,
+.memory-capa-scope-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.memory-capa-model-head {
+  margin-bottom: 7px;
+}
+
+.memory-capa-model-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.memory-capa-model-head strong {
+  color: #20201d;
+  font-size: 0.82rem;
+}
+
+.memory-capa-model-head span,
+.memory-capa-model-note {
+  color: #6f6f67;
+  font-size: 0.7rem;
+}
+
+.memory-capa-model-badge {
+  padding: 5px 7px;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  background: #f6f4ec;
+  color: #5a5a54 !important;
+  font-weight: 850;
+}
+
+.memory-capa-model-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.memory-capa-model-table {
+  width: 100%;
+  min-width: 690px;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.memory-capa-model-table th,
+.memory-capa-model-table td {
+  padding: 8px 10px;
+  border-right: 1px solid #ecebe4;
+  border-bottom: 1px solid #ecebe4;
+  text-align: right;
+}
+
+.memory-capa-model-table th:first-child,
+.memory-capa-model-table td:first-child {
+  text-align: left;
+}
+
+.memory-capa-model-table thead th {
+  background: #eef2f7;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.memory-capa-model-table tbody th {
+  background: #fbfaf4;
+  color: #20201d;
+  font-weight: 850;
+}
+
+.memory-capa-model-table tr:last-child th,
+.memory-capa-model-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.memory-capa-model-table th:last-child,
+.memory-capa-model-table td:last-child {
+  border-right: 0;
+}
+
+.memory-capa-model-total th,
+.memory-capa-model-total td {
+  background: #edf7f0 !important;
+  color: #166534;
+  font-weight: 900;
+}
+
+.memory-capa-model-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 7px;
+  line-height: 1.45;
+}
+
+.memory-capa-model-note > span {
+  max-width: 900px;
+}
+
+.memory-capa-model-note .memory-capa-source-list {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.memory-capa-metric-note {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border-left: 3px solid #64748b;
+  background: #f5f7f9;
+  color: #52525b;
+  font-size: 0.74rem;
+  line-height: 1.45;
 }
 
 .memory-capa-table-wrap {
@@ -3775,6 +3908,34 @@ h1 {
   min-width: 260px;
 }
 
+.memory-capa-scope-head {
+  align-items: flex-start;
+}
+
+.memory-capa-scope-head .memory-capa-confidence {
+  flex: 0 0 auto;
+  padding: 5px 7px;
+  font-size: 0.62rem;
+}
+
+.memory-capa-confidence-official {
+  border-color: #9fd2b5;
+  background: #eaf8ef;
+  color: #166534;
+}
+
+.memory-capa-confidence-mixed {
+  border-color: #a7c7f7;
+  background: #ecf4ff;
+  color: #1d4ed8;
+}
+
+.memory-capa-confidence-reported {
+  border-color: #f1c777;
+  background: #fff8e6;
+  color: #92400e;
+}
+
 .memory-capa-quarter-cell strong,
 .memory-capa-quarter-cell small {
   text-align: center;
@@ -3830,6 +3991,14 @@ h1 {
 
   .study-deal-filter-row {
     flex-direction: column;
+  }
+
+  .memory-capa-model-note {
+    flex-direction: column;
+  }
+
+  .memory-capa-model-note .memory-capa-source-list {
+    margin-top: 2px;
   }
 }
 

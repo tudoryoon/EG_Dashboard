@@ -1149,6 +1149,48 @@ function renderMemoryCapaSourceLinks(sources) {
     .join("");
 }
 
+function renderMemoryCapaAnnualModel(section) {
+  const model = section?.annualModel;
+  if (!model?.rows?.length || !model?.years?.length) {
+    return "";
+  }
+
+  const yearHeadMarkup = model.years.map((year) => `<th>${escapeHtml(year)}</th>`).join("");
+  const rowMarkup = model.rows
+    .map(
+      (row) => `
+        <tr class="${row.total ? "memory-capa-model-total" : ""}">
+          <th>${escapeHtml(row.label || "-")}</th>
+          ${(row.values ?? []).map((value) => `<td>${escapeHtml(value ?? "-")}</td>`).join("")}
+        </tr>`,
+    )
+    .join("");
+  const sourceMarkup = renderMemoryCapaSourceLinks(model.sources);
+
+  return `
+    <div class="memory-capa-model">
+      <div class="memory-capa-model-head">
+        <div>
+          <strong>${escapeHtml(model.title || "Annual model")}</strong>
+          <span>${escapeHtml(model.unit || "")}</span>
+        </div>
+        <span class="memory-capa-model-badge">${escapeHtml(model.badge || "Scenario")}</span>
+      </div>
+      <div class="memory-capa-model-table-wrap">
+        <table class="memory-capa-model-table">
+          <thead>
+            <tr><th>회사</th>${yearHeadMarkup}</tr>
+          </thead>
+          <tbody>${rowMarkup}</tbody>
+        </table>
+      </div>
+      <div class="memory-capa-model-note">
+        <span>${escapeHtml(model.note || "")}</span>
+        <div class="study-source-list memory-capa-source-list">${sourceMarkup}</div>
+      </div>
+    </div>`;
+}
+
 function renderMemoryCapaCompanyRows(section, quarters) {
   return (section?.companyRows ?? [])
     .map((row) => {
@@ -1173,7 +1215,10 @@ function renderMemoryCapaCompanyRows(section, quarters) {
             <span class="study-company-badge">${escapeHtml(row.company || "-")}</span>
           </td>
           <td class="memory-capa-scope-cell">
-            <strong>${escapeHtml(row.scope || "-")}</strong>
+            <div class="memory-capa-scope-head">
+              <strong>${escapeHtml(row.scope || "-")}</strong>
+              ${row.confidence ? `<span class="memory-capa-confidence memory-capa-confidence-${escapeHtml(row.confidenceTone || "reported")}">${escapeHtml(row.confidence)}</span>` : ""}
+            </div>
             <small>${escapeHtml(row.summary || "")}</small>
             <div class="study-source-list memory-capa-source-list">${sourceMarkup || "-"}</div>
           </td>
@@ -1225,10 +1270,14 @@ function renderMemoryCapaRows(section, quarters) {
 }
 
 function renderMemoryCapaSection(sectionKey, section, quarters) {
-  const isPlaceholder = sectionKey !== "dram";
   const usesCompanyRows = Boolean(section?.companyRows?.length);
   const quarterHeader = (quarters ?? []).map((quarter) => `<th>${escapeHtml(quarter.label)}</th>`).join("");
   const rowMarkup = usesCompanyRows ? renderMemoryCapaCompanyRows(section, quarters) : renderMemoryCapaRows(section, quarters);
+  const isPlaceholder = !rowMarkup.trim();
+  const annualModelMarkup = renderMemoryCapaAnnualModel(section);
+  const metricNoteMarkup = section?.metricNote
+    ? `<div class="memory-capa-metric-note">${escapeHtml(section.metricNote)}</div>`
+    : "";
   const baseHeadMarkup = usesCompanyRows
     ? `
               <th rowspan="2">회사</th>
@@ -1246,6 +1295,8 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
           <p>${escapeHtml(section?.subtitle || "")}</p>
         </div>
       </div>
+      ${annualModelMarkup}
+      ${metricNoteMarkup}
       <div class="memory-capa-table-wrap">
         <table class="memory-capa-table${usesCompanyRows ? " memory-capa-table-compact" : ""}">
           <thead>
@@ -1294,7 +1345,7 @@ function renderStudyMemoryCapaOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Memory Capa</h2>
-            <p>DRAM, NAND, HDD 공급 증설 일정을 분기별로 정리합니다. 이번 버전은 DRAM 우선 완성, NAND/HDD는 틀만 잡아둔 상태입니다.</p>
+            <p>DRAM·NAND wafer CAPA와 HDD exabyte 공급능력의 핵심 이벤트를 분기별로 비교합니다. 모델 추정과 회사 공식 일정을 구분해 표시합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="us-price-updated">Updated ${escapeHtml(studyMemoryCapaData.updatedAt || "-")}</div>
