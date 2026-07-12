@@ -1,5 +1,5 @@
 window.studyDataCenterDeals = {
-  updatedAt: "2026-07-10",
+  updatedAt: "2026-07-12",
   scope:
     "2025년 이후 공식 발표와 검증 가능한 주요 보도를 기준으로 물리적 데이터센터, 전용 컴퓨트, 전력 인프라를 추적합니다. 데이터센터 IT 용량과 발전·PPA 용량은 구분하고, 미체결 입찰·복수 프레임워크·혼합 투자액은 확정 CAPA나 투자 총액으로 합산하지 않습니다.",
   companies: [
@@ -19,7 +19,7 @@ window.studyDataCenterDeals = {
     { key: "planned", label: "계획/부지선정", tone: "gray" },
   ],
   capacityOutlook: {
-    updatedAt: "2026-07-10",
+    updatedAt: "2026-07-12",
     years: [2026, 2027, 2028, 2029, 2030],
     metric: "연말 기준 활용 가능·통제할 것으로 예상되는 compute-linked power capacity (GW)",
     methodology:
@@ -47,8 +47,8 @@ window.studyDataCenterDeals = {
         ],
         sources: [
           { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
-          { label: "Aterio · 2030 U.S. outlook", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
-          { label: "Google · India 1GW hub", url: "https://www.googlecloudpresscorner.com/2026-04-28-Google-Breaks-Ground-on-India-AI-Hub%2C-Launching-a-National-Industrial-Ecosystem-Alongside-Indias-Digital-Infrastructure-Milestone" },
+          { label: "Aterio chart · industry repost", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
+          { label: "Google · India 1GW hub", url: "https://blog.google/intl/en-in/google-ai-hub-scaling-indias-ai-infrastructure-and-community-impact/" },
           { label: "Google · multi-GW energy parks", url: "https://blog.google/innovation-and-ai/infrastructure-and-cloud/global-network/new-approach-to-data-center-and-clean-energy-growth/" },
         ],
       },
@@ -66,7 +66,7 @@ window.studyDataCenterDeals = {
         ],
         sources: [
           { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
-          { label: "Aterio · 2030 U.S. outlook", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
+          { label: "Aterio chart · industry repost", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
           { label: "AWS · 2025 capacity additions", url: "https://www.datacenterdynamics.com/en/news/aws-says-it-added-more-data-center-capacity-than-any-other-company-in-2025-including-12gw-in-q4/" },
           { label: "Amazon · Indiana 2.4GW", url: "https://www.aboutamazon.com/news/company-news/amazon-15-billion-indiana-data-centers" },
         ],
@@ -103,7 +103,7 @@ window.studyDataCenterDeals = {
         ],
         sources: [
           { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
-          { label: "Aterio · 2030 U.S. outlook", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
+          { label: "Aterio chart · industry repost", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
           { label: "Microsoft · Pecos +2GW", url: "https://blogs.microsoft.com/blog/2026/06/22/powering-the-next-wave-of-ai-expanding-capacity-with-our-new-datacenter-in-pecos/" },
           { label: "Microsoft · Fairwater 2GW", url: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q1" },
         ],
@@ -301,7 +301,7 @@ window.studyDataCenterDeals = {
       sources: [
         {
           label: "Google Cloud",
-          url: "https://www.googlecloudpresscorner.com/2026-06-02-Google-Breaks-Ground-on-Data-Center-in-Horndal%2C-Sweden",
+          url: "https://blog.google/intl/sv-se/foretagsnyheter/google-tar-spadtaget-for-sitt-forsta-datacenter-i-sverige/",
         },
       ],
     },
@@ -322,7 +322,7 @@ window.studyDataCenterDeals = {
       sources: [
         {
           label: "Google Cloud",
-          url: "https://www.googlecloudpresscorner.com/2026-04-28-Google-Breaks-Ground-on-India-AI-Hub%2C-Launching-a-National-Industrial-Ecosystem-Alongside-Indias-Digital-Infrastructure-Milestone",
+          url: "https://blog.google/intl/en-in/google-ai-hub-scaling-indias-ai-infrastructure-and-community-impact/",
         },
       ],
     },
@@ -343,7 +343,7 @@ window.studyDataCenterDeals = {
       sources: [
         {
           label: "Google Cloud",
-          url: "https://www.googlecloudpresscorner.com/2026-04-23-Google-Breaks-Ground-on-Data-Center-in-Kronstorf%2C-Austria",
+          url: "https://blog.google/innovation-and-ai/infrastructure-and-cloud/global-network/google-data-center-austria/",
         },
       ],
     },
@@ -385,7 +385,7 @@ window.studyDataCenterDeals = {
       sources: [
         {
           label: "Google Cloud",
-          url: "https://www.googlecloudpresscorner.com/2025-11-11-Google-Announces-EUR5-5-Billion-Investment-in-Germany%2C-including-AI-Infrastructure%2C-through-2029",
+          url: "https://blog.google/intl/de-de/unternehmen/engagement/google-investiert-milliarden-in-deutschlands-digitale-zukunft/",
         },
       ],
     },
