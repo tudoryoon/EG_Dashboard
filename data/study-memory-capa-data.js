@@ -1,5 +1,5 @@
 window.studyMemoryCapaData = {
-  updatedAt: "2026-07-10",
+  updatedAt: "2026-07-13",
   unit: "DRAM/NAND: 12-inch wafer starts per month (K WPM) · HDD: TB/drive and production-ramp milestones",
   scope:
     "2026년 5~7월 발표 자료를 기준으로 다시 작성했습니다. 회사가 WPM을 직접 공시하지 않은 경우에는 리서치 추정치로 명시하며, 노드 전환·설계 최대 CAPA·회사 총 CAPA를 서로 더하지 않습니다.",
@@ -46,7 +46,7 @@ window.studyMemoryCapaData = {
           { label: "3사 합계", values: ["1,535", "1,715", "2,035", "2,295", "2,555*"], total: true },
         ],
         note:
-          "Samsung·SK hynix는 2026-06-17 DS투자증권 연말 추정입니다. Micron 2025~2026은 2026-06-04 SK증권, 2027~2028은 2026년 6월 공개 증설 모델과 ID1·ID2·Tongluo 일정을 교차 적용했습니다. 2029E 600K(*)는 late-2028 ID2 첫 wafer-out 이후의 완만한 램프를 반영한 대시보드 시나리오이며 회사 공시값이 아닙니다. 3사 합계와 YoY도 같은 시나리오의 산술 합계입니다.",
+          "Samsung·SK hynix는 2026-06-17 DS투자증권 연말 추정입니다. Micron 2025~2026은 2026-06-04 SK증권, 2027~2028은 2026년 6월 공개 증설 모델과 ID1·ID2·Tongluo 일정을 교차 적용했습니다. 2029E 600K(*)는 late-2028 ID2 첫 wafer-out 이후의 완만한 램프를 반영한 대시보드 시나리오이며 회사 공시값이 아닙니다. 2026-07-09 New York Fab 첫 콘크리트 타설은 장기 공급능력에는 중요하지만 WPM·wafer-out 시점이 공개되지 않아 이 연말 수치에는 반영하지 않았습니다. 3사 합계와 YoY도 같은 시나리오의 산술 합계입니다.",
         sources: [
           {
             label: "2026-06-17 DS Securities",
@@ -67,6 +67,10 @@ window.studyMemoryCapaData = {
           {
             label: "2026-06-29 SEMI 300mm Outlook",
             url: "https://www.semi.org/en/products-services/market-data/300mm-fab-outlook",
+          },
+          {
+            label: "2026-07-09 Micron New York Fab",
+            url: "https://investors.micron.com/news-releases/news-release-details/micron-accelerates-us-investments-pours-first-concrete-new-york",
           },
         ],
       },
@@ -222,9 +226,9 @@ window.studyMemoryCapaData = {
               status: "online",
               value: "100K",
               delta: "M15X design full",
-              detail: "M15X 초기 양산 목표 2Q26, 공급 기여 2H26. 100K는 완전 램프 시 설계 최대치입니다.",
-              basis: "2026-06-17 DS투자증권 추정입니다. 2Q26 실제 투입량이 100K라는 뜻은 아닙니다.",
-              sourceIndexes: [0],
+              detail: "M15X 초기 양산 목표 2Q26, 공급 기여 2H26. 100K는 완전 램프 시 설계 최대치입니다. 6월 18일 HBM4E 12단 샘플 공급은 제품·패키징 진척이며 WPM 증설 수치가 아닙니다.",
+              basis: "100K는 2026-06-17 DS투자증권 추정입니다. HBM4E 샘플은 SK hynix 공식 발표로 교차 확인했으며 2Q26 실제 투입량이 100K라는 뜻은 아닙니다.",
+              sourceIndexes: [0, 4],
             },
             "2026Q3": {
               status: "ramp",
@@ -284,12 +288,16 @@ window.studyMemoryCapaData = {
               label: "2026-02-25 Yongin official",
               url: "https://news.skhynix.com/new-facility-investment-for-yongin-semiconductor-cluster/",
             },
+            {
+              label: "2026-06-18 SK hynix HBM4E",
+              url: "https://news.skhynix.com/12-layer-hbm4e-sample/",
+            },
           ],
         },
         {
           company: "Micron",
-          scope: "Tongluo · Virginia Fab 6 · Idaho ID1/ID2",
-          confidence: "2026-06 회사 공시 + 리서치",
+          scope: "Tongluo · Virginia Fab 6 · Idaho ID1/ID2 · New York Fab 1",
+          confidence: "2026-06/07 회사 공시 + 리서치",
           confidenceTone: "official",
           summary:
             "2026년 말 총 DRAM CAPA는 365K WPM 추정입니다. 회사는 Tongluo가 mid-2027부터 의미 있는 출하, ID1 mid-2027, ID2 late-2028 첫 wafer output이라고 공시했습니다.",
@@ -310,12 +318,20 @@ window.studyMemoryCapaData = {
               basis: "30~40K는 2026-06-04 SK증권 추정이며, Fab 6 가동 상태는 2026-05-26 TrendForce로 교차 확인했습니다.",
               sourceIndexes: [2, 3],
             },
+            "2026Q3": {
+              status: "construction",
+              value: "NY Fab 1",
+              delta: "first concrete",
+              detail: "7월 9일 Clay, New York 첫 Fab의 첫 콘크리트 타설을 완료해 site work에서 수직 건설 단계로 전환했습니다. Micron은 2035년까지 미국 투자 계획을 2,500억 달러 이상으로 확대하고 장기적으로 미국에서 DRAM의 40%를 생산하는 목표를 제시했습니다.",
+              basis: "Micron 공식 발표입니다. New York Fab의 WPM과 첫 wafer-out 시점은 이번 발표에서 공개하지 않아 연말 CAPA 모델에는 더하지 않았습니다.",
+              sourceIndexes: [4],
+            },
             "2026Q4": {
               status: "ramp",
-              value: "1γ / HBM4",
-              delta: "node ramp",
-              detail: "1-gamma DRAM과 G9 NAND가 램프 중이며 HBM4 12-high 램프 속도는 HBM3E보다 빠르다고 회사가 설명했습니다.",
-              basis: "2026-06-24 Micron FY3Q26 prepared remarks. 해당 발표에는 WPM 수치가 없습니다.",
+              value: "HBM4E dev",
+              delta: "1γ · CY27 HVM",
+              detail: "HBM4는 1-beta DRAM 기반으로 이미 high-volume shipment 중입니다. 1-gamma는 HBM4가 아니라 HBM4E에 적용되며 회사는 HBM4E volume production을 2027년으로 제시했습니다.",
+              basis: "2026-06-24 Micron FY3Q26 공식 발표의 공정 구분입니다. 해당 발표에는 HBM용 WPM 수치가 없습니다.",
               sourceIndexes: [0],
             },
             "2027Q2": {
@@ -360,6 +376,10 @@ window.studyMemoryCapaData = {
               label: "2026-05-26 TrendForce Fab 6",
               url: "https://www.trendforce.com/presscenter/news/20260526-13061.html",
             },
+            {
+              label: "2026-07-09 Micron New York Fab",
+              url: "https://investors.micron.com/news-releases/news-release-details/micron-accelerates-us-investments-pours-first-concrete-new-york",
+            },
           ],
         },
       ],
@@ -379,7 +399,7 @@ window.studyMemoryCapaData = {
         rows: [
           { label: "Samsung", values: ["V8 전환", "Xi'an2 30-45K", "국내 재개 추정", "-"] },
           { label: "SK hynix / Solidigm", values: ["321L QLC", "Dalian2 30-50K", "국내 재개 추정", "-"] },
-          { label: "Kioxia / SanDisk", values: ["K2 BiCS8", "+30K Yokkaichi", "BiCS10 scale", "-"] },
+          { label: "Kioxia / SanDisk", values: ["K2 BiCS8", "+30K Yokkaichi 추정", "BiCS10 scale", "-"] },
           { label: "Micron", values: ["Singapore 착공", "G9 ramp", "차세대 node", "첫 wafer-out"] },
         ],
         note:
@@ -400,6 +420,10 @@ window.studyMemoryCapaData = {
           {
             label: "2026-07-03 Kioxia/SanDisk K2",
             url: "https://www.kioxia.com/en-jp/about/news/2026/20260703-2.html",
+          },
+          {
+            label: "2026-07-03 Kioxia BiCS10 sample",
+            url: "https://apac.kioxia.com/en-apac/about/news/2026/20260703-1.html",
           },
         ],
       },
@@ -574,7 +598,7 @@ window.studyMemoryCapaData = {
           confidence: "2026-06/07 회사 공식",
           confidenceTone: "official",
           summary:
-            "6월 Investor Day에서 FY26 CAPEX 4,500억 엔과 22% GB CAGR 지원 계획을 제시했고, 7월 3일 K2에서 BiCS10 생산을 실제로 시작했습니다.",
+            "6월 Investor Day에서 FY26 CAPEX 4,500억 엔과 22% GB CAGR 지원 계획을 제시했고, 7월 3일 K2에서 BiCS10 생산을 시작하면서 1Tb TLC 샘플도 출하했습니다.",
           cells: {
             "2026Q1": {
               status: "ramp",
@@ -595,10 +619,10 @@ window.studyMemoryCapaData = {
             "2026Q3": {
               status: "online",
               value: "BiCS10",
-              delta: "K2 production",
-              detail: "2026년 7월 3일 K2에서 10세대 3D Flash 생산을 시작한 실제 완료 이벤트입니다.",
-              basis: "Kioxia·SanDisk 공동 공식 발표. 정확한 WPM은 공개되지 않았습니다.",
-              sourceIndexes: [2],
+              delta: "332L · K2 production",
+              detail: "2026년 7월 3일 K2에서 BiCS10 생산을 시작하고 1Tb TLC 샘플 출하를 발표했습니다. 332단, 4.8Gb/s 인터페이스, BiCS8 대비 bit density 59% 개선이 핵심입니다.",
+              basis: "Kioxia·SanDisk 공동 생산 발표와 Kioxia 제품 샘플 발표를 함께 확인했습니다. 정확한 WPM은 공개되지 않았습니다.",
+              sourceIndexes: [2, 3],
             },
             "2027Q2": {
               status: "ramp",
@@ -622,6 +646,10 @@ window.studyMemoryCapaData = {
               label: "2026-07-03 Kioxia/SanDisk K2",
               url: "https://www.kioxia.com/en-jp/about/news/2026/20260703-2.html",
             },
+            {
+              label: "2026-07-03 Kioxia BiCS10 sample",
+              url: "https://apac.kioxia.com/en-apac/about/news/2026/20260703-1.html",
+            },
           ],
         },
         {
@@ -630,7 +658,7 @@ window.studyMemoryCapaData = {
           confidence: "JV 공식 + 2026-05 SEC",
           confidenceTone: "official",
           summary:
-            "Kioxia와 같은 K2 물리 CAPA를 공유합니다. 7월 BiCS10 생산 개시는 별도 SanDisk fab 증설이 아니며 시장 CAPA 합계에서 중복 제거해야 합니다.",
+            "Kioxia와 같은 K2 물리 CAPA를 공유합니다. 7월 BiCS10 생산·1Tb TLC 샘플 출하는 별도 SanDisk fab 증설이 아니며 시장 CAPA 합계에서 중복 제거해야 합니다.",
           cells: {
             "2026Q1": {
               status: "ramp",
@@ -651,10 +679,10 @@ window.studyMemoryCapaData = {
             "2026Q3": {
               status: "online",
               value: "BiCS10",
-              delta: "K2 production",
-              detail: "Kioxia와 공동으로 K2에서 BiCS10 생산을 시작. Kioxia 행과 중복 합산 금지.",
-              basis: "2026-07-03 양사 공동 공식 발표입니다.",
-              sourceIndexes: [0],
+              delta: "332L · K2 production",
+              detail: "Kioxia와 공동으로 K2에서 BiCS10 생산을 시작하고 1Tb TLC 샘플을 출하했습니다. Kioxia 행과 동일한 물리 CAPA이므로 중복 합산하지 않습니다.",
+              basis: "2026-07-02/03 SanDisk·Kioxia 공식 발표입니다.",
+              sourceIndexes: [0, 3],
             },
           },
           sources: [
@@ -669,6 +697,10 @@ window.studyMemoryCapaData = {
             {
               label: "2026-06-02 Kioxia Investor Day",
               url: "https://www.kioxia-holdings.com/en-jp/news/2026/20260602-1.html",
+            },
+            {
+              label: "2026-07-02 SanDisk BiCS10 sample",
+              url: "https://www.sandisk.com/company/newsroom/press-releases/2026/2026-07-02-sandisk-announces-bics10-1tb-tlc",
             },
           ],
         },
