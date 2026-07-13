@@ -56,6 +56,28 @@
       "sharesOutstanding": 285769539
     },
     {
+      "ticker": "ARM",
+      "name": "Arm Holdings plc",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 1064053821
+    },
+    {
+      "ticker": "ASML",
+      "name": "ASML Holding N.V.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 385417665
+    },
+    {
       "ticker": "ASTS",
       "name": "AST SpaceMobile, Inc.",
       "memberships": {
@@ -375,6 +397,17 @@
       "sharesOutstanding": 178022198
     },
     {
+      "ticker": "MSTR",
+      "name": "Strategy Inc",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 357768526
+    },
+    {
       "ticker": "NET",
       "name": "Cloudflare, Inc.",
       "memberships": {
@@ -527,6 +560,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 834325691
+    },
+    {
+      "ticker": "SHOP",
+      "name": "Shopify Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 1297654610
     },
     {
       "ticker": "SNOW",

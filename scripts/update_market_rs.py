@@ -851,6 +851,11 @@ def build_payload(
     volume_frame: pd.DataFrame,
     shares_cache: dict[str, int | None],
 ) -> dict[str, object]:
+    manual_tickers = {
+        normalize_ticker(member.get("ticker"))
+        for member in get_manual_universe_members()
+        if normalize_ticker(member.get("ticker"))
+    }
     benchmark = adjusted_close_frame[BENCHMARK_SYMBOL].dropna()
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
@@ -922,7 +927,7 @@ def build_payload(
         if ticker not in stock_adjusted_close.columns or ticker not in stock_raw_close.columns:
             continue
         latest_rating = rs_rating_all.at[latest_date, ticker] if ticker in rs_rating_all.columns else None
-        if latest_rating is None or pd.isna(latest_rating):
+        if (latest_rating is None or pd.isna(latest_rating)) and ticker not in manual_tickers:
             continue
 
         performance_series = stock_adjusted_close[ticker].dropna()
@@ -993,7 +998,7 @@ def build_payload(
             "price": round(current_price, 2),
             "marketCap": market_cap,
             "sharesOutstanding": shares_outstanding,
-            "rsRatingAll": int(latest_rating),
+            "rsRatingAll": nullable_int(latest_rating),
             "rsRatingSp500": nullable_int(rs_ratings_by_universe.get("sp500", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingNasdaq100": nullable_int(rs_ratings_by_universe.get("nasdaq100", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingDowjones": nullable_int(rs_ratings_by_universe.get("dowjones", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
@@ -1077,7 +1082,7 @@ def build_payload(
             "volume": serialize_volume_line(volume_window),
         }
 
-    rows.sort(key=lambda item: (-int(item["rsRatingAll"]), item["ticker"]))
+    rows.sort(key=lambda item: (-int(item.get("rsRatingAll") or 0), item["ticker"]))
     return {
         "updatedAt": latest_date.strftime("%Y-%m-%d"),
         "benchmark": {"symbol": BENCHMARK_SYMBOL, "label": "S&P 500"},
