@@ -13763,6 +13763,7 @@ function renderStudyDataCenterCapacityOutlook() {
           type="button"
           class="study-outlook-company-chip"
           style="${getStudyDealCompanyStyle(item.company)}"
+          title="${escapeHtml(item.family || "Capacity series")}"
           data-study-outlook-company="${escapeHtml(item.company)}"
           aria-pressed="true"
         >
@@ -13798,6 +13799,7 @@ function renderStudyDataCenterCapacityOutlook() {
         <tr data-study-outlook-row="${escapeHtml(item.company)}">
           <th style="${getStudyDealCompanyStyle(item.company)}">
             <span class="study-build-company-label"><i></i>${escapeHtml(company.label)}</span>
+            <small class="study-outlook-family">${escapeHtml(item.family || "")}</small>
             <button type="button" class="study-outlook-basis-button" data-study-outlook-detail="${escapeHtml(item.company)}">
               근거
             </button>
@@ -13810,10 +13812,10 @@ function renderStudyDataCenterCapacityOutlook() {
     <section class="study-data-center-summary study-capacity-outlook">
       <div class="study-summary-head">
         <div>
-          <h3>총 컴퓨팅 용량 로드맵</h3>
+          <h3>${escapeHtml(outlook.title || "연말 누적 컴퓨트 용량 로드맵")}</h3>
           <p>${escapeHtml(outlook.metric || "")}</p>
         </div>
-        <span>2026~2030 · 회사별 비합산</span>
+        <span>${escapeHtml(outlook.badge || "2026~2030 · 회사별 비합산")}</span>
       </div>
       <div class="study-outlook-toolbar">
         <div class="study-outlook-company-row" aria-label="회사 표시 선택">${companyChipMarkup}</div>
@@ -13841,6 +13843,29 @@ function renderStudyDataCenterCapacityOutlook() {
         <span>실선 구간은 공개 앵커를 연결하고, 점선 구간은 보간·모델 추정이 포함됐음을 뜻합니다.</span>
       </div>
     </section>`;
+}
+
+function renderStudyDataCenterMetricBridge() {
+  const outlook = studyDataCenterDeals.capacityOutlook ?? {};
+  const schedule = studyDataCenterDeals.buildSchedule ?? {};
+  if (!outlook.comparisonNote) {
+    return "";
+  }
+  return `
+    <aside class="study-capacity-bridge" aria-label="두 용량 그래프의 집계 기준">
+      <div>
+        <span>위 그래프 · 누적</span>
+        <strong>${escapeHtml(outlook.title || "연말 누적 용량")}</strong>
+        <small>기존 fleet + 공개 pipeline</small>
+      </div>
+      <b aria-hidden="true">≠</b>
+      <div>
+        <span>아래 그래프 · 연간 증분</span>
+        <strong>${escapeHtml(schedule.title || "연도별 신규 가동 예정분")}</strong>
+        <small>가동 연도와 GW가 모두 공개된 프로젝트만</small>
+      </div>
+      <p>${escapeHtml(outlook.comparisonNote)}</p>
+    </aside>`;
 }
 
 function createStudyDataCenterCapacityOutlookChart(canvas) {
@@ -13909,7 +13934,7 @@ function createStudyDataCenterCapacityOutlookChart(canvas) {
           suggestedMax: 40,
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           ticks: { color: "#8d8d86", callback: (value) => `${Number(value).toFixed(0)}GW` },
-          title: { display: true, text: "Year-end capacity roadmap (GW)", color: "#8d8d86" },
+          title: { display: true, text: outlook.axisTitle || "Year-end cumulative capacity (GW)", color: "#8d8d86" },
           border: { color: "#d8d8d2" },
         },
       },
@@ -13941,6 +13966,7 @@ function bindStudyDataCenterCapacityOutlookChart(chart) {
 }
 
 function renderStudyDataCenterBuildSummary(companyOptions, buildRows) {
+  const schedule = studyDataCenterDeals.buildSchedule ?? {};
   const companyColumns = companyOptions.filter((item) => item.key !== "All");
   const headerMarkup = companyColumns
     .map(
@@ -13971,10 +13997,10 @@ function renderStudyDataCenterBuildSummary(companyOptions, buildRows) {
     <section class="study-data-center-summary">
       <div class="study-summary-head">
         <div>
-          <h3>연도별 예정 가동 용량</h3>
-          <p>${escapeHtml(studyDataCenterDeals.buildSchedule?.metric || "")}</p>
+          <h3>${escapeHtml(schedule.title || "연도별 신규 가동 예정분")}</h3>
+          <p>${escapeHtml(schedule.metric || "")}</p>
         </div>
-        <span>공개 최소치 · 중복 제거</span>
+        <span>${escapeHtml(schedule.badge || "연간 증분 · 공개 최소치")}</span>
       </div>
       <div class="study-data-center-summary-grid">
         <div class="study-build-chart-panel">
@@ -13995,7 +14021,7 @@ function renderStudyDataCenterBuildSummary(companyOptions, buildRows) {
         </div>
       </div>
       <div class="market-trend-meta study-build-methodology">
-        <span>${escapeHtml(studyDataCenterDeals.buildSchedule?.methodology || "")}</span>
+        <span>${escapeHtml(schedule.methodology || "")}</span>
         <span>표의 '-'는 0GW가 아니라 해당 연도에 정량 반영할 공개 수치가 없다는 뜻입니다.</span>
       </div>
     </section>`;
@@ -14058,7 +14084,11 @@ function createStudyDataCenterBuildChart(canvas, companyOptions, buildRows) {
           beginAtZero: true,
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           ticks: { color: "#8d8d86", callback: (value) => `${Number(value).toFixed(1)}GW` },
-          title: { display: true, text: "New online capacity (GW)", color: "#8d8d86" },
+          title: {
+            display: true,
+            text: studyDataCenterDeals.buildSchedule?.axisTitle || "Annual new capacity (GW)",
+            color: "#8d8d86",
+          },
           border: { color: "#d8d8d2" },
         },
       },
@@ -14093,9 +14123,9 @@ function openStudyDataCenterOutlookDetail(companyKey) {
   body.innerHTML = `
     <div class="study-deal-dialog-kicker">
       <span class="study-company-badge" style="${getStudyDealCompanyStyle(series.company)}">${escapeHtml(company.label)}</span>
-      <span>2026~2030 capacity roadmap</span>
+      <span>${escapeHtml(series.family || outlook.badge || "Capacity roadmap")}</span>
     </div>
-    <h3>${escapeHtml(company.label)} 총 컴퓨팅 용량 전망</h3>
+    <h3>${escapeHtml(company.label)} ${escapeHtml(outlook.title || "연말 누적 capacity 전망")}</h3>
     <div class="study-deal-dialog-status">
       <span class="study-status-pill study-status-amber">2030E</span>
       <strong>${formatStudyOutlookGw(latestPoint?.gw)}</strong>
@@ -14105,6 +14135,7 @@ function openStudyDataCenterOutlookDetail(companyKey) {
       <div><dt>정의</dt><dd>${escapeHtml(series.definition || "-")}</dd></div>
       <div><dt>산출 방식</dt><dd>${escapeHtml(series.calculation || "-")}</dd></div>
       <div><dt>비교 주의</dt><dd>${escapeHtml(outlook.warning || "-")}</dd></div>
+      <div><dt>아래 그래프와 차이</dt><dd>${escapeHtml(outlook.comparisonNote || "-")}</dd></div>
     </dl>
     <div class="study-outlook-point-list">${pointMarkup}</div>
     <div class="study-deal-dialog-sources">
@@ -14163,6 +14194,7 @@ function openStudyDataCenterYearDetail(year) {
   const buildRow = getStudyDataCenterBuildRows().find((row) => Number(row.year) === Number(year));
   const dialog = usOverviewRoot.querySelector("[data-study-data-center-dialog]");
   const body = dialog?.querySelector("[data-study-data-center-dialog-body]");
+  const schedule = studyDataCenterDeals.buildSchedule ?? {};
   if (!buildRow || !dialog || !body) {
     return;
   }
@@ -14190,13 +14222,13 @@ function openStudyDataCenterYearDetail(year) {
     : '<p class="study-build-empty">정량 반영할 공개 GW가 없습니다.</p>';
   body.removeAttribute("style");
   body.innerHTML = `
-    <div class="study-deal-dialog-kicker"><span>${escapeHtml(year)} build schedule</span></div>
-    <h3>연도별 예정 가동 용량 · ${formatStudyCapacityGw(buildRow.total)}</h3>
+    <div class="study-deal-dialog-kicker"><span>${escapeHtml(year)} · ${escapeHtml(schedule.badge || "연간 증분")}</span></div>
+    <h3>${escapeHtml(schedule.title || "연도별 신규 가동 예정분")} · ${formatStudyCapacityGw(buildRow.total)}</h3>
     <p class="study-build-year-note">${escapeHtml(buildRow.note || "")}</p>
     <div class="study-build-event-list">${eventMarkup}</div>
     <div class="study-deal-dialog-sources">
       <span>집계 방법</span>
-      <p>${escapeHtml(studyDataCenterDeals.buildSchedule?.methodology || "")}</p>
+      <p>${escapeHtml(schedule.methodology || "")}</p>
     </div>`;
   if (typeof dialog.showModal === "function") {
     dialog.showModal();
@@ -14240,6 +14272,8 @@ function renderStudyDataCenterOverview() {
     : [{ key: "All", label: "All" }, ...Array.from(new Set(allDeals.map((deal) => deal.company))).map((key) => ({ key, label: key }))];
   const buildRows = getStudyDataCenterBuildRows();
   const scheduledCapacityTotal = buildRows.reduce((sum, row) => sum + row.total, 0);
+  const scheduleYears = studyDataCenterDeals.buildSchedule?.years ?? [];
+  const scheduleRange = scheduleYears.length ? `${scheduleYears[0]}~${scheduleYears.at(-1)}` : "-";
   const activeCompany = companyOptions.some((item) => item.key === state.studyDataCenterCompany) ? state.studyDataCenterCompany : "All";
   state.studyDataCenterCompany = activeCompany;
   const filteredDeals = activeCompany === "All" ? allDeals : allDeals.filter((deal) => deal.company === activeCompany);
@@ -14347,6 +14381,7 @@ function renderStudyDataCenterOverview() {
           </div>
         </div>
         ${renderStudyDataCenterCapacityOutlook()}
+        ${renderStudyDataCenterMetricBridge()}
         ${renderStudyDataCenterBuildSummary(companyOptions, buildRows)}
         <div class="study-kpi-grid study-data-center-kpi-grid">
           <article class="study-kpi-card">
@@ -14360,9 +14395,9 @@ function renderStudyDataCenterOverview() {
             <small>${liveCount} operational · ${constructionCount} under construction</small>
           </article>
           <article class="study-kpi-card">
-            <span>Dated online capacity</span>
+            <span>Dated new capacity</span>
             <strong>${formatStudyCapacityGw(scheduledCapacityTotal)}</strong>
-            <small>2025~2028 공개 최소치 · ${studyDataCenterDeals.buildSchedule?.events?.length || 0} events</small>
+            <small>${escapeHtml(scheduleRange)} 공개 최소치 · ${studyDataCenterDeals.buildSchedule?.events?.length || 0} events</small>
           </article>
         </div>
         <div class="market-trend-meta study-data-center-note">

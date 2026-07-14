@@ -1,5 +1,5 @@
 window.studyDataCenterDeals = {
-  updatedAt: "2026-07-12",
+  updatedAt: "2026-07-14",
   scope:
     "2025년 이후 공식 발표와 검증 가능한 주요 보도를 기준으로 물리적 데이터센터, 전용 컴퓨트, 전력 인프라를 추적합니다. 데이터센터 IT 용량과 발전·PPA 용량은 구분하고, 미체결 입찰·복수 프레임워크·혼합 투자액은 확정 CAPA나 투자 총액으로 합산하지 않습니다. 신용보강만 제공한 회사는 소유자·임차인과 구분하며, 물리적 GW가 공개되지 않은 클라우드 계약은 딜 목록에는 표시하되 연도별 가동 합계에서는 제외합니다.",
   companies: [
@@ -19,13 +19,18 @@ window.studyDataCenterDeals = {
     { key: "planned", label: "계획/부지선정", tone: "gray" },
   ],
   capacityOutlook: {
-    updatedAt: "2026-07-12",
+    updatedAt: "2026-07-14",
+    title: "연말 누적 컴퓨트 용량 로드맵",
+    badge: "연말 누적 · 회사별 비합산",
+    axisTitle: "Year-end cumulative capacity (GW)",
     years: [2026, 2027, 2028, 2029, 2030],
-    metric: "연말 기준 활용 가능·통제할 것으로 예상되는 compute-linked power capacity (GW)",
+    metric: "기존 fleet와 공개 pipeline을 포함한 연말 누적 compute-linked capacity envelope (GW)",
     methodology:
-      "회사 공식 발표와 신뢰도 높은 보도·산업 트래커의 공개 수치를 앵커로 사용하고, 중간 연도는 공개 앵커 사이 CAGR 또는 공개된 공급 일정을 반영한 base-case로 추정합니다. 정확한 회사 가이던스가 없는 값은 모델 추정으로 표시하며 실제 가동·전력 인입을 뜻하지 않습니다.",
+      "GOOGL·AMZN·META·MSFT는 Jefferies/Aterio의 북미 현재 owner/operator capacity와 미국 2030 self-built+leased 전망을 연결한 물리적 fleet 경로입니다. 중간 연도는 두 앵커 사이 CAGR로 보간합니다. OpenAI·Anthropic은 별도의 AI lab 계약·확보 envelope이므로 hyperscaler fleet와 직접 비교하거나 합산하지 않습니다.",
     warning:
-      "회사별 공개 범위와 정의가 다릅니다. AMZN·GOOGL·MSFT의 2026 앵커는 북미 owner/operator 기준으로 임차·확보 용량이 포함될 수 있어 계량된 실가동 IT load와 같지 않으며, 2030 앵커는 Aterio의 미국 self-built+leased 전망입니다. Meta는 더 최신인 글로벌 deploy 목표, OpenAI·Anthropic은 파트너 클라우드에 확보한 컴퓨트가 포함됩니다. Google이 신용보강한 Fluidstack 용량은 Google 소유 용량이 아닙니다. OpenAI·Anthropic 용량은 AMZN·GOOGL·MSFT 안에 중복될 수 있으므로 회사 간 수치를 합산하면 안 됩니다.",
+      "위 네 hyperscaler의 2026 앵커는 북미, 2030 앵커는 미국 기준이라 지리 범위가 완전히 같지는 않습니다. Meta의 Reuters 7GW→14GW는 글로벌 연간 배치 목표라 이 fleet 선에서는 제외하고 근거 상세에만 남겼습니다. OpenAI·Anthropic capacity는 AMZN·GOOGL·MSFT의 fleet 안에 중복될 수 있습니다.",
+    comparisonNote:
+      "위는 기존 설비를 포함한 연말 누적 capacity envelope이고, 아래는 정확한 GW와 가동 연도가 함께 공개된 신규 프로젝트의 해당 연도 증분입니다. 포함 범위와 시간 기준이 달라 두 그래프의 합계가 일치하지 않는 것이 정상입니다.",
     sourceTypes: [
       { key: "official", label: "회사 공식 앵커", tone: "green" },
       { key: "reported", label: "보도·트래커 앵커", tone: "blue" },
@@ -35,6 +40,7 @@ window.studyDataCenterDeals = {
     series: [
       {
         company: "GOOGL",
+        family: "Hyperscaler fleet",
         definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 방향성 전망",
         calculation:
           "2026년 Jefferies/Aterio 북미 5.2GW와 Aterio의 2030년 미국 self-built+leased 31GW를 앵커로 두고 2027~2029년을 CAGR 56.3%로 보간했습니다.",
@@ -54,6 +60,7 @@ window.studyDataCenterDeals = {
       },
       {
         company: "AMZN",
+        family: "Hyperscaler fleet",
         definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 방향성 전망",
         calculation:
           "2026년 Jefferies/Aterio 북미 10.6GW와 Aterio의 2030년 미국 self-built+leased 36GW를 앵커로 두고 2027~2029년을 CAGR 35.8%로 보간했습니다.",
@@ -73,17 +80,20 @@ window.studyDataCenterDeals = {
       },
       {
         company: "META",
-        definition: "Meta가 전 세계에 deploy하겠다고 밝힌 computing infrastructure 기준",
+        family: "Hyperscaler fleet",
+        definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 물리적 fleet 방향성 전망",
         calculation:
-          "Reuters가 확인한 내부 메모의 2026년 7GW·2027년 14GW를 그대로 사용했습니다. 이후는 Zuckerberg의 'this decade tens of gigawatts'를 보수적 하단인 20GW로 수치화하고 2028~2030년을 CAGR 12.6%로 연결했습니다.",
+          "2026년 Jefferies/Aterio 북미 4.8GW와 Aterio의 2030년 미국 self-built+leased 13GW를 앵커로 두고 2027~2029년을 CAGR 28.3%로 보간했습니다. Reuters의 2026년 7GW·2027년 14GW는 글로벌 compute 배치 목표로 정의가 달라 이 선에 섞지 않았습니다.",
         values: [
-          { year: 2026, gw: 7.0, type: "reported", basis: "Reuters 확인 내부 메모: 2026년 7GW deploy" },
-          { year: 2027, gw: 14.0, type: "reported", basis: "Reuters 확인 내부 메모: 2027년 14GW로 확대" },
-          { year: 2028, gw: 15.8, type: "model", basis: "2027년 앵커와 2030년 보수적 하단 사이 보간" },
-          { year: 2029, gw: 17.8, type: "model", basis: "2027년 앵커와 2030년 보수적 하단 사이 보간" },
-          { year: 2030, gw: 20.0, type: "model", basis: "공식 'tens of gigawatts this decade'의 최소 수치화" },
+          { year: 2026, gw: 4.8, type: "reported", basis: "Jefferies/Aterio 북미 operator·owner capacity" },
+          { year: 2027, gw: 6.2, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2028, gw: 7.9, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2029, gw: 10.1, type: "model", basis: "2026→2030 CAGR 보간" },
+          { year: 2030, gw: 13.0, type: "consensus", basis: "Aterio 미국 self-built+leased total 전망" },
         ],
         sources: [
+          { label: "Axios · Jefferies/Aterio 2026", url: "https://www.axios.com/2026/06/26/amazon-google-microsoft-dominate-data-centers" },
+          { label: "Aterio chart · industry repost", url: "https://www.linkedin.com/posts/mrdatacenters_amazons-self-built-data-center-capacity-activity-7478087695425183744-JfRq" },
           { label: "Reuters · 7GW→14GW memo", url: "https://www.investing.com/news/stock-market-news/exclusivemeta-to-put-ai-chip-into-production-in-september-as-it-looks-to-double-computing-capacity-memo-shows-4783736" },
           { label: "Reuters · Meta Compute", url: "https://archive.vn/2026.01.13-025505/https%3A/www.reuters.com/technology/meta-build-gigawatt-scale-computing-capacity-under-meta-compute-effort-2026-01-12/" },
           { label: "Meta · data center capacity", url: "https://about.fb.com/news/2026/04/infrastructure-explained-meta-data-centers/" },
@@ -91,6 +101,7 @@ window.studyDataCenterDeals = {
       },
       {
         company: "MSFT",
+        family: "Hyperscaler fleet",
         definition: "북미 owner/operator 현재 용량과 Aterio의 미국 self-built+leased 2030 pipeline을 연결한 방향성 전망",
         calculation:
           "2026년 Jefferies/Aterio 북미 5.5GW와 Aterio의 2030년 미국 self-built+leased 16GW를 앵커로 두고 2027~2029년을 CAGR 30.6%로 보간했습니다.",
@@ -110,6 +121,7 @@ window.studyDataCenterDeals = {
       },
       {
         company: "OpenAI",
+        family: "AI lab contract envelope",
         definition: "OpenAI가 직접 또는 파트너 데이터센터에 배치할 accelerator power envelope 기준",
         calculation:
           "2025년 약 1.9GW available compute에서 2026년 하반기 AMD·NVIDIA 각 최초 1GW와 Broadcom 초기 배치를 반영해 5GW로 추정했습니다. 2029년은 Broadcom 10GW, NVIDIA 최소 10GW, AMD 6GW의 발표 상단을 합산한 26GW이며, 계약 단계와 물리적 사이트 중복 위험 때문에 upper-envelope로 봐야 합니다.",
@@ -130,6 +142,7 @@ window.studyDataCenterDeals = {
       },
       {
         company: "Anthropic",
+        family: "AI lab contract envelope",
         definition: "AWS·Google·SpaceX 등 파트너 클라우드에서 Claude 전용으로 확보한 컴퓨트 기준",
         calculation:
           "2026년은 AWS nearly 1GW, 기존 Google TPU well over 1GW, SpaceX 0.3GW의 공식 발표를 보수적으로 합산한 2.3GW 모델 추정입니다. 2027년부터 Broadcom SEC 공시에 확인된 Google/Broadcom 약 3.5GW와 AWS up to 5GW를 단계적으로 반영해 2030년 9.8GW 수준에 도달하는 경로로 추정했습니다. Microsoft $30B와 Fluidstack은 GW 미공개라 제외했습니다.",
@@ -151,46 +164,48 @@ window.studyDataCenterDeals = {
     ],
   },
   buildSchedule: {
-    years: [2025, 2026, 2027, 2028],
-    metric: "공개 수치 기반 신규 가동 critical IT / compute capacity (GW)",
+    title: "연도별 신규 가동 예정분",
+    badge: "연간 증분 · 공개 최소치",
+    axisTitle: "Annual new capacity (GW)",
+    years: [2026, 2027, 2028],
+    metric: "정확한 GW와 가동 목표 연도가 함께 공개된 프로젝트의 연간 신규 critical IT / compute capacity",
     methodology:
-      "원문에서 용량과 가동 목표 연도를 모두 확인할 수 있는 물리적 데이터센터·컴퓨트 capacity만 반영합니다. 누적 수치는 연도별 순증으로 환산하고, PPA·발전용량·중복 프레임워크·가동연도 미공개 프로젝트는 합계에서 제외합니다. Google 열의 Lake Mariner·Abernathy는 Google 소유가 아니라 Google 신용보강을 받은 Fluidstack 임차 capacity이므로 소유 용량으로 해석하거나 Anthropic Fluidstack 프로그램과 중복 합산하면 안 됩니다.",
+      "원문에서 critical IT/compute 용량과 가동 목표 연도를 모두 확인할 수 있는 물리적 프로젝트만 해당 연도의 신규 증분으로 반영합니다. 기존 가동 fleet, PPA·발전용량, 중복 프레임워크, 가동연도 미공개 프로젝트는 제외합니다. Google 열의 Lake Mariner·Abernathy는 Google 소유가 아니라 Google 신용보강을 받은 Fluidstack 임차 capacity입니다.",
     yearNotes: {
-      2025: "Lake Mariner 최초 42MW만 반영. Google은 신용보강 제공자이며 Fluidstack이 임차인입니다. Abilene·Fairwater Atlanta·Project Rainier·Waltham Cross·Winschoten 등은 가동이 확인되지만 공개 IT GW가 없어 제외.",
-      2026: "Lake Mariner 순증 158MW, CB-5 160MW, Abernathy 168MW, Nscale Texas 240MW, Stargate UAE 200MW, Anthropic AWS 1GW 및 G42 UAE 200MW만 반영. 앞의 Fluidstack 3건은 Google 신용보강 기준 표시이며 Google 소유가 아닙니다. 용량 또는 가동 시점이 미공개인 프로젝트는 제외.",
+      2026: "Lake Mariner CB-3 42MW·CB-4 168MW·CB-5 168MW, Abernathy 168MW, Nscale Texas 240MW, Stargate UAE 200MW, Anthropic AWS 1GW 및 G42 UAE 200MW만 반영. Lake Mariner·Abernathy는 Google 신용보강 기준 표시이며 Google 소유가 아닙니다.",
       2027: "Blackstone TPU Cloud 500MW, Nscale Sines 200MW, Loughton 50MW만 반영. '복수 GW' 표현과 Anthropic 호주 미체결 입찰은 제외.",
       2028: "Hawesville는 2027년 초기분이 미공개라 2028년 full 401MW를 일괄 반영해 중복을 방지.",
     },
     events: [
       {
-        id: "lake-mariner-initial-2025",
-        year: 2025,
-        company: "GOOGL",
-        gw: 0.042,
-        label: "Lake Mariner CB-3/4 최초 delivery",
-        confidence: "공식 최소치",
-        dealIds: ["googl-terawulf-fluidstack-lake-mariner-initial-2025"],
-        note: "TeraWulf 공개 누적 delivery timeline의 2025년 하반기 42MW. Fluidstack 임차·Google 신용보강이며 Google 소유 capacity가 아닙니다.",
-      },
-      {
-        id: "lake-mariner-initial-2026",
+        id: "lake-mariner-cb3-2026",
         year: 2026,
         company: "GOOGL",
-        gw: 0.158,
-        label: "Lake Mariner CB-3/4 잔여 ramp",
-        confidence: "공식 최소치",
+        gw: 0.042,
+        label: "Lake Mariner CB-3",
+        confidence: "SEC 8-K schedule",
         dealIds: ["googl-terawulf-fluidstack-lake-mariner-initial-2025"],
-        note: "2026년 상반기 누적 200MW+ 목표에서 2025년 반영분 42MW를 차감한 최소 순증. Fluidstack 임차·Google 신용보강 기준입니다.",
+        note: "최신 TeraWulf 일정의 2026년 5월 delivery 42MW. 2026년 3월 말 기준 Fluidstack lease는 아직 개시 전이어서 기존 2025년 집계에서 이동했습니다.",
+      },
+      {
+        id: "lake-mariner-cb4-2026",
+        year: 2026,
+        company: "GOOGL",
+        gw: 0.168,
+        label: "Lake Mariner CB-4",
+        confidence: "SEC 8-K schedule",
+        dealIds: ["googl-terawulf-fluidstack-lake-mariner-initial-2025"],
+        note: "최신 TeraWulf 일정의 2026년 3분기 delivery 168MW. Fluidstack 임차·Google 신용보강 기준입니다.",
       },
       {
         id: "lake-mariner-cb5-2026",
         year: 2026,
         company: "GOOGL",
-        gw: 0.16,
+        gw: 0.168,
         label: "Lake Mariner CB-5",
-        confidence: "공식",
+        confidence: "SEC 8-K schedule",
         dealIds: ["googl-terawulf-fluidstack-lake-mariner-cb5-2025"],
-        note: "2026년 하반기 운영 개시 목표인 160MW critical IT load. Fluidstack 임차·Google 신용보강 기준입니다.",
+        note: "최신 TeraWulf 일정에서 168MW로 상향됐으며 2026년 4분기 delivery 목표입니다. Fluidstack 임차·Google 신용보강 기준입니다.",
       },
       {
         id: "abernathy-2026",
@@ -688,12 +703,12 @@ window.studyDataCenterDeals = {
       company: "GOOGL",
       date: "2025-08-18",
       title: "Fluidstack/TeraWulf Lake Mariner CB-5 확장 보증",
-      capacity: "0.160GW critical IT load",
+      capacity: "0.168GW critical IT load (최신 증설안)",
       amount: "Google 추가 보증 약 $1.4B, 총 보증 약 $3.2B",
       partners: ["Fluidstack", "TeraWulf"],
       location: "Lake Mariner, Western New York",
       status: "construction",
-      construction: "CB-5 160MW lease 확장. 기존 CB-3/CB-4와 합산 시 약 360MW critical IT load.",
+      construction: "최초 계약은 160MW였으나 2026년 2월 공식 자료에서 168MW로 상향. 2026년 4분기 delivery 목표.",
       equipment: "Liquid-cooled AI/HPC hosting, grid-connected Lake Mariner campus",
       dcType: "AI/HPC colocation expansion",
       sourceNote: "공식 발표",
@@ -701,6 +716,10 @@ window.studyDataCenterDeals = {
         {
           label: "TeraWulf",
           url: "https://investors.terawulf.com/news-events/press-releases/detail/114/terawulf-announces-fluidstack-expansion-with-160-mw-cb-5-lease-at-lake-mariner",
+        },
+        {
+          label: "TeraWulf 8-K · 2026 delivery schedule",
+          url: "https://investors.terawulf.com/sec-filings/all-sec-filings/content/0001083301-26-000026/terawulfq42025investorpr.htm",
         },
       ],
     },
@@ -734,12 +753,12 @@ window.studyDataCenterDeals = {
       company: "GOOGL",
       date: "2025-08-14",
       title: "Fluidstack/TeraWulf Lake Mariner initial AI hosting 보증",
-      capacity: "0.200GW+ critical IT load, 약 0.250GW gross",
+      capacity: "0.210GW critical IT load (CB-3 42MW + CB-4 168MW)",
       amount: "Google 보증 약 $1.8B, 초기 10년 매출 약 $3.7B",
       partners: ["Fluidstack", "TeraWulf"],
       location: "Lake Mariner, Western New York",
       status: "construction",
-      construction: "TeraWulf 공개 delivery timeline 기준 2025년 하반기 42MW, 2026년 상반기 누적 200MW+ 목표.",
+      construction: "2026년 3월 말 Fluidstack lease 미개시. 최신 일정은 CB-3 42MW 2026년 5월, CB-4 168MW 2026년 3분기 delivery 목표.",
       equipment: "Dual 345kV, closed-loop water cooling, liquid-cooled AI/HPC hosting",
       dcType: "AI/HPC colocation, 전력 고밀도 캠퍼스",
       sourceNote: "공식 발표",
@@ -747,6 +766,14 @@ window.studyDataCenterDeals = {
         {
           label: "TeraWulf",
           url: "https://investors.terawulf.com/news-events/press-releases/detail/112/terawulf-signs-200-mw-10-year-ai-hosting-agreements-with-fluidstack",
+        },
+        {
+          label: "TeraWulf 10-Q · 2026-03-31 lease status",
+          url: "https://investors.terawulf.com/sec-filings/all-sec-filings/content/0001083301-26-000092/wulf-20260331.htm",
+        },
+        {
+          label: "TeraWulf 8-K · 2026 delivery schedule",
+          url: "https://investors.terawulf.com/sec-filings/all-sec-filings/content/0001083301-26-000026/terawulfq42025investorpr.htm",
         },
       ],
     },

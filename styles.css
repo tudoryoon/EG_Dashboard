@@ -3610,6 +3610,15 @@ h1 {
   margin-right: 7px;
 }
 
+.study-outlook-family {
+  display: block;
+  margin: 3px 0 5px 15px;
+  color: #85857d;
+  font-size: 0.56rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
 .study-outlook-value {
   display: inline-flex;
   align-items: center;
@@ -3657,6 +3666,60 @@ h1 {
 .study-outlook-warning strong {
   color: #92400e;
   white-space: nowrap;
+}
+
+.study-capacity-bridge {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 4px;
+  padding: 13px 16px;
+  border-top: 1px solid #d8d8d2;
+  border-bottom: 1px solid #d8d8d2;
+  background: #f7f7f3;
+}
+
+.study-capacity-bridge > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.study-capacity-bridge > div > span {
+  color: #0f766e;
+  font-size: 0.64rem;
+  font-weight: 850;
+}
+
+.study-capacity-bridge > div:nth-of-type(2) > span {
+  color: #9a6700;
+}
+
+.study-capacity-bridge strong {
+  color: #292925;
+  font-size: 0.79rem;
+}
+
+.study-capacity-bridge small {
+  color: #76766f;
+  font-size: 0.66rem;
+}
+
+.study-capacity-bridge > b {
+  color: #9a9a92;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.study-capacity-bridge > p {
+  grid-column: 1 / -1;
+  margin: 3px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid #dfdfd8;
+  color: #5f5f58;
+  font-size: 0.7rem;
+  line-height: 1.5;
 }
 
 .study-data-center-summary-grid {
@@ -4270,6 +4333,20 @@ h1 {
   .study-outlook-warning {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .study-capacity-bridge {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .study-capacity-bridge > b {
+    display: none;
+  }
+
+  .study-capacity-bridge > p {
+    grid-column: auto;
   }
 
   .study-outlook-point-list {
