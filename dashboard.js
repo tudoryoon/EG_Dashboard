@@ -1215,6 +1215,27 @@ function renderMemoryCapaAnnualModel(section) {
     </div>`;
 }
 
+function renderMemoryCapaCriteria(section) {
+  const criteria = section?.criteria;
+  if (!criteria?.length) {
+    return "";
+  }
+
+  return `
+    <div class="memory-capa-criteria" aria-label="표시 기준">
+      ${criteria
+        .map(
+          (item) => `
+            <div class="memory-capa-criterion">
+              <span>${escapeHtml(item.label || "기준")}</span>
+              <strong>${escapeHtml(item.value || "-")}</strong>
+              <small>${escapeHtml(item.note || "")}</small>
+            </div>`,
+        )
+        .join("")}
+    </div>`;
+}
+
 function renderMemoryCapaHbmAllocation(section) {
   const model = section?.hbmAllocation;
   if (!model?.rows?.length || !model?.years?.length) {
@@ -1231,8 +1252,8 @@ function renderMemoryCapaHbmAllocation(section) {
             .map(
               (value) => `
                 <td>
-                  <strong class="memory-capa-hbm-wpm">${escapeHtml(value?.wpm || "-")}</strong>
-                  <small class="memory-capa-hbm-share">${escapeHtml(value?.share === "N/D" ? "비중 N/D" : `DRAM 중 ${value?.share || "-"}`)}</small>
+                  <strong class="memory-capa-hbm-share">${escapeHtml(value?.share === "N/D" ? "N/D" : value?.share || "-")}</strong>
+                  <small class="memory-capa-hbm-wpm">${escapeHtml(value?.wpm === "N/D" ? "환산 N/D" : `환산 ${value?.wpm || "-"}`)}</small>
                 </td>`,
             )
             .join("")}
@@ -1358,6 +1379,7 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
   const quarterHeader = (quarters ?? []).map((quarter) => `<th>${escapeHtml(quarter.label)}</th>`).join("");
   const rowMarkup = usesCompanyRows ? renderMemoryCapaCompanyRows(sectionKey, section, quarters) : renderMemoryCapaRows(section, quarters);
   const isPlaceholder = !rowMarkup.trim();
+  const criteriaMarkup = renderMemoryCapaCriteria(section);
   const annualModelMarkup = renderMemoryCapaAnnualModel(section);
   const hbmAllocationMarkup = renderMemoryCapaHbmAllocation(section);
   const metricNoteMarkup = section?.metricNote
@@ -1380,9 +1402,14 @@ function renderMemoryCapaSection(sectionKey, section, quarters) {
           <p>${escapeHtml(section?.subtitle || "")}</p>
         </div>
       </div>
+      ${criteriaMarkup}
       ${annualModelMarkup}
       ${hbmAllocationMarkup}
       ${metricNoteMarkup}
+      <div class="memory-capa-roadmap-head">
+        <strong>${escapeHtml(section?.roadmapTitle || "분기별 생산 이벤트")}</strong>
+        <span>${escapeHtml(section?.roadmapNote || "셀을 클릭하면 상세 근거를 확인할 수 있습니다.")}</span>
+      </div>
       <div class="memory-capa-table-wrap">
         <table class="memory-capa-table${usesCompanyRows ? " memory-capa-table-compact" : ""}">
           <thead>

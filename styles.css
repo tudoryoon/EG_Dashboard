@@ -4489,6 +4489,51 @@ h1 {
   opacity: 0.82;
 }
 
+.memory-capa-criteria {
+  display: grid;
+  margin: 10px 0 16px;
+  border-top: 1px solid #d8d8d2;
+  border-bottom: 1px solid #d8d8d2;
+  background: #fbfaf5;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.memory-capa-criterion {
+  min-width: 0;
+  padding: 11px 14px;
+  border-right: 1px solid #e5e5df;
+}
+
+.memory-capa-criterion:last-child {
+  border-right: 0;
+}
+
+.memory-capa-criterion span,
+.memory-capa-criterion strong,
+.memory-capa-criterion small {
+  display: block;
+}
+
+.memory-capa-criterion span {
+  color: #64748b;
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+
+.memory-capa-criterion strong {
+  margin-top: 4px;
+  color: #20201d;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.memory-capa-criterion small {
+  margin-top: 3px;
+  color: #71717a;
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
 .memory-capa-model {
   margin: 8px 0 14px;
 }
@@ -4647,7 +4692,7 @@ h1 {
 }
 
 .memory-capa-hbm-table {
-  min-width: 760px;
+  min-width: 620px;
 }
 
 .memory-capa-hbm-table td {
@@ -4660,16 +4705,17 @@ h1 {
 }
 
 .memory-capa-hbm-wpm {
-  color: #20201d;
-  font-size: 0.8rem;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
   line-height: 1.2;
 }
 
 .memory-capa-hbm-share {
-  margin-top: 4px;
   color: #0f766e;
-  font-size: 0.66rem;
-  font-weight: 850;
+  font-size: 0.84rem;
+  font-weight: 900;
   line-height: 1.2;
 }
 
@@ -4681,6 +4727,25 @@ h1 {
   color: #52525b;
   font-size: 0.74rem;
   line-height: 1.45;
+}
+
+.memory-capa-roadmap-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 7px;
+}
+
+.memory-capa-roadmap-head strong {
+  color: #20201d;
+  font-size: 0.82rem;
+}
+
+.memory-capa-roadmap-head span {
+  color: #71717a;
+  font-size: 0.68rem;
+  text-align: right;
 }
 
 .memory-capa-table-wrap {
@@ -5020,6 +5085,29 @@ h1 {
 
   .memory-capa-model-note .memory-capa-source-list {
     margin-top: 2px;
+  }
+
+  .memory-capa-criteria {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-capa-criterion {
+    border-right: 0;
+    border-bottom: 1px solid #e5e5df;
+  }
+
+  .memory-capa-criterion:last-child {
+    border-bottom: 0;
+  }
+
+  .memory-capa-roadmap-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .memory-capa-roadmap-head span {
+    text-align: left;
   }
 
   .memory-capa-subtabs {

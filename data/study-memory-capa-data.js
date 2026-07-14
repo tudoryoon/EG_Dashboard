@@ -1,8 +1,8 @@
 window.studyMemoryCapaData = {
-  updatedAt: "2026-07-13",
-  unit: "DRAM/NAND: 12-inch wafer starts per month (K WPM) · HDD: TB/drive and production-ramp milestones",
+  updatedAt: "2026-07-14",
+  unit: "DRAM: 연말 총 wafer CAPA (K WPM) · NAND: 생산 전환/증설 이벤트 · HDD: TB/drive 및 출하 단계",
   scope:
-    "2026년 5~7월 발표 자료를 기준으로 다시 작성했습니다. 회사가 WPM을 직접 공시하지 않은 경우에는 리서치 추정치로 명시하며, 노드 전환·설계 최대 CAPA·회사 총 CAPA를 서로 더하지 않습니다.",
+    "표시 기준을 연말 총량, HBM 배정 비중, 분기별 생산 이벤트로 분리했습니다. 서로 다른 층의 숫자는 합산하지 않으며, 회사가 직접 공시하지 않은 WPM은 리서치 기반 추정치로 표시합니다.",
   quarters: [
     { key: "2026Q1", year: "CY2026", label: "1Q" },
     { key: "2026Q2", year: "CY2026", label: "2Q" },
@@ -28,25 +28,42 @@ window.studyMemoryCapaData = {
     dram: {
       title: "DRAM Capa Roadmap",
       subtitle:
-        "삼성전자·SK하이닉스·Micron의 최신 DRAM/HBM 생산 이벤트입니다. 분기 이벤트는 설계 최대치 또는 증설분일 수 있으므로 연말 회사 총 CAPA와 합산하지 않습니다.",
+        "삼성전자·SK하이닉스·Micron을 동일한 연말 총량 기준으로 비교하고, HBM 배정과 Fab 이벤트는 별도 층으로 표시합니다.",
       kpis: [
         { label: "Samsung 2026E", value: "740K", note: "2026-06-04/17 연말 WPM 추정" },
         { label: "SK hynix 2026E", value: "610K", note: "2026-06-04/17 연말 WPM 추정" },
-        { label: "Micron 2026E", value: "365K", note: "2027~2029은 증설 일정 기반 시나리오" },
+        { label: "Micron 2026E", value: "365K", note: "2027~2028은 증설 일정 기반 시나리오" },
+      ],
+      criteria: [
+        {
+          label: "연말 총량",
+          value: "회사 전체 DRAM CAPA",
+          note: "연말 시점 K WPM · 3사 동일 기준",
+        },
+        {
+          label: "HBM 배정",
+          value: "DRAM 중 HBM wafer 비중",
+          note: "전공정 기준 · TSV/패키징 제외",
+        },
+        {
+          label: "분기 로드맵",
+          value: "Fab 단계와 공급 시점",
+          note: "설계치·증설분은 총량에 재합산 금지",
+        },
       ],
       annualModel: {
-        title: "연말 DRAM Wafer CAPA 최신 추정",
-        badge: "2026-07 refresh",
-        unit: "K WPM · 2025A는 YoY 기준점",
-        years: ["2025A", "2026E", "2027E", "2028E", "2029E"],
+        title: "연말 총 DRAM CAPA",
+        badge: "동일 기준 · Base case",
+        unit: "K WPM · 연말 총 wafer capacity 추정",
+        years: ["2025 Base", "2026E", "2027E", "2028E"],
         rows: [
-          { label: "Samsung", values: ["650", "740", "865", "975", "1,095"] },
-          { label: "SK hynix", values: ["545", "610", "710", "760", "860"] },
-          { label: "Micron", values: ["340", "365", "460", "560", "600*"] },
-          { label: "3사 합계", values: ["1,535", "1,715", "2,035", "2,295", "2,555*"], total: true },
+          { label: "Samsung", values: ["650", "740", "865", "975"] },
+          { label: "SK hynix", values: ["545", "610", "710", "760"] },
+          { label: "Micron", values: ["340", "365", "460", "560"] },
+          { label: "3사 합계", values: ["1,535", "1,715", "2,035", "2,295"], total: true },
         ],
         note:
-          "Samsung·SK hynix는 2026-06-17 DS투자증권 연말 추정입니다. Micron 2025~2026은 2026-06-04 SK증권, 2027~2028은 2026년 6월 공개 증설 모델과 ID1·ID2·Tongluo 일정을 교차 적용했습니다. 2029E 600K(*)는 late-2028 ID2 첫 wafer-out 이후의 완만한 램프를 반영한 대시보드 시나리오이며 회사 공시값이 아닙니다. 2026-07-09 New York Fab 첫 콘크리트 타설은 장기 공급능력에는 중요하지만 WPM·wafer-out 시점이 공개되지 않아 이 연말 수치에는 반영하지 않았습니다. 3사 합계와 YoY도 같은 시나리오의 산술 합계입니다.",
+          "2025 Base는 YoY 계산용 추정 기준점이며 2026E~2028E는 리서치와 회사 증설 일정을 결합한 Base case입니다. 3사 합계는 같은 기준의 산술 합계입니다. 아래 분기 표의 설계 최대치·증설분은 이 총량에 다시 더하지 않습니다.",
         sources: [
           {
             label: "2026-06-17 DS Securities",
@@ -75,10 +92,10 @@ window.studyMemoryCapaData = {
         ],
       },
       hbmAllocation: {
-        title: "HBM Wafer Allocation Estimate",
-        badge: "Front-end wafer mix",
-        unit: "HBM용 WPM 범위 / 회사 DRAM CAPA 대비 비중",
-        years: ["2026E", "2027E", "2028E", "2029E"],
+        title: "HBM 전공정 배정 비중",
+        badge: "파생 추정 · 범위",
+        unit: "회사 DRAM 총 CAPA 중 HBM core die용 wafer input",
+        years: ["2026E", "2027E", "2028E"],
         rows: [
           {
             label: "Samsung",
@@ -86,7 +103,6 @@ window.studyMemoryCapaData = {
               { wpm: "140-170K", share: "19-23%" },
               { wpm: "230-250K", share: "27-29%" },
               { wpm: "300-320K", share: "31-33%" },
-              { wpm: "380-400K", share: "35-37%" },
             ],
           },
           {
@@ -95,7 +111,6 @@ window.studyMemoryCapaData = {
               { wpm: "160-180K", share: "26-30%" },
               { wpm: "210-230K", share: "30-32%" },
               { wpm: "250-270K", share: "33-36%" },
-              { wpm: "310-330K", share: "36-38%" },
             ],
           },
           {
@@ -104,12 +119,11 @@ window.studyMemoryCapaData = {
               { wpm: "80-90K", share: "22-25%" },
               { wpm: "100-110K", share: "22-24%" },
               { wpm: "120-130K", share: "21-23%" },
-              { wpm: "N/D", share: "N/D" },
             ],
           },
         ],
         note:
-          "HBM 완제품 출하량이나 TSV·패키징 CAPA가 아니라 HBM core die 생산에 배정되는 DRAM 전공정 wafer input 추정입니다. Samsung·SK hynix는 DS투자증권의 2026-06-17 HBM/Non-HBM 연말 막대와 합산 비중을 범위로 재구성했고, Micron은 2026년 6월 공개 capacity model을 대시보드 총 CAPA 분모에 맞춰 범위화했습니다. 서로 집계 기준이 달라 단일 정밀값 대신 범위로 봐야 합니다.",
+          "비중을 핵심 지표로 표시하며 WPM은 위 연말 총량에 비중을 적용한 환산 범위입니다. HBM 완제품·TSV·패키징 CAPA는 포함하지 않으며, 업체별 원자료 차이를 감안해 단일값이 아닌 범위로 봅니다.",
         sources: [
           {
             label: "2026-06-17 DS Securities",
@@ -129,6 +143,8 @@ window.studyMemoryCapaData = {
           },
         ],
       },
+      roadmapTitle: "분기별 Fab 이벤트",
+      roadmapNote: "셀에는 단계와 시점만 표시합니다. 클릭하면 설계치·증설분과 출처를 확인할 수 있습니다.",
       companyRows: [
         {
           company: "Samsung",
@@ -156,24 +172,16 @@ window.studyMemoryCapaData = {
             },
             "2026Q3": {
               status: "ramp",
-              value: "60-80K",
-              delta: "P4 Ph4 design",
+              value: "P4 Ph4",
+              delta: "초기 양산",
               detail: "P4 Ph4 초기 양산 목표 구간. 실제 공급 기여는 1H27부터로 추정됩니다.",
               basis: "설계 최대 CAPA와 초기 양산 시점 모두 2026-06-17 리서치 추정이며 실제 wafer input은 램프 속도에 따라 달라집니다.",
               sourceIndexes: [0],
             },
-            "2026Q4": {
-              status: "ramp",
-              value: "740K",
-              delta: "연말 총 CAPA",
-              detail: "2026년 말 Samsung 전체 DRAM wafer CAPA 최신 추정치. 2025년 650K 대비 약 13.8% 증가입니다.",
-              basis: "2026-06-04 SK증권과 2026-06-17 DS투자증권이 같은 740K WPM을 제시합니다.",
-              sourceIndexes: [0, 1],
-            },
             "2027Q1": {
               status: "equipment",
               value: "P4 Ph2",
-              delta: "90K+ design",
+              delta: "장비 반입",
               detail: "P4 Ph2 장비 반입 시작 추정. 초기 양산은 2H27, 공급 기여는 1H28로 예상됩니다.",
               basis: "2026-06-17 리서치 팹 타임라인의 설계 최대치이며 회사 확정 CAPA가 아닙니다.",
               sourceIndexes: [0],
@@ -181,7 +189,7 @@ window.studyMemoryCapaData = {
             "2028Q1": {
               status: "online",
               value: "P5",
-              delta: "150K+ design",
+              delta: "초기 양산",
               detail: "P5 초기 양산 목표. 공급 기여는 2H28부터로 추정되며 P5·P6 전체 600K 보도치와는 범위가 다릅니다.",
               basis: "초기 양산·150K+ 설계치는 2026-06-17 리서치, P5/P6 건설 일정은 2026-05 보도로 교차 확인했습니다.",
               sourceIndexes: [0, 3],
@@ -224,16 +232,16 @@ window.studyMemoryCapaData = {
             },
             "2026Q2": {
               status: "online",
-              value: "100K",
-              delta: "M15X design full",
+              value: "M15X",
+              delta: "초기 양산",
               detail: "M15X 초기 양산 목표 2Q26, 공급 기여 2H26. 100K는 완전 램프 시 설계 최대치입니다. 6월 18일 HBM4E 12단 샘플 공급은 제품·패키징 진척이며 WPM 증설 수치가 아닙니다.",
               basis: "100K는 2026-06-17 DS투자증권 추정입니다. HBM4E 샘플은 SK hynix 공식 발표로 교차 확인했으며 2Q26 실제 투입량이 100K라는 뜻은 아닙니다.",
               sourceIndexes: [0, 4],
             },
             "2026Q3": {
               status: "ramp",
-              value: "+70K",
-              delta: "CY26 investment",
+              value: "CY26 증설",
+              delta: "투자분 추정",
               detail: "2026년 DRAM 증설 투자분 추정. M15X 일부 공간은 2H26 범용 1c DRAM에도 배정될 것으로 예상됩니다.",
               basis: "2026-06-04 SK증권 추정이며 M15X 설계 최대 100K와 별도로 더하면 안 됩니다.",
               sourceIndexes: [1],
@@ -248,16 +256,16 @@ window.studyMemoryCapaData = {
             },
             "2027Q1": {
               status: "online",
-              value: "100K+",
-              delta: "Y1 Ph1 design",
+              value: "Y1 Ph1",
+              delta: "첫 클린룸",
               detail: "Y1 Ph1 초기 양산 및 첫 클린룸 개장 구간. 공급 기여는 2H27로 추정됩니다.",
               basis: "100K+는 설계 최대치 추정입니다. 회사 공식 발표는 6개 클린룸과 첫 클린룸 2027년 2월 일정만 제공합니다.",
               sourceIndexes: [0, 3],
             },
             "2027Q4": {
               status: "online",
-              value: "100K+",
-              delta: "Y1 Ph2 design",
+              value: "Y1 Ph2",
+              delta: "초기 양산",
               detail: "Y1 Ph2 초기 양산 추정. 실제 공급 기여는 2H28로 예상됩니다.",
               basis: "2026-06-17 리서치 타임라인의 설계 최대치이며 공식 WPM이 아닙니다.",
               sourceIndexes: [0],
@@ -312,8 +320,8 @@ window.studyMemoryCapaData = {
             },
             "2026Q2": {
               status: "ramp",
-              value: "30-40K",
-              delta: "CY26 DRAM invest",
+              value: "CY26 증설",
+              delta: "증설분 추정",
               detail: "Micron의 2026년 DRAM 증설분 리서치 추정. Virginia Fab 6는 1α DDR4/LPDDR4 생산을 시작했지만 OMT 이전을 포함한 재배치 성격이 큽니다.",
               basis: "30~40K는 2026-06-04 SK증권 추정이며, Fab 6 가동 상태는 2026-05-26 TrendForce로 교차 확인했습니다.",
               sourceIndexes: [2, 3],
@@ -328,8 +336,8 @@ window.studyMemoryCapaData = {
             },
             "2026Q4": {
               status: "ramp",
-              value: "HBM4E dev",
-              delta: "1γ · CY27 HVM",
+              value: "HBM4E",
+              delta: "개발 · CY27 HVM",
               detail: "HBM4는 1-beta DRAM 기반으로 이미 high-volume shipment 중입니다. 1-gamma는 HBM4가 아니라 HBM4E에 적용되며 회사는 HBM4E volume production을 2027년으로 제시했습니다.",
               basis: "2026-06-24 Micron FY3Q26 공식 발표의 공정 구분입니다. 해당 발표에는 HBM용 WPM 수치가 없습니다.",
               sourceIndexes: [0],
@@ -344,8 +352,8 @@ window.studyMemoryCapaData = {
             },
             "2027Q4": {
               status: "ramp",
-              value: "1.5x",
-              delta: "Fab 6 vs 2Q26",
+              value: "Fab 6",
+              delta: "램프 추정",
               detail: "Virginia Fab 6 월 wafer input이 2Q26 대비 4Q27에 1.5배가 될 것으로 예상됩니다. Micron 전체 순증이 아니라 OMT 생산 이전을 포함합니다.",
               basis: "2026-05-26 TrendForce 추정. 글로벌 Micron 총 CAPA 증가로 단순 환산하지 않습니다.",
               sourceIndexes: [3],
@@ -390,6 +398,23 @@ window.studyMemoryCapaData = {
         "오래된 2030 총량 시나리오 대신 2026년 5~7월에 확인된 실제 노드 전환·신규 투자·wafer-out 이벤트를 표시합니다. Kioxia와 SanDisk는 동일 JV fab이므로 중복 합산하지 않습니다.",
       metricNote:
         "최신 공개자료에는 업체별 총 NAND WPM 시계열이 완전하게 공개되지 않습니다. 아래 수치는 회사 총 CAPA가 아니라 증설·전환 대상 또는 공정 milestone입니다.",
+      criteria: [
+        {
+          label: "총 CAPA",
+          value: "업체별 공개치 부족",
+          note: "회사 간 합계·YoY 미산출",
+        },
+        {
+          label: "추적 기준",
+          value: "노드·Fab 전환 이벤트",
+          note: "순증과 전환 대상 규모를 구분",
+        },
+        {
+          label: "중복 방지",
+          value: "Kioxia·SanDisk JV 1회",
+          note: "동일 물리 Fab은 합산 금지",
+        },
+      ],
       annualModel: {
         title: "최신 NAND Capacity Actions",
         badge: "2026-05~07 refresh",
@@ -427,6 +452,8 @@ window.studyMemoryCapaData = {
           },
         ],
       },
+      roadmapTitle: "분기별 생산 전환 이벤트",
+      roadmapNote: "WPM 숫자는 회사 총량이 아니라 해당 증설·전환 대상 규모입니다.",
       companyRows: [
         {
           company: "Samsung",
@@ -712,6 +739,25 @@ window.studyMemoryCapaData = {
         "HDD 업체는 공장 unit CAPA를 공개하지 않으므로 TB/drive, 고객 인증, volume shipment를 실질 공급능력 지표로 사용합니다. 최신 확인이 없는 과거 exabyte 전망은 제거했습니다.",
       metricNote:
         "같은 수의 드라이브를 생산해도 TB/drive가 높아지면 출하 가능한 exabyte가 늘어납니다. 아래 수치는 wafer WPM과 비교할 수 없습니다.",
+      criteria: [
+        {
+          label: "공급력 Proxy",
+          value: "TB/drive",
+          note: "공장 unit CAPA는 미공개",
+        },
+        {
+          label: "진행 단계",
+          value: "인증 → 양산 → 출하",
+          note: "고객 채택 여부를 함께 확인",
+        },
+        {
+          label: "비교 기준",
+          value: "Exabyte 공급능력",
+          note: "DRAM·NAND WPM과 직접 비교 금지",
+        },
+      ],
+      roadmapTitle: "분기별 인증·출하 이벤트",
+      roadmapNote: "용량과 고객 인증 단계가 실제 공급 확대를 확인하는 핵심 지표입니다.",
       companyRows: [
         {
           company: "Seagate",
