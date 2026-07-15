@@ -496,6 +496,17 @@
       "sharesOutstanding": 356402526
     },
     {
+      "ticker": "QQQ",
+      "name": "Invesco QQQ Trust",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 393100000
+    },
+    {
       "ticker": "RBLX",
       "name": "Roblox Corporation",
       "memberships": {
@@ -615,6 +626,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 205620061
+    },
+    {
+      "ticker": "SPY",
+      "name": "State Street SPDR S&P 500 ETF Trust",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 917782016
     },
     {
       "ticker": "SYM",
