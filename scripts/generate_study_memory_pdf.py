@@ -102,12 +102,18 @@ def safe(value: object) -> str:
     return html.escape(str(value if value is not None else ""))
 
 
-def parse_number(value: str) -> float:
+def parse_number(value: str) -> float | None:
     cleaned = str(value).replace(",", "").replace("*", "").strip()
+    if "-" in cleaned:
+        parts = cleaned.split("-", 1)
+        try:
+            return (float(parts[0]) + float(parts[1])) / 2
+        except ValueError:
+            return None
     try:
         return float(cleaned)
     except ValueError:
-        return 0.0
+        return None
 
 
 def build_styles() -> dict[str, ParagraphStyle]:
@@ -253,9 +259,15 @@ def make_table(
 
 
 def dram_chart(annual: dict, styles: dict[str, ParagraphStyle]) -> Drawing:
-    years = annual["years"]
     company_rows = annual["rows"][:3]
-    values = [[parse_number(v) for v in row["values"]] for row in company_rows]
+    parsed_values = [[parse_number(v) for v in row["values"]] for row in company_rows]
+    available_indexes = [
+        index
+        for index in range(len(annual["years"]))
+        if all(row[index] is not None for row in parsed_values)
+    ]
+    years = [annual["years"][index] for index in available_indexes]
+    values = [[row[index] for index in available_indexes] for row in parsed_values]
     drawing = Drawing(720, 245)
     chart = VerticalBarChart()
     chart.x = 55
@@ -307,9 +319,12 @@ def annual_table(section: dict, styles: dict[str, ParagraphStyle]) -> Table:
     for row in annual["rows"]:
         rendered = [para(row["label"], styles["table_cell_bold"])]
         previous = None
+        explicit_yoy = row.get("yoy", [])
         for index, value in enumerate(row["values"]):
             current = parse_number(value)
-            if index == 0 or previous in (None, 0):
+            if index < len(explicit_yoy) and explicit_yoy[index]:
+                note = explicit_yoy[index]
+            elif index == 0 or previous in (None, 0) or current is None:
                 note = "base" if annual.get("showYoy", True) else ""
             elif annual.get("showYoy", True):
                 note = f"YoY {(current / previous - 1) * 100:+.1f}%"

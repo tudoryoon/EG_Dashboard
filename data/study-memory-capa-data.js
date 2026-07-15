@@ -1,5 +1,5 @@
 window.studyMemoryCapaData = {
-  updatedAt: "2026-07-14",
+  updatedAt: "2026-07-15",
   unit: "DRAM: 연말 총 wafer CAPA (K WPM) · NAND: 생산 전환/증설 이벤트 · HDD: TB/drive 및 출하 단계",
   scope:
     "표시 기준을 연말 총량, HBM 배정 비중, 분기별 생산 이벤트로 분리했습니다. 서로 다른 층의 숫자는 합산하지 않으며, 회사가 직접 공시하지 않은 WPM은 리서치 기반 추정치로 표시합니다.",
@@ -28,17 +28,17 @@ window.studyMemoryCapaData = {
     dram: {
       title: "DRAM Capa Roadmap",
       subtitle:
-        "삼성전자·SK하이닉스·Micron을 동일한 연말 총량 기준으로 비교하고, HBM 배정과 Fab 이벤트는 별도 층으로 표시합니다.",
+        "연말 명목 wafer CAPA를 같은 단위로 비교하되, 복수 리서치의 범위와 회사가 공개한 Fab 가동 시점을 분리해 표시합니다.",
       kpis: [
-        { label: "Samsung 2026E", value: "740K", note: "2026-06-04/17 연말 WPM 추정" },
-        { label: "SK hynix 2026E", value: "610K", note: "2026-06-04/17 연말 WPM 추정" },
-        { label: "Micron 2026E", value: "365K", note: "2027~2028은 증설 일정 기반 시나리오" },
+        { label: "Samsung 2026E", value: "700-740K", note: "Mirae 700K · SK/DS 740K" },
+        { label: "SK hynix 2026E", value: "605-610K", note: "Mirae 605K · SK/DS 610K" },
+        { label: "Micron 2026E", value: "365K", note: "SK증권 연말 WPM 추정" },
       ],
       criteria: [
         {
           label: "연말 총량",
           value: "회사 전체 DRAM CAPA",
-          note: "연말 시점 K WPM · 3사 동일 기준",
+          note: "연말 명목 K WPM · 회사 공시가 아닌 리서치 추정",
         },
         {
           label: "HBM 배정",
@@ -53,18 +53,39 @@ window.studyMemoryCapaData = {
       ],
       annualModel: {
         title: "연말 총 DRAM CAPA",
-        badge: "동일 기준 · Base case",
-        unit: "K WPM · 연말 총 wafer capacity 추정",
+        badge: "공개 범위 · 보수적 N/D",
+        unit: "K WPM · 2026은 공개 추정 범위, *는 DS 단일 시나리오",
         years: ["2025 Base", "2026E", "2027E", "2028E"],
         rows: [
-          { label: "Samsung", values: ["650", "740", "865", "975"] },
-          { label: "SK hynix", values: ["545", "610", "710", "760"] },
-          { label: "Micron", values: ["340", "365", "460", "560"] },
-          { label: "3사 합계", values: ["1,535", "1,715", "2,035", "2,295"], total: true },
+          {
+            label: "Samsung",
+            values: ["650", "700-740", "865*", "975*"],
+            yoy: ["기준", "YoY +7.7~13.8%", "DS +16.9%", "DS +12.7%"],
+          },
+          {
+            label: "SK hynix",
+            values: ["545", "605-610", "710*", "760*"],
+            yoy: ["기준", "YoY +11.0~11.9%", "DS +16.4%", "DS +7.0%"],
+          },
+          {
+            label: "Micron",
+            values: ["340", "365", "N/D", "N/D"],
+            yoy: ["기준", "YoY +7.4%", "공개 WPM 없음", "공개 WPM 없음"],
+          },
+          {
+            label: "3사 합계",
+            values: ["1,535", "1,670-1,715", "N/D", "N/D"],
+            yoy: ["기준", "YoY +8.8~11.7%", "미산출", "미산출"],
+            total: true,
+          },
         ],
         note:
-          "2025 Base는 YoY 계산용 추정 기준점이며 2026E~2028E는 리서치와 회사 증설 일정을 결합한 Base case입니다. 3사 합계는 같은 기준의 산술 합계입니다. 아래 분기 표의 설계 최대치·증설분은 이 총량에 다시 더하지 않습니다.",
+          "2026 증가는 신규 메가팹이 아니라 Samsung P4·SK hynix M15X 등 기존 캠퍼스 증설과 공정 전환 후 순증을 반영합니다. 2027E~2028E의 Samsung·SK hynix 값은 DS증권 단일 시나리오이며, Micron은 ID1·Tongluo·ID2의 공식 가동 시점만 공개하고 WPM은 공개하지 않아 보간값을 삭제했습니다. 따라서 3사 합계와 YoY도 2027년 이후 산출하지 않습니다.",
         sources: [
+          {
+            label: "2026 Outlook Mirae Asset (SEC 700K · SKH 605K)",
+            url: "https://securities.miraeasset.com/bbs/download/2141014.pdf?attachmentId=2141014",
+          },
           {
             label: "2026-06-17 DS Securities",
             url: "https://file.alphasquare.co.kr/media/pdfs/market-report/%EB%B0%98%EB%8F%84%EC%B2%B4Higher%2C20260617DS%ED%88%AC%EC%9E%90%EC%A6%9D%EA%B6%8C.pdf",
@@ -74,20 +95,12 @@ window.studyMemoryCapaData = {
             url: "https://www.hankyung.com/koreamarket/consensus/pdf/2026-06-0397aa4d7f1d9c63edb010f68c702867",
           },
           {
-            label: "2026-06 DRAM capacity model",
-            url: "https://log.eurekapu.com/memory-makers/dram-fab-capacity/",
-          },
-          {
             label: "2026-06-24 Micron supply roadmap",
             url: "https://investors.micron.com/static-files/2354ecda-77a0-4ddd-8462-a631eb491356",
           },
           {
-            label: "2026-06-29 SEMI 300mm Outlook",
-            url: "https://www.semi.org/en/products-services/market-data/300mm-fab-outlook",
-          },
-          {
-            label: "2026-07-09 Micron New York Fab",
-            url: "https://investors.micron.com/news-releases/news-release-details/micron-accelerates-us-investments-pours-first-concrete-new-york",
+            label: "2026-02-25 SK hynix Yongin official",
+            url: "https://news.skhynix.com/new-facility-investment-for-yongin-semiconductor-cluster/",
           },
         ],
       },
@@ -117,13 +130,13 @@ window.studyMemoryCapaData = {
             label: "Micron",
             values: [
               { wpm: "80-90K", share: "22-25%" },
-              { wpm: "100-110K", share: "22-24%" },
-              { wpm: "120-130K", share: "21-23%" },
+              { wpm: "N/D", share: "22-24%" },
+              { wpm: "N/D", share: "21-23%" },
             ],
           },
         ],
         note:
-          "비중을 핵심 지표로 표시하며 WPM은 위 연말 총량에 비중을 적용한 환산 범위입니다. HBM 완제품·TSV·패키징 CAPA는 포함하지 않으며, 업체별 원자료 차이를 감안해 단일값이 아닌 범위로 봅니다.",
+          "비중을 핵심 지표로 표시하며 WPM은 위 연말 총량에 비중을 적용한 환산 범위입니다. Micron의 2027~2028 연말 총 WPM이 공개되지 않아 해당 환산값은 N/D로 처리했습니다. HBM 완제품·TSV·패키징 CAPA는 포함하지 않습니다.",
         sources: [
           {
             label: "2026-06-17 DS Securities",
@@ -152,7 +165,7 @@ window.studyMemoryCapaData = {
           confidence: "2026-06 리서치 + 2026-05 회사 발표",
           confidenceTone: "mixed",
           summary:
-            "2026년 연말 총 DRAM CAPA는 740K WPM으로 최신 추정됩니다. P4 Ph3·Ph4·Ph2의 설계 CAPA는 서로 다른 단계의 라인 수치이며, 회사 총 CAPA와 별도로 봐야 합니다.",
+            "2026년 연말 총 DRAM CAPA는 리서치별 700~740K WPM 범위입니다. P4 Ph3·Ph4·Ph2의 설계 CAPA는 서로 다른 단계의 라인 수치이며, 회사 총 CAPA와 별도로 봐야 합니다.",
           cells: {
             "2026Q1": {
               status: "equipment",
