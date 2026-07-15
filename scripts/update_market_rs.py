@@ -94,6 +94,7 @@ EXTENSION_ANCHORS = {
 }
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
 MANUAL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-manual-tickers.json"
+NASDAQ100_SNAPSHOT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-nasdaq100-snapshot.json"
 SYMBOL_ALIASES = {
     "CRDA": "CRD-A",
     "GEFB": "GEF-B",
@@ -332,22 +333,65 @@ def read_existing_universe(universe_key: str) -> pd.DataFrame:
     return pd.DataFrame(rows).drop_duplicates(subset=["Ticker"])
 
 
-def read_nasdaq100_constituents(url: str) -> pd.DataFrame:
+def read_nasdaq100_snapshot() -> pd.DataFrame:
+    if not NASDAQ100_SNAPSHOT_PATH.exists():
+        return pd.DataFrame(columns=["Ticker", "Name"])
     try:
-        response = requests.get(url, headers=WIKI_HEADERS, timeout=30)
-        response.raise_for_status()
-        payload = response.json()
-        rows = (((payload.get("data") or {}).get("data") or {}).get("rows") or [])
-        frame = pd.DataFrame(rows).rename(columns={"symbol": "Ticker", "companyName": "Name"})
-        if not {"Ticker", "Name"}.issubset(frame.columns) or len(frame) < 90:
-            raise RuntimeError(f"Nasdaq API returned only {len(frame)} usable rows.")
-        return frame[["Ticker", "Name"]].copy()
-    except Exception as error:
-        fallback = read_existing_universe("nasdaq100")
-        if not fallback.empty:
-            print(f"Unable to refresh Nasdaq-100 membership; using existing snapshot: {error}")
-            return fallback
-        raise RuntimeError(f"Unable to load Nasdaq-100 membership: {error}") from error
+        payload = json.loads(NASDAQ100_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        frame = pd.DataFrame(payload.get("rows") or [])
+    except Exception:
+        return pd.DataFrame(columns=["Ticker", "Name"])
+    if not {"Ticker", "Name"}.issubset(frame.columns) or len(frame) < 90:
+        return pd.DataFrame(columns=["Ticker", "Name"])
+    return frame[["Ticker", "Name"]].copy()
+
+
+def write_nasdaq100_snapshot(frame: pd.DataFrame, source_date: str | None) -> None:
+    rows = [
+        {"Ticker": str(row["Ticker"]), "Name": str(row["Name"])}
+        for _, row in frame[["Ticker", "Name"]].sort_values("Ticker").iterrows()
+    ]
+    payload = {
+        "updatedAt": source_date or datetime.now(timezone.utc).date().isoformat(),
+        "source": UNIVERSES["nasdaq100"]["url"],
+        "rows": rows,
+    }
+    NASDAQ100_SNAPSHOT_PATH.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def read_nasdaq100_constituents(url: str) -> pd.DataFrame:
+    last_error: Exception | None = None
+    for attempt in range(1, 4):
+        try:
+            response = requests.get(url, headers=WIKI_HEADERS, timeout=30)
+            response.raise_for_status()
+            payload = response.json()
+            data = payload.get("data") or {}
+            rows = ((data.get("data") or {}).get("rows") or [])
+            frame = pd.DataFrame(rows).rename(columns={"symbol": "Ticker", "companyName": "Name"})
+            if not {"Ticker", "Name"}.issubset(frame.columns) or len(frame) < 90:
+                raise RuntimeError(f"Nasdaq API returned only {len(frame)} usable rows.")
+            frame = frame[["Ticker", "Name"]].copy()
+            write_nasdaq100_snapshot(frame, str(data.get("date") or ""))
+            return frame
+        except Exception as error:
+            last_error = error
+            if attempt < 3:
+                time.sleep(attempt * 2)
+
+    snapshot = read_nasdaq100_snapshot()
+    if not snapshot.empty:
+        print(f"Unable to refresh Nasdaq-100 membership; using local source snapshot: {last_error}")
+        return snapshot
+    fallback = read_existing_universe("nasdaq100")
+    if not fallback.empty:
+        print(f"Unable to refresh Nasdaq-100 membership; using existing RS snapshot: {last_error}")
+        return fallback
+    raise RuntimeError(f"Unable to load Nasdaq-100 membership: {last_error}") from last_error
 
 
 def fetch_universe_frame() -> pd.DataFrame:

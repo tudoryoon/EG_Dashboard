@@ -11,10 +11,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-market-rs
+  cancel-in-progress: false
+
 jobs:
   update-market-rs:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,23 +34,34 @@ jobs:
       - name: Refresh market RS history
         env:
           MARKET_RS_MAX_SHARES_FETCH: "1600"
+        run: python scripts/update_market_rs.py
+
+      - name: Refresh market trend score
+        run: python scripts/update_market_trend_score.py
+
+      - name: Refresh market RS financials
+        env:
           MARKET_RS_FINANCIALS_MAX_COMPANIES: "35"
           MARKET_RS_FINANCIALS_STALE_DAYS: "14"
-        run: |
-          python scripts/update_market_rs.py
-          python scripts/update_market_trend_score.py
-          python scripts/update_market_rs_financials.py
+        run: python scripts/update_market_rs_financials.py
+
+      - name: Refresh CANSLIM EPS surprise history
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '03 20 * * *'
+        run: python scripts/update_market_canslim_earnings.py
+
+      - name: Validate market RS pipeline outputs
+        run: python scripts/validate_market_rs_pipeline.py
 
       - name: Commit updated market RS history
         run: |
-          if git diff --quiet -- data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js; then
+          if git diff --quiet -- data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json; then
             echo "No market RS changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js
+          python scripts/bump_data_cache_versions.py data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js index.html
+          git add data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json index.html
           git commit -m "Update market RS history" || exit 0
           git pull --rebase origin main
           git push

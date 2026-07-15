@@ -1,0 +1,418 @@
+{
+  "updatedAt": "Jul 14, 2026",
+  "source": "https://api.nasdaq.com/api/quote/list-type/nasdaq100",
+  "rows": [
+    {
+      "Ticker": "AAPL",
+      "Name": "Apple Inc. Common Stock"
+    },
+    {
+      "Ticker": "ABNB",
+      "Name": "Airbnb, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "ADBE",
+      "Name": "Adobe Inc. Common Stock"
+    },
+    {
+      "Ticker": "ADI",
+      "Name": "Analog Devices, Inc. Common Stock"
+    },
+    {
+      "Ticker": "ADP",
+      "Name": "Automatic Data Processing, Inc. Common Stock"
+    },
+    {
+      "Ticker": "ADSK",
+      "Name": "Autodesk, Inc. Common Stock"
+    },
+    {
+      "Ticker": "AEP",
+      "Name": "American Electric Power Company, Inc. Common Stock"
+    },
+    {
+      "Ticker": "ALAB",
+      "Name": "Astera Labs, Inc. Common Stock"
+    },
+    {
+      "Ticker": "ALNY",
+      "Name": "Alnylam Pharmaceuticals, Inc. Common Stock"
+    },
+    {
+      "Ticker": "AMAT",
+      "Name": "Applied Materials, Inc. Common Stock"
+    },
+    {
+      "Ticker": "AMD",
+      "Name": "Advanced Micro Devices, Inc. Common Stock"
+    },
+    {
+      "Ticker": "AMGN",
+      "Name": "Amgen Inc. Common Stock"
+    },
+    {
+      "Ticker": "AMZN",
+      "Name": "Amazon.com, Inc. Common Stock"
+    },
+    {
+      "Ticker": "APP",
+      "Name": "Applovin Corporation Class A Common Stock"
+    },
+    {
+      "Ticker": "ARM",
+      "Name": "Arm Holdings plc American Depositary Shares"
+    },
+    {
+      "Ticker": "ASML",
+      "Name": "ASML Holding N.V. New York Registry Shares"
+    },
+    {
+      "Ticker": "AVGO",
+      "Name": "Broadcom Inc. Common Stock"
+    },
+    {
+      "Ticker": "AXON",
+      "Name": "Axon Enterprise, Inc. Common Stock"
+    },
+    {
+      "Ticker": "BKNG",
+      "Name": "Booking Holdings Inc. Common Stock"
+    },
+    {
+      "Ticker": "BKR",
+      "Name": "Baker Hughes Company Class A Common Stock"
+    },
+    {
+      "Ticker": "CCEP",
+      "Name": "Coca-Cola Europacific Partners plc Ordinary Shares"
+    },
+    {
+      "Ticker": "CDNS",
+      "Name": "Cadence Design Systems, Inc. Common Stock"
+    },
+    {
+      "Ticker": "CEG",
+      "Name": "Constellation Energy Corporation Common Stock "
+    },
+    {
+      "Ticker": "CMCSA",
+      "Name": "Comcast Corporation Class A Common Stock"
+    },
+    {
+      "Ticker": "COST",
+      "Name": "Costco Wholesale Corporation Common Stock"
+    },
+    {
+      "Ticker": "CPRT",
+      "Name": "Copart, Inc. (DE) Common Stock"
+    },
+    {
+      "Ticker": "CRWD",
+      "Name": "CrowdStrike Holdings, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "CRWV",
+      "Name": "CoreWeave, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "CSCO",
+      "Name": "Cisco Systems, Inc. Common Stock (DE)"
+    },
+    {
+      "Ticker": "CSX",
+      "Name": "CSX Corporation Common Stock"
+    },
+    {
+      "Ticker": "CTAS",
+      "Name": "Cintas Corporation Common Stock"
+    },
+    {
+      "Ticker": "DASH",
+      "Name": "DoorDash, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "DDOG",
+      "Name": "Datadog, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "DXCM",
+      "Name": "DexCom, Inc. Common Stock"
+    },
+    {
+      "Ticker": "EA",
+      "Name": "Electronic Arts Inc. Common Stock"
+    },
+    {
+      "Ticker": "EXC",
+      "Name": "Exelon Corporation Common Stock"
+    },
+    {
+      "Ticker": "FANG",
+      "Name": "Diamondback Energy, Inc. Common Stock"
+    },
+    {
+      "Ticker": "FAST",
+      "Name": "Fastenal Company Common Stock"
+    },
+    {
+      "Ticker": "FER",
+      "Name": "Ferrovial N.V. Ordinary Shares"
+    },
+    {
+      "Ticker": "FTNT",
+      "Name": "Fortinet, Inc. Common Stock"
+    },
+    {
+      "Ticker": "GEHC",
+      "Name": "GE HealthCare Technologies Inc. Common Stock "
+    },
+    {
+      "Ticker": "GILD",
+      "Name": "Gilead Sciences, Inc. Common Stock"
+    },
+    {
+      "Ticker": "GOOG",
+      "Name": "Alphabet Inc. Class C Capital Stock"
+    },
+    {
+      "Ticker": "GOOGL",
+      "Name": "Alphabet Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "HON",
+      "Name": "Honeywell International Inc. Common Stock"
+    },
+    {
+      "Ticker": "HONA",
+      "Name": "Honeywell Aerospace Inc. Common Stock "
+    },
+    {
+      "Ticker": "IDXX",
+      "Name": "IDEXX Laboratories, Inc. Common Stock"
+    },
+    {
+      "Ticker": "INTC",
+      "Name": "Intel Corporation Common Stock"
+    },
+    {
+      "Ticker": "INTU",
+      "Name": "Intuit Inc. Common Stock"
+    },
+    {
+      "Ticker": "ISRG",
+      "Name": "Intuitive Surgical, Inc. Common Stock"
+    },
+    {
+      "Ticker": "KDP",
+      "Name": "Keurig Dr Pepper Inc. Common Stock"
+    },
+    {
+      "Ticker": "KHC",
+      "Name": "The Kraft Heinz Company Common Stock"
+    },
+    {
+      "Ticker": "KLAC",
+      "Name": "KLA Corporation Common Stock"
+    },
+    {
+      "Ticker": "LIN",
+      "Name": "Linde plc Ordinary Shares"
+    },
+    {
+      "Ticker": "LITE",
+      "Name": "Lumentum Holdings Inc. Common Stock"
+    },
+    {
+      "Ticker": "LRCX",
+      "Name": "Lam Research Corporation Common Stock"
+    },
+    {
+      "Ticker": "MAR",
+      "Name": "Marriott International Class A Common Stock"
+    },
+    {
+      "Ticker": "MCHP",
+      "Name": "Microchip Technology Incorporated Common Stock"
+    },
+    {
+      "Ticker": "MDLZ",
+      "Name": "Mondelez International, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "MELI",
+      "Name": "MercadoLibre, Inc. Common Stock"
+    },
+    {
+      "Ticker": "META",
+      "Name": "Meta Platforms, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "MNST",
+      "Name": "Monster Beverage Corporation"
+    },
+    {
+      "Ticker": "MPWR",
+      "Name": "Monolithic Power Systems, Inc. Common Stock"
+    },
+    {
+      "Ticker": "MRVL",
+      "Name": "Marvell Technology, Inc. Common Stock"
+    },
+    {
+      "Ticker": "MSFT",
+      "Name": "Microsoft Corporation Common Stock"
+    },
+    {
+      "Ticker": "MSTR",
+      "Name": "Strategy Inc Common Stock Class A"
+    },
+    {
+      "Ticker": "MU",
+      "Name": "Micron Technology, Inc. Common Stock"
+    },
+    {
+      "Ticker": "NBIS",
+      "Name": "Nebius Group N.V. Class A Ordinary Shares"
+    },
+    {
+      "Ticker": "NFLX",
+      "Name": "Netflix, Inc. Common Stock"
+    },
+    {
+      "Ticker": "NVDA",
+      "Name": "NVIDIA Corporation Common Stock"
+    },
+    {
+      "Ticker": "NXPI",
+      "Name": "NXP Semiconductors N.V. Common Stock"
+    },
+    {
+      "Ticker": "ODFL",
+      "Name": "Old Dominion Freight Line, Inc. Common Stock"
+    },
+    {
+      "Ticker": "ORLY",
+      "Name": "O'Reilly Automotive, Inc. Common Stock"
+    },
+    {
+      "Ticker": "PANW",
+      "Name": "Palo Alto Networks, Inc. Common Stock"
+    },
+    {
+      "Ticker": "PAYX",
+      "Name": "Paychex, Inc. Common Stock"
+    },
+    {
+      "Ticker": "PCAR",
+      "Name": "PACCAR Inc. Common Stock"
+    },
+    {
+      "Ticker": "PDD",
+      "Name": "PDD Holdings Inc. American Depositary Shares"
+    },
+    {
+      "Ticker": "PEP",
+      "Name": "PepsiCo, Inc. Common Stock"
+    },
+    {
+      "Ticker": "PLTR",
+      "Name": "Palantir Technologies Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "PYPL",
+      "Name": "PayPal Holdings, Inc. Common Stock"
+    },
+    {
+      "Ticker": "QCOM",
+      "Name": "QUALCOMM Incorporated Common Stock"
+    },
+    {
+      "Ticker": "REGN",
+      "Name": "Regeneron Pharmaceuticals, Inc. Common Stock"
+    },
+    {
+      "Ticker": "RKLB",
+      "Name": "Rocket Lab Corporation Common Stock"
+    },
+    {
+      "Ticker": "ROP",
+      "Name": "Roper Technologies, Inc. Common Stock"
+    },
+    {
+      "Ticker": "ROST",
+      "Name": "Ross Stores, Inc. Common Stock"
+    },
+    {
+      "Ticker": "SBUX",
+      "Name": "Starbucks Corporation Common Stock"
+    },
+    {
+      "Ticker": "SHOP",
+      "Name": "Shopify Inc. Class A Subordinate Voting Shares"
+    },
+    {
+      "Ticker": "SNDK",
+      "Name": "Sandisk Corporation Common Stock"
+    },
+    {
+      "Ticker": "SNPS",
+      "Name": "Synopsys, Inc. Common Stock"
+    },
+    {
+      "Ticker": "SPCX",
+      "Name": "Space Exploration Technologies Corp. Class A Common Stock"
+    },
+    {
+      "Ticker": "STX",
+      "Name": "Seagate Technology Holdings PLC Ordinary Shares (Ireland)"
+    },
+    {
+      "Ticker": "TER",
+      "Name": "Teradyne, Inc. Common Stock"
+    },
+    {
+      "Ticker": "TMUS",
+      "Name": "T-Mobile US, Inc. Common Stock"
+    },
+    {
+      "Ticker": "TRI",
+      "Name": "Thomson Reuters Corporation Common Shares"
+    },
+    {
+      "Ticker": "TSLA",
+      "Name": "Tesla, Inc. Common Stock"
+    },
+    {
+      "Ticker": "TTWO",
+      "Name": "Take-Two Interactive Software, Inc. Common Stock"
+    },
+    {
+      "Ticker": "TXN",
+      "Name": "Texas Instruments Incorporated Common Stock"
+    },
+    {
+      "Ticker": "VRTX",
+      "Name": "Vertex Pharmaceuticals Incorporated Common Stock"
+    },
+    {
+      "Ticker": "WBD",
+      "Name": "Warner Bros. Discovery, Inc. Series A Common Stock "
+    },
+    {
+      "Ticker": "WDAY",
+      "Name": "Workday, Inc. Class A Common Stock"
+    },
+    {
+      "Ticker": "WDC",
+      "Name": "Western Digital Corporation Common Stock"
+    },
+    {
+      "Ticker": "WMT",
+      "Name": "Walmart Inc. Common Stock"
+    },
+    {
+      "Ticker": "XEL",
+      "Name": "Xcel Energy Inc. Common Stock"
+    }
+  ]
+}
