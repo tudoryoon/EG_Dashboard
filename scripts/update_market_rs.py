@@ -46,10 +46,10 @@ UNIVERSES = {
     },
     "nasdaq100": {
         "label": "NASDAQ 100",
-        "url": "https://en.wikipedia.org/wiki/Nasdaq-100",
-        "table_index": 5,
+        "url": "https://api.nasdaq.com/api/quote/list-type/nasdaq100",
         "ticker_col": "Ticker",
-        "name_col": "Company",
+        "name_col": "Name",
+        "source": "nasdaq_api",
     },
     "dowjones": {
         "label": "Dow Jones",
@@ -109,6 +109,7 @@ TERMINAL_SKIP_TICKERS = {
     "SBT",
     "THRD",
 }
+SOURCE_PLACEHOLDER_TICKERS = {"", "NAN", "-", "--"}
 MANUAL_UNIVERSE_MEMBERS = [
     {
         "ticker": "NBIS",
@@ -331,10 +332,30 @@ def read_existing_universe(universe_key: str) -> pd.DataFrame:
     return pd.DataFrame(rows).drop_duplicates(subset=["Ticker"])
 
 
+def read_nasdaq100_constituents(url: str) -> pd.DataFrame:
+    try:
+        response = requests.get(url, headers=WIKI_HEADERS, timeout=30)
+        response.raise_for_status()
+        payload = response.json()
+        rows = (((payload.get("data") or {}).get("data") or {}).get("rows") or [])
+        frame = pd.DataFrame(rows).rename(columns={"symbol": "Ticker", "companyName": "Name"})
+        if not {"Ticker", "Name"}.issubset(frame.columns) or len(frame) < 90:
+            raise RuntimeError(f"Nasdaq API returned only {len(frame)} usable rows.")
+        return frame[["Ticker", "Name"]].copy()
+    except Exception as error:
+        fallback = read_existing_universe("nasdaq100")
+        if not fallback.empty:
+            print(f"Unable to refresh Nasdaq-100 membership; using existing snapshot: {error}")
+            return fallback
+        raise RuntimeError(f"Unable to load Nasdaq-100 membership: {error}") from error
+
+
 def fetch_universe_frame() -> pd.DataFrame:
     merged: dict[str, dict[str, object]] = {}
     for key, meta in UNIVERSES.items():
-        if meta.get("source") == "csv":
+        if meta.get("source") == "nasdaq_api":
+            table = read_nasdaq100_constituents(str(meta["url"]))
+        elif meta.get("source") == "csv":
             table = read_ishares_holdings_csv(str(meta["url"]))
         else:
             table = read_wiki_table(str(meta["url"]), int(meta["table_index"]))
@@ -342,7 +363,7 @@ def fetch_universe_frame() -> pd.DataFrame:
         name_col = str(meta["name_col"])
         for _, row in table.iterrows():
             ticker = normalize_ticker(row.get(ticker_col, ""))
-            if ticker in {"", "NAN", "-"} or is_terminal_symbol(ticker):
+            if ticker in SOURCE_PLACEHOLDER_TICKERS or is_terminal_symbol(ticker):
                 continue
             item = merged.setdefault(
                 ticker,
@@ -401,7 +422,7 @@ def download_batch(
         group_by="ticker",
     )
     if history.empty:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, {}, {}
 
     raw_close_map: dict[str, pd.Series] = {}
     adjusted_close_map: dict[str, pd.Series] = {}
@@ -495,6 +516,7 @@ def download_batch(
 def fetch_price_frames(
     symbols: list[str],
     batch_size: int = BATCH_SIZE,
+    allow_empty: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     raw_close_map: dict[str, pd.Series] = {}
     adjusted_close_map: dict[str, pd.Series] = {}
@@ -520,6 +542,8 @@ def fetch_price_frames(
         volume_map.update(batch_volume_map)
         time.sleep(BATCH_SLEEP)
     if not raw_close_map or not adjusted_close_map or not open_map or not high_map or not low_map or not volume_map:
+        if allow_empty:
+            return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
         raise RuntimeError("No price data downloaded for RS universe.")
     raw_close_frame = pd.concat(raw_close_map.values(), axis=1).sort_index()
     adjusted_close_frame = pd.concat(adjusted_close_map.values(), axis=1).sort_index()
@@ -543,7 +567,11 @@ def ensure_symbol_price_frames(
     if not missing:
         return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
 
-    raw_map, adjusted_map, open_map, high_map, low_map, volume_map = fetch_price_frames(missing, batch_size=1)
+    raw_map, adjusted_map, open_map, high_map, low_map, volume_map = fetch_price_frames(
+        missing,
+        batch_size=1,
+        allow_empty=True,
+    )
     for symbol in missing:
         if symbol in raw_map:
             raw_close_frame[symbol] = raw_map[symbol]
@@ -557,6 +585,14 @@ def ensure_symbol_price_frames(
             low_frame[symbol] = low_map[symbol]
         if symbol in volume_map:
             volume_frame[symbol] = volume_map[symbol]
+
+    unresolved = [symbol for symbol in missing if symbol not in raw_map.columns]
+    if unresolved:
+        print(
+            "No fresh Yahoo price data for manual symbols; existing history will be used when available: "
+            + ", ".join(unresolved),
+            flush=True,
+        )
 
     return (
         raw_close_frame.sort_index(),
