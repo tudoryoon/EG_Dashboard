@@ -212,32 +212,58 @@ def update_latest_fields(company: dict) -> None:
         currency["USD"] = round(float(latest_revenue) * usd_ratio, 3)
 
 
-def append_company_months(company: dict, source_rows: dict[str, dict[str, float]]) -> list[str]:
+def sync_company_months(company: dict, source_rows: dict[str, dict[str, float]]) -> list[str]:
     updated: list[str] = []
     bars = company.setdefault("bars", [])
     yoy_line = company.setdefault("yoyLine", [])
     mom_line = company.setdefault("momLine", [])
     latest_year, latest_month = parse_month_text(company["month"])
     latest_index = month_index(latest_year, latest_month)
-    available = []
+
+    source_periods = []
     for period, row in source_rows.items():
         year, month = map(int, period.split("/"))
         idx = month_index(year, month)
-        if idx > latest_index:
-            available.append((idx, year, month, row))
-    for _, year, month, row in sorted(available):
+        if idx >= 0:
+            source_periods.append((idx, year, month, row))
+
+    for idx, year, month, row in sorted(source_periods):
+        while len(bars) <= idx:
+            bars.append(None)
+        while len(yoy_line) <= idx:
+            yoy_line.append(None)
+        while len(mom_line) <= idx:
+            mom_line.append(None)
+
         revenue = round(float(row["revenue"]), 4)
-        previous_revenue = bars[-1] if bars else None
-        mom = round(((revenue - previous_revenue) / previous_revenue) * 100, 1) if previous_revenue else None
         yoy = round(float(row["yoy"]), 1) if row.get("yoy") is not None else None
-        bars.append(revenue)
-        yoy_line.append(yoy)
-        mom_line.append(mom)
-        company["month"] = format_month(year, month)
+        old_revenue = number_or_none(bars[idx])
+        old_yoy = number_or_none(yoy_line[idx])
+        changed = old_revenue != revenue or old_yoy != yoy
+
+        bars[idx] = revenue
+        yoy_line[idx] = yoy
+        previous_revenue = bars[idx - 1] if idx >= 1 else None
+        mom = round(((revenue - previous_revenue) / previous_revenue) * 100, 1) if previous_revenue else None
+        if mom_line[idx] != mom:
+            changed = True
+        mom_line[idx] = mom
+
+        if idx + 1 < len(bars) and bars[idx + 1] is not None:
+            next_mom = round(((bars[idx + 1] - revenue) / revenue) * 100, 1) if revenue else None
+            if mom_line[idx + 1] != next_mom:
+                mom_line[idx + 1] = next_mom
+                changed = True
+
+        if idx >= latest_index:
+            company["month"] = format_month(year, month)
+            latest_index = idx
         set_yearly_value(company, year, month, yoy)
-        updated.append(company["month"])
+        if changed:
+            updated.append(format_month(year, month))
+
     update_latest_fields(company)
-    return updated
+    return sorted(set(updated))
 
 
 def update_aggregate(company: dict, components: list[dict]) -> list[str]:
@@ -295,7 +321,7 @@ def main() -> None:
             skipped.append(f"{name}: missing dashboard company")
             continue
         rows = fetch_recent_revenue(code, session)
-        months = append_company_months(company, rows)
+        months = sync_company_months(company, rows)
         if months:
             updated[name] = months
         time.sleep(REQUEST_DELAY_SECONDS)
