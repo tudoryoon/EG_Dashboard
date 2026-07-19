@@ -10965,25 +10965,31 @@ function renderMarketRsOverview() {
   ]
     .map((panel) => {
       const panelRows = [...panel.rows].sort((left, right) => {
-        const capDifference = (Number(right.marketCap) || 0) - (Number(left.marketCap) || 0);
-        if (capDifference !== 0) {
-          return capDifference;
-        }
         const scoreDifference =
           (getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity) -
           (getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity);
-        return scoreDifference || String(left.ticker).localeCompare(String(right.ticker));
+        if (scoreDifference !== 0) {
+          return scoreDifference;
+        }
+        const capDifference = (Number(right.marketCap) || 0) - (Number(left.marketCap) || 0);
+        return capDifference || String(left.ticker).localeCompare(String(right.ticker));
       });
       const panelItems = panelRows
-        .map(
-          (row) => `
+        .map((row) => {
+          const sectorLabel = getMarketRsBriefingSectorLabels(row, briefingSectorData)
+            .slice(0, 2)
+            .join(", ");
+          return `
             <button type="button" class="market-rs-new-high-item" data-rs-ticker="${row.ticker}" data-rs-monitor-item>
               <strong>${row.ticker}</strong>
-              <span>RS ${formatRsNumber(getMarketRsUniverseScore(row, state.rsUniverse))}</span>
+              <span class="market-rs-new-high-meta">
+                <b>RS ${formatRsNumber(getMarketRsUniverseScore(row, state.rsUniverse))}</b>
+                ${sectorLabel ? `<em title="${sectorLabel}">${sectorLabel}</em>` : ""}
+              </span>
               <small>${formatMarketCapCompact(row.marketCap)}</small>
             </button>
-          `,
-        )
+          `;
+        })
         .join("");
       return `
         <article class="market-rs-new-high-panel is-${panel.tone}">
@@ -11160,7 +11166,7 @@ function renderMarketRsOverview() {
         <div class="market-rs-new-high-board-head">
           <div>
             <h2>New High Monitor</h2>
-            <p>${getMarketRsUniverseLabel(state.rsUniverse)} · Market cap descending · scroll for all names</p>
+            <p>${getMarketRsUniverseLabel(state.rsUniverse)} · RS Rating descending · 7 visible · scroll for all names</p>
           </div>
         </div>
         <div class="market-rs-new-high-grid">${newHighPanels}</div>

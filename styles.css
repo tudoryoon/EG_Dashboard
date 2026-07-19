@@ -5974,17 +5974,17 @@ h1 {
 }
 
 .market-rs-new-high-list {
-  max-height: 410px;
+  max-height: 308px;
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
 
 .market-rs-new-high-item {
   display: grid;
-  grid-template-columns: minmax(48px, 0.8fr) minmax(52px, 0.9fr) minmax(64px, 1fr);
+  grid-template-columns: minmax(42px, 0.65fr) minmax(88px, 1.7fr) minmax(58px, 0.85fr);
   align-items: center;
   width: 100%;
-  min-height: 40px;
+  height: 44px;
   gap: 8px;
   padding: 8px 10px;
   border: 0;
@@ -6007,15 +6007,32 @@ h1 {
   text-overflow: ellipsis;
 }
 
-.market-rs-new-high-item span {
+.market-rs-new-high-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.market-rs-new-high-meta b {
   color: #b42318;
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.market-rs-new-high-panel.is-price .market-rs-new-high-item span {
+.market-rs-new-high-panel.is-price .market-rs-new-high-meta b {
   color: #166534;
+}
+
+.market-rs-new-high-meta em {
+  min-width: 0;
+  overflow: hidden;
+  color: #696962;
+  font-size: 0.68rem;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .market-rs-new-high-item small {
