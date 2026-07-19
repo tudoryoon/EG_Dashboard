@@ -28,6 +28,7 @@ RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
 RETRY_ATTEMPTS = int(os.getenv("MARKET_RS_RETRY_ATTEMPTS", "4"))
 LOOKBACKS = {
     "1w": 5,
+    "2w": 10,
     "10d": 10,
     "20d": 20,
     "1m": 21,
@@ -850,6 +851,8 @@ def weighted_rs_rating(period_ratings: dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 def build_period_rs_ratings(close_frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
     return {
+        "1w": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["1w"])).sub(1)),
+        "2w": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["2w"])).sub(1)),
         "1m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["1m"])).sub(1)),
         "3m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["3m"])).sub(1)),
         "6m": percentile_to_rating(close_frame.div(close_frame.shift(LOOKBACKS["6m"])).sub(1)),
@@ -1084,12 +1087,16 @@ def build_payload(
             "rsRatingDowjones": nullable_int(rs_ratings_by_universe.get("dowjones", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingRussell2000": nullable_int(rs_ratings_by_universe.get("russell2000", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsPeriods": {
+                "1w": nullable_int(period_rs_ratings_all["1w"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
+                "2w": nullable_int(period_rs_ratings_all["2w"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
                 "1m": nullable_int(period_rs_ratings_all["1m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
                 "3m": nullable_int(period_rs_ratings_all["3m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
                 "6m": nullable_int(period_rs_ratings_all["6m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
                 "12m": nullable_int(period_rs_ratings_all["12m"].get(ticker, pd.Series(dtype=float)).get(latest_date)),
             },
             "returns": {
+                "1w": compute_return(performance_series, LOOKBACKS["1w"]),
+                "2w": compute_return(performance_series, LOOKBACKS["2w"]),
                 "1m": compute_return(performance_series, LOOKBACKS["1m"]),
                 "3m": compute_return(performance_series, LOOKBACKS["3m"]),
                 "6m": compute_return(performance_series, LOOKBACKS["6m"]),

@@ -10114,8 +10114,7 @@ function matchesTrendScoreClimaxRange(row) {
   );
 }
 
-function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorData()) {
-  const query = normalizeMarketTickerSearch(state.query);
+function getMarketRsBaseRows(briefingSectorData = getMarketRsBriefingSectorData()) {
   return (marketRsData.rows ?? [])
     .filter((row) => {
       if (!matchesMarketRsCapRange(row)) {
@@ -10139,6 +10138,14 @@ function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorDa
       if (!matchesMarketRsBriefingSector(row, briefingSectorData)) {
         return false;
       }
+      return true;
+    });
+}
+
+function getVisibleMarketRsRows(briefingSectorData = getMarketRsBriefingSectorData()) {
+  const query = normalizeMarketTickerSearch(state.query);
+  return getMarketRsBaseRows(briefingSectorData)
+    .filter((row) => {
       if (!query) {
         return matchesMarketRsNewHighFilter(row, state.rsUniverse);
       }
@@ -10193,6 +10200,10 @@ function getMarketRsTableSortValue(row, sortKey) {
       return row.marketCap ?? Number.NEGATIVE_INFINITY;
     case "rs":
       return getMarketRsUniverseScore(row, state.rsUniverse) ?? Number.NEGATIVE_INFINITY;
+    case "rs1w":
+      return row.rsPeriods?.["1w"] ?? Number.NEGATIVE_INFINITY;
+    case "rs2w":
+      return row.rsPeriods?.["2w"] ?? Number.NEGATIVE_INFINITY;
     case "rs1m":
       return row.rsPeriods?.["1m"] ?? Number.NEGATIVE_INFINITY;
     case "rs3m":
@@ -10832,6 +10843,7 @@ function renderMarketRsOverview() {
     state.rsBriefingSector = "all";
   }
   const rows = getVisibleMarketRsRows(briefingSectorData);
+  const newHighBaseRows = getMarketRsBaseRows(briefingSectorData);
   const selected = getSelectedMarketRsRow(rows);
   if (selected) {
     state.rsSelectedTicker = selected.ticker;
@@ -10929,6 +10941,63 @@ function renderMarketRsOverview() {
   const activeNewHighKind = getMarketRsFilterNewHighKind() ?? "rs";
   const activeNewHighWindow = getMarketRsFilterNewHighWindow() ?? "1y";
   const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow, activeNewHighKind);
+  const newHighPanels = [
+    {
+      title: "RS New High 3M",
+      tone: "rs",
+      rows: newHighBaseRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "3m")),
+    },
+    {
+      title: "RS New High 1Y",
+      tone: "rs",
+      rows: newHighBaseRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y")),
+    },
+    {
+      title: "Price New High 3M",
+      tone: "price",
+      rows: newHighBaseRows.filter((row) => getMarketRsPriceNewHigh(row, "3m")),
+    },
+    {
+      title: "Price New High 1Y",
+      tone: "price",
+      rows: newHighBaseRows.filter((row) => getMarketRsPriceNewHigh(row, "1y")),
+    },
+  ]
+    .map((panel) => {
+      const panelRows = [...panel.rows].sort((left, right) => {
+        const capDifference = (Number(right.marketCap) || 0) - (Number(left.marketCap) || 0);
+        if (capDifference !== 0) {
+          return capDifference;
+        }
+        const scoreDifference =
+          (getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity) -
+          (getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity);
+        return scoreDifference || String(left.ticker).localeCompare(String(right.ticker));
+      });
+      const panelItems = panelRows
+        .map(
+          (row) => `
+            <button type="button" class="market-rs-new-high-item" data-rs-ticker="${row.ticker}" data-rs-monitor-item>
+              <strong>${row.ticker}</strong>
+              <span>RS ${formatRsNumber(getMarketRsUniverseScore(row, state.rsUniverse))}</span>
+              <small>${formatMarketCapCompact(row.marketCap)}</small>
+            </button>
+          `,
+        )
+        .join("");
+      return `
+        <article class="market-rs-new-high-panel is-${panel.tone}">
+          <div class="market-rs-new-high-title">
+            <h3>${panel.title}</h3>
+            <span>${panelRows.length}</span>
+          </div>
+          <div class="market-rs-new-high-list">
+            ${panelItems || '<p class="market-rs-empty">해당 종목이 없습니다.</p>'}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
   const leaderCards = rsCardRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -10986,6 +11055,8 @@ function renderMarketRsOverview() {
           <td>${formatMarketRsBriefingSectorLabels(row, briefingSectorData, 3)}</td>
           <td>${formatMarketCapCompact(row.marketCap)}</td>
           <td>${formatRsNumber(score)}</td>
+          <td>${formatRsNumber(row.rsPeriods?.["1w"])}</td>
+          <td>${formatRsNumber(row.rsPeriods?.["2w"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["1m"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["3m"])}</td>
           <td>${formatRsNumber(row.rsPeriods?.["6m"])}</td>
@@ -11085,6 +11156,16 @@ function renderMarketRsOverview() {
         </div>
       </article>
 
+      <section class="market-rs-new-high-board" aria-label="RS and price new highs">
+        <div class="market-rs-new-high-board-head">
+          <div>
+            <h2>New High Monitor</h2>
+            <p>${getMarketRsUniverseLabel(state.rsUniverse)} · Market cap descending · scroll for all names</p>
+          </div>
+        </div>
+        <div class="market-rs-new-high-grid">${newHighPanels}</div>
+      </section>
+
       <section class="market-rs-layout">
         <article class="us-panel market-rs-leaders">
           <div class="us-section-head">
@@ -11114,6 +11195,14 @@ function renderMarketRsOverview() {
             <div class="market-rs-metric">
               <span>Market Cap</span>
               <strong>${formatMarketCapCompact(selected?.marketCap)}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>RS_1W</span>
+              <strong>${formatRsNumber(selected?.rsPeriods?.["1w"])}</strong>
+            </div>
+            <div class="market-rs-metric">
+              <span>RS_2W</span>
+              <strong>${formatRsNumber(selected?.rsPeriods?.["2w"])}</strong>
             </div>
             <div class="market-rs-metric">
               <span>RS_1M</span>
@@ -11183,6 +11272,8 @@ function renderMarketRsOverview() {
                 <th>Briefing Sector</th>
                 <th>${renderMarketRsSortHeader("Market Cap", "marketCap")}</th>
                 <th>${renderMarketRsSortHeader("RS", "rs")}</th>
+                <th>${renderMarketRsSortHeader("RS_1W", "rs1w")}</th>
+                <th>${renderMarketRsSortHeader("RS_2W", "rs2w")}</th>
                 <th>${renderMarketRsSortHeader("RS_1M", "rs1m")}</th>
                 <th>${renderMarketRsSortHeader("RS_3M", "rs3m")}</th>
                 <th>${renderMarketRsSortHeader("RS_6M", "rs6m")}</th>
@@ -11192,7 +11283,7 @@ function renderMarketRsOverview() {
                 <th>${renderMarketRsSortHeader("Price NH", "priceNewHigh")}</th>
               </tr>
             </thead>
-            <tbody>${tableRows || '<tr><td colspan="12">검색 결과가 없습니다.</td></tr>'}</tbody>
+            <tbody>${tableRows || '<tr><td colspan="14">검색 결과가 없습니다.</td></tr>'}</tbody>
           </table>
         </div>
       </article>
@@ -11338,6 +11429,10 @@ function renderMarketRsOverview() {
   }
   usOverviewRoot.querySelectorAll("[data-rs-ticker]").forEach((element) => {
     element.addEventListener("click", () => {
+      if (element.hasAttribute("data-rs-monitor-item")) {
+        state.query = "";
+        state.rsFilter = "all";
+      }
       state.rsSelectedTicker = element.dataset.rsTicker;
       render();
     });

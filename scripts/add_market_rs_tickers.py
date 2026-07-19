@@ -173,7 +173,8 @@ def rating_series_from_values(values: dict[str, float | None], ascending: bool =
 def recompute_latest_rs(rows: list[dict], new_rows: list[dict]) -> None:
     combined = rows + new_rows
     ratings_by_period: dict[str, dict[str, int | None]] = {}
-    for period_key in rs.RS_WEIGHTS:
+    display_periods = ["1w", "2w", *rs.RS_WEIGHTS]
+    for period_key in display_periods:
         values = {
             row["ticker"]: (row.get("returns") or {}).get(period_key)
             for row in combined
@@ -186,11 +187,12 @@ def recompute_latest_rs(rows: list[dict], new_rows: list[dict]) -> None:
         if not ticker:
             continue
         period_output = row.setdefault("rsPeriods", {})
+        for period_key in display_periods:
+            period_output[period_key] = ratings_by_period[period_key].get(ticker)
         weighted_sum = 0.0
         weight_sum = 0.0
         for period_key, weight in rs.RS_WEIGHTS.items():
             rating = ratings_by_period[period_key].get(ticker)
-            period_output[period_key] = rating
             if rating is not None:
                 weighted_sum += rating * weight
                 weight_sum += weight
@@ -294,7 +296,7 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
     returns = {
         period_key: compute_period_return_at(adj_close, latest_date, periods)
         for period_key, periods in rs.LOOKBACKS.items()
-        if period_key in {"1m", "3m", "6m", "12m"}
+        if period_key in {"1w", "2w", "1m", "3m", "6m", "12m"}
     }
     price_history = close.reindex(history_index).ffill(limit=1)
     latest_rating = None
@@ -309,7 +311,7 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
         "rsRatingNasdaq100": None,
         "rsRatingDowjones": None,
         "rsRatingRussell2000": None,
-        "rsPeriods": {"1m": None, "3m": None, "6m": None, "12m": None},
+        "rsPeriods": {"1w": None, "2w": None, "1m": None, "3m": None, "6m": None, "12m": None},
         "returns": returns,
         "atr21Pct": rs.compute_atr_pct(high, low, raw_close),
         "extension": rs.compute_extension_metrics(raw_close, atr_series, atr_pct_series),
