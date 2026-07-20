@@ -105,6 +105,7 @@ const gpuCloudRuntime = {
 
 const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing" },
+  RS: { label: "RS" },
   IndexTrend: { label: "Index Trend" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
@@ -124,7 +125,6 @@ const bigTechSubtabMeta = {
 const marketSubtabMeta = {
   VIX: { label: "VIX" },
   Breadth: { label: "Breadth" },
-  RS: { label: "RS" },
   TrendScore: { label: "추세스코어" },
   Canslim: { label: "CANSLIM" },
   Overview: { label: "Price" },
@@ -134,7 +134,7 @@ const marketSubtabMeta = {
   FxCommodities: { label: "FX & Commodities" },
 };
 
-const accentMarketSubtabs = new Set(["VIX", "Breadth", "RS", "TrendScore", "Canslim"]);
+const accentMarketSubtabs = new Set(["VIX", "Breadth", "TrendScore", "Canslim"]);
 
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
@@ -7870,7 +7870,7 @@ function getBriefingRsLinkAttrs(item) {
   if (!ticker) {
     return "";
   }
-  return `data-briefing-rs-ticker="${ticker}" role="button" tabindex="0" aria-label="Open ${ticker} in Market RS"`;
+  return `data-briefing-rs-ticker="${ticker}" role="button" tabindex="0" aria-label="Open ${ticker} in RS"`;
 }
 
 function openMarketRsTicker(ticker) {
@@ -7879,8 +7879,7 @@ function openMarketRsTicker(ticker) {
     return;
   }
 
-  state.tab = "Market";
-  state.marketView = "RS";
+  state.tab = "RS";
   state.rsUniverse = "all";
   state.rsFilter = "all";
   state.rsBriefingSector = "all";
@@ -16947,7 +16946,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -16955,6 +16954,12 @@ function renderCountries() {
         state.currency = meta.defaultCurrency;
       } else {
         state.currency = "USD";
+      }
+      if (tabKey === "RS") {
+        state.query = "";
+        if (searchInput) {
+          searchInput.value = "";
+        }
       }
       state.sector = "All";
       render();
@@ -17058,6 +17063,11 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
+  if (state.tab === "RS") {
+    summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
+    return;
+  }
+
   if (state.tab === "IndexTrend") {
     summaryText.textContent = "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD";
     return;
@@ -17098,10 +17108,6 @@ function renderSummary(list) {
     }
     if (state.marketView === "Breadth") {
       summaryText.textContent = "Daily market breadth dashboard workspace";
-      return;
-    }
-    if (state.marketView === "RS") {
-      summaryText.textContent = "StockEasy-style RS leaderboard with RS_1M, RS_3M, RS_6M and searchable daily trend";
       return;
     }
     if (state.marketView === "TrendScore") {
@@ -17487,7 +17493,7 @@ function render() {
   destroyCharts();
   ensureValidSelection();
   const showRsToolbar =
-    state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore" || state.marketView === "Canslim");
+    state.tab === "RS" || (state.tab === "Market" && (state.marketView === "TrendScore" || state.marketView === "Canslim"));
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
   }
@@ -17496,7 +17502,9 @@ function render() {
   }
   if (searchInput) {
     if (showRsToolbar) {
-      if (state.marketView === "TrendScore") {
+      if (state.tab === "RS") {
+        searchInput.placeholder = "Search ticker or company...";
+      } else if (state.marketView === "TrendScore") {
         searchInput.placeholder = "Search trend score ticker...";
       } else if (state.marketView === "Canslim") {
         searchInput.placeholder = "Search CANSLIM ticker...";
@@ -17546,6 +17554,12 @@ function render() {
   if (state.tab === "DailyBriefing") {
     renderSummary([]);
     renderMarketBriefingOverview();
+    return;
+  }
+
+  if (state.tab === "RS") {
+    renderSummary([]);
+    renderMarketRsOverview();
     return;
   }
 
@@ -17619,10 +17633,6 @@ function render() {
       renderMarketBreadthOverview();
       return;
     }
-    if (state.marketView === "RS") {
-      renderMarketRsOverview();
-      return;
-    }
     if (state.marketView === "TrendScore") {
       renderMarketTrendScoreOverview();
       return;
@@ -17648,14 +17658,13 @@ searchInput.addEventListener("input", (event) => {
     window.clearTimeout(searchRenderTimer);
     searchRenderTimer = null;
   }
-  if (state.tab === "Market" && (state.marketView === "RS" || state.marketView === "TrendScore" || state.marketView === "Canslim")) {
+  if (state.tab === "RS" || (state.tab === "Market" && (state.marketView === "TrendScore" || state.marketView === "Canslim"))) {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
-      if (state.marketView === "TrendScore") {
-        resetTrendScoreCardLimit();
-      }
-      if (state.marketView === "RS") {
+      if (state.tab === "RS") {
         resetRsCardLimit();
+      } else if (state.marketView === "TrendScore") {
+        resetTrendScoreCardLimit();
       }
       if (state.marketView === "Canslim") {
         resetCanslimCardLimit();

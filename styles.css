@@ -194,6 +194,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(63, 63, 58, 0.18);
 }
 
+.country-button.is-rs {
+  border-color: #b7dfc7;
+  background: linear-gradient(180deg, #eef9f2, #dff3e7);
+  color: #24613b;
+}
+
+.country-button.is-rs.active {
+  border-color: #2f7d4e;
+  background: linear-gradient(135deg, #49a96f, #24613b);
+  color: #f5fff8;
+  box-shadow: 0 14px 28px rgba(47, 125, 78, 0.2);
+}
+
 .country-button.is-index-trend {
   border-color: #b7d7c6;
   background: linear-gradient(180deg, #edf8f2, #dff2e7);
