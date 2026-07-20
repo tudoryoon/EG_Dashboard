@@ -5930,6 +5930,35 @@ h1 {
   font-size: 0.84rem;
 }
 
+.market-rs-new-high-cap-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid #cfcfc8;
+  border-radius: 8px;
+  background: #fff;
+  color: #3f3f3a;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.market-rs-new-high-cap-toggle:hover {
+  border-color: #85857d;
+  background: #f7f7f3;
+}
+
+.market-rs-new-high-cap-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #242421;
+  cursor: pointer;
+}
+
 .market-rs-new-high-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -7191,6 +7220,10 @@ h1 {
 
   .market-rs-new-high-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .market-rs-new-high-board-head {
+    align-items: stretch;
   }
 
   .market-rs-card-grid {

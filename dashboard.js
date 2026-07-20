@@ -395,6 +395,7 @@ const state = {
   rsScoreRange: "all",
   rsCustomScoreMin: "",
   rsCustomScoreMax: "",
+  rsNewHighLargeCapOnly: true,
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
@@ -10941,26 +10942,29 @@ function renderMarketRsOverview() {
   const activeNewHighKind = getMarketRsFilterNewHighKind() ?? "rs";
   const activeNewHighWindow = getMarketRsFilterNewHighWindow() ?? "1y";
   const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow, activeNewHighKind);
+  const newHighMonitorRows = state.rsNewHighLargeCapOnly
+    ? newHighBaseRows.filter((row) => Number(row.marketCap) > 10_000_000_000)
+    : newHighBaseRows;
   const newHighPanels = [
     {
       title: "RS New High 3M",
       tone: "rs",
-      rows: newHighBaseRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "3m")),
+      rows: newHighMonitorRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "3m")),
     },
     {
       title: "RS New High 1Y",
       tone: "rs",
-      rows: newHighBaseRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y")),
+      rows: newHighMonitorRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y")),
     },
     {
       title: "Price New High 3M",
       tone: "price",
-      rows: newHighBaseRows.filter((row) => getMarketRsPriceNewHigh(row, "3m")),
+      rows: newHighMonitorRows.filter((row) => getMarketRsPriceNewHigh(row, "3m")),
     },
     {
       title: "Price New High 1Y",
       tone: "price",
-      rows: newHighBaseRows.filter((row) => getMarketRsPriceNewHigh(row, "1y")),
+      rows: newHighMonitorRows.filter((row) => getMarketRsPriceNewHigh(row, "1y")),
     },
   ]
     .map((panel) => {
@@ -11168,6 +11172,10 @@ function renderMarketRsOverview() {
             <h2>New High Monitor</h2>
             <p>${getMarketRsUniverseLabel(state.rsUniverse)} · RS Rating descending · 7 visible · scroll for all names</p>
           </div>
+          <label class="market-rs-new-high-cap-toggle">
+            <input type="checkbox" data-rs-new-high-large-cap ${state.rsNewHighLargeCapOnly ? "checked" : ""} />
+            <span>$10B 이하 제외</span>
+          </label>
         </div>
         <div class="market-rs-new-high-grid">${newHighPanels}</div>
       </section>
@@ -11387,6 +11395,13 @@ function renderMarketRsOverview() {
       state.rsScoreRange = "all";
       state.rsSelectedTicker = "";
       resetRsCardLimit();
+      render();
+    });
+  }
+  const rsNewHighLargeCapToggle = usOverviewRoot.querySelector("[data-rs-new-high-large-cap]");
+  if (rsNewHighLargeCapToggle) {
+    rsNewHighLargeCapToggle.addEventListener("change", () => {
+      state.rsNewHighLargeCapOnly = rsNewHighLargeCapToggle.checked;
       render();
     });
   }
