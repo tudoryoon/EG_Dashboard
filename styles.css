@@ -195,16 +195,16 @@ h1 {
 }
 
 .country-button.is-rs {
-  border-color: #b7dfc7;
-  background: linear-gradient(180deg, #eef9f2, #dff3e7);
-  color: #24613b;
+  border-color: #f4c78f;
+  background: linear-gradient(180deg, #fff8ed, #ffe8c7);
+  color: #8a4709;
 }
 
 .country-button.is-rs.active {
-  border-color: #2f7d4e;
-  background: linear-gradient(135deg, #49a96f, #24613b);
-  color: #f5fff8;
-  box-shadow: 0 14px 28px rgba(47, 125, 78, 0.2);
+  border-color: #d97706;
+  background: linear-gradient(135deg, #f6b75f, #e18422);
+  color: #fffaf3;
+  box-shadow: 0 14px 28px rgba(217, 119, 6, 0.2);
 }
 
 .country-button.is-index-trend {
