@@ -77,6 +77,21 @@ MANUAL_RELEASE_OVERRIDES = {
     },
 }
 
+ISM_DATES_2026 = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"]
+MANUAL_SERIES_DATA = {
+    "ism_services": {
+        "services_pmi": [53.8, 56.1, 54.0, 53.6, 54.5, 54.0],
+        "services_prices": [66.6, 63.0, 70.7, 70.7, 71.3, 67.7],
+        "services_employment": [50.3, 51.8, 45.2, 48.0, 47.9, 51.2],
+        "services_new_orders": [53.1, 58.6, 60.6, 53.5, 57.3, 55.1],
+    },
+    "ism_manufacturing": {
+        "manufacturing_pmi": [52.6, 52.4, 52.7, 52.7, 54.0, 53.3],
+        "manufacturing_new_orders": [57.1, 55.8, 53.5, 54.1, 56.8, 56.0],
+        "manufacturing_prices": [59.0, 70.5, 78.3, 84.6, 82.1, 73.0],
+    },
+}
+
 
 @dataclass(frozen=True)
 class SeriesConfig:
@@ -172,9 +187,9 @@ INDICATORS: list[dict[str, Any]] = [
         "category": "Business Cycle",
         "startMonth": "2008-01",
         "sourceLabel": "ISM public report",
-        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/services/",
+        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/june/",
         "status": "manual",
-        "statusNote": "manual/source pending",
+        "statusNote": "Official ISM monthly report snapshots through June 2026",
         "series": [
             SeriesConfig("services_pmi", "Services PMI", None, "index", "#111827", True),
             SeriesConfig("services_prices", "Prices", None, "index", "#d93025"),
@@ -188,9 +203,9 @@ INDICATORS: list[dict[str, Any]] = [
         "category": "Business Cycle",
         "startMonth": "1948-01",
         "sourceLabel": "ISM public report",
-        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/pmi/",
+        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/june/",
         "status": "manual",
-        "statusNote": "manual/source pending",
+        "statusNote": "Official ISM monthly report snapshots through June 2026",
         "series": [
             SeriesConfig("manufacturing_pmi", "Manufacturing PMI", None, "index", "#111827", True),
             SeriesConfig("manufacturing_new_orders", "New Orders", None, "index", "#2563eb"),
@@ -257,11 +272,11 @@ def load_existing_payload() -> dict[str, Any]:
         return {}
 
 
-def fetch_text(url: str) -> str:
+def fetch_text(url: str, timeout: int = 20, attempts: int = 3) -> str:
     last_error: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(attempts):
         try:
-            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=timeout)
             response.raise_for_status()
             return response.text
         except Exception as error:  # pragma: no cover - network variability
@@ -273,8 +288,8 @@ def fetch_text(url: str) -> str:
 def fred_csv_urls(series_id: str, start_month: str) -> list[str]:
     fred_graph_url = f"{FRED_GRAPH_BASE}{series_id}&cosd={start_month}-01"
     fred_gateway_url = f"{FRED_GATEWAY_BASE}{series_id}"
-    if series_id in {"CPIAUCSL", "CPILFESL"}:
-        return [fred_graph_url, fred_gateway_url]
+    # The lightweight gateway is materially faster and the latest CPI month is
+    # merged from the official BLS API below when FRED propagation lags.
     return [fred_gateway_url, fred_graph_url]
 
 
@@ -516,7 +531,9 @@ def format_release_surprise(value: float | None, unit: str | None) -> str | None
 def parse_moneycontrol_release_history(url: str, release_unit: str | None) -> list[dict[str, Any]]:
     from bs4 import BeautifulSoup
 
-    text = fetch_text(url)
+    # Release-history enrichment is optional; do not let a slow mirror block the
+    # official FRED/BLS time-series refresh.
+    text = fetch_text(url, timeout=6, attempts=1)
     soup = BeautifulSoup(text, "html.parser")
     table = soup.select_one("#hist_tbl")
     if not table:
@@ -654,23 +671,36 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
     }
 
     for series in config["series"]:
+        existing_series = series_by_key.get(series.key, {})
         if config["status"] != "auto" or not series.source_id:
-            indicator_series.append(
-                {
-                    "key": series.key,
-                    "label": series.label,
-                    "sourceId": series.source_id,
-                    "unit": series.unit,
-                    "color": series.color,
-                    "primary": series.primary,
-                    "dates": [],
-                    "values": [],
-                    **compute_snapshot([], []),
-                }
-            )
+            manual_values = MANUAL_SERIES_DATA.get(config["key"], {}).get(series.key)
+            if manual_values:
+                by_month = dict(zip(existing_series.get("dates", []), existing_series.get("values", [])))
+                by_month.update(dict(zip(ISM_DATES_2026, manual_values)))
+                dates = sorted(by_month)
+                values = [float(by_month[month]) for month in dates]
+            else:
+                dates = list(existing_series.get("dates", []))
+                values = [float(value) for value in existing_series.get("values", [])]
+            payload_series = {
+                "key": series.key,
+                "label": series.label,
+                "sourceId": series.source_id,
+                "unit": series.unit,
+                "color": series.color,
+                "primary": series.primary,
+                "dates": dates,
+                "values": values,
+                "releaseHistory": existing_series.get("releaseHistory", []),
+                "latestRelease": existing_series.get("latestRelease"),
+                **compute_snapshot(dates, values),
+            }
+            if dates:
+                latest_months.append(dates[-1])
+                available_start_months.append(dates[0])
+            indicator_series.append(payload_series)
             continue
 
-        existing_series = series_by_key.get(series.key, {})
         try:
             parsed = parse_series_data(series.source_id, config["startMonth"])
             parsed = merge_latest_bls_fallback(parsed, series.source_id)
@@ -682,13 +712,23 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                     f"preserving existing {existing_latest_month}"
                 )
             existing_release_history = existing_series.get("releaseHistory", []) if isinstance(existing_series, dict) else []
-            try:
-                release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
-            except Exception as release_error:
+            latest_month_name = month_name_from_key(parsed_latest_month)
+            existing_release_is_current = bool(
+                existing_release_history
+                and latest_month_name
+                and latest_month_name in str(existing_release_history[-1].get("reference", ""))
+            )
+            if existing_release_is_current:
                 release_history = existing_release_history
-                release_fetch_error = str(release_error)
-            else:
                 release_fetch_error = None
+            else:
+                try:
+                    release_history = parse_moneycontrol_release_history(series.release_url, series.release_unit) if series.release_url else []
+                except Exception as release_error:
+                    release_history = existing_release_history
+                    release_fetch_error = str(release_error)
+                else:
+                    release_fetch_error = None
             release_history = apply_manual_release_override(series.key, release_history)
             snapshot = compute_snapshot(parsed["dates"], parsed["values"])
             if release_fetch_error:
