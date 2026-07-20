@@ -396,6 +396,7 @@ const state = {
   rsCustomScoreMin: "",
   rsCustomScoreMax: "",
   rsNewHighLargeCapOnly: true,
+  rsPeriodLeadersLargeCapOnly: true,
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
@@ -11007,6 +11008,63 @@ function renderMarketRsOverview() {
       `;
     })
     .join("");
+  const periodLeaderRows = state.rsPeriodLeadersLargeCapOnly
+    ? newHighBaseRows.filter((row) => Number(row.marketCap) > 10_000_000_000)
+    : newHighBaseRows;
+  const periodLeaderPanels = [
+    { key: "1w", label: "RS 1W" },
+    { key: "2w", label: "RS 2W" },
+    { key: "1m", label: "RS 1M" },
+    { key: "3m", label: "RS 3M" },
+    { key: "6m", label: "RS 6M" },
+  ]
+    .map((period) => {
+      const panelRows = periodLeaderRows
+        .filter((row) => Number.isFinite(Number(row.rsPeriods?.[period.key])))
+        .sort((left, right) => {
+          const periodDifference = Number(right.rsPeriods?.[period.key]) - Number(left.rsPeriods?.[period.key]);
+          if (periodDifference !== 0) {
+            return periodDifference;
+          }
+          const scoreDifference =
+            (getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity) -
+            (getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity);
+          if (scoreDifference !== 0) {
+            return scoreDifference;
+          }
+          const capDifference = (Number(right.marketCap) || 0) - (Number(left.marketCap) || 0);
+          return capDifference || String(left.ticker).localeCompare(String(right.ticker));
+        });
+      const panelItems = panelRows
+        .map(
+          (row, index) => `
+            <button type="button" class="market-rs-period-item" data-rs-ticker="${row.ticker}" data-rs-monitor-item>
+              <span class="market-rs-period-rank">${index + 1}</span>
+              <span class="market-rs-period-identity">
+                <strong>${escapeHtml(row.ticker)}</strong>
+                <small title="${escapeHtml(row.name)}">${escapeHtml(row.name)} · ${formatMarketCapCompact(row.marketCap)}</small>
+              </span>
+              <b>${formatRsNumber(row.rsPeriods?.[period.key])}</b>
+            </button>
+          `,
+        )
+        .join("");
+      return `
+        <article class="market-rs-period-panel">
+          <div class="market-rs-period-title">
+            <div>
+              <small>PERIOD LEADERS</small>
+              <h3>${period.label}</h3>
+            </div>
+            <span>${panelRows.length} NAMES</span>
+          </div>
+          <div class="market-rs-period-list">
+            ${panelItems || '<p class="market-rs-empty">해당 종목이 없습니다.</p>'}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
   const leaderCards = rsCardRows
     .map((row) => {
       const score = getMarketRsUniverseScore(row, state.rsUniverse);
@@ -11108,6 +11166,23 @@ function renderMarketRsOverview() {
           </label>
         </div>
         <div class="market-rs-new-high-grid">${newHighPanels}</div>
+      </section>
+
+      <section class="market-rs-period-board" aria-label="Period RS leaders">
+        <div class="market-rs-new-high-board-head">
+          <div>
+            <h2>기간별 RS Leaders</h2>
+            <p>각 기간 RS 내림차순 · 7 visible · scroll for all names · 동점은 종합 RS와 시가총액 순</p>
+          </div>
+          <div class="market-rs-period-controls">
+            <label class="market-rs-new-high-cap-toggle">
+              <input type="checkbox" data-rs-period-large-cap ${state.rsPeriodLeadersLargeCapOnly ? "checked" : ""} />
+              <span>$10B 이하 제외</span>
+            </label>
+            <span class="market-rs-period-eligible">${periodLeaderRows.length} eligible</span>
+          </div>
+        </div>
+        <div class="market-rs-period-grid">${periodLeaderPanels}</div>
       </section>
 
       <article class="us-panel">
@@ -11401,6 +11476,13 @@ function renderMarketRsOverview() {
   if (rsNewHighLargeCapToggle) {
     rsNewHighLargeCapToggle.addEventListener("change", () => {
       state.rsNewHighLargeCapOnly = rsNewHighLargeCapToggle.checked;
+      render();
+    });
+  }
+  const rsPeriodLargeCapToggle = usOverviewRoot.querySelector("[data-rs-period-large-cap]");
+  if (rsPeriodLargeCapToggle) {
+    rsPeriodLargeCapToggle.addEventListener("change", () => {
+      state.rsPeriodLeadersLargeCapOnly = rsPeriodLargeCapToggle.checked;
       render();
     });
   }

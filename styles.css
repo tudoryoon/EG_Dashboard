@@ -6084,6 +6084,147 @@ h1 {
   white-space: nowrap;
 }
 
+.market-rs-period-board {
+  min-width: 0;
+  padding: 12px 0 4px;
+  border-top: 1px solid #e5e5df;
+}
+
+.market-rs-period-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-rs-period-eligible {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 8px 11px;
+  border: 1px solid #d8d8d1;
+  border-radius: 8px;
+  background: #fff;
+  color: #595952;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.market-rs-period-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.market-rs-period-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-top: 3px solid #e18422;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.market-rs-period-title {
+  display: flex;
+  min-height: 62px;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border-bottom: 1px solid #ecece7;
+  background: #fffaf3;
+}
+
+.market-rs-period-title div {
+  min-width: 0;
+}
+
+.market-rs-period-title small {
+  display: block;
+  margin-bottom: 4px;
+  color: #8a6a45;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.market-rs-period-title h3 {
+  margin: 0;
+  font-size: 0.93rem;
+}
+
+.market-rs-period-title > span {
+  color: #6a6a63;
+  font-size: 0.64rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.market-rs-period-list {
+  max-height: 364px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.market-rs-period-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 30px;
+  width: 100%;
+  height: 52px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 0;
+  border-bottom: 1px solid #f0f0eb;
+  background: #fff;
+  color: var(--ink);
+  content-visibility: auto;
+  contain-intrinsic-size: 52px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.market-rs-period-item:hover,
+.market-rs-period-item:focus-visible {
+  background: #fff7eb;
+}
+
+.market-rs-period-rank {
+  color: #85857e;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.market-rs-period-identity {
+  min-width: 0;
+}
+
+.market-rs-period-identity strong,
+.market-rs-period-identity small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-rs-period-identity strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.78rem;
+}
+
+.market-rs-period-identity small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.market-rs-period-item > b {
+  color: #b85d08;
+  font-size: 0.86rem;
+  text-align: right;
+}
+
 .trend-score-overview,
 .trend-score-overview .us-panel,
 .trend-score-overview .market-rs-layout > * {
@@ -7235,8 +7376,16 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .market-rs-period-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .market-rs-new-high-board-head {
     align-items: stretch;
+  }
+
+  .market-rs-period-controls {
+    justify-content: flex-end;
   }
 
   .market-rs-card-grid {
@@ -7369,7 +7518,14 @@ h1 {
 }
 
 @media (max-width: 560px) {
-  .market-rs-new-high-grid {
+  .market-rs-new-high-grid,
+  .market-rs-period-grid {
     grid-template-columns: 1fr;
+  }
+
+  .market-rs-new-high-board-head,
+  .market-rs-period-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
