@@ -11096,6 +11096,20 @@ function renderMarketRsOverview() {
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
+      <section class="market-rs-new-high-board" aria-label="RS and price new highs">
+        <div class="market-rs-new-high-board-head">
+          <div>
+            <h2>New High Monitor</h2>
+            <p>${getMarketRsUniverseLabel(state.rsUniverse)} · RS Rating descending · 7 visible · scroll for all names</p>
+          </div>
+          <label class="market-rs-new-high-cap-toggle">
+            <input type="checkbox" data-rs-new-high-large-cap ${state.rsNewHighLargeCapOnly ? "checked" : ""} />
+            <span>$10B 이하 제외</span>
+          </label>
+        </div>
+        <div class="market-rs-new-high-grid">${newHighPanels}</div>
+      </section>
+
       <article class="us-panel">
         <div class="us-section-head market-rs-head">
           <div>
@@ -11164,20 +11178,6 @@ function renderMarketRsOverview() {
           </div>
         </div>
       </article>
-
-      <section class="market-rs-new-high-board" aria-label="RS and price new highs">
-        <div class="market-rs-new-high-board-head">
-          <div>
-            <h2>New High Monitor</h2>
-            <p>${getMarketRsUniverseLabel(state.rsUniverse)} · RS Rating descending · 7 visible · scroll for all names</p>
-          </div>
-          <label class="market-rs-new-high-cap-toggle">
-            <input type="checkbox" data-rs-new-high-large-cap ${state.rsNewHighLargeCapOnly ? "checked" : ""} />
-            <span>$10B 이하 제외</span>
-          </label>
-        </div>
-        <div class="market-rs-new-high-grid">${newHighPanels}</div>
-      </section>
 
       <section class="market-rs-layout">
         <article class="us-panel market-rs-leaders">
