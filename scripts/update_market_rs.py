@@ -1195,7 +1195,7 @@ def build_payload(
             "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. Names with market cap at or below $200M are excluded.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
             "weights": RS_WEIGHTS,
-            "atr": "ATR% = up to 21 trading days of average true range divided by the current close; newly listed names use available history after two trading sessions.",
+            "atr": "ATR% = the average of each session's true range divided by its previous close over up to 21 trading days; newly listed names use available history after two trading sessions.",
         },
         "rows": rows,
         "histories": histories,
@@ -1248,7 +1248,7 @@ def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_
     ).dropna()
     if len(frame) < ATR_MIN_PERIODS:
         return pd.Series(dtype=float)
-    previous_close = frame["close"].shift(1)
+    previous_close = frame["close"].shift(1).fillna(frame["close"])
     true_range = pd.concat(
         [
             frame["high"] - frame["low"],
@@ -1258,8 +1258,8 @@ def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_
         axis=1,
     ).max(axis=1)
     min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
-    atr = true_range.rolling(window, min_periods=min_periods).mean()
-    return ((atr / frame["close"]) * 100).dropna()
+    true_range_pct = (true_range / previous_close.where(previous_close > 0)) * 100
+    return true_range_pct.rolling(window, min_periods=min_periods).mean().dropna()
 
 
 def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> float | None:

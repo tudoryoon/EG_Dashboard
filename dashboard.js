@@ -1634,25 +1634,25 @@ function calculateAtrPercentSeries(values, highs, lows, period = 21) {
   if (!Array.isArray(values) || !Array.isArray(highs) || !Array.isArray(lows) || !values.length) {
     return [];
   }
-  const trueRanges = values.map((close, index) => {
+  const trueRangePercents = values.map((close, index) => {
     const high = Number(highs[index]);
     const low = Number(lows[index]);
     const previousClose = index > 0 ? Number(values[index - 1]) : Number(close);
-    if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(previousClose)) {
+    if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(previousClose) || previousClose <= 0) {
       return null;
     }
-    return Math.max(high - low, Math.abs(high - previousClose), Math.abs(low - previousClose));
+    const trueRange = Math.max(high - low, Math.abs(high - previousClose), Math.abs(low - previousClose));
+    return (trueRange / previousClose) * 100;
   });
   return values.map((close, index) => {
     if (index < period - 1 || !Number.isFinite(Number(close))) {
       return null;
     }
-    const window = trueRanges.slice(index - period + 1, index + 1).filter((value) => Number.isFinite(value));
+    const window = trueRangePercents.slice(index - period + 1, index + 1).filter((value) => Number.isFinite(value));
     if (window.length < period) {
       return null;
     }
-    const atr = window.reduce((sum, value) => sum + Number(value), 0) / period;
-    return Number(((atr / Number(close)) * 100).toFixed(2));
+    return Number((window.reduce((sum, value) => sum + Number(value), 0) / period).toFixed(2));
   });
 }
 
@@ -10378,22 +10378,23 @@ function calculateDrawdownSeries(values = []) {
 }
 
 function calculateAtrPctSeries(highValues = [], lowValues = [], closeValues = [], window = 21) {
-  const trueRanges = closeValues.map((closeValue, index) => {
+  const trueRangePercents = closeValues.map((closeValue, index) => {
     const high = Number(highValues[index]);
     const low = Number(lowValues[index]);
     if (!Number.isFinite(high) || !Number.isFinite(low)) {
       return null;
     }
-    const previousClose = Number(closeValues[index - 1]);
-    const ranges = [high - low];
-    if (Number.isFinite(previousClose) && previousClose > 0) {
-      ranges.push(Math.abs(high - previousClose), Math.abs(low - previousClose));
+    const previousClose = index > 0 ? Number(closeValues[index - 1]) : Number(closeValue);
+    if (!Number.isFinite(previousClose) || previousClose <= 0) {
+      return null;
     }
+    const ranges = [high - low];
+    ranges.push(Math.abs(high - previousClose), Math.abs(low - previousClose));
     const trueRange = Math.max(...ranges.filter((value) => Number.isFinite(value)));
     if (!Number.isFinite(trueRange)) {
       return null;
     }
-    return trueRange;
+    return (trueRange / previousClose) * 100;
   });
 
   return closeValues.map((closeValue, index) => {
@@ -10401,14 +10402,13 @@ function calculateAtrPctSeries(highValues = [], lowValues = [], closeValues = []
     if (!Number.isFinite(close) || close <= 0) {
       return null;
     }
-    const windowValues = trueRanges
+    const windowValues = trueRangePercents
       .slice(Math.max(0, index - window + 1), index + 1)
       .filter((value) => Number.isFinite(value));
     if (windowValues.length < window) {
       return null;
     }
-    const atr = windowValues.reduce((sum, value) => sum + value, 0) / window;
-    return Number(((atr / close) * 100).toFixed(2));
+    return Number((windowValues.reduce((sum, value) => sum + value, 0) / window).toFixed(2));
   });
 }
 

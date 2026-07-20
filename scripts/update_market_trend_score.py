@@ -249,7 +249,7 @@ def compute_atr_pct(frame: pd.DataFrame, window: int = 21) -> pd.Series:
     price = frame["price"].astype("float64")
     high = frame["high"].astype("float64") if "high" in frame else price
     low = frame["low"].astype("float64") if "low" in frame else price
-    previous_close = price.shift(1)
+    previous_close = price.shift(1).fillna(price)
     true_range = pd.concat(
         [
             high - low,
@@ -258,8 +258,9 @@ def compute_atr_pct(frame: pd.DataFrame, window: int = 21) -> pd.Series:
         ],
         axis=1,
     ).max(axis=1)
+    true_range_pct = (true_range / previous_close.where(previous_close > 0)) * 100
     min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
-    return (true_range.rolling(window, min_periods=min_periods).mean() / price) * 100
+    return true_range_pct.rolling(window, min_periods=min_periods).mean()
 
 
 def compute_climax_components(frame: pd.DataFrame) -> pd.DataFrame:

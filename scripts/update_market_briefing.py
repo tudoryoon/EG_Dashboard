@@ -1124,11 +1124,11 @@ def compute_atr_percent_from_ohlc(frame: pd.DataFrame, period: int = 21) -> floa
         ],
         axis=1,
     ).max(axis=1)
-    atr = true_range.rolling(period).mean().iloc[-1]
-    latest_close = close.iloc[-1]
-    if not math.isfinite(float(atr)) or not math.isfinite(float(latest_close)) or latest_close == 0:
+    true_range_pct = (true_range / previous_close.where(previous_close > 0)) * 100
+    atr_pct = true_range_pct.rolling(period).mean().iloc[-1]
+    if not math.isfinite(float(atr_pct)):
         return None
-    return round((float(atr) / float(latest_close)) * 100, 2)
+    return round(float(atr_pct), 2)
 
 
 def build_index_cards() -> list[dict[str, object]]:
