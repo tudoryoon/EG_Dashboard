@@ -3225,6 +3225,15 @@ h1 {
   text-align: right;
 }
 
+.market-trend-risk-card-multiple .market-trend-risk-card-head strong {
+  white-space: nowrap;
+}
+
+.market-trend-risk-card-multiple .market-trend-risk-card-head span {
+  white-space: normal;
+  text-align: right;
+}
+
 .market-trend-risk-chart-wrap {
   height: 190px;
 }

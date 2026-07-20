@@ -1743,7 +1743,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   const atrPctFull = calculateAtrPercentSeries(fullValues, fullHighs, fullLows, 21);
   const drawdownPctFull = calculateDrawdownPercentSeries(fullValues);
   const rollingDrawdown60PctFull = calculateRollingDrawdownPercentSeries(fullValues, 60);
-  const drawdownAtrFull = calculateAtrDrawdownMultipleSeries(drawdownPctFull, atrPctFull);
+  const rollingDrawdownAtrFull = calculateAtrDrawdownMultipleSeries(rollingDrawdown60PctFull, atrPctFull);
   const emaReferenceSeries = Object.fromEntries(
     MARKET_PRICE_EMA_OPTIONS.map((period) => [period, calculateEmaSeries(fullValues, period).slice(startIndex, sliceEnd)]),
   );
@@ -1804,7 +1804,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
       atrPct: atrPctFull.slice(startIndex, sliceEnd),
       drawdownPct: drawdownPctFull.slice(startIndex, sliceEnd),
       rollingDrawdown60Pct: rollingDrawdown60PctFull.slice(startIndex, sliceEnd),
-      drawdownAtr: drawdownAtrFull.slice(startIndex, sliceEnd),
+      rollingDrawdownAtr: rollingDrawdownAtrFull.slice(startIndex, sliceEnd),
     },
   };
 }
@@ -1869,7 +1869,7 @@ function buildMarketTrendRiskSummary() {
       Number.isFinite(Number(series.atrPct?.[index])) ||
       Number.isFinite(Number(series.drawdownPct?.[index])) ||
       Number.isFinite(Number(series.rollingDrawdown60Pct?.[index])) ||
-      Number.isFinite(Number(series.drawdownAtr?.[index]))
+      Number.isFinite(Number(series.rollingDrawdownAtr?.[index]))
     ) {
       latestIndex = index;
       break;
@@ -1882,7 +1882,7 @@ function buildMarketTrendRiskSummary() {
     { label: "21D ATR", value: series.atrPct?.[latestIndex], formatter: (value) => `${Number(value).toFixed(2)}%`, tone: "neutral" },
     { label: "From High", value: series.drawdownPct?.[latestIndex], formatter: formatSignedPercent, tone: "negative" },
     { label: "60D MDD", value: series.rollingDrawdown60Pct?.[latestIndex], formatter: formatSignedPercent, tone: "negative" },
-    { label: "Drawdown / ATR", value: series.drawdownAtr?.[latestIndex], formatter: (value) => `${Number(value).toFixed(2)}x`, tone: "negative" },
+    { label: "60D MDD / ATR", value: series.rollingDrawdownAtr?.[latestIndex], formatter: (value) => `${Number(value).toFixed(2)}x`, tone: "negative" },
   ];
   return items.map((item) => ({
     ...item,
@@ -2103,8 +2103,8 @@ function createMarketTrendRiskChart(canvas, rangeKey, indexKey, customStart = ""
       suggestedMax: 0,
     },
     multiple: {
-      label: "Drawdown / ATR (x)",
-      data: riskSeries.drawdownAtr ?? [],
+      label: "60D Rolling MDD / ATR (x)",
+      data: riskSeries.rollingDrawdownAtr ?? [],
       color: "#111827",
       fillColor: "rgba(17, 24, 39, 0.14)",
       tickSuffix: "x",
@@ -14826,7 +14826,7 @@ function renderIndexTrendOverview() {
         </div>
         <div class="market-trend-risk-block">
           <div class="market-trend-meta">
-            <span>21일 ATR, 전체 고점 대비 MDD, 60D Rolling MDD, 하락폭의 ATR 배수를 각각 분리해서 봅니다.</span>
+            <span>21일 ATR, 전체 고점 대비 MDD, 60D Rolling MDD, 최근 60거래일 하락폭의 ATR 배수를 각각 분리해서 봅니다.</span>
             <span>${marketTrendRiskMarkup}</span>
           </div>
           <div class="market-trend-risk-grid">
@@ -14841,8 +14841,8 @@ function renderIndexTrendOverview() {
             </div>
             <div class="market-trend-risk-card market-trend-risk-card-multiple">
               <div class="market-trend-risk-card-head">
-                <strong>Drawdown / ATR</strong>
-                <span>하락폭의 ATR 배수</span>
+                <strong>60D MDD / ATR</strong>
+                <span>최근 60거래일 고점 하락폭의 ATR 배수</span>
               </div>
               <div class="market-trend-risk-chart-wrap">
                 <canvas data-market-trend="risk" data-market-trend-risk="multiple"></canvas>
