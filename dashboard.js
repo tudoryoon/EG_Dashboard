@@ -19,6 +19,7 @@ const m7PriceData = window.m7PriceData ?? { updatedAt: "", startDate: "2017-01-0
 const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], items: {} };
 const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", defaultRange: "max", ranges: [], dashboards: {} };
 const studyDataCenterDeals = window.studyDataCenterDeals ?? { updatedAt: "", scope: "", companies: [], statusLegend: [], deals: [] };
+const studyEtfFlowData = window.studyEtfFlowData ?? { updatedAt: "", startDate: "", defaultRange: "ytd", ranges: [], methodology: {}, sources: [], items: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -145,6 +146,7 @@ const studySubtabMeta = {
   MemoryCap: { label: "Memory Market Cap" },
   DataCenter: { label: "Data Center" },
   MemoryCapa: { label: "Memory Capa" },
+  EtfTracking: { label: "ETF 추적" },
 };
 
 const studyDataCenterSortOptions = [
@@ -330,6 +332,7 @@ const state = {
   studyView: "MemoryCap",
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
+  studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
   marketPriceRange: "3y",
@@ -13870,6 +13873,232 @@ function renderStudyOverview() {
   }
 }
 
+function formatSignedDollarMillions(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "-";
+  }
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : numeric < 0 ? "-" : "";
+  return `${sign}${formatCompactDollarMillions(Math.abs(numeric))}`;
+}
+
+function buildStudyEtfFlowPayload(item, rangeKey) {
+  const dates = item?.dates ?? [];
+  if (!dates.length) {
+    return { labels: [], prices: [], dailyFlows: [], cumulativeFlows: [] };
+  }
+  const latestDate = dates[dates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, dates[0]);
+  const startIndex = Math.max(
+    0,
+    dates.findIndex((dateText) => dateText >= startDate),
+  );
+  const labels = dates.slice(startIndex);
+  const prices = (item.prices ?? []).slice(startIndex, startIndex + labels.length);
+  const dailyFlows = (item.dailyFlowM ?? []).slice(startIndex, startIndex + labels.length);
+  let cumulative = 0;
+  const cumulativeFlows = dailyFlows.map((value) => {
+    cumulative += Number(value) || 0;
+    return Number(cumulative.toFixed(3));
+  });
+  return { labels, prices, dailyFlows, cumulativeFlows };
+}
+
+function createStudyEtfFlowChart(canvas, item, rangeKey) {
+  const payload = buildStudyEtfFlowPayload(item, rangeKey);
+  if (!payload.labels.length) {
+    return;
+  }
+  const tickIndexes = new Set(getMacroTickIndexes(payload.labels, rangeKey, canvas.clientWidth));
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: [
+        {
+          label: "누적 Fund Flow (L)",
+          data: payload.cumulativeFlows,
+          yAxisID: "yFlow",
+          borderColor: "#d97745",
+          backgroundColor: "rgba(217, 119, 69, 0.08)",
+          borderWidth: 2.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.08,
+          spanGaps: true,
+        },
+        {
+          label: "주가 (R)",
+          data: payload.prices,
+          yAxisID: "yPrice",
+          borderColor: item.color || "#1f5f73",
+          backgroundColor: "transparent",
+          borderWidth: 2.3,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.08,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { usePointStyle: true, boxWidth: 8, color: "#4a4a45" },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => formatFullIsoDate(items[0]?.label),
+            label: (context) =>
+              context.dataset.yAxisID === "yFlow"
+                ? `${context.dataset.label}: ${formatSignedDollarMillions(context.parsed.y)}`
+                : `${context.dataset.label}: $${Number(context.parsed.y).toFixed(2)}`,
+            afterBody: (items) => {
+              const index = items[0]?.dataIndex;
+              const daily = Number(payload.dailyFlows[index]);
+              return Number.isFinite(daily) ? `일별 Fund Flow: ${formatSignedDollarMillions(daily)}` : "";
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#77776f",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (_, index) => (tickIndexes.has(index) ? formatRangeAxisDate(payload.labels[index], rangeKey) : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        yFlow: {
+          position: "left",
+          grid: { color: "rgba(148, 148, 140, 0.16)" },
+          ticks: { color: "#b86438", callback: (value) => formatCompactDollarMillions(Number(value)) },
+          title: { display: true, text: "누적 Fund Flow ($M)", color: "#b86438" },
+          border: { color: "#d8d8d2" },
+        },
+        yPrice: {
+          position: "right",
+          grid: { drawOnChartArea: false },
+          ticks: { color: item.color || "#1f5f73", callback: (value) => `$${Number(value).toFixed(0)}` },
+          title: { display: true, text: "주가 ($)", color: item.color || "#1f5f73" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function renderStudyEtfTrackingOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const items = Object.values(studyEtfFlowData.items ?? {});
+  if (!items.length) {
+    renderPlaceholderOverview("ETF 추적", "ETF flow data is not available yet.");
+    return;
+  }
+
+  const activeRange = (studyEtfFlowData.ranges ?? []).some((range) => range.key === state.studyEtfFlowRange)
+    ? state.studyEtfFlowRange
+    : studyEtfFlowData.defaultRange || "ytd";
+  state.studyEtfFlowRange = activeRange;
+  const rangeMarkup = (studyEtfFlowData.ranges ?? [])
+    .map(
+      (range) => `
+        <button type="button" class="m7-range-chip${activeRange === range.key ? " active" : ""}" data-study-etf-range="${escapeHtml(range.key)}">
+          ${escapeHtml(range.label)}
+        </button>`,
+    )
+    .join("");
+
+  const chartMarkup = items
+    .map((item) => {
+      const payload = buildStudyEtfFlowPayload(item, activeRange);
+      const latestPrice = payload.prices[payload.prices.length - 1];
+      const cumulative = payload.cumulativeFlows[payload.cumulativeFlows.length - 1];
+      const dailyFlow = payload.dailyFlows[payload.dailyFlows.length - 1];
+      const latestDate = payload.labels[payload.labels.length - 1] || item.latest?.date || "-";
+      return `
+        <article class="study-etf-card">
+          <div class="study-etf-card-head">
+            <div>
+              <div class="study-etf-title-row">
+                <strong>${escapeHtml(item.ticker)}</strong>
+                <span>${escapeHtml(item.theme || "")}</span>
+              </div>
+              <h3>${escapeHtml(item.name)}</h3>
+            </div>
+            <time>${escapeHtml(latestDate)}</time>
+          </div>
+          <div class="study-etf-metrics">
+            <div><span>누적 Flow</span><b class="${Number(cumulative) >= 0 ? "is-positive" : "is-negative"}">${formatSignedDollarMillions(cumulative)}</b></div>
+            <div><span>일별 Flow</span><b class="${Number(dailyFlow) >= 0 ? "is-positive" : "is-negative"}">${formatSignedDollarMillions(dailyFlow)}</b></div>
+            <div><span>주가</span><b>$${Number(latestPrice).toFixed(2)}</b></div>
+          </div>
+          <div class="study-etf-chart-wrap"><canvas data-study-etf-chart="${escapeHtml(item.ticker)}"></canvas></div>
+        </article>`;
+    })
+    .join("");
+
+  const sourceMarkup = (studyEtfFlowData.sources ?? [])
+    .map(
+      (source) => `
+        <a class="study-source-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
+          ${escapeHtml(source.label)}
+        </a>`,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview study-overview study-etf-overview">
+      <section class="us-panel study-panel study-etf-panel">
+        <div class="us-section-head us-price-head study-etf-page-head">
+          <div>
+            <h2>ETF 가격과 누적 Fund Flow</h2>
+            <p>SOXX · DRAM · MAGS의 주가와 실제 설정·환매 기반 자금 유입을 같은 화면에서 비교합니다.</p>
+          </div>
+          <div class="us-price-controls">
+            <div class="m7-range-row">${rangeMarkup}</div>
+            <div class="us-price-updated">Updated ${escapeHtml(studyEtfFlowData.updatedAt || "-")}</div>
+          </div>
+        </div>
+        <div class="study-etf-method-grid">
+          <div><span>일별 Fund Flow</span><strong>설정좌수 순증감 × 당일 NAV</strong></div>
+          <div><span>누적값</span><strong>선택 기간의 일별 Flow 합산</strong></div>
+          <div><span>주의</span><strong>총 설정좌수 자체를 누적하지 않음</strong></div>
+        </div>
+        <div class="study-etf-grid">${chartMarkup}</div>
+        <div class="study-etf-source-row">
+          <p>SOXX는 iShares 공식 Historical 자료, DRAM·MAGS는 Roundhill 공식 일별 NAV와 날짜별 holdings의 Shares Outstanding를 사용합니다.</p>
+          <div class="study-source-list">${sourceMarkup}</div>
+        </div>
+      </section>
+    </section>`;
+
+  usOverviewRoot.querySelectorAll("[data-study-etf-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studyEtfFlowRange = button.dataset.studyEtfRange || studyEtfFlowData.defaultRange || "ytd";
+      render();
+    });
+  });
+  items.forEach((item) => {
+    const canvas = usOverviewRoot.querySelector(`[data-study-etf-chart="${item.ticker}"]`);
+    if (canvas) {
+      createStudyEtfFlowChart(canvas, item, activeRange);
+    }
+  });
+}
+
 function getStudyDealStatusMeta(statusKey) {
   return (
     (studyDataCenterDeals.statusLegend ?? []).find((item) => item.key === statusKey) ?? {
@@ -17156,9 +17385,10 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Study") {
-    summaryText.textContent =
-      state.studyView === "DataCenter"
-        ? "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status"
+    summaryText.textContent = state.studyView === "DataCenter"
+      ? "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status"
+      : state.studyView === "EtfTracking"
+        ? "Issuer-based ETF price and primary-market fund-flow tracking"
         : "Study dashboard for focused market-cap and cross-market comparisons";
     return;
   }
@@ -17659,6 +17889,10 @@ function render() {
     }
     if (state.studyView === "MemoryCapa") {
       renderStudyMemoryCapaOverview();
+      return;
+    }
+    if (state.studyView === "EtfTracking") {
+      renderStudyEtfTrackingOverview();
       return;
     }
     renderStudyOverview();
