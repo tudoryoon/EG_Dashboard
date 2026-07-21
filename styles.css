@@ -3548,14 +3548,67 @@ h1 {
 .study-etf-chart-wrap {
   position: relative;
   width: 100%;
-  height: 340px;
+  height: 285px;
   margin-top: 10px;
 }
 
-.study-etf-chart-wrap canvas {
+.study-etf-chart-wrap canvas,
+.study-etf-daily-flow-wrap canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.study-etf-daily-flow-block {
+  margin-top: 7px;
+  padding-top: 9px;
+  border-top: 1px solid #e5e5df;
+}
+
+.study-etf-daily-flow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 18px;
+}
+
+.study-etf-daily-flow-head span {
+  color: #3d3d38;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.study-etf-daily-flow-head em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #85857d;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.study-etf-daily-flow-head i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.study-etf-daily-flow-head .is-inflow {
+  background: #1f9d62;
+}
+
+.study-etf-daily-flow-head .is-outflow {
+  margin-left: 4px;
+  background: #d94a43;
+}
+
+.study-etf-daily-flow-wrap {
+  position: relative;
+  width: 100%;
+  height: 115px;
+  margin-top: 2px;
 }
 
 .study-etf-source-row {
@@ -5350,7 +5403,11 @@ h1 {
   }
 
   .study-etf-chart-wrap {
-    height: 300px;
+    height: 260px;
+  }
+
+  .study-etf-daily-flow-wrap {
+    height: 110px;
   }
 }
 

@@ -4,9 +4,9 @@
 Daily flow is calculated directly from issuer data:
     (shares outstanding[t] - shares outstanding[t-1]) * NAV[t]
 
-SOXX uses the official iShares fund-download Historical worksheet. DRAM and
-MAGS use Roundhill's official daily NAV files plus dated holdings snapshots,
-which include SharesOutstanding for every fund account.
+SOXX and EWY use the official iShares fund-download Historical worksheet.
+DRAM and MAGS use Roundhill's official daily NAV files plus dated holdings
+snapshots, which include SharesOutstanding for every fund account.
 """
 
 from __future__ import annotations
@@ -41,9 +41,8 @@ HEADERS = {
 ISHARES_DOWNLOAD_URL = (
     "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/"
     "get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&"
-    "locale=en_US&portfolioId=239705&component=fundDownload&userType=individual"
+    "locale=en_US&portfolioId={portfolio_id}&component=fundDownload&userType=individual"
 )
-ISHARES_PAGE_URL = "https://www.ishares.com/us/products/239705/ishares-semiconductor-etf"
 ROUNDHILL_NAV_URL = (
     "https://www.roundhillinvestments.com/assets/data/"
     "FilepointRoundhill.40RU.RU_{file_ticker}_Daily.csv"
@@ -63,6 +62,8 @@ ETF_META = {
         "theme": "반도체",
         "issuer": "iShares",
         "color": "#1f5f73",
+        "portfolioId": "239705",
+        "pageUrl": "https://www.ishares.com/us/products/239705/ishares-semiconductor-etf",
     },
     "DRAM": {
         "name": "Roundhill Memory ETF",
@@ -77,6 +78,14 @@ ETF_META = {
         "issuer": "Roundhill",
         "color": "#315f85",
         "fileTicker": "BIGT",
+    },
+    "EWY": {
+        "name": "iShares MSCI South Korea ETF",
+        "theme": "한국",
+        "issuer": "iShares",
+        "color": "#375a9e",
+        "portfolioId": "239681",
+        "pageUrl": "https://www.ishares.com/us/products/239681/ishares-msci-south-korea-etf",
     },
 }
 
@@ -110,8 +119,8 @@ def load_existing() -> dict[str, Any]:
     return json.loads(match.group(1))
 
 
-def fetch_soxx_history() -> dict[str, dict[str, float]]:
-    content = request_bytes(ISHARES_DOWNLOAD_URL)
+def fetch_ishares_history(portfolio_id: str) -> dict[str, dict[str, float]]:
+    content = request_bytes(ISHARES_DOWNLOAD_URL.format(portfolio_id=portfolio_id))
     root = etree.fromstring(content, etree.XMLParser(recover=True))
     namespace = "{urn:schemas-microsoft-com:office:spreadsheet}"
     worksheet = next(
@@ -331,10 +340,16 @@ def build_item(
 
 def build_payload() -> dict[str, Any]:
     existing = load_existing()
-    soxx_history = fetch_soxx_history()
-    soxx_prices = fetch_yahoo_prices("SOXX", START_DATE)
-    for day_text, values in soxx_history.items():
-        values["price"] = soxx_prices.get(day_text, values["nav"])
+    ishares_histories: dict[str, dict[str, dict[str, float]]] = {}
+    for ticker, meta in ETF_META.items():
+        portfolio_id = meta.get("portfolioId")
+        if not portfolio_id:
+            continue
+        history = fetch_ishares_history(str(portfolio_id))
+        prices = fetch_yahoo_prices(ticker, START_DATE)
+        for day_text, values in history.items():
+            values["price"] = prices.get(day_text, values["nav"])
+        ishares_histories[ticker] = history
 
     roundhill_histories = {
         ticker: fetch_roundhill_nav_history(meta["fileTicker"])
@@ -359,9 +374,10 @@ def build_payload() -> dict[str, Any]:
             roundhill_shares.setdefault(ticker, {})[day_text] = shares
 
     items = {
-        "SOXX": build_item("SOXX", soxx_history),
+        "SOXX": build_item("SOXX", ishares_histories["SOXX"]),
         "DRAM": build_item("DRAM", roundhill_histories["DRAM"], roundhill_shares["DRAM"]),
         "MAGS": build_item("MAGS", roundhill_histories["MAGS"], roundhill_shares["MAGS"]),
+        "EWY": build_item("EWY", ishares_histories["EWY"]),
     }
     updated_at = max(item["latest"]["date"] for item in items.values())
     return {
@@ -385,7 +401,7 @@ def build_payload() -> dict[str, Any]:
         "sources": [
             {
                 "label": "iShares SOXX official fund data",
-                "url": ISHARES_PAGE_URL,
+                "url": ETF_META["SOXX"]["pageUrl"],
                 "detail": "Historical NAV and Shares Outstanding; market price uses Yahoo Finance close.",
             },
             {
@@ -397,6 +413,11 @@ def build_payload() -> dict[str, Any]:
                 "label": "Roundhill MAGS official fund data",
                 "url": "https://www.roundhillinvestments.com/etf/mags/",
                 "detail": "Daily NAV/market price and dated holdings SharesOutstanding for MAGS.",
+            },
+            {
+                "label": "iShares EWY official fund data",
+                "url": ETF_META["EWY"]["pageUrl"],
+                "detail": "Historical NAV and Shares Outstanding; market price uses Yahoo Finance close.",
             },
         ],
         "items": items,

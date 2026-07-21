@@ -13997,6 +13997,70 @@ function createStudyEtfFlowChart(canvas, item, rangeKey) {
   charts.push(chart);
 }
 
+function createStudyEtfDailyFlowChart(canvas, item, rangeKey) {
+  const payload = buildStudyEtfFlowPayload(item, rangeKey);
+  if (!payload.labels.length) {
+    return;
+  }
+  const inflowColor = "rgba(31, 157, 98, 0.82)";
+  const outflowColor = "rgba(217, 74, 67, 0.82)";
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: payload.labels,
+      datasets: [
+        {
+          label: "일별 Fund Flow",
+          data: payload.dailyFlows,
+          backgroundColor: payload.dailyFlows.map((value) => (Number(value) >= 0 ? inflowColor : outflowColor)),
+          borderColor: payload.dailyFlows.map((value) => (Number(value) >= 0 ? "#16734a" : "#b93831")),
+          borderWidth: 0.5,
+          borderSkipped: false,
+          categoryPercentage: 1,
+          barPercentage: 0.92,
+          maxBarThickness: 10,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => formatFullIsoDate(items[0]?.label),
+            label: (context) => `일별 Fund Flow: ${formatSignedDollarMillions(context.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { display: false },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: (context) => (context.tick.value === 0 ? "rgba(72, 72, 66, 0.55)" : "rgba(148, 148, 140, 0.12)"),
+            lineWidth: (context) => (context.tick.value === 0 ? 1.3 : 1),
+          },
+          ticks: {
+            color: "#77776f",
+            maxTicksLimit: 5,
+            callback: (value) => formatSignedDollarMillions(Number(value)),
+          },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
 function renderStudyEtfTrackingOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -14046,6 +14110,13 @@ function renderStudyEtfTrackingOverview() {
             <div><span>주가</span><b>$${Number(latestPrice).toFixed(2)}</b></div>
           </div>
           <div class="study-etf-chart-wrap"><canvas data-study-etf-chart="${escapeHtml(item.ticker)}"></canvas></div>
+          <div class="study-etf-daily-flow-block">
+            <div class="study-etf-daily-flow-head">
+              <span>일별 Fund Flow</span>
+              <em><i class="is-inflow"></i>유입 <i class="is-outflow"></i>유출 · $M</em>
+            </div>
+            <div class="study-etf-daily-flow-wrap"><canvas data-study-etf-daily-flow="${escapeHtml(item.ticker)}"></canvas></div>
+          </div>
         </article>`;
     })
     .join("");
@@ -14065,7 +14136,7 @@ function renderStudyEtfTrackingOverview() {
         <div class="us-section-head us-price-head study-etf-page-head">
           <div>
             <h2>ETF 가격과 누적 Fund Flow</h2>
-            <p>SOXX · DRAM · MAGS의 주가와 실제 설정·환매 기반 자금 유입을 같은 화면에서 비교합니다.</p>
+            <p>SOXX · DRAM · MAGS · EWY의 주가와 실제 설정·환매 기반 자금 유입을 같은 화면에서 비교합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
@@ -14079,7 +14150,7 @@ function renderStudyEtfTrackingOverview() {
         </div>
         <div class="study-etf-grid">${chartMarkup}</div>
         <div class="study-etf-source-row">
-          <p>SOXX는 iShares 공식 Historical 자료, DRAM·MAGS는 Roundhill 공식 일별 NAV와 날짜별 holdings의 Shares Outstanding를 사용합니다.</p>
+          <p>SOXX·EWY는 iShares 공식 Historical 자료, DRAM·MAGS는 Roundhill 공식 일별 NAV와 날짜별 holdings의 Shares Outstanding를 사용합니다.</p>
           <div class="study-source-list">${sourceMarkup}</div>
         </div>
       </section>
@@ -14095,6 +14166,10 @@ function renderStudyEtfTrackingOverview() {
     const canvas = usOverviewRoot.querySelector(`[data-study-etf-chart="${item.ticker}"]`);
     if (canvas) {
       createStudyEtfFlowChart(canvas, item, activeRange);
+    }
+    const dailyFlowCanvas = usOverviewRoot.querySelector(`[data-study-etf-daily-flow="${item.ticker}"]`);
+    if (dailyFlowCanvas) {
+      createStudyEtfDailyFlowChart(dailyFlowCanvas, item, activeRange);
     }
   });
 }
