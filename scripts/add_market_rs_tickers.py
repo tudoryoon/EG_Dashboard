@@ -370,6 +370,48 @@ def update_new_high_flags(row: dict, history: dict) -> None:
     row["rsNewHigh3mAll"] = three_month
 
 
+def preserve_existing_universe_fields(
+    row: dict,
+    history: dict,
+    existing_row: dict | None,
+    existing_history: dict | None,
+) -> None:
+    if not existing_row:
+        return
+    row_keys = [
+        "memberships",
+        "rsRatingSp500",
+        "rsRatingNasdaq100",
+        "rsRatingDowjones",
+        "rsRatingRussell2000",
+        "rsNewHighSp500",
+        "rsNewHighNasdaq100",
+        "rsNewHighDowjones",
+        "rsNewHighRussell2000",
+        "rsNewHigh1ySp500",
+        "rsNewHigh1yNasdaq100",
+        "rsNewHigh1yDowjones",
+        "rsNewHigh1yRussell2000",
+        "rsNewHigh3mSp500",
+        "rsNewHigh3mNasdaq100",
+        "rsNewHigh3mDowjones",
+        "rsNewHigh3mRussell2000",
+    ]
+    for key in row_keys:
+        if key in existing_row:
+            row[key] = existing_row[key]
+    if not existing_history:
+        return
+    for key in [
+        "rsRatingSp500",
+        "rsRatingNasdaq100",
+        "rsRatingDowjones",
+        "rsRatingRussell2000",
+    ]:
+        if key in existing_history:
+            history[key] = existing_history[key]
+
+
 def upsert_manual_config(ticker: str, name: str, shares: int | None) -> None:
     payload = load_manual_config()
     members = payload.setdefault("members", [])
@@ -436,13 +478,18 @@ def main() -> None:
     new_histories: dict[str, dict] = {}
 
     for ticker in tickers:
+        existing_row = rows_by_ticker.get(ticker)
+        existing_history = payload.get("histories", {}).get(ticker)
         name, shares = fetch_ticker_meta(ticker)
         if shares is None:
             raise RuntimeError(f"Unable to fetch shares outstanding for {ticker}. Use manual config first.")
-        if not args.dry_run:
+        existing_memberships = (existing_row or {}).get("memberships") or {}
+        is_index_member = any(bool(value) for value in existing_memberships.values())
+        if not args.dry_run and not is_index_member:
             upsert_manual_config(ticker, name, shares)
         frame = download_ohlcv(ticker)
         row, history = build_new_row_and_history(payload, ticker, frame, name, shares)
+        preserve_existing_universe_fields(row, history, existing_row, existing_history)
         if ticker in rows_by_ticker:
             existing_rows = [existing for existing in existing_rows if existing.get("ticker") != ticker]
             payload.setdefault("histories", {}).pop(ticker, None)

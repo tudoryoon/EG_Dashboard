@@ -22,6 +22,8 @@ BENCHMARK_SYMBOL = "^GSPC"
 HISTORY_POINTS = 252
 MIN_MARKET_CAP_USD = 200_000_000
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
+SHARES_REFRESH_RATIO_LOW = 0.70
+SHARES_REFRESH_RATIO_HIGH = 1.45
 BATCH_SIZE = int(os.getenv("MARKET_RS_BATCH_SIZE", "15"))
 BATCH_SLEEP = float(os.getenv("MARKET_RS_BATCH_SLEEP", "0.6"))
 RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
@@ -765,7 +767,40 @@ def fetch_shares_outstanding_for_symbol(symbol: str) -> tuple[str, int | None]:
     return symbol, None
 
 
-def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, object]]) -> dict[str, int | None]:
+def detect_share_refresh_symbols(
+    symbols: list[str],
+    existing_rows: dict[str, dict[str, object]],
+    raw_close_frame: pd.DataFrame,
+) -> list[str]:
+    refresh: list[str] = []
+    for symbol in symbols:
+        row = existing_rows.get(symbol)
+        if not row or symbol not in raw_close_frame.columns:
+            continue
+        previous_price = safe_float(row.get("price"))
+        prices = raw_close_frame[symbol].dropna()
+        if previous_price is None or previous_price <= 0 or prices.empty:
+            continue
+        latest_price = safe_float(prices.iloc[-1])
+        if latest_price is None or latest_price <= 0:
+            continue
+        price_ratio = latest_price / previous_price
+        if price_ratio < SHARES_REFRESH_RATIO_LOW or price_ratio > SHARES_REFRESH_RATIO_HIGH:
+            refresh.append(symbol)
+    if refresh:
+        print(
+            "Refreshing shares after possible split-like price moves: "
+            + ", ".join(refresh),
+            flush=True,
+        )
+    return refresh
+
+
+def build_shares_cache(
+    symbols: list[str],
+    existing_rows: dict[str, dict[str, object]],
+    refresh_symbols: list[str] | None = None,
+) -> dict[str, int | None]:
     cache: dict[str, int | None] = {}
     manual_shares_outstanding = get_manual_shares_outstanding()
     for symbol in symbols:
@@ -800,15 +835,27 @@ def build_shares_cache(symbols: list[str], existing_rows: dict[str, dict[str, ob
         except Exception:
             continue
 
-    missing = [symbol for symbol in symbols if symbol not in cache][:MAX_SHARES_FETCH]
-    if not missing:
+    refresh_set = set(refresh_symbols or [])
+    fetch_symbols = list(
+        dict.fromkeys(
+            [symbol for symbol in symbols if symbol in refresh_set]
+            + [symbol for symbol in symbols if symbol not in cache]
+        )
+    )[:MAX_SHARES_FETCH]
+    if not fetch_symbols:
         return cache
 
     with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(fetch_shares_outstanding_for_symbol, symbol): symbol for symbol in missing}
+        futures = {
+            executor.submit(fetch_shares_outstanding_for_symbol, symbol): symbol
+            for symbol in fetch_symbols
+        }
         for future in as_completed(futures):
             symbol, shares = future.result()
-            cache[symbol] = shares
+            if shares:
+                cache[symbol] = shares
+            elif symbol not in cache:
+                cache[symbol] = None
     return cache
 
 
@@ -1398,7 +1445,8 @@ def main() -> None:
         volume_frame,
     )
     existing_rows = load_existing_rows()
-    shares_cache = build_shares_cache(symbols, existing_rows)
+    refresh_symbols = detect_share_refresh_symbols(symbols, existing_rows, raw_close_frame)
+    shares_cache = build_shares_cache(symbols, existing_rows, refresh_symbols)
     payload = build_payload(
         universe,
         raw_close_frame,
