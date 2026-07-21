@@ -106,6 +106,7 @@ const gpuCloudRuntime = {
 
 const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing" },
+  EtfStatus: { label: "ETF 현황" },
   RS: { label: "RS" },
   IndexTrend: { label: "Index Trend" },
   Market: { label: "Market" },
@@ -146,7 +147,6 @@ const studySubtabMeta = {
   MemoryCap: { label: "Memory Market Cap" },
   DataCenter: { label: "Data Center" },
   MemoryCapa: { label: "Memory Capa" },
-  EtfTracking: { label: "ETF 추적" },
 };
 
 const studyDataCenterSortOptions = [
@@ -17332,7 +17332,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -17459,12 +17459,15 @@ function renderSummary(list) {
     return;
   }
 
+  if (state.tab === "EtfStatus") {
+    summaryText.textContent = "Issuer-based ETF price and primary-market fund-flow tracking";
+    return;
+  }
+
   if (state.tab === "Study") {
     summaryText.textContent = state.studyView === "DataCenter"
       ? "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status"
-      : state.studyView === "EtfTracking"
-        ? "Issuer-based ETF price and primary-market fund-flow tracking"
-        : "Study dashboard for focused market-cap and cross-market comparisons";
+      : "Study dashboard for focused market-cap and cross-market comparisons";
     return;
   }
 
@@ -17944,6 +17947,12 @@ function render() {
     return;
   }
 
+  if (state.tab === "EtfStatus") {
+    renderSummary([]);
+    renderStudyEtfTrackingOverview();
+    return;
+  }
+
   if (state.tab === "RS") {
     renderSummary([]);
     renderMarketRsOverview();
@@ -17964,10 +17973,6 @@ function render() {
     }
     if (state.studyView === "MemoryCapa") {
       renderStudyMemoryCapaOverview();
-      return;
-    }
-    if (state.studyView === "EtfTracking") {
-      renderStudyEtfTrackingOverview();
       return;
     }
     renderStudyOverview();

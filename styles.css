@@ -194,6 +194,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(63, 63, 58, 0.18);
 }
 
+.country-button.is-etf-status {
+  border-color: #b9d9e5;
+  background: linear-gradient(180deg, #eff9fc, #dff1f7);
+  color: #15536a;
+}
+
+.country-button.is-etf-status.active {
+  border-color: #0e7490;
+  background: linear-gradient(135deg, #22a6bd, #0e7490);
+  color: #f5fdff;
+  box-shadow: 0 14px 28px rgba(14, 116, 144, 0.2);
+}
+
 .country-button.is-rs {
   border-color: #f4c78f;
   background: linear-gradient(180deg, #fff8ed, #ffe8c7);
