@@ -13912,6 +13912,13 @@ function buildStudyEtfFlowPayload(item, rangeKey) {
   return { labels, prices, aums, dailyFlows, cumulativeFlows };
 }
 
+const STUDY_ETF_LEFT_AXIS_WIDTH = 72;
+const STUDY_ETF_RIGHT_AXIS_WIDTH = 58;
+
+function fitStudyEtfAxisWidth(axis, width) {
+  axis.width = width;
+}
+
 function createStudyEtfFlowChart(canvas, item, rangeKey) {
   const payload = buildStudyEtfFlowPayload(item, rangeKey);
   if (!payload.labels.length) {
@@ -13987,6 +13994,7 @@ function createStudyEtfFlowChart(canvas, item, rangeKey) {
         },
         yFlow: {
           position: "left",
+          afterFit: (axis) => fitStudyEtfAxisWidth(axis, STUDY_ETF_LEFT_AXIS_WIDTH),
           grid: { color: "rgba(148, 148, 140, 0.16)" },
           ticks: { color: "#b86438", callback: (value) => formatCompactDollarMillions(Number(value)) },
           title: { display: true, text: "누적 Fund Flow ($M)", color: "#b86438" },
@@ -13994,6 +14002,7 @@ function createStudyEtfFlowChart(canvas, item, rangeKey) {
         },
         yPrice: {
           position: "right",
+          afterFit: (axis) => fitStudyEtfAxisWidth(axis, STUDY_ETF_RIGHT_AXIS_WIDTH),
           grid: { drawOnChartArea: false },
           ticks: { color: item.color || "#1f5f73", callback: (value) => `$${Number(value).toFixed(0)}` },
           title: { display: true, text: "주가 ($)", color: item.color || "#1f5f73" },
@@ -14052,6 +14061,7 @@ function createStudyEtfDailyFlowChart(canvas, item, rangeKey) {
         },
         y: {
           beginAtZero: true,
+          afterFit: (axis) => fitStudyEtfAxisWidth(axis, STUDY_ETF_LEFT_AXIS_WIDTH),
           grid: {
             color: (context) => (context.tick.value === 0 ? "rgba(72, 72, 66, 0.55)" : "rgba(148, 148, 140, 0.12)"),
             lineWidth: (context) => (context.tick.value === 0 ? 1.3 : 1),
@@ -14062,6 +14072,17 @@ function createStudyEtfDailyFlowChart(canvas, item, rangeKey) {
             callback: (value) => formatSignedDollarMillions(Number(value)),
           },
           border: { color: "#d8d8d2" },
+        },
+        ySpacer: {
+          position: "right",
+          display: true,
+          min: 0,
+          max: 1,
+          afterFit: (axis) => fitStudyEtfAxisWidth(axis, STUDY_ETF_RIGHT_AXIS_WIDTH),
+          grid: { display: false, drawOnChartArea: false },
+          ticks: { display: false },
+          title: { display: false },
+          border: { display: false },
         },
       },
     },
