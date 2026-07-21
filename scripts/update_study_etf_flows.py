@@ -208,6 +208,7 @@ def fetch_roundhill_current() -> dict[str, dict[str, float]]:
             "nav": finite(row.get("NAV")),
             "price": finite(row.get("Market Price")),
             "shares": finite(row.get("Shares Outstanding")),
+            "aum": finite(row.get("Net Assets")),
         }
     return result
 
@@ -298,6 +299,9 @@ def build_item(
         if price is None:
             price = nav
         daily_flow = 0.0 if last_shares is None else (shares - last_shares) * nav / 1_000_000
+        aum = finite(values.get("aum"))
+        if aum is None:
+            aum = shares * nav
         cumulative += daily_flow
         rows.append(
             {
@@ -305,6 +309,7 @@ def build_item(
                 "nav": round(nav, 6),
                 "price": round(price, 6),
                 "shares": round(shares),
+                "aumM": round(aum / 1_000_000, 3),
                 "dailyFlowM": round(daily_flow, 3),
                 "cumulativeFlowM": round(cumulative, 3),
             }
@@ -325,6 +330,7 @@ def build_item(
         "prices": [row["price"] for row in rows],
         "navs": [row["nav"] for row in rows],
         "sharesOutstanding": [row["shares"] for row in rows],
+        "aumM": [row["aumM"] for row in rows],
         "dailyFlowM": [row["dailyFlowM"] for row in rows],
         "cumulativeFlowM": [row["cumulativeFlowM"] for row in rows],
         "latest": {
@@ -332,6 +338,7 @@ def build_item(
             "price": latest["price"],
             "nav": latest["nav"],
             "sharesOutstanding": latest["shares"],
+            "aumM": latest["aumM"],
             "dailyFlowM": latest["dailyFlowM"],
             "cumulativeFlowM": latest["cumulativeFlowM"],
         },
@@ -364,6 +371,7 @@ def build_payload() -> dict[str, Any]:
         roundhill_histories.setdefault(ticker, {})[day_text] = {
             "nav": finite(values.get("nav")),
             "price": finite(values.get("price")),
+            "aum": finite(values.get("aum")),
         }
 
     roundhill_shares = fetch_roundhill_shares(roundhill_histories, existing)
@@ -379,9 +387,17 @@ def build_payload() -> dict[str, Any]:
         "MAGS": build_item("MAGS", roundhill_histories["MAGS"], roundhill_shares["MAGS"]),
         "EWY": build_item("EWY", ishares_histories["EWY"]),
     }
+    common_dates = set(items["SOXX"]["dates"])
+    for item in items.values():
+        common_dates.intersection_update(item["dates"])
+    if not common_dates:
+        raise RuntimeError("No common comparison date across ETF datasets")
+    comparison_date = max(common_dates)
     updated_at = max(item["latest"]["date"] for item in items.values())
     return {
         "updatedAt": updated_at,
+        "comparisonDate": comparison_date,
+        "sourceDates": {ticker: item["latest"]["date"] for ticker, item in items.items()},
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "startDate": START_DATE.isoformat(),
         "defaultRange": "ytd",

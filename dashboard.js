@@ -13885,23 +13885,31 @@ function formatSignedDollarMillions(value) {
 function buildStudyEtfFlowPayload(item, rangeKey) {
   const dates = item?.dates ?? [];
   if (!dates.length) {
-    return { labels: [], prices: [], dailyFlows: [], cumulativeFlows: [] };
+    return { labels: [], prices: [], aums: [], dailyFlows: [], cumulativeFlows: [] };
   }
-  const latestDate = dates[dates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, dates[0]);
+  const comparisonDate = studyEtfFlowData.comparisonDate || dates[dates.length - 1];
+  const firstLaterIndex = dates.findIndex((dateText) => dateText > comparisonDate);
+  const endIndex = firstLaterIndex === -1 ? dates.length : firstLaterIndex;
+  const comparableDates = dates.slice(0, endIndex);
+  if (!comparableDates.length) {
+    return { labels: [], prices: [], aums: [], dailyFlows: [], cumulativeFlows: [] };
+  }
+  const latestDate = comparableDates[comparableDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, comparableDates[0]);
   const startIndex = Math.max(
     0,
-    dates.findIndex((dateText) => dateText >= startDate),
+    comparableDates.findIndex((dateText) => dateText >= startDate),
   );
-  const labels = dates.slice(startIndex);
+  const labels = comparableDates.slice(startIndex);
   const prices = (item.prices ?? []).slice(startIndex, startIndex + labels.length);
+  const aums = (item.aumM ?? []).slice(startIndex, startIndex + labels.length);
   const dailyFlows = (item.dailyFlowM ?? []).slice(startIndex, startIndex + labels.length);
   let cumulative = 0;
   const cumulativeFlows = dailyFlows.map((value) => {
     cumulative += Number(value) || 0;
     return Number(cumulative.toFixed(3));
   });
-  return { labels, prices, dailyFlows, cumulativeFlows };
+  return { labels, prices, aums, dailyFlows, cumulativeFlows };
 }
 
 function createStudyEtfFlowChart(canvas, item, rangeKey) {
@@ -14089,6 +14097,7 @@ function renderStudyEtfTrackingOverview() {
     .map((item) => {
       const payload = buildStudyEtfFlowPayload(item, activeRange);
       const latestPrice = payload.prices[payload.prices.length - 1];
+      const latestAum = payload.aums[payload.aums.length - 1];
       const cumulative = payload.cumulativeFlows[payload.cumulativeFlows.length - 1];
       const dailyFlow = payload.dailyFlows[payload.dailyFlows.length - 1];
       const latestDate = payload.labels[payload.labels.length - 1] || item.latest?.date || "-";
@@ -14105,6 +14114,7 @@ function renderStudyEtfTrackingOverview() {
             <time>${escapeHtml(latestDate)}</time>
           </div>
           <div class="study-etf-metrics">
+            <div><span>AUM</span><b>${formatCompactDollarMillions(Number(latestAum))}</b></div>
             <div><span>누적 Flow</span><b class="${Number(cumulative) >= 0 ? "is-positive" : "is-negative"}">${formatSignedDollarMillions(cumulative)}</b></div>
             <div><span>일별 Flow</span><b class="${Number(dailyFlow) >= 0 ? "is-positive" : "is-negative"}">${formatSignedDollarMillions(dailyFlow)}</b></div>
             <div><span>주가</span><b>$${Number(latestPrice).toFixed(2)}</b></div>
@@ -14140,13 +14150,14 @@ function renderStudyEtfTrackingOverview() {
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
-            <div class="us-price-updated">Updated ${escapeHtml(studyEtfFlowData.updatedAt || "-")}</div>
+            <div class="us-price-updated">공통 기준일 ${escapeHtml(studyEtfFlowData.comparisonDate || studyEtfFlowData.updatedAt || "-")}</div>
           </div>
         </div>
         <div class="study-etf-method-grid">
+          <div><span>AUM</span><strong>발행사 순자산 · 미제공 시 NAV × 설정좌수</strong></div>
           <div><span>일별 Fund Flow</span><strong>설정좌수 순증감 × 당일 NAV</strong></div>
           <div><span>누적값</span><strong>선택 기간의 일별 Flow 합산</strong></div>
-          <div><span>주의</span><strong>총 설정좌수 자체를 누적하지 않음</strong></div>
+          <div><span>0M 의미</span><strong>설정좌수 무변동 · 데이터 누락 아님</strong></div>
         </div>
         <div class="study-etf-grid">${chartMarkup}</div>
         <div class="study-etf-source-row">
