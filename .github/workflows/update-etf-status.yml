@@ -1,0 +1,49 @@
+name: Update ETF Status
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 21:18 UTC = 06:18 KST. Early issuer-data check after the US close.
+    - cron: "18 21 * * *"
+    # 01:07 UTC = 10:07 KST. Final run after Roundhill AUM/shares files publish.
+    - cron: "7 1 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-etf-status
+  cancel-in-progress: false
+
+jobs:
+  update-etf-status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install pandas yfinance requests lxml
+
+      - name: Refresh ETF status data
+        run: python scripts/update_study_etf_flows.py
+
+      - name: Commit updated ETF status data
+        run: |
+          if git diff --quiet -- data/study-etf-flow-data.js; then
+            echo "No ETF status changes detected."
+            exit 0
+          fi
+          python scripts/bump_data_cache_versions.py data/study-etf-flow-data.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/study-etf-flow-data.js index.html
+          git commit -m "Update ETF status data" || exit 0
+          git pull --rebase origin main
+          git push
