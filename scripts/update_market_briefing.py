@@ -448,6 +448,7 @@ SECTOR_GROUPS = [
             {"ticker": "ILMN", "label": "ILMN US", "name": "Illumina", "query": "Illumina stock"},
             {"ticker": "GH", "label": "GH US", "name": "Guardant Health", "query": "Guardant Health stock"},
             {"ticker": "ISRG", "label": "ISRG US", "name": "Intuitive Surgical", "query": "Intuitive Surgical stock"},
+            {"ticker": "CVS", "label": "CVS US", "name": "CVS Health", "query": "CVS Health stock"},
         ],
     },
     {
