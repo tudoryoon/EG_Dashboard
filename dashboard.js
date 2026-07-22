@@ -5270,10 +5270,11 @@ function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
 
 function buildCloudRpoStatsMarkup(panel) {
   const labels = cloudDashboardData.labels ?? [];
-  const latestIndex = labels.length - 1;
   return (panel?.series ?? [])
     .map((series) => {
-      const latestValue = series.values?.[latestIndex];
+      const values = series.values ?? [];
+      const latestIndex = values.findLastIndex((value) => Number.isFinite(value));
+      const latestValue = latestIndex >= 0 ? values[latestIndex] : null;
       const yearAgoValue = series.values?.[latestIndex - 4];
       const yoy =
         Number.isFinite(latestValue) && Number.isFinite(yearAgoValue) && yearAgoValue !== 0
@@ -5283,7 +5284,7 @@ function buildCloudRpoStatsMarkup(panel) {
         <div class="cloud-rpo-stat">
           <span>${series.name}</span>
           <strong>${Number.isFinite(latestValue) ? `$${Number(latestValue).toFixed(1)}B` : "-"}</strong>
-          <small>${Number.isFinite(yoy) ? `${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% YoY` : "YoY N/A"}</small>
+          <small>${Number.isFinite(yoy) ? `${labels[latestIndex] ?? "-"} · ${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% YoY` : "YoY N/A"}</small>
         </div>`;
     })
     .join("");
