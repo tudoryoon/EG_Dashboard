@@ -398,7 +398,9 @@ const state = {
   rsScoreRange: "all",
   rsCustomScoreMin: "",
   rsCustomScoreMax: "",
+  rsNewHighBriefingOnly: true,
   rsNewHighLargeCapOnly: true,
+  rsPeriodLeadersBriefingOnly: true,
   rsPeriodLeadersLargeCapOnly: true,
   rsLeaderSort: "rs",
   rsTableSortKey: "rs",
@@ -10945,9 +10947,10 @@ function renderMarketRsOverview() {
   const activeNewHighKind = getMarketRsFilterNewHighKind() ?? "rs";
   const activeNewHighWindow = getMarketRsFilterNewHighWindow() ?? "1y";
   const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow, activeNewHighKind);
-  const newHighMonitorRows = state.rsNewHighLargeCapOnly
-    ? newHighBaseRows.filter((row) => Number(row.marketCap) > 10_000_000_000)
-    : newHighBaseRows;
+  const briefingTickerSet = new Set(briefingSectorData.allTickers);
+  const newHighMonitorRows = newHighBaseRows
+    .filter((row) => !state.rsNewHighBriefingOnly || briefingTickerSet.has(row.ticker))
+    .filter((row) => !state.rsNewHighLargeCapOnly || Number(row.marketCap) > 10_000_000_000);
   const newHighPanels = [
     {
       title: "RS New High 3M",
@@ -11011,9 +11014,9 @@ function renderMarketRsOverview() {
       `;
     })
     .join("");
-  const periodLeaderRows = state.rsPeriodLeadersLargeCapOnly
-    ? newHighBaseRows.filter((row) => Number(row.marketCap) > 10_000_000_000)
-    : newHighBaseRows;
+  const periodLeaderRows = newHighBaseRows
+    .filter((row) => !state.rsPeriodLeadersBriefingOnly || briefingTickerSet.has(row.ticker))
+    .filter((row) => !state.rsPeriodLeadersLargeCapOnly || Number(row.marketCap) > 10_000_000_000);
   const periodLeaderPanels = [
     { key: "1w", label: "RS 1W" },
     { key: "2w", label: "RS 2W" },
@@ -11163,10 +11166,16 @@ function renderMarketRsOverview() {
             <h2>New High Monitor</h2>
             <p>${getMarketRsUniverseLabel(state.rsUniverse)} · RS Rating descending · 7 visible · scroll for all names</p>
           </div>
-          <label class="market-rs-new-high-cap-toggle">
-            <input type="checkbox" data-rs-new-high-large-cap ${state.rsNewHighLargeCapOnly ? "checked" : ""} />
-            <span>$10B 이하 제외</span>
-          </label>
+          <div class="market-rs-period-controls">
+            <label class="market-rs-new-high-cap-toggle">
+              <input type="checkbox" data-rs-new-high-briefing-only ${state.rsNewHighBriefingOnly ? "checked" : ""} />
+              <span>Daily Briefing 종목만</span>
+            </label>
+            <label class="market-rs-new-high-cap-toggle">
+              <input type="checkbox" data-rs-new-high-large-cap ${state.rsNewHighLargeCapOnly ? "checked" : ""} />
+              <span>$10B 이하 제외</span>
+            </label>
+          </div>
         </div>
         <div class="market-rs-new-high-grid">${newHighPanels}</div>
       </section>
@@ -11178,6 +11187,10 @@ function renderMarketRsOverview() {
             <p>각 기간 RS 내림차순 · 7 visible · scroll for all names · 동점은 종합 RS와 시가총액 순</p>
           </div>
           <div class="market-rs-period-controls">
+            <label class="market-rs-new-high-cap-toggle">
+              <input type="checkbox" data-rs-period-briefing-only ${state.rsPeriodLeadersBriefingOnly ? "checked" : ""} />
+              <span>Daily Briefing 종목만</span>
+            </label>
             <label class="market-rs-new-high-cap-toggle">
               <input type="checkbox" data-rs-period-large-cap ${state.rsPeriodLeadersLargeCapOnly ? "checked" : ""} />
               <span>$10B 이하 제외</span>
@@ -11475,10 +11488,24 @@ function renderMarketRsOverview() {
       render();
     });
   }
+  const rsNewHighBriefingToggle = usOverviewRoot.querySelector("[data-rs-new-high-briefing-only]");
+  if (rsNewHighBriefingToggle) {
+    rsNewHighBriefingToggle.addEventListener("change", () => {
+      state.rsNewHighBriefingOnly = rsNewHighBriefingToggle.checked;
+      render();
+    });
+  }
   const rsNewHighLargeCapToggle = usOverviewRoot.querySelector("[data-rs-new-high-large-cap]");
   if (rsNewHighLargeCapToggle) {
     rsNewHighLargeCapToggle.addEventListener("change", () => {
       state.rsNewHighLargeCapOnly = rsNewHighLargeCapToggle.checked;
+      render();
+    });
+  }
+  const rsPeriodBriefingToggle = usOverviewRoot.querySelector("[data-rs-period-briefing-only]");
+  if (rsPeriodBriefingToggle) {
+    rsPeriodBriefingToggle.addEventListener("change", () => {
+      state.rsPeriodLeadersBriefingOnly = rsPeriodBriefingToggle.checked;
       render();
     });
   }
