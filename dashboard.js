@@ -10362,6 +10362,8 @@ function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
       return {
         x: selectedLabels[index],
         y: markerY,
+        releaseDate,
+        earningsEvent: quarter,
       };
     })
     .filter(Boolean);
@@ -10525,6 +10527,7 @@ function createMarketRsChart(canvas, row) {
       pointRotation: earningsMarkers.rotations,
       pointRadius: earningsMarkers.data.length ? 7 : 0,
       pointHoverRadius: 9,
+      pointHitRadius: 12,
       yAxisID: "y1",
       showLine: false,
       order: -1,
@@ -10542,7 +10545,7 @@ function createMarketRsChart(canvas, row) {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      interaction: { mode: "index", intersect: false },
+      interaction: { mode: "nearest", intersect: true },
       plugins: {
         legend: {
           position: "top",
@@ -10555,12 +10558,18 @@ function createMarketRsChart(canvas, row) {
           },
         },
         tooltip: {
+          position: "nearest",
+          mode: "nearest",
+          intersect: true,
           callbacks: {
-            title: (items) => items?.[0]?.label ?? "",
+            title: (items) => {
+              const earningsItem = items?.find((item) => item.dataset.isEarningsSurprise);
+              const releaseDate = earningsItem?.raw?.releaseDate;
+              return releaseDate ? `Earnings Release ${releaseDate}` : items?.[0]?.label ?? "";
+            },
             label: (context) => {
               if (context.dataset.isEarningsSurprise) {
-                const index = selectedLabels.indexOf(context.raw?.x ?? context.label);
-                const event = earningsMarkers.byIndex.get(index);
+                const event = context.raw?.earningsEvent;
                 const eps = event?.eps ?? {};
                 const surprisePct = Number(eps.surprisePct);
                 const label = Number.isFinite(surprisePct) && surprisePct < 0 ? "EPS Shock" : "EPS Beat";
