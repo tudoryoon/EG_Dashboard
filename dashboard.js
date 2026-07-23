@@ -391,7 +391,7 @@ const state = {
   rsHistoryRange: "3y",
   rsSelectedTicker: "",
   rsFilter: "all",
-  rsBriefingSector: "all",
+  rsBriefingSector: "briefingAll",
   rsMarketCapRange: "all",
   rsCustomMarketCapMin: "",
   rsCustomMarketCapMax: "",
@@ -426,7 +426,7 @@ const state = {
   trendScoreClimaxRange: "all",
   trendScoreCustomClimaxMin: "",
   trendScoreCustomClimaxMax: "",
-  trendScoreBriefingSector: "all",
+  trendScoreBriefingSector: "briefingAll",
   trendScoreTableSortKey: "rank",
   trendScoreTableSortDirection: "asc",
   trendScoreVisibleCardCount: TREND_SCORE_CARD_BATCH_SIZE,
@@ -7889,7 +7889,7 @@ function openMarketRsTicker(ticker) {
   state.tab = "RS";
   state.rsUniverse = "all";
   state.rsFilter = "all";
-  state.rsBriefingSector = "all";
+  state.rsBriefingSector = "briefingAll";
   state.rsMarketCapRange = "all";
   state.rsCustomMarketCapMin = "";
   state.rsCustomMarketCapMax = "";
@@ -10889,7 +10889,7 @@ function renderMarketRsOverview() {
     state.rsBriefingSector !== "briefingAll" &&
     !briefingSectorData.groups.some((sector) => sector.key === state.rsBriefingSector)
   ) {
-    state.rsBriefingSector = "all";
+    state.rsBriefingSector = "briefingAll";
   }
   const rows = getVisibleMarketRsRows(briefingSectorData);
   const newHighBaseRows = getMarketRsBaseRows(briefingSectorData);
@@ -11930,7 +11930,7 @@ function renderMarketTrendScoreOverview() {
     state.trendScoreBriefingSector !== "briefingAll" &&
     !briefingSectorData.groups.some((sector) => sector.key === state.trendScoreBriefingSector)
   ) {
-    state.trendScoreBriefingSector = "all";
+    state.trendScoreBriefingSector = "briefingAll";
   }
   const rows = getVisibleTrendScoreRows(briefingSectorData);
   const selected = getSelectedTrendScoreRow(rows);
