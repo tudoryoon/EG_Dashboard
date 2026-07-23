@@ -10330,6 +10330,38 @@ function syncMarketRsChartSeriesButtons() {
   });
 }
 
+const MARKET_RS_INTERACTION_MODE = "marketRsEarningsAware";
+
+function ensureMarketRsInteractionMode() {
+  const modes = Chart?.Interaction?.modes;
+  if (!modes) {
+    return "index";
+  }
+  if (!modes[MARKET_RS_INTERACTION_MODE]) {
+    modes[MARKET_RS_INTERACTION_MODE] = (chart, event, options, useFinalPosition) => {
+      const directItems = modes.nearest(
+        chart,
+        event,
+        { ...options, axis: "xy", intersect: true },
+        useFinalPosition,
+      );
+      const earningsItems = directItems.filter(
+        (item) => chart.data.datasets[item.datasetIndex]?.isEarningsSurprise,
+      );
+      if (earningsItems.length) {
+        return earningsItems;
+      }
+      return modes.index(
+        chart,
+        event,
+        { ...options, axis: "x", intersect: false },
+        useFinalPosition,
+      );
+    };
+  }
+  return MARKET_RS_INTERACTION_MODE;
+}
+
 function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
   const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
   const quarters = earningsProfile?.quarters ?? [];
@@ -10473,6 +10505,7 @@ function createMarketRsChart(canvas, row) {
     }
   }
   const earningsMarkers = buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax);
+  const interactionMode = ensureMarketRsInteractionMode();
   const ratingLatestIndex = getLastFiniteSeriesIndex(selectedRatings);
   const priceLatestIndex = getLastFiniteSeriesIndex(selectedPrice);
   const ratingLabelUniverse = getMarketRsUniverseLabel(ratingSeries.universeKey);
@@ -10545,7 +10578,7 @@ function createMarketRsChart(canvas, row) {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      interaction: { mode: "nearest", intersect: true },
+      interaction: { mode: interactionMode, axis: "x", intersect: false },
       plugins: {
         legend: {
           position: "top",
@@ -10559,8 +10592,8 @@ function createMarketRsChart(canvas, row) {
         },
         tooltip: {
           position: "nearest",
-          mode: "nearest",
-          intersect: true,
+          mode: interactionMode,
+          intersect: false,
           callbacks: {
             title: (items) => {
               const earningsItem = items?.find((item) => item.dataset.isEarningsSurprise);
