@@ -319,6 +319,16 @@ const RS_CARD_BATCH_SIZE = 100;
 const ENABLE_CANSLIM_LIMITED_CARDS = true;
 const CANSLIM_CARD_BATCH_SIZE = 100;
 
+const FX_CURRENCY_OPTIONS = [
+  { key: "KRW", label: "KRW", name: "Korean Won", seriesKey: "krw_usd", quoteConvention: "unitsPerUsd" },
+  { key: "USD", label: "USD", name: "US Dollar", seriesKey: null, quoteConvention: "usd" },
+  { key: "JPY", label: "JPY", name: "Japanese Yen", seriesKey: "jpy_usd", quoteConvention: "unitsPerUsd" },
+  { key: "EUR", label: "EUR", name: "Euro", seriesKey: "eur_usd", quoteConvention: "usdPerUnit" },
+  { key: "GBP", label: "GBP", name: "British Pound", seriesKey: "gbp_usd", quoteConvention: "usdPerUnit" },
+  { key: "CHF", label: "CHF", name: "Swiss Franc", seriesKey: "chf_usd", quoteConvention: "unitsPerUsd" },
+  { key: "CNY", label: "CNY", name: "Chinese Yuan", seriesKey: "cny_usd", quoteConvention: "unitsPerUsd" },
+];
+
 const state = {
   tab: "DailyBriefing",
   marketView: "Overview",
@@ -365,6 +375,8 @@ const state = {
         : Object.keys(panel?.series ?? {}),
     ]),
   ),
+  fxBaseCurrency: "KRW",
+  fxQuoteCurrency: "USD",
   marketValuationRange: "3y",
   marketValuationCustomStart: "",
   marketValuationCustomEnd: "",
@@ -3180,6 +3192,87 @@ function getMarketMacroPanel(panelKey) {
   return marketMacroData?.panels?.[panelKey] ?? null;
 }
 
+function getFxCurrencyOption(currencyKey) {
+  return FX_CURRENCY_OPTIONS.find((option) => option.key === currencyKey) ?? null;
+}
+
+function getFxUsdValue(currencyKey, rawValue) {
+  if (currencyKey === "USD") {
+    return 1;
+  }
+  const option = getFxCurrencyOption(currencyKey);
+  const numeric = Number(rawValue);
+  if (!option || !Number.isFinite(numeric) || numeric <= 0) {
+    return null;
+  }
+  return option.quoteConvention === "unitsPerUsd" ? 1 / numeric : numeric;
+}
+
+function buildFxCrossRateChartPayload(rangeKey, customRange = null) {
+  const panel = getMarketMacroPanel("fx_dashboard");
+  const baseCurrency = state.fxBaseCurrency || "KRW";
+  const quoteCurrency = state.fxQuoteCurrency || "USD";
+  const baseOption = getFxCurrencyOption(baseCurrency);
+  const quoteOption = getFxCurrencyOption(quoteCurrency);
+  if (!panel || !baseOption || !quoteOption || baseCurrency === quoteCurrency) {
+    return { labels: [], datasets: [], mode: "normalized" };
+  }
+
+  const baseSeries = baseOption.seriesKey ? panel.series?.[baseOption.seriesKey] : null;
+  const quoteSeries = quoteOption.seriesKey ? panel.series?.[quoteOption.seriesKey] : null;
+  const baseMap = new Map((baseSeries?.dates ?? []).map((date, index) => [date, baseSeries.values?.[index]]));
+  const quoteMap = new Map((quoteSeries?.dates ?? []).map((date, index) => [date, quoteSeries.values?.[index]]));
+  const sourceDates = baseSeries?.dates ?? quoteSeries?.dates ?? [];
+  const allDates = [...new Set(sourceDates)].filter((date) => {
+    const baseRaw = baseCurrency === "USD" ? 1 : baseMap.get(date);
+    const quoteRaw = quoteCurrency === "USD" ? 1 : quoteMap.get(date);
+    return Number.isFinite(getFxUsdValue(baseCurrency, baseRaw)) && Number.isFinite(getFxUsdValue(quoteCurrency, quoteRaw));
+  }).sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [], mode: "normalized" };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const customStart = customRange?.start || "";
+  const customEnd = customRange?.end || "";
+  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "1971-01-01");
+  const labels = allDates.filter((date) => date >= startDate && (!customEnd || date <= customEnd));
+  const rawCrossRates = labels.map((date) => {
+    const baseRaw = baseCurrency === "USD" ? 1 : baseMap.get(date);
+    const quoteRaw = quoteCurrency === "USD" ? 1 : quoteMap.get(date);
+    const baseUsdValue = getFxUsdValue(baseCurrency, baseRaw);
+    const quoteUsdValue = getFxUsdValue(quoteCurrency, quoteRaw);
+    if (!Number.isFinite(baseUsdValue) || !Number.isFinite(quoteUsdValue) || quoteUsdValue === 0) {
+      return null;
+    }
+    return baseUsdValue / quoteUsdValue;
+  });
+  const baseValue = rawCrossRates.find((value) => Number.isFinite(value) && value > 0);
+  const data = rawCrossRates.map((value) => (
+    Number.isFinite(value) && Number.isFinite(baseValue) && baseValue > 0
+      ? Number(((value / baseValue) * 100).toFixed(2))
+      : null
+  ));
+
+  return {
+    labels,
+    datasets: [{
+      key: `${baseCurrency}_${quoteCurrency}`,
+      label: `${baseCurrency} / ${quoteCurrency}`,
+      data,
+      borderColor: "#111827",
+      backgroundColor: "#111827",
+      borderWidth: 2.8,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+    }],
+    mode: "normalized",
+  };
+}
+
 function getMarketMacroRange(panelKey) {
   return state.marketMacroRanges?.[panelKey] ?? marketMacroData.defaultRange ?? "max";
 }
@@ -3409,12 +3502,14 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
     return;
   }
 
-  const payload = buildMarketMacroChartPayload(
-    panel,
-    rangeKey,
-    getMarketMacroSelection(panelKey),
-    getMarketMacroCustomRange(panelKey),
-  );
+  const payload = panelKey === "fx_dashboard"
+    ? buildFxCrossRateChartPayload(rangeKey, getMarketMacroCustomRange(panelKey))
+    : buildMarketMacroChartPayload(
+      panel,
+      rangeKey,
+      getMarketMacroSelection(panelKey),
+      getMarketMacroCustomRange(panelKey),
+    );
   const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
@@ -3493,7 +3588,7 @@ function createMarketMacroChart(canvas, panelKey, rangeKey) {
           },
           title: {
             display: true,
-            text: panel.yAxisLabel ?? "",
+            text: panelKey === "fx_dashboard" ? "Selected period start = 100" : panel.yAxisLabel ?? "",
             color: "#8d8d86",
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
@@ -16042,6 +16137,7 @@ function renderMarketFxCommoditiesOverview() {
       }
       const selectedSeries = new Set(getMarketMacroSelection(key));
       const customRange = getMarketMacroCustomRange(key);
+      const isFxPanel = key === "fx_dashboard";
       const seriesChips = Object.entries(panel.series ?? {})
         .map(
           ([seriesKey, item]) => `
@@ -16056,6 +16152,34 @@ function renderMarketFxCommoditiesOverview() {
             </button>`,
         )
         .join("");
+      const fxCurrencyOptions = (selectedCurrency, disabledCurrency) => FX_CURRENCY_OPTIONS
+        .map((option) => `
+          <option value="${option.key}"${option.key === selectedCurrency ? " selected" : ""}${option.key === disabledCurrency ? " disabled" : ""}>
+            ${option.label} · ${option.name}
+          </option>
+        `)
+        .join("");
+      const fxPairControls = `
+        <div class="fx-pair-controls">
+          <label class="fx-pair-field">
+            <span>기준 통화</span>
+            <select data-fx-base-currency>
+              ${fxCurrencyOptions(state.fxBaseCurrency, state.fxQuoteCurrency)}
+            </select>
+          </label>
+          <span class="fx-pair-divider" aria-hidden="true">/</span>
+          <label class="fx-pair-field">
+            <span>비교 통화</span>
+            <select data-fx-quote-currency>
+              ${fxCurrencyOptions(state.fxQuoteCurrency, state.fxBaseCurrency)}
+            </select>
+          </label>
+          <div class="fx-pair-reading">
+            <strong>${state.fxBaseCurrency} / ${state.fxQuoteCurrency}</strong>
+            <span>100 위 = ${state.fxBaseCurrency} 강세 · 100 아래 = ${state.fxBaseCurrency} 약세</span>
+          </div>
+        </div>
+      `;
       const customDateMarkup = `
             <div class="total-date-row market-macro-date-row">
               <label class="total-date-field">
@@ -16076,8 +16200,8 @@ function renderMarketFxCommoditiesOverview() {
         <article class="cloud-panel macro-panel ${className}">
           <div class="us-panel-head">
             <div>
-              <h3>${panel.title}</h3>
-              <p>${panel.subtitle}</p>
+              <h3>${isFxPanel ? "FX Relative Strength" : panel.title}</h3>
+              <p>${isFxPanel ? "선택한 기준 통화의 비교 통화 대비 강도를 선택 기간 첫 거래일 100으로 표시합니다." : panel.subtitle}</p>
             </div>
             <div class="m7-range-row">
               ${rangeSource
@@ -16097,11 +16221,9 @@ function renderMarketFxCommoditiesOverview() {
           </div>
           <div class="macro-panel-meta">
             <span>${panel.source ?? ""}</span>
-            <span>${panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
+            <span>${isFxPanel ? "Selected period start = 100" : panel.mode === "normalized" ? "Normalized view" : "Raw level"}</span>
           </div>
-          <div class="market-macro-series-row">
-            ${seriesChips}
-          </div>
+          ${isFxPanel ? fxPairControls : `<div class="market-macro-series-row">${seriesChips}</div>`}
           ${customDateMarkup}
           <div class="macro-chart-wrap">
             <canvas data-market-macro="${canvas}"></canvas>
@@ -16117,7 +16239,7 @@ function renderMarketFxCommoditiesOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>FX & Commodities</h2>
-            <p>Dollar index, crude oil, metals, and strategic commodity prices. Normalized panels compare cross-asset momentum cleanly.</p>
+            <p>Select any base and comparison currency for relative-strength tracking, alongside energy, metals, and strategic commodity prices.</p>
           </div>
           <div class="us-price-controls">
             <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
@@ -16207,6 +16329,29 @@ function renderMarketFxCommoditiesOverview() {
       render();
     });
   });
+
+  const fxBaseSelect = usOverviewRoot.querySelector("[data-fx-base-currency]");
+  const fxQuoteSelect = usOverviewRoot.querySelector("[data-fx-quote-currency]");
+  if (fxBaseSelect) {
+    fxBaseSelect.addEventListener("change", () => {
+      const nextCurrency = fxBaseSelect.value;
+      if (nextCurrency === state.fxQuoteCurrency) {
+        state.fxQuoteCurrency = state.fxBaseCurrency;
+      }
+      state.fxBaseCurrency = nextCurrency;
+      render();
+    });
+  }
+  if (fxQuoteSelect) {
+    fxQuoteSelect.addEventListener("change", () => {
+      const nextCurrency = fxQuoteSelect.value;
+      if (nextCurrency === state.fxBaseCurrency) {
+        state.fxBaseCurrency = state.fxQuoteCurrency;
+      }
+      state.fxQuoteCurrency = nextCurrency;
+      render();
+    });
+  }
 
   ["fx_dashboard", "energy", "natural_gas", "metals", "strategic", "food"].forEach((panelKey) => {
     const canvas = usOverviewRoot.querySelector(`[data-market-macro="${panelKey}"]`);

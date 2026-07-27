@@ -3064,6 +3064,63 @@ h1 {
   margin-top: 12px;
 }
 
+.fx-pair-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 24px minmax(180px, 240px) minmax(240px, 1fr);
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fx-pair-field {
+  display: grid;
+  gap: 6px;
+  color: #66665f;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.fx-pair-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 34px 9px 12px;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #fff;
+  color: #20201d;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fx-pair-divider {
+  align-self: end;
+  padding-bottom: 10px;
+  color: #8d8d86;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.fx-pair-reading {
+  min-height: 42px;
+  padding: 8px 12px;
+  border-left: 3px solid #111827;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  background: #f7f7f3;
+  color: #20201d;
+}
+
+.fx-pair-reading strong {
+  font-size: 0.88rem;
+}
+
+.fx-pair-reading span {
+  color: #66665f;
+  font-size: 0.76rem;
+}
+
 .market-macro-date-row {
   margin-top: 12px;
 }
@@ -3304,6 +3361,14 @@ h1 {
 }
 
 @media (max-width: 760px) {
+  .fx-pair-controls {
+    grid-template-columns: 1fr 20px 1fr;
+  }
+
+  .fx-pair-reading {
+    grid-column: 1 / -1;
+  }
+
   .market-trend-risk-grid {
     grid-template-columns: 1fr;
   }
