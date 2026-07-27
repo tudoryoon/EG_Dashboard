@@ -40,8 +40,9 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           import re
-          from datetime import datetime
+          from datetime import datetime, time, timezone
           from pathlib import Path
+          from urllib.request import Request, urlopen
           from zoneinfo import ZoneInfo
 
           event_name = "${{ github.event_name }}"
@@ -52,19 +53,46 @@ jobs:
               text = Path("data/market-briefing-data.js").read_text(encoding="utf-8")
               match = re.search(r"window\.marketBriefingData\s*=\s*(\{.*\});\s*$", text, re.S)
               payload = json.loads(match.group(1)) if match else {}
-              generated_at = payload.get("generatedAt")
-              if generated_at:
-                  generated_dt = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-                  kst = ZoneInfo("Asia/Seoul")
-                  generated_kst = generated_dt.astimezone(kst)
-                  now_kst = datetime.now(kst)
-                  if generated_kst.date() == now_kst.date():
+              current_date = str(payload.get("updatedAt") or "")
+              now_new_york = datetime.now(ZoneInfo("America/New_York"))
+
+              try:
+                  request = Request(
+                      "https://query1.finance.yahoo.com/v8/finance/chart/QQQ"
+                      "?range=10d&interval=1d&includePrePost=false&events=history",
+                      headers={"User-Agent": "Mozilla/5.0"},
+                  )
+                  with urlopen(request, timeout=15) as response:
+                      chart = json.loads(response.read().decode("utf-8"))
+                  result = chart["chart"]["result"][0]
+                  available_dates = sorted(
+                      datetime.fromtimestamp(value, timezone.utc).date()
+                      for value in (result.get("timestamp") or [])
+                  )
+                  if (
+                      now_new_york.weekday() < 5
+                      and now_new_york.time() < time(16, 10)
+                  ):
+                      available_dates = [day for day in available_dates if day < now_new_york.date()]
+                  latest_available = available_dates[-1].isoformat() if available_dates else ""
+
+                  if current_date and latest_available and current_date >= latest_available:
                       should_run = False
-                      reason = f"Daily Briefing already generated today KST at {generated_kst.isoformat()}"
+                      reason = (
+                          f"Daily Briefing is current ({current_date}); "
+                          f"latest completed QQQ session is {latest_available}"
+                      )
                   else:
-                      reason = f"latest Daily Briefing generatedAt is {generated_kst.isoformat()}, so backup should run"
-              else:
-                  reason = "generatedAt missing, so backup should run"
+                      reason = (
+                          f"Daily Briefing {current_date or 'missing'} trails "
+                          f"latest completed QQQ session {latest_available or 'unknown'}"
+                      )
+              except Exception as error:
+                  if now_new_york.weekday() < 5 and now_new_york.time() < time(16, 10):
+                      should_run = False
+                      reason = f"QQQ session check failed before market close; retry later: {error}"
+                  else:
+                      reason = f"QQQ session check failed after market close; running guarded update: {error}"
 
           print(f"should_run={'true' if should_run else 'false'}")
           print(f"reason={reason}")

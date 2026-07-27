@@ -4,12 +4,13 @@ import json
 import math
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, time as datetime_time, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 from pathlib import Path
 from urllib.parse import quote_plus
 from xml.etree import ElementTree as ET
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
@@ -982,6 +983,33 @@ def is_same_price_date(left: pd.Timestamp | None, right: pd.Timestamp | None) ->
     return pd.Timestamp(left).date() == pd.Timestamp(right).date()
 
 
+def latest_completed_market_timestamp(series: pd.Series) -> pd.Timestamp | None:
+    if series.empty:
+        return None
+    latest = pd.Timestamp(series.index.max())
+    now_new_york = datetime.now(ZoneInfo("America/New_York"))
+    if (
+        now_new_york.weekday() < 5
+        and now_new_york.time() < datetime_time(16, 10)
+        and latest.date() == now_new_york.date()
+    ):
+        completed = series[pd.Index(series.index).date < now_new_york.date()]
+        return pd.Timestamp(completed.index.max()) if not completed.empty else None
+    return latest
+
+
+def load_existing_updated_at() -> str | None:
+    if not OUTPUT_PATH.exists():
+        return None
+    try:
+        text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+        text = re.sub(r"^window\.marketBriefingData\s*=\s*", "", text).rstrip(";")
+        value = json.loads(text).get("updatedAt")
+        return str(value) if value else None
+    except Exception:
+        return None
+
+
 def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object], pd.DataFrame]:
     companies = [item | {"sectorKey": sector["key"], "sectorLabel": sector["label"]} for sector in SECTOR_GROUPS for item in sector["items"]]
     symbols = sorted({company["ticker"] for company in companies} | set(BENCHMARK_SYMBOLS) | {USD_PER_KRW_SYMBOL})
@@ -991,7 +1019,10 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         if ROTATION_BENCHMARK_SYMBOL in close_frame.columns
         else pd.Series(dtype=float)
     )
-    latest_timestamp = benchmark_series.index.max() if not benchmark_series.empty else close_frame.index.max()
+    reference_series = benchmark_series if not benchmark_series.empty else close_frame.max(axis=1).dropna()
+    latest_timestamp = latest_completed_market_timestamp(reference_series)
+    if latest_timestamp is None:
+        raise RuntimeError("No completed market session found for Daily Briefing.")
     latest_date = latest_timestamp.strftime("%Y-%m-%d")
     rotation_benchmark = build_rotation_benchmark(close_frame)
 
@@ -1810,6 +1841,15 @@ def build_payload() -> dict[str, object]:
 
 def main() -> None:
     payload = build_payload()
+    existing_updated_at = load_existing_updated_at()
+    candidate_updated_at = str(payload.get("updatedAt") or "")
+    if existing_updated_at and candidate_updated_at and candidate_updated_at < existing_updated_at:
+        print(
+            "Skipped Daily Briefing write because the provider regressed "
+            f"from {existing_updated_at} to {candidate_updated_at}.",
+            flush=True,
+        )
+        return
     OUTPUT_PATH.write_text(
         "window.marketBriefingData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",

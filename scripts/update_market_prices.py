@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as datetime_time, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 
 START_DATE = "1965-01-01"
@@ -33,6 +34,32 @@ def fetch_json(url: str) -> dict:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urlopen(request) as response:  # nosec B310 - fixed public Yahoo Finance endpoint
         return json.loads(response.read().decode("utf-8"))
+
+
+def exclude_incomplete_session(
+    rows: list[tuple[str, float, float, float, float]],
+) -> list[tuple[str, float, float, float, float]]:
+    if not rows:
+        return rows
+    now_new_york = datetime.now(ZoneInfo("America/New_York"))
+    if now_new_york.weekday() >= 5 or now_new_york.time() >= datetime_time(16, 10):
+        return rows
+    current_day = now_new_york.date().isoformat()
+    return [row for row in rows if row[0] < current_day]
+
+
+def load_existing_updated_at(output_path: Path) -> str | None:
+    if not output_path.exists():
+        return None
+    try:
+        text = output_path.read_text(encoding="utf-8").strip()
+        prefix = "window.marketPriceData = "
+        if text.startswith(prefix):
+            text = text[len(prefix) :]
+        value = json.loads(text.rstrip(";")).get("updatedAt")
+        return str(value) if value else None
+    except Exception:
+        return None
 
 
 def build_item(meta: dict[str, object]) -> dict[str, object]:
@@ -69,11 +96,11 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
         lows.append(round(float(raw_low) * adjustment, 4))
         closes.append(round(float(close), 4))
 
-    filtered = [
+    filtered = exclude_incomplete_session([
         (day, value, high, low, close)
         for day, value, high, low, close in zip(dates, values, highs, lows, closes)
         if day >= START_DATE
-    ]
+    ])
     return {
         "label": meta["label"],
         "symbol": meta["symbol"],
@@ -108,6 +135,15 @@ def main() -> None:
     }
 
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-price-data.js"
+    existing_updated_at = load_existing_updated_at(output_path)
+    candidate_updated_at = str(payload.get("updatedAt") or "")
+    if existing_updated_at and candidate_updated_at and candidate_updated_at < existing_updated_at:
+        print(
+            "Skipped market price write because the provider regressed "
+            f"from {existing_updated_at} to {candidate_updated_at}.",
+            flush=True,
+        )
+        return
     output_path.write_text(
         "window.marketPriceData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
