@@ -14308,9 +14308,6 @@ function renderStudyCdsOverview() {
   ];
   const validIndexKeys = new Set(indexOptions.map((option) => option.key));
   const activeIndexKeys = (state.studyCdsIndexSelection ?? []).filter((key) => validIndexKeys.has(key));
-  if (!activeIndexKeys.length) {
-    activeIndexKeys.push("sox");
-  }
   state.studyCdsIndexSelection = activeIndexKeys;
   const companyOptions = items.map((item) => ({
     key: item.ticker,
@@ -14465,9 +14462,6 @@ function renderStudyCdsOverview() {
       }
       const nextSelection = new Set(state.studyCdsIndexSelection ?? []);
       if (nextSelection.has(key)) {
-        if (nextSelection.size === 1) {
-          return;
-        }
         nextSelection.delete(key);
       } else {
         nextSelection.add(key);
