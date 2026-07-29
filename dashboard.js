@@ -5546,21 +5546,39 @@ function createCapexLineChart(canvas, labels, panel, formatter, minOverride = nu
   charts.push(chart);
 }
 
+function isCapexEstimateLabel(label) {
+  const text = Array.isArray(label) ? label.join(" ") : String(label ?? "");
+  return text.startsWith("2026E");
+}
+
+function darkenCapexColor(color, factor = 0.25) {
+  const hex = String(color ?? "").replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(hex)) {
+    return color;
+  }
+  const channels = [0, 2, 4].map((offset) => Math.max(0, Math.round(parseInt(hex.slice(offset, offset + 2), 16) * (1 - factor))));
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function createCapexBarChart(canvas, labels, panel, formatter) {
   if (typeof Chart === "undefined" || !panel) {
     return;
   }
 
-  const datasets = panel.series.map((series) => ({
-    label: series.name,
-    data: series.values,
-    backgroundColor: capexDashboardData.colors[series.key],
-    borderColor: capexDashboardData.colors[series.key],
-    borderWidth: 0,
-    borderRadius: 4,
-    barPercentage: 0.78,
-    categoryPercentage: 0.72,
-  }));
+  const datasets = panel.series.map((series) => {
+    const baseColor = capexDashboardData.colors[series.key];
+    const estimateColor = darkenCapexColor(baseColor);
+    return {
+      label: series.name,
+      data: series.values,
+      backgroundColor: labels.map((label) => (isCapexEstimateLabel(label) ? estimateColor : baseColor)),
+      borderColor: labels.map((label) => (isCapexEstimateLabel(label) ? darkenCapexColor(baseColor, 0.4) : baseColor)),
+      borderWidth: labels.map((label) => (isCapexEstimateLabel(label) ? 1.5 : 0)),
+      borderRadius: 4,
+      barPercentage: 0.78,
+      categoryPercentage: 0.72,
+    };
+  });
 
   const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
@@ -5631,8 +5649,7 @@ function buildAnnualBig5CapexPanel() {
     ),
   );
   const yoy = totals.map((value, index) => {
-    const label = Array.isArray(labels[index]) ? labels[index].join(" ") : String(labels[index] ?? "");
-    const priorIndex = label.startsWith("2026E") ? labels.indexOf("2025") : index - 1;
+    const priorIndex = isCapexEstimateLabel(labels[index]) ? labels.indexOf("2025") : index - 1;
     if (priorIndex < 0 || !Number.isFinite(value) || !Number.isFinite(totals[priorIndex]) || totals[priorIndex] === 0) {
       return null;
     }
@@ -5700,9 +5717,9 @@ function createCapexAggregateComboChart(canvas, panel) {
           type: "bar",
           label: "BIG5 Capex",
           data: panel.totals,
-          backgroundColor: "rgba(74, 74, 70, 0.84)",
-          borderColor: "rgba(74, 74, 70, 1)",
-          borderWidth: 0,
+          backgroundColor: panel.labels.map((label) => (isCapexEstimateLabel(label) ? "rgba(32, 32, 29, 0.96)" : "rgba(74, 74, 70, 0.78)")),
+          borderColor: panel.labels.map((label) => (isCapexEstimateLabel(label) ? "rgba(16, 16, 14, 1)" : "rgba(74, 74, 70, 1)")),
+          borderWidth: panel.labels.map((label) => (isCapexEstimateLabel(label) ? 1.5 : 0)),
           borderRadius: 4,
           yAxisID: "yCapex",
         },
