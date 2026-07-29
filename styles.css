@@ -194,6 +194,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(63, 63, 58, 0.18);
 }
 
+.country-button.is-cds {
+  border-color: #e4beb8;
+  background: linear-gradient(180deg, #fff7f5, #f9e7e3);
+  color: #8b2f26;
+}
+
+.country-button.is-cds.active {
+  border-color: #b5473c;
+  background: linear-gradient(135deg, #d86b5e, #a83d34);
+  color: #fffafa;
+  box-shadow: 0 14px 28px rgba(181, 71, 60, 0.2);
+}
+
 .country-button.is-etf-status {
   border-color: #b9d9e5;
   background: linear-gradient(180deg, #eff9fc, #dff1f7);

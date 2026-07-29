@@ -107,6 +107,7 @@ const gpuCloudRuntime = {
 
 const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing" },
+  Cds: { label: "CDS" },
   EtfStatus: { label: "ETF 현황" },
   RS: { label: "RS" },
   IndexTrend: { label: "Index Trend" },
@@ -148,7 +149,6 @@ const studySubtabMeta = {
   MemoryCap: { label: "Memory Market Cap" },
   DataCenter: { label: "Data Center" },
   MemoryCapa: { label: "Memory Capa" },
-  Cds: { label: "CDS" },
 };
 
 const studyDataCenterSortOptions = [
@@ -17937,7 +17937,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "Cds" ? " is-cds" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -18069,11 +18069,14 @@ function renderSummary(list) {
     return;
   }
 
+  if (state.tab === "Cds") {
+    summaryText.textContent = "DTCC-reported 5Y single-name CDS transaction spreads for major US technology companies";
+    return;
+  }
+
   if (state.tab === "Study") {
     if (state.studyView === "DataCenter") {
       summaryText.textContent = "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status";
-    } else if (state.studyView === "Cds") {
-      summaryText.textContent = "DTCC-reported 5Y single-name CDS transaction spreads for major US technology companies";
     } else {
       summaryText.textContent = "Study dashboard for focused market-cap and cross-market comparisons";
     }
@@ -18556,6 +18559,12 @@ function render() {
     return;
   }
 
+  if (state.tab === "Cds") {
+    renderSummary([]);
+    renderStudyCdsOverview();
+    return;
+  }
+
   if (state.tab === "EtfStatus") {
     renderSummary([]);
     renderStudyEtfTrackingOverview();
@@ -18576,10 +18585,6 @@ function render() {
 
   if (state.tab === "Study") {
     renderSummary([]);
-    if (state.studyView === "Cds") {
-      renderStudyCdsOverview();
-      return;
-    }
     if (state.studyView === "DataCenter") {
       renderStudyDataCenterOverview();
       return;
