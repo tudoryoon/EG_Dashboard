@@ -14070,6 +14070,97 @@ function createStudyCdsChart(canvas, item, rangeKey) {
   charts.push(chart);
 }
 
+function createStudyCdsComparisonChart(canvas, items, rangeKey) {
+  if (!canvas || typeof Chart === "undefined" || !items.length) {
+    return;
+  }
+  const payloads = items.map((item) => getStudyCdsPayload(item, rangeKey));
+  const labels = payloads[0]?.labels ?? [];
+  if (!labels.length) {
+    return;
+  }
+  const tickSet = new Set(getMacroTickIndexes(labels, rangeKey, canvas.clientWidth ?? 0));
+  const datasets = items.map((item, index) => {
+    const payload = payloads[index];
+    return {
+      label: item.ticker,
+      data: payload.values,
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: 2.15,
+      pointRadius: payload.observed.map((value) => (Number.isFinite(Number(value)) ? 2.1 : 0)),
+      pointHoverRadius: payload.observed.map((value) => (Number.isFinite(Number(value)) ? 5 : 3)),
+      pointBackgroundColor: item.color,
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 1,
+      tension: 0.08,
+      spanGaps: false,
+      segment: {
+        borderDash: (context) => (
+          Number.isFinite(Number(payload.observed[context.p1DataIndex])) ? undefined : [5, 4]
+        ),
+      },
+    };
+  });
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "bottom",
+          align: "start",
+          labels: {
+            usePointStyle: true,
+            pointStyle: "circle",
+            boxWidth: 8,
+            boxHeight: 8,
+            padding: 16,
+            color: "#56564f",
+            font: { family: "Space Grotesk", size: 11, weight: "700" },
+          },
+        },
+        tooltip: {
+          itemSort: (a, b) => Number(b.parsed.y) - Number(a.parsed.y),
+          callbacks: {
+            title: (itemsForDate) => formatFullIsoDate(labels[itemsForDate[0]?.dataIndex] ?? ""),
+            label: (context) => {
+              const payload = payloads[context.datasetIndex];
+              const isObserved = Number.isFinite(Number(payload.observed[context.dataIndex]));
+              const suffix = isObserved ? "직접 관측" : "직전값 이월";
+              return `${context.dataset.label} ${formatStudyCdsBps(context.parsed.y)} · ${suffix}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#77766d",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(labels[value], rangeKey) : ""),
+          },
+        },
+        y: {
+          grace: "10%",
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          ticks: {
+            color: "#77766d",
+            callback: (value) => `${Number(value).toFixed(0)}bp`,
+          },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
 function getStudyCdsFreshness(latest) {
   const staleDays = Number(latest?.staleDays);
   if (!Number.isFinite(staleDays)) {
@@ -14173,6 +14264,19 @@ function renderStudyCdsOverview() {
         </div>
       </header>
 
+      <section class="study-cds-comparison-panel">
+        <div class="study-cds-comparison-head">
+          <div>
+            <h3>6-Company CDS Comparison</h3>
+            <p>동일한 bps 축에서 여섯 기업의 5년물 CDS 거래 스프레드를 비교합니다.</p>
+          </div>
+          <span>5Y · bps</span>
+        </div>
+        <div class="study-cds-comparison-wrap">
+          <canvas data-study-cds-comparison aria-label="Big Tech six-company 5-year CDS comparison"></canvas>
+        </div>
+      </section>
+
       <div class="study-cds-snapshot-grid">
         <div><span>가장 높은 위험 보험료</span><strong>${escapeHtml(sortedLatest[0]?.ticker ?? "-")} ${formatStudyCdsBps(sortedLatest[0]?.latest?.bps)}</strong></div>
         <div><span>가장 낮은 위험 보험료</span><strong>${escapeHtml(tightestItem?.ticker ?? "-")} ${formatStudyCdsBps(tightestItem?.latest?.bps)}</strong></div>
@@ -14201,6 +14305,11 @@ function renderStudyCdsOverview() {
       render();
     });
   });
+  createStudyCdsComparisonChart(
+    usOverviewRoot.querySelector("[data-study-cds-comparison]"),
+    items,
+    activeRange,
+  );
   items.forEach((item) => {
     const canvas = usOverviewRoot.querySelector(`[data-study-cds-chart="${item.ticker}"]`);
     createStudyCdsChart(canvas, item, activeRange);
