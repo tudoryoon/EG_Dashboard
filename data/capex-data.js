@@ -55,7 +55,7 @@ window.capexDashboardData = {
   },
   annualCapex: {
     title: "Annual Capex",
-    subtitle: "Annual capex history with 2026E guidance midpoints tracked by estimate vintage",
+    subtitle: "Annual capex history with 2026E guidance midpoints by estimate vintage; ORCL is excluded from 2026E",
     unit: "$B",
     series: [
       { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 190.0, 190.0] },

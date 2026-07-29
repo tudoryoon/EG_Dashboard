@@ -13844,6 +13844,7 @@ function renderCapexOverview() {
             <div>
               <h3>Annual BIG5 Capex Total (리스 포함, CY기준)</h3>
               <p>Annual big tech capex sum; both 2026E vintages show growth versus 2025 actual</p>
+              <p>*2026E 합산은 ORCL 제외 (공식 연간 Capex 가이던스 미공개)</p>
             </div>
           </div>
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
