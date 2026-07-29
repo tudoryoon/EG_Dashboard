@@ -346,6 +346,7 @@ const state = {
   studyRange: studyData.defaultRange ?? "max",
   studyCdsRange: studyCdsData.defaultRange ?? "1y",
   studyCdsIndexSelection: ["sox"],
+  studyCdsCompanySelection: ["GOOGL", "MSFT", "NVDA", "META", "ORCL", "AMZN"],
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
@@ -14311,6 +14312,18 @@ function renderStudyCdsOverview() {
     activeIndexKeys.push("sox");
   }
   state.studyCdsIndexSelection = activeIndexKeys;
+  const companyOptions = items.map((item) => ({
+    key: item.ticker,
+    label: item.ticker,
+    color: item.color || "#20201d",
+  }));
+  const validCompanyKeys = new Set(companyOptions.map((option) => option.key));
+  const activeCompanyKeys = (state.studyCdsCompanySelection ?? []).filter((key) => validCompanyKeys.has(key));
+  if (!activeCompanyKeys.length) {
+    activeCompanyKeys.push(...companyOptions.map((option) => option.key));
+  }
+  state.studyCdsCompanySelection = activeCompanyKeys;
+  const activeComparisonItems = items.filter((item) => activeCompanyKeys.includes(item.ticker));
 
   const rangeMarkup = (studyCdsData.ranges ?? []).map((range) => `
     <button type="button" class="m7-range-chip${activeRange === range.key ? " active" : ""}" data-study-cds-range="${escapeHtml(range.key)}">
@@ -14324,6 +14337,15 @@ function renderStudyCdsOverview() {
       data-study-cds-index="${escapeHtml(option.key)}"
       aria-pressed="${activeIndexKeys.includes(option.key) ? "true" : "false"}"
     >${escapeHtml(option.label)}</button>
+  `).join("");
+  const companySelectorMarkup = companyOptions.map((option) => `
+    <button
+      type="button"
+      class="study-cds-company-chip${activeCompanyKeys.includes(option.key) ? " active" : ""}"
+      data-study-cds-company="${escapeHtml(option.key)}"
+      aria-pressed="${activeCompanyKeys.includes(option.key) ? "true" : "false"}"
+      style="--series-color: ${escapeHtml(option.color)}"
+    ><i></i>${escapeHtml(option.label)}</button>
   `).join("");
   const cardsMarkup = items.map((item) => {
     const latest = item.latest ?? {};
@@ -14392,9 +14414,14 @@ function renderStudyCdsOverview() {
             <p>선택 지수는 왼쪽 축, 여섯 기업의 5년물 CDS 프리미엄은 오른쪽 bps 축으로 비교합니다.</p>
           </div>
           <div class="study-cds-comparison-controls">
-            <span>LEFT INDEX</span>
-            <div class="study-cds-index-toggle">${indexSelectorMarkup}</div>
-            <em>RIGHT · CDS BP</em>
+            <div class="study-cds-control-group">
+              <span>LEFT INDEX</span>
+              <div class="study-cds-index-toggle">${indexSelectorMarkup}</div>
+            </div>
+            <div class="study-cds-control-group is-companies">
+              <span>RIGHT CDS · BP</span>
+              <div class="study-cds-company-toggle">${companySelectorMarkup}</div>
+            </div>
           </div>
         </div>
         <div class="study-cds-comparison-wrap">
@@ -14451,9 +14478,30 @@ function renderStudyCdsOverview() {
       render();
     });
   });
+  usOverviewRoot.querySelectorAll("[data-study-cds-company]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.studyCdsCompany;
+      if (!validCompanyKeys.has(key)) {
+        return;
+      }
+      const nextSelection = new Set(state.studyCdsCompanySelection ?? []);
+      if (nextSelection.has(key)) {
+        if (nextSelection.size === 1) {
+          return;
+        }
+        nextSelection.delete(key);
+      } else {
+        nextSelection.add(key);
+      }
+      state.studyCdsCompanySelection = companyOptions
+        .map((option) => option.key)
+        .filter((optionKey) => nextSelection.has(optionKey));
+      render();
+    });
+  });
   createStudyCdsComparisonChart(
     usOverviewRoot.querySelector("[data-study-cds-comparison]"),
-    items,
+    activeComparisonItems,
     activeRange,
     activeIndexKeys,
   );

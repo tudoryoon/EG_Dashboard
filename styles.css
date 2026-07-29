@@ -3586,20 +3586,28 @@ h1 {
 .study-cds-comparison-controls {
   display: flex;
   flex: 0 0 auto;
+  max-width: min(720px, 64%);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.study-cds-control-group {
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
-.study-cds-comparison-controls > span,
-.study-cds-comparison-controls > em {
+.study-cds-control-group > span {
+  flex: 0 0 auto;
   color: #77776f;
   font-family: "Space Grotesk", sans-serif;
   font-size: 0.64rem;
-  font-style: normal;
   font-weight: 800;
 }
 
-.study-cds-comparison-controls > em {
+.study-cds-control-group.is-companies > span {
   color: #9a4037;
 }
 
@@ -3636,6 +3644,54 @@ h1 {
 .study-cds-index-chip:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: -2px;
+}
+
+.study-cds-company-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.study-cds-company-chip {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid #ddddda;
+  border-radius: 5px;
+  background: #f8f8f5;
+  color: #999991;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.study-cds-company-chip i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border: 1px solid var(--series-color);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.study-cds-company-chip.active {
+  border-color: var(--series-color);
+  background: #ffffff;
+  color: #30302c;
+  box-shadow: inset 0 -2px 0 var(--series-color);
+}
+
+.study-cds-company-chip.active i {
+  background: var(--series-color);
+}
+
+.study-cds-company-chip:focus-visible {
+  outline: 2px solid var(--series-color);
+  outline-offset: 1px;
 }
 
 .study-cds-comparison-wrap {
@@ -5864,7 +5920,19 @@ h1 {
 
   .study-cds-comparison-controls {
     width: 100%;
-    flex-wrap: wrap;
+    max-width: none;
+    align-items: flex-start;
+  }
+
+  .study-cds-control-group,
+  .study-cds-control-group.is-companies {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .study-cds-company-toggle {
+    justify-content: flex-start;
   }
 
   .study-cds-comparison-wrap {
