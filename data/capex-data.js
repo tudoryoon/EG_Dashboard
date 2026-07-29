@@ -21,7 +21,7 @@ window.capexDashboardData = {
     "2024-Q1", "2024-Q2", "2024-Q3", "2024-Q4",
     "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2",
   ],
-  annualLabels: ["2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026E"],
+  annualLabels: ["2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", ["2026E", "1Q26"], ["2026E", "2Q26"]],
   colors: {
     msft: "#2563eb",
     googl: "#db4437",
@@ -55,14 +55,14 @@ window.capexDashboardData = {
   },
   annualCapex: {
     title: "Annual Capex",
-    subtitle: "Annual capex overview with 2026E included where available",
+    subtitle: "Annual capex history with 2026E guidance midpoints tracked by estimate vintage",
     unit: "$B",
     series: [
-      { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 190.0] },
-      { key: "googl", name: "GOOGL", values: [13.2, 25.1, 23.5, 22.3, 24.6, 31.5, 32.3, 52.5, 91.4, 185.0] },
-      { key: "meta", name: "META", values: [6.7, 14.0, 15.7, 15.7, 19.2, 32.0, 28.1, 39.2, 72.2, 135.0] },
-      { key: "amzn", name: "AMZN", values: [12.0, 13.4, 16.9, 40.1, 61.1, 63.6, 52.7, 83.0, 130.7, 200.0] },
-      { key: "orcl", name: "ORCL", values: [2.0, 1.5, 1.6, 1.8, 3.1, 6.7, 6.9, 10.7, 35.4, null] },
+      { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 190.0, 190.0] },
+      { key: "googl", name: "GOOGL", values: [13.2, 25.1, 23.5, 22.3, 24.6, 31.5, 32.3, 52.5, 91.4, 185.0, 200.0] },
+      { key: "meta", name: "META", values: [6.7, 14.0, 15.7, 15.7, 19.2, 32.0, 28.1, 39.2, 72.2, 135.0, 137.5] },
+      { key: "amzn", name: "AMZN", values: [12.0, 13.4, 16.9, 40.1, 61.1, 63.6, 52.7, 83.0, 130.7, 200.0, 200.0] },
+      { key: "orcl", name: "ORCL", values: [2.0, 1.5, 1.6, 1.8, 3.1, 6.7, 6.9, 10.7, 35.4, null, null] },
     ],
   },
   quarterlyOcf: {

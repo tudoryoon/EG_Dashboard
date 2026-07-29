@@ -5631,10 +5631,12 @@ function buildAnnualBig5CapexPanel() {
     ),
   );
   const yoy = totals.map((value, index) => {
-    if (index === 0 || !Number.isFinite(value) || !Number.isFinite(totals[index - 1]) || totals[index - 1] === 0) {
+    const label = Array.isArray(labels[index]) ? labels[index].join(" ") : String(labels[index] ?? "");
+    const priorIndex = label.startsWith("2026E") ? labels.indexOf("2025") : index - 1;
+    if (priorIndex < 0 || !Number.isFinite(value) || !Number.isFinite(totals[priorIndex]) || totals[priorIndex] === 0) {
       return null;
     }
-    return Number((((value - totals[index - 1]) / totals[index - 1]) * 100).toFixed(1));
+    return Number((((value - totals[priorIndex]) / totals[priorIndex]) * 100).toFixed(1));
   });
 
   return {
@@ -13824,7 +13826,7 @@ function renderCapexOverview() {
           <div class="us-panel-head">
             <div>
               <h3>Annual BIG5 Capex Total (리스 포함, CY기준)</h3>
-              <p>Annual big tech capex sum with YoY growth rate</p>
+              <p>Annual big tech capex sum; both 2026E vintages show growth versus 2025 actual</p>
             </div>
           </div>
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
