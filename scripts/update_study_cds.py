@@ -135,6 +135,9 @@ def parse_spread_bps(value: str, notation: str) -> float | None:
 
 def parse_notional_usd(value: str) -> float | None:
     normalized = str(value or "").replace(",", "").strip()
+    match = re.search(r"\d+(?:\.\d+)?", normalized)
+    if match:
+        normalized = match.group(0)
     try:
         notional = float(normalized)
     except (TypeError, ValueError):
@@ -142,6 +145,18 @@ def parse_notional_usd(value: str) -> float | None:
     if notional <= 0:
         return None
     return round(notional, 2)
+
+
+def parse_trade_notional_usd(row: dict[str, str]) -> tuple[float | None, str]:
+    fields = (
+        ("notional amount-leg 1", "reported"),
+        ("notional amount in effect on associated effective date-leg 1", "schedule"),
+    )
+    for field, source in fields:
+        value = parse_notional_usd(row.get(field, ""))
+        if value is not None:
+            return value, source
+    return None, ""
 
 
 def lower_row(row: dict[str, str]) -> dict[str, str]:
@@ -190,11 +205,12 @@ def parse_dtcc_zip(entry: dict[str, Any]) -> tuple[str, dict[str, dict[str, Any]
                 if spread is None:
                     continue
                 result[issuer]["spreads"].append(spread)
-                notional_usd = parse_notional_usd(row.get("notional amount-leg 1", ""))
+                notional_usd, notional_source = parse_trade_notional_usd(row)
                 result[issuer]["trades"].append({
                     "spreadBps": spread,
                     "notionalUsd": notional_usd,
                     "isCapped": bool(notional_usd is not None and notional_usd >= 5_000_000),
+                    "notionalSource": notional_source,
                     "executedAt": row.get("execution timestamp", ""),
                 })
                 result[issuer]["directTradeCount"] += 1
@@ -335,6 +351,7 @@ def build_payload(
         }
 
     return {
+        "schemaVersion": 2,
         "updatedAt": latest_file_date.isoformat(),
         "generatedAt": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "startDate": dates[0] if dates else "",
@@ -391,9 +408,12 @@ def main() -> None:
     latest_file_date = entries[-1][0]
     full_start = latest_file_date - timedelta(days=LOOKBACK_DAYS)
     existing_payload = load_existing()
-    needs_trade_backfill = bool(existing_payload) and any(
-        "directTrades" not in item
-        for item in (existing_payload.get("items") or {}).values()
+    needs_trade_backfill = bool(existing_payload) and (
+        int(existing_payload.get("schemaVersion") or 0) < 2
+        or any(
+            "directTrades" not in item
+            for item in (existing_payload.get("items") or {}).values()
+        )
     )
     refresh_start = (
         full_start
