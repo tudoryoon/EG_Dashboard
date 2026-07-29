@@ -345,6 +345,7 @@ const state = {
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
   studyCdsRange: studyCdsData.defaultRange ?? "1y",
+  studyCdsIndexSelection: ["sox"],
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
@@ -13975,6 +13976,23 @@ function formatStudyCdsObservationDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(dateText) ? dateText.slice(5).replace("-", "/") : "-";
 }
 
+function formatStudyCdsNotional(value, isCapped = false) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "규모 미공개";
+  }
+  if (isCapped || numeric >= 5_000_000) {
+    return "$5M+";
+  }
+  if (numeric >= 1_000_000) {
+    return `$${(numeric / 1_000_000).toFixed(numeric % 1_000_000 === 0 ? 0 : 1)}M`;
+  }
+  if (numeric >= 1_000) {
+    return `$${(numeric / 1_000).toFixed(numeric % 1_000 === 0 ? 0 : 1)}K`;
+  }
+  return `$${numeric.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
 function getStudyCdsPayload(item, rangeKey) {
   const dates = studyCdsData.dates ?? [];
   const range = (studyCdsData.ranges ?? []).find((option) => option.key === rangeKey);
@@ -13985,6 +14003,7 @@ function getStudyCdsPayload(item, rangeKey) {
     values: (item.values ?? []).slice(startIndex),
     observed: (item.observedBps ?? []).slice(startIndex),
     directTradeCounts: (item.directTradeCounts ?? []).slice(startIndex),
+    directTrades: (item.directTrades ?? []).slice(startIndex),
   };
 }
 
@@ -14040,8 +14059,21 @@ function createStudyCdsChart(canvas, item, rangeKey) {
               const isObserved = Number.isFinite(Number(payload.observed[index]));
               const tradeCount = Number(payload.directTradeCounts[index]) || 0;
               return isObserved
-                ? `${formatStudyCdsBps(context.parsed.y)} · 직접 스프레드 거래 ${tradeCount}건`
+                ? `일별 중앙값 ${formatStudyCdsBps(context.parsed.y)} · 직접 거래 ${tradeCount}건`
                 : `${formatStudyCdsBps(context.parsed.y)} · 직전 관측값 이월`;
+            },
+            afterLabel: (context) => {
+              const trades = payload.directTrades[context.dataIndex] ?? [];
+              if (!trades.length) {
+                return "";
+              }
+              return trades.map((trade, index) => (
+                `#${index + 1} ${formatStudyCdsBps(trade.spreadBps)} · ${formatStudyCdsNotional(trade.notionalUsd, trade.isCapped)}`
+              ));
+            },
+            footer: (itemsForDate) => {
+              const trades = payload.directTrades[itemsForDate[0]?.dataIndex] ?? [];
+              return trades.some((trade) => trade.isCapped) ? "$5M+는 DTCC 공개 상한" : "";
             },
           },
         },
@@ -14070,7 +14102,24 @@ function createStudyCdsChart(canvas, item, rangeKey) {
   charts.push(chart);
 }
 
-function createStudyCdsComparisonChart(canvas, items, rangeKey) {
+function getStudyCdsIndexPayload(indexKey, labels) {
+  const item = marketPriceData.items?.[indexKey];
+  if (!item?.dates?.length) {
+    return null;
+  }
+  const valueByDate = new Map(item.dates.map((day, index) => [day, item.values?.[index]]));
+  return {
+    key: indexKey,
+    label: item.label || indexKey.toUpperCase(),
+    color: indexKey === "sox" ? "#111827" : "#2563eb",
+    values: labels.map((day) => {
+      const value = Number(valueByDate.get(day));
+      return Number.isFinite(value) ? value : null;
+    }),
+  };
+}
+
+function createStudyCdsComparisonChart(canvas, items, rangeKey, selectedIndexKeys = ["sox"]) {
   if (!canvas || typeof Chart === "undefined" || !items.length) {
     return;
   }
@@ -14080,7 +14129,23 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey) {
     return;
   }
   const tickSet = new Set(getMacroTickIndexes(labels, rangeKey, canvas.clientWidth ?? 0));
-  const datasets = items.map((item, index) => {
+  const indexPayloads = selectedIndexKeys
+    .map((key) => getStudyCdsIndexPayload(key, labels))
+    .filter(Boolean);
+  const indexDatasets = indexPayloads.map((payload) => ({
+    label: payload.label,
+    data: payload.values,
+    borderColor: payload.color,
+    backgroundColor: payload.color,
+    borderWidth: 2.8,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    tension: 0.08,
+    spanGaps: true,
+    yAxisID: "yIndex",
+    cdsSeriesType: "index",
+  }));
+  const cdsDatasets = items.map((item, index) => {
     const payload = payloads[index];
     return {
       label: item.ticker,
@@ -14095,6 +14160,9 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey) {
       pointBorderWidth: 1,
       tension: 0.08,
       spanGaps: false,
+      yAxisID: "yCds",
+      cdsSeriesType: "cds",
+      cdsPayloadIndex: index,
       segment: {
         borderDash: (context) => (
           Number.isFinite(Number(payload.observed[context.p1DataIndex])) ? undefined : [5, 4]
@@ -14104,7 +14172,7 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey) {
   });
   const chart = new Chart(canvas, {
     type: "line",
-    data: { labels, datasets },
+    data: { labels, datasets: [...indexDatasets, ...cdsDatasets] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -14125,11 +14193,21 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey) {
           },
         },
         tooltip: {
-          itemSort: (a, b) => Number(b.parsed.y) - Number(a.parsed.y),
+          itemSort: (a, b) => {
+            const aType = a.dataset.cdsSeriesType;
+            const bType = b.dataset.cdsSeriesType;
+            if (aType !== bType) {
+              return aType === "index" ? -1 : 1;
+            }
+            return Number(b.parsed.y) - Number(a.parsed.y);
+          },
           callbacks: {
             title: (itemsForDate) => formatFullIsoDate(labels[itemsForDate[0]?.dataIndex] ?? ""),
             label: (context) => {
-              const payload = payloads[context.datasetIndex];
+              if (context.dataset.cdsSeriesType === "index") {
+                return `${context.dataset.label} ${Number(context.parsed.y).toLocaleString("en-US", { maximumFractionDigits: 1 })}`;
+              }
+              const payload = payloads[context.dataset.cdsPayloadIndex];
               const isObserved = Number.isFinite(Number(payload.observed[context.dataIndex]));
               const suffix = isObserved ? "직접 관측" : "직전값 이월";
               return `${context.dataset.label} ${formatStudyCdsBps(context.parsed.y)} · ${suffix}`;
@@ -14147,11 +14225,36 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey) {
             callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(labels[value], rangeKey) : ""),
           },
         },
-        y: {
-          grace: "10%",
+        yIndex: {
+          type: "linear",
+          position: "left",
+          display: indexDatasets.length > 0,
+          grace: "8%",
+          title: {
+            display: true,
+            text: "Index",
+            color: "#66665f",
+            font: { family: "Space Grotesk", size: 11, weight: "700" },
+          },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           ticks: {
             color: "#77766d",
+            callback: (value) => Number(value).toLocaleString("en-US", { maximumFractionDigits: 0 }),
+          },
+        },
+        yCds: {
+          type: "linear",
+          position: "right",
+          grace: "10%",
+          title: {
+            display: true,
+            text: "CDS Premium (bp)",
+            color: "#8b2f26",
+            font: { family: "Space Grotesk", size: 11, weight: "700" },
+          },
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: "#8b2f26",
             callback: (value) => `${Number(value).toFixed(0)}bp`,
           },
         },
@@ -14198,11 +14301,29 @@ function renderStudyCdsOverview() {
     ? state.studyCdsRange
     : studyCdsData.defaultRange ?? "1y";
   state.studyCdsRange = activeRange;
+  const indexOptions = [
+    { key: "sox", label: "SOX" },
+    { key: "nasdaq100", label: "NASDAQ 100" },
+  ];
+  const validIndexKeys = new Set(indexOptions.map((option) => option.key));
+  const activeIndexKeys = (state.studyCdsIndexSelection ?? []).filter((key) => validIndexKeys.has(key));
+  if (!activeIndexKeys.length) {
+    activeIndexKeys.push("sox");
+  }
+  state.studyCdsIndexSelection = activeIndexKeys;
 
   const rangeMarkup = (studyCdsData.ranges ?? []).map((range) => `
     <button type="button" class="m7-range-chip${activeRange === range.key ? " active" : ""}" data-study-cds-range="${escapeHtml(range.key)}">
       ${escapeHtml(range.label)}
     </button>
+  `).join("");
+  const indexSelectorMarkup = indexOptions.map((option) => `
+    <button
+      type="button"
+      class="study-cds-index-chip${activeIndexKeys.includes(option.key) ? " active" : ""}"
+      data-study-cds-index="${escapeHtml(option.key)}"
+      aria-pressed="${activeIndexKeys.includes(option.key) ? "true" : "false"}"
+    >${escapeHtml(option.label)}</button>
   `).join("");
   const cardsMarkup = items.map((item) => {
     const latest = item.latest ?? {};
@@ -14267,10 +14388,14 @@ function renderStudyCdsOverview() {
       <section class="study-cds-comparison-panel">
         <div class="study-cds-comparison-head">
           <div>
-            <h3>6-Company CDS Comparison</h3>
-            <p>동일한 bps 축에서 여섯 기업의 5년물 CDS 거래 스프레드를 비교합니다.</p>
+            <h3>Index & 6-Company CDS Comparison</h3>
+            <p>선택 지수는 왼쪽 축, 여섯 기업의 5년물 CDS 프리미엄은 오른쪽 bps 축으로 비교합니다.</p>
           </div>
-          <span>5Y · bps</span>
+          <div class="study-cds-comparison-controls">
+            <span>LEFT INDEX</span>
+            <div class="study-cds-index-toggle">${indexSelectorMarkup}</div>
+            <em>RIGHT · CDS BP</em>
+          </div>
         </div>
         <div class="study-cds-comparison-wrap">
           <canvas data-study-cds-comparison aria-label="Big Tech six-company 5-year CDS comparison"></canvas>
@@ -14293,7 +14418,7 @@ function renderStudyCdsOverview() {
       <section class="study-cds-grid">${cardsMarkup}</section>
 
       <footer class="study-cds-source-row">
-        <p>${escapeHtml(studyCdsData.methodology?.carry ?? "")}</p>
+        <p>${escapeHtml(studyCdsData.methodology?.carry ?? "")} ${escapeHtml(studyCdsData.methodology?.notionalDisclosure ?? "")}</p>
         <a href="${escapeHtml(studyCdsData.source?.url ?? "https://pddata.dtcc.com/ppd/secdashboard")}" target="_blank" rel="noreferrer">DTCC 원자료</a>
       </footer>
     </section>
@@ -14305,10 +14430,32 @@ function renderStudyCdsOverview() {
       render();
     });
   });
+  usOverviewRoot.querySelectorAll("[data-study-cds-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.studyCdsIndex;
+      if (!validIndexKeys.has(key)) {
+        return;
+      }
+      const nextSelection = new Set(state.studyCdsIndexSelection ?? []);
+      if (nextSelection.has(key)) {
+        if (nextSelection.size === 1) {
+          return;
+        }
+        nextSelection.delete(key);
+      } else {
+        nextSelection.add(key);
+      }
+      state.studyCdsIndexSelection = indexOptions
+        .map((option) => option.key)
+        .filter((optionKey) => nextSelection.has(optionKey));
+      render();
+    });
+  });
   createStudyCdsComparisonChart(
     usOverviewRoot.querySelector("[data-study-cds-comparison]"),
     items,
     activeRange,
+    activeIndexKeys,
   );
   items.forEach((item) => {
     const canvas = usOverviewRoot.querySelector(`[data-study-cds-chart="${item.ticker}"]`);

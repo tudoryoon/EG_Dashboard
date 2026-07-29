@@ -133,6 +133,17 @@ def parse_spread_bps(value: str, notation: str) -> float | None:
     return round(bps, 3)
 
 
+def parse_notional_usd(value: str) -> float | None:
+    normalized = str(value or "").replace(",", "").strip()
+    try:
+        notional = float(normalized)
+    except (TypeError, ValueError):
+        return None
+    if notional <= 0:
+        return None
+    return round(notional, 2)
+
+
 def lower_row(row: dict[str, str]) -> dict[str, str]:
     return {str(key).strip().lower(): (value or "").strip() for key, value in row.items()}
 
@@ -144,7 +155,7 @@ def parse_dtcc_zip(entry: dict[str, Any]) -> tuple[str, dict[str, dict[str, Any]
         raise ValueError(f"Cannot parse DTCC file date: {file_name}")
     content = fetch_bytes(str(entry["fullFilePath"]))
     result = {
-        key: {"spreads": [], "allTradeCount": 0, "directTradeCount": 0}
+        key: {"spreads": [], "trades": [], "allTradeCount": 0, "directTradeCount": 0}
         for key in ISSUERS
     }
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
@@ -179,16 +190,26 @@ def parse_dtcc_zip(entry: dict[str, Any]) -> tuple[str, dict[str, dict[str, Any]
                 if spread is None:
                     continue
                 result[issuer]["spreads"].append(spread)
+                notional_usd = parse_notional_usd(row.get("notional amount-leg 1", ""))
+                result[issuer]["trades"].append({
+                    "spreadBps": spread,
+                    "notionalUsd": notional_usd,
+                    "isCapped": bool(notional_usd is not None and notional_usd >= 5_000_000),
+                    "executedAt": row.get("execution timestamp", ""),
+                })
                 result[issuer]["directTradeCount"] += 1
 
     daily: dict[str, dict[str, Any]] = {}
     for issuer, item in result.items():
         spreads = item.pop("spreads")
+        trades = item.pop("trades")
+        trades.sort(key=lambda trade: str(trade.get("executedAt") or ""))
         daily[issuer] = {
             **item,
             "observedBps": round(statistics.median(spreads), 2) if spreads else None,
             "lowBps": round(min(spreads), 2) if spreads else None,
             "highBps": round(max(spreads), 2) if spreads else None,
+            "trades": trades,
         }
     return file_date.isoformat(), daily
 
@@ -212,6 +233,7 @@ def existing_daily_map(payload: dict[str, Any]) -> dict[str, dict[str, dict[str,
         all_counts = item.get("allTradeCounts") or []
         lows = item.get("lowBps") or []
         highs = item.get("highBps") or []
+        trades = item.get("directTrades") or []
         for index, day_text in enumerate(dates):
             daily.setdefault(day_text, {})[issuer] = {
                 "observedBps": observed[index] if index < len(observed) else None,
@@ -219,6 +241,7 @@ def existing_daily_map(payload: dict[str, Any]) -> dict[str, dict[str, dict[str,
                 "allTradeCount": all_counts[index] if index < len(all_counts) else 0,
                 "lowBps": lows[index] if index < len(lows) else None,
                 "highBps": highs[index] if index < len(highs) else None,
+                "trades": trades[index] if index < len(trades) else [],
             }
     return daily
 
@@ -255,6 +278,7 @@ def build_payload(
         high_values: list[float | None] = []
         direct_counts: list[int] = []
         all_counts: list[int] = []
+        direct_trades: list[list[dict[str, Any]]] = []
         carried: list[float | None] = []
         last_value: float | None = None
         last_observed_date = ""
@@ -270,6 +294,7 @@ def build_payload(
             high_values.append(row.get("highBps"))
             direct_counts.append(int(row.get("directTradeCount") or 0))
             all_counts.append(int(row.get("allTradeCount") or 0))
+            direct_trades.append(row.get("trades") or [])
             carried.append(last_value)
 
         latest_index = len(dates) - 1
@@ -296,6 +321,7 @@ def build_payload(
             "highBps": high_values,
             "directTradeCounts": direct_counts,
             "allTradeCounts": all_counts,
+            "directTrades": direct_trades,
             "latest": {
                 "bps": latest_value,
                 "observedDate": last_observed_date,
@@ -330,6 +356,7 @@ def build_payload(
             "filters": "Action=NEWT, Event=TRAD, CDS Corp Single Name Senior, USD, 잔존만기 4.25~5.75년",
             "carry": "직접 스프레드 거래가 없는 날은 직전 관측값을 이월하며 마지막 실거래일과 경과일을 표시합니다.",
             "limits": "딜러 종합 호가나 공식 종가가 아닙니다. 고정 쿠폰+업프런트만 보고된 거래는 가격 산출에서 제외하고 거래 건수에만 포함합니다.",
+            "notionalDisclosure": "거래규모는 DTCC 공개 명목금액입니다. 단일기업 CDS는 공개값 $5M 이상이 상한 처리되므로 $5M+로 표시합니다.",
         },
         "dates": dates,
         "items": items,
