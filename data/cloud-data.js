@@ -37,7 +37,7 @@ window.cloudDashboardData = {
       {
         key: "microsoft",
         name: "Azure",
-        values: [49.0, 46.0, 42.0, 38.0, 31.0, 27.0, 27.0, 28.0, 28.0, 30.0, 34.0, 31.0, 35.0, 39.0, 39.0, 38.0, 39.0, null],
+        values: [49.0, 46.0, 42.0, 38.0, 31.0, 27.0, 27.0, 28.0, 28.0, 30.0, 34.0, 31.0, 35.0, 39.0, 39.0, 38.0, 39.0, 43.0],
       },
       {
         key: "google",
@@ -59,7 +59,7 @@ window.cloudDashboardData = {
       {
         key: "microsoft",
         name: "MS Intelligent Cloud Margin",
-        values: [null, null, 39.98, 37.53, 38.46, 39.81, 44.51, 44.39, 42.97, 41.35, 43.6, 42.48, 41.48, 40.63, 43.34, 42.16, 39.66, null],
+        values: [null, null, 39.98, 37.53, 38.46, 39.81, 44.51, 44.39, 42.97, 41.35, 43.6, 42.48, 41.48, 40.63, 43.34, 42.16, 39.66, 40.59],
       },
       {
         key: "google",
@@ -81,7 +81,7 @@ window.cloudDashboardData = {
       {
         key: "microsoft",
         name: "MS Intelligent Cloud Revenue",
-        values: [null, null, 16885, 17926, 18244, 19889, 20013, 21525, 22141, 23785, 24092, 25544, 26751, 29878, 30897, 32907, 34681, null],
+        values: [null, null, 16885, 17926, 18244, 19889, 20013, 21525, 22141, 23785, 24092, 25544, 26751, 29878, 30897, 32907, 34681, 39306],
       },
       {
         key: "google",
@@ -92,7 +92,7 @@ window.cloudDashboardData = {
   },
   rpo: {
     title: "Cloud RPO Backlog",
-    subtitle: "Quarterly remaining performance obligations. AWS is primarily >1Y AWS commitments; Microsoft is commercial/total RPO; Google is Alphabet RPO, now mostly Google Cloud.",
+    subtitle: "Quarterly remaining performance obligations. AWS is primarily >1Y AWS commitments; Microsoft is Commercial RPO; Google is Alphabet RPO, now mostly Google Cloud.",
     unit: "$B",
     source: "SEC filings and company disclosures",
     series: [
@@ -103,8 +103,8 @@ window.cloudDashboardData = {
       },
       {
         key: "microsoft",
-        name: "Microsoft Cloud RPO",
-        values: [160.0, 193.0, 183.0, 193.0, 201.0, 229.0, 216.0, 229.0, 242.0, 275.0, 266.0, 304.0, 321.0, 375.0, 398.0, 631.0, 633.0, null],
+        name: "Microsoft Commercial RPO",
+        values: [155.0, 189.0, 180.0, 189.0, 196.0, 224.0, 212.0, 222.0, 235.0, 269.0, 259.0, 298.0, 315.0, 368.0, 392.0, 625.0, 627.0, 678.0],
       },
       {
         key: "google",
