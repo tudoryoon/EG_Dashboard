@@ -390,10 +390,18 @@ def main() -> None:
     entries.sort(key=lambda item: item[0])
     latest_file_date = entries[-1][0]
     full_start = latest_file_date - timedelta(days=LOOKBACK_DAYS)
-    refresh_start = full_start if args.backfill or not DATA_PATH.exists() else latest_file_date - timedelta(days=max(1, args.refresh_days))
+    existing_payload = load_existing()
+    needs_trade_backfill = bool(existing_payload) and any(
+        "directTrades" not in item
+        for item in (existing_payload.get("items") or {}).values()
+    )
+    refresh_start = (
+        full_start
+        if args.backfill or not DATA_PATH.exists() or needs_trade_backfill
+        else latest_file_date - timedelta(days=max(1, args.refresh_days))
+    )
     selected = [entry for file_date, entry in entries if refresh_start <= file_date <= latest_file_date]
 
-    existing_payload = load_existing()
     daily_map = existing_daily_map(existing_payload)
     for day_text in list(daily_map):
         if date.fromisoformat(day_text) < full_start:

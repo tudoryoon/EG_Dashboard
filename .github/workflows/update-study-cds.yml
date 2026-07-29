@@ -1,6 +1,12 @@
 name: Update Study CDS
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/update_study_cds.py
+      - .github/workflows/update-study-cds.yml
   workflow_dispatch:
     inputs:
       backfill:
