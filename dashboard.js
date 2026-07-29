@@ -20,6 +20,7 @@ const marketPriceData = window.marketPriceData ?? { updatedAt: "", startDate: "2
 const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", defaultRange: "max", ranges: [], dashboards: {} };
 const studyDataCenterDeals = window.studyDataCenterDeals ?? { updatedAt: "", scope: "", companies: [], statusLegend: [], deals: [] };
 const studyEtfFlowData = window.studyEtfFlowData ?? { updatedAt: "", startDate: "", defaultRange: "ytd", ranges: [], methodology: {}, sources: [], items: {} };
+const studyCdsData = window.studyCdsData ?? { updatedAt: "", generatedAt: "", startDate: "", defaultRange: "1y", ranges: [], source: {}, methodology: {}, dates: [], items: {} };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -147,6 +148,7 @@ const studySubtabMeta = {
   MemoryCap: { label: "Memory Market Cap" },
   DataCenter: { label: "Data Center" },
   MemoryCapa: { label: "Memory Capa" },
+  Cds: { label: "CDS" },
 };
 
 const studyDataCenterSortOptions = [
@@ -342,6 +344,7 @@ const state = {
   studyView: "MemoryCap",
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
+  studyCdsRange: studyCdsData.defaultRange ?? "1y",
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
@@ -13958,6 +13961,252 @@ function renderCapexOverview() {
   }
 }
 
+function formatStudyCdsBps(value, signed = false) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  const sign = signed && numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toFixed(1)}bp`;
+}
+
+function formatStudyCdsObservationDate(value) {
+  const dateText = String(value || "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateText) ? dateText.slice(5).replace("-", "/") : "-";
+}
+
+function getStudyCdsPayload(item, rangeKey) {
+  const dates = studyCdsData.dates ?? [];
+  const range = (studyCdsData.ranges ?? []).find((option) => option.key === rangeKey);
+  const sessionCount = rangeKey === "1y" ? dates.length : Number(range?.sessions) || dates.length;
+  const startIndex = Math.max(0, dates.length - sessionCount);
+  return {
+    labels: dates.slice(startIndex),
+    values: (item.values ?? []).slice(startIndex),
+    observed: (item.observedBps ?? []).slice(startIndex),
+    directTradeCounts: (item.directTradeCounts ?? []).slice(startIndex),
+  };
+}
+
+function createStudyCdsChart(canvas, item, rangeKey) {
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+  const payload = getStudyCdsPayload(item, rangeKey);
+  if (!payload.labels.length || !payload.values.some((value) => Number.isFinite(Number(value)))) {
+    return;
+  }
+  const tickSet = new Set(getMacroTickIndexes(payload.labels, rangeKey, canvas.clientWidth ?? 0));
+  const pointRadius = payload.observed.map((value) => (Number.isFinite(Number(value)) ? 2.8 : 0));
+  const pointHoverRadius = payload.observed.map((value) => (Number.isFinite(Number(value)) ? 5 : 3));
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: payload.labels,
+      datasets: [
+        {
+          label: `${item.ticker} 5Y CDS`,
+          data: payload.values,
+          borderColor: item.color,
+          backgroundColor: `${item.color}18`,
+          borderWidth: 2.25,
+          pointRadius,
+          pointHoverRadius,
+          pointBackgroundColor: item.color,
+          pointBorderColor: "#ffffff",
+          pointBorderWidth: 1.2,
+          tension: 0.08,
+          spanGaps: false,
+          segment: {
+            borderDash: (context) => (
+              Number.isFinite(Number(payload.observed[context.p1DataIndex])) ? undefined : [5, 4]
+            ),
+          },
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => formatFullIsoDate(payload.labels[items[0]?.dataIndex] ?? ""),
+            label: (context) => {
+              const index = context.dataIndex;
+              const isObserved = Number.isFinite(Number(payload.observed[index]));
+              const tradeCount = Number(payload.directTradeCounts[index]) || 0;
+              return isObserved
+                ? `${formatStudyCdsBps(context.parsed.y)} · 직접 스프레드 거래 ${tradeCount}건`
+                : `${formatStudyCdsBps(context.parsed.y)} · 직전 관측값 이월`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            color: "#77766d",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(payload.labels[value], rangeKey) : ""),
+          },
+        },
+        y: {
+          grace: "12%",
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          ticks: {
+            color: "#77766d",
+            callback: (value) => `${Number(value).toFixed(0)}bp`,
+          },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function getStudyCdsFreshness(latest) {
+  const staleDays = Number(latest?.staleDays);
+  if (!Number.isFinite(staleDays)) {
+    return { label: "관측 없음", className: "is-stale" };
+  }
+  if (staleDays === 0) {
+    return { label: "당일 거래", className: "is-fresh" };
+  }
+  if (staleDays <= 3) {
+    return { label: `${staleDays}일 경과`, className: "is-recent" };
+  }
+  return { label: `${staleDays}일 경과`, className: "is-stale" };
+}
+
+function renderStudyCdsOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const items = Object.values(studyCdsData.items ?? {});
+  if (!studyCdsData.dates?.length || !items.length) {
+    renderPlaceholderOverview("CDS", "DTCC CDS transaction data is not available yet.");
+    return;
+  }
+  const latestItems = items.filter((item) => Number.isFinite(Number(item.latest?.bps)));
+  const sortedLatest = [...latestItems].sort((a, b) => Number(b.latest.bps) - Number(a.latest.bps));
+  const medianValues = sortedLatest.map((item) => Number(item.latest.bps)).sort((a, b) => a - b);
+  const medianIndex = Math.floor(medianValues.length / 2);
+  const medianBps = medianValues.length % 2
+    ? medianValues[medianIndex]
+    : (medianValues[medianIndex - 1] + medianValues[medianIndex]) / 2;
+  const tightestItem = sortedLatest[sortedLatest.length - 1];
+  const freshCount = latestItems.filter((item) => Number(item.latest?.staleDays) <= 3).length;
+  const activeRange = (studyCdsData.ranges ?? []).some((range) => range.key === state.studyCdsRange)
+    ? state.studyCdsRange
+    : studyCdsData.defaultRange ?? "1y";
+  state.studyCdsRange = activeRange;
+
+  const rangeMarkup = (studyCdsData.ranges ?? []).map((range) => `
+    <button type="button" class="m7-range-chip${activeRange === range.key ? " active" : ""}" data-study-cds-range="${escapeHtml(range.key)}">
+      ${escapeHtml(range.label)}
+    </button>
+  `).join("");
+  const cardsMarkup = items.map((item) => {
+    const latest = item.latest ?? {};
+    const freshness = getStudyCdsFreshness(latest);
+    const changeClass = Number(latest.change1mBps) > 0 ? "is-wider" : Number(latest.change1mBps) < 0 ? "is-tighter" : "";
+    return `
+      <article class="study-cds-card" style="--cds-color: ${escapeHtml(item.color || "#20201d")}">
+        <div class="study-cds-card-head">
+          <div class="study-cds-title">
+            <span class="study-cds-ticker">${escapeHtml(item.ticker)}</span>
+            <div>
+              <h3>${escapeHtml(item.name)}</h3>
+              <p>USD Senior Single-name · 5Y</p>
+            </div>
+          </div>
+          <span class="study-cds-freshness ${freshness.className}">${freshness.label}</span>
+        </div>
+        <div class="study-cds-metrics">
+          <div>
+            <span>Latest</span>
+            <strong>${formatStudyCdsBps(latest.bps)}</strong>
+          </div>
+          <div>
+            <span>1M 변화</span>
+            <strong class="${changeClass}">${formatStudyCdsBps(latest.change1mBps, true)}</strong>
+          </div>
+          <div>
+            <span>마지막 실거래</span>
+            <strong>${formatStudyCdsObservationDate(latest.observedDate)}</strong>
+          </div>
+          <div>
+            <span>1Y 직접 관측</span>
+            <strong>${Number(latest.observedDays || 0).toLocaleString("en-US")}일</strong>
+          </div>
+        </div>
+        <div class="study-cds-chart-wrap">
+          <canvas data-study-cds-chart="${escapeHtml(item.ticker)}" aria-label="${escapeHtml(item.name)} 5-year CDS transaction spread"></canvas>
+        </div>
+        <div class="study-cds-card-foot">
+          <span><i class="is-observed"></i>직접 관측</span>
+          <span><i class="is-carried"></i>직전값 이월</span>
+          <span>직접 ${Number(latest.directTrades1y || 0).toLocaleString("en-US")}건 / 전체 5Y ${Number(latest.allTrades1y || 0).toLocaleString("en-US")}건</span>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="study-cds-page">
+      <header class="study-cds-page-head">
+        <div>
+          <span class="study-cds-eyebrow">DTCC SEC PUBLIC DISSEMINATION</span>
+          <h2>Big Tech 5Y CDS</h2>
+          <p>실제 보고된 CDS 거래를 통해 빅테크 신용위험 보험료의 방향을 추적합니다. bps가 높을수록 시장이 요구한 신용보호 비용이 높습니다.</p>
+        </div>
+        <div class="study-cds-head-actions">
+          <div class="m7-range-row">${rangeMarkup}</div>
+          <span>DTCC file ${escapeHtml(studyCdsData.updatedAt || "-")}</span>
+        </div>
+      </header>
+
+      <div class="study-cds-snapshot-grid">
+        <div><span>가장 높은 위험 보험료</span><strong>${escapeHtml(sortedLatest[0]?.ticker ?? "-")} ${formatStudyCdsBps(sortedLatest[0]?.latest?.bps)}</strong></div>
+        <div><span>가장 낮은 위험 보험료</span><strong>${escapeHtml(tightestItem?.ticker ?? "-")} ${formatStudyCdsBps(tightestItem?.latest?.bps)}</strong></div>
+        <div><span>6개사 중앙값</span><strong>${formatStudyCdsBps(medianBps)}</strong></div>
+        <div><span>3일 이내 직접 관측</span><strong>${freshCount} / ${latestItems.length}</strong></div>
+      </div>
+
+      <div class="study-cds-method-strip">
+        <div><span>산출</span><strong>${escapeHtml(studyCdsData.methodology?.summary ?? "")}</strong></div>
+        <div><span>필터</span><strong>${escapeHtml(studyCdsData.methodology?.filters ?? "")}</strong></div>
+        <div><span>주의</span><strong>${escapeHtml(studyCdsData.methodology?.limits ?? "")}</strong></div>
+      </div>
+
+      <section class="study-cds-grid">${cardsMarkup}</section>
+
+      <footer class="study-cds-source-row">
+        <p>${escapeHtml(studyCdsData.methodology?.carry ?? "")}</p>
+        <a href="${escapeHtml(studyCdsData.source?.url ?? "https://pddata.dtcc.com/ppd/secdashboard")}" target="_blank" rel="noreferrer">DTCC 원자료</a>
+      </footer>
+    </section>
+  `;
+
+  usOverviewRoot.querySelectorAll("[data-study-cds-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studyCdsRange = button.dataset.studyCdsRange || studyCdsData.defaultRange || "1y";
+      render();
+    });
+  });
+  items.forEach((item) => {
+    const canvas = usOverviewRoot.querySelector(`[data-study-cds-chart="${item.ticker}"]`);
+    createStudyCdsChart(canvas, item, activeRange);
+  });
+}
+
 function renderStudyOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -17712,9 +17961,13 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Study") {
-    summaryText.textContent = state.studyView === "DataCenter"
-      ? "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status"
-      : "Study dashboard for focused market-cap and cross-market comparisons";
+    if (state.studyView === "DataCenter") {
+      summaryText.textContent = "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status";
+    } else if (state.studyView === "Cds") {
+      summaryText.textContent = "DTCC-reported 5Y single-name CDS transaction spreads for major US technology companies";
+    } else {
+      summaryText.textContent = "Study dashboard for focused market-cap and cross-market comparisons";
+    }
     return;
   }
 
@@ -18214,6 +18467,10 @@ function render() {
 
   if (state.tab === "Study") {
     renderSummary([]);
+    if (state.studyView === "Cds") {
+      renderStudyCdsOverview();
+      return;
+    }
     if (state.studyView === "DataCenter") {
       renderStudyDataCenterOverview();
       return;

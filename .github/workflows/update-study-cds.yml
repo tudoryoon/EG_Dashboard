@@ -1,0 +1,56 @@
+name: Update Study CDS
+
+on:
+  workflow_dispatch:
+    inputs:
+      backfill:
+        description: Refresh the full one-year DTCC history
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # 00:40 UTC = 09:40 KST, after DTCC's usual next-day 00:15 UTC file publication.
+    - cron: "40 0 * * 2-6"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-study-cds
+  cancel-in-progress: false
+
+jobs:
+  update-study-cds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh DTCC CDS data
+        shell: bash
+        run: |
+          if [[ "${{ inputs.backfill }}" == "true" ]]; then
+            python scripts/update_study_cds.py --backfill
+          else
+            python scripts/update_study_cds.py
+          fi
+
+      - name: Commit updated CDS data
+        run: |
+          if git diff --quiet -- data/study-cds-data.js; then
+            echo "No CDS data changes detected."
+            exit 0
+          fi
+          python scripts/bump_data_cache_versions.py data/study-cds-data.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/study-cds-data.js index.html
+          git commit -m "Update Study CDS data" || exit 0
+          git pull --rebase origin main
+          git push
