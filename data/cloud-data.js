@@ -32,7 +32,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS",
-        values: [36.57, 33.29, 27.49, 20.24, 15.8, 12.16, 14.47, 13.22, 17.25, 18.7, 16.77, 18.93, 16.89, 17.47, 20.23, 23.6, 28.43, null],
+        values: [36.57, 33.29, 27.49, 20.24, 15.8, 12.16, 14.47, 13.22, 17.25, 18.7, 16.77, 18.93, 16.89, 17.47, 20.23, 23.6, 28.43, 36.79],
       },
       {
         key: "microsoft",
@@ -54,7 +54,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS Margin",
-        values: [35.35, 28.95, 26.31, 24.35, 23.99, 24.23, 29.67, 29.61, 37.63, 35.52, 38.06, 36.93, 39.45, 32.91, 34.64, 35.03, 37.68, null],
+        values: [35.35, 28.95, 26.31, 24.35, 23.99, 24.23, 29.67, 29.61, 37.63, 35.52, 38.06, 36.93, 39.45, 32.91, 34.64, 35.03, 37.68, 39.36],
       },
       {
         key: "microsoft",
@@ -76,7 +76,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS Revenue",
-        values: [18441, 19739, 20538, 21378, 21354, 22140, 23509, 24204, 25037, 26281, 27452, 28786, 29267, 30873, 33006, 35579, 37587, null],
+        values: [18441, 19739, 20538, 21378, 21354, 22140, 23509, 24204, 25037, 26281, 27452, 28786, 29267, 30873, 33006, 35579, 37587, 42232],
       },
       {
         key: "microsoft",
@@ -92,14 +92,14 @@ window.cloudDashboardData = {
   },
   rpo: {
     title: "Cloud RPO Backlog",
-    subtitle: "Quarterly remaining performance obligations. AWS is primarily >1Y AWS commitments; Microsoft is Commercial RPO; Google is Alphabet RPO, now mostly Google Cloud.",
+    subtitle: "Quarterly contracted backlog. AWS is management-disclosed revenue backlog, while Microsoft is Commercial RPO and Google is Alphabet RPO, now mostly Google Cloud; definitions are not identical.",
     unit: "$B",
-    source: "SEC filings and company disclosures",
+    source: "Company filings, earnings releases, and earnings-call disclosures",
     series: [
       {
         key: "amazon",
-        name: "AWS RPO",
-        values: [88.9, 100.1, 104.3, 110.4, 122.0, 132.1, 133.0, 155.7, 157.7, 156.6, 164.0, 177.0, 189.0, 195.0, 200.0, 244.0, 364.0, null],
+        name: "AWS Revenue Backlog",
+        values: [88.9, 100.1, 104.3, 110.4, 122.0, 132.1, 133.0, 155.7, 157.7, 156.6, 164.0, 177.0, 189.0, 195.0, 200.0, 244.0, 364.0, 496.0],
       },
       {
         key: "microsoft",
