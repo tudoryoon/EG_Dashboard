@@ -42,7 +42,7 @@ def main() -> None:
     require(membership_counts["nasdaq100"] >= 90, f"NASDAQ 100 membership is too small: {membership_counts['nasdaq100']}")
     require(membership_counts["dowjones"] >= 25, f"Dow membership is too small: {membership_counts['dowjones']}")
     require(membership_counts["russell2000"] >= 1_500, f"Russell 2000 membership is too small: {membership_counts['russell2000']}")
-    for ticker in ("NVDA", "ASML", "QQQ", "SPY"):
+    for ticker in ("NVDA", "ASML", "QQQ", "QQQE", "SPY"):
         require(ticker in rs_by_ticker, f"Required RS ticker is missing: {ticker}")
 
     trend_rows = trend.get("rows") or {}
@@ -50,7 +50,7 @@ def main() -> None:
     require(len(trend_rows.get("all") or []) == len(rs_rows), "Trend Score all-universe count differs from RS.")
     require(len(trend_rows.get("nasdaq100") or []) >= 90, "Trend Score NASDAQ 100 universe is too small.")
     trend_all = {row.get("ticker") for row in trend_rows.get("all") or []}
-    for ticker in ("NVDA", "ASML", "QQQ", "SPY"):
+    for ticker in ("NVDA", "ASML", "QQQ", "QQQE", "SPY"):
         require(ticker in trend_all, f"Required Trend Score ticker is missing: {ticker}")
 
     financial_counts = (financials.get("scope") or {}).get("counts") or {}

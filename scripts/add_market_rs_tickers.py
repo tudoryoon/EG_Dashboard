@@ -103,6 +103,15 @@ def fetch_ticker_meta(ticker: str) -> tuple[str, int | None]:
         shares = shares or normalize_positive_int(
             info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
         )
+        if shares is None and str(info.get("quoteType") or "").upper() == "ETF":
+            total_assets = normalize_positive_int(info.get("totalAssets"))
+            nav_price = info.get("navPrice") or info.get("regularMarketPrice")
+            try:
+                nav_price = float(nav_price)
+            except Exception:
+                nav_price = 0.0
+            if total_assets and math.isfinite(nav_price) and nav_price > 0:
+                shares = normalize_positive_int(total_assets / nav_price)
     except Exception:
         pass
     return name, shares

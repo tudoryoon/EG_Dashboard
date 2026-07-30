@@ -507,6 +507,17 @@
       "sharesOutstanding": 393100000
     },
     {
+      "ticker": "QQQE",
+      "name": "Direxion NASDAQ-100 Equal Weighted Index Shares",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 12054599
+    },
+    {
       "ticker": "RBLX",
       "name": "Roblox Corporation",
       "memberships": {
