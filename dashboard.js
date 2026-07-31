@@ -459,9 +459,10 @@ const state = {
   macroDashboardCustomStart: "",
   macroDashboardCustomEnd: "",
   macroDashboardSelection: [
-    "policy:fed_funds",
-    "gdp:real_gdp_annualized",
     "market:sp500",
+    "policy:fed_funds",
+    "rates:us2y",
+    "rates:us10y",
   ],
   memorySpotRanges: {},
   infraRanges: Object.fromEntries(
