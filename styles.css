@@ -7541,6 +7541,12 @@ h1 {
   background: #fff;
 }
 
+.market-canslim-financial-chart-wrap {
+  width: 100%;
+  height: 340px;
+  margin: 4px 0 16px;
+}
+
 .market-rs-financial-table {
   width: 100%;
   min-width: 780px;
@@ -8314,6 +8320,10 @@ h1 {
 
   .market-canslim-grid {
     grid-template-columns: 1fr;
+  }
+
+  .market-canslim-financial-chart-wrap {
+    height: 300px;
   }
 
   .market-rs-extension-title,

@@ -449,7 +449,7 @@ const state = {
   trendScoreVisibleCardCount: TREND_SCORE_CARD_BATCH_SIZE,
   canslimSelectedTicker: "",
   canslimUniverse: "all",
-  canslimBriefingSector: "all",
+  canslimBriefingSector: "briefingAll",
   canslimSort: "canslimDesc",
   canslimVisibleCardCount: CANSLIM_CARD_BATCH_SIZE,
   macroIndicatorKey: "",
@@ -9070,6 +9070,9 @@ function renderMarketRsFinancials(row) {
         </div>
         <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
       </div>
+      <div class="market-canslim-financial-chart-wrap">
+        <canvas data-canslim-chart="financials" aria-label="Quarterly revenue, margin, and revenue growth chart"></canvas>
+      </div>
       <div class="market-rs-financial-table-wrap">
         <table class="market-rs-financial-table">
           <thead>
@@ -9092,6 +9095,172 @@ function renderMarketRsFinancials(row) {
       <p class="market-rs-financial-note">${scopeText}</p>
     </div>
   `;
+}
+
+function createMarketCanslimFinancialChart(canvas, financialItem) {
+  if (typeof Chart === "undefined" || !canvas || !financialItem?.quarters?.length) {
+    return;
+  }
+
+  const quarters = [...financialItem.quarters].slice(0, 8).reverse();
+  const finiteOrNull = (value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+    return Number.isFinite(Number(value)) ? Number(value) : null;
+  };
+  const revenueValues = quarters.map((quarter) => {
+    const revenue = finiteOrNull(quarter.revenue);
+    return revenue === null ? null : Number((revenue / 1_000_000_000).toFixed(2));
+  });
+  const grossMarginValues = quarters.map((quarter) => finiteOrNull(quarter.grossMarginPct));
+  const operatingMarginValues = quarters.map((quarter) => finiteOrNull(quarter.operatingMarginPct));
+  const revenueGrowthValues = quarters.map((quarter) => finiteOrNull(quarter.revenueYoyPct));
+  const percentValues = [...grossMarginValues, ...operatingMarginValues, ...revenueGrowthValues].filter((value) => value !== null);
+  const minimumPercent = percentValues.length ? Math.min(...percentValues) : 0;
+  const maximumPercent = percentValues.length ? Math.max(...percentValues) : 100;
+  const percentAxisMin = minimumPercent < 0 ? Math.floor((minimumPercent - 5) / 10) * 10 : 0;
+  const percentAxisMax = Math.max(10, Math.ceil((maximumPercent + 5) / 10) * 10);
+  const maximumRevenue = Math.max(...revenueValues.filter((value) => value !== null), 0);
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: quarters.map((quarter) => quarter.period ?? "-"),
+      datasets: [
+        {
+          type: "bar",
+          label: "Revenue",
+          data: revenueValues,
+          backgroundColor: "rgba(17, 24, 39, 0.78)",
+          borderColor: "#111827",
+          borderWidth: 1,
+          borderRadius: 3,
+          categoryPercentage: 0.78,
+          barPercentage: 0.86,
+          yAxisID: "yRevenue",
+          order: 2,
+        },
+        {
+          type: "bar",
+          label: "GPM",
+          data: grossMarginValues,
+          backgroundColor: "rgba(22, 163, 74, 0.46)",
+          borderColor: "#15803d",
+          borderWidth: 1,
+          borderRadius: 3,
+          categoryPercentage: 0.78,
+          barPercentage: 0.86,
+          yAxisID: "yPercent",
+          order: 2,
+        },
+        {
+          type: "bar",
+          label: "OPM",
+          data: operatingMarginValues,
+          backgroundColor: "rgba(217, 119, 6, 0.52)",
+          borderColor: "#b45309",
+          borderWidth: 1,
+          borderRadius: 3,
+          categoryPercentage: 0.78,
+          barPercentage: 0.86,
+          yAxisID: "yPercent",
+          order: 2,
+        },
+        {
+          type: "line",
+          label: "Revenue YoY",
+          data: revenueGrowthValues,
+          borderColor: "#dc2626",
+          backgroundColor: "#dc2626",
+          borderWidth: 2.4,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointHitRadius: 12,
+          pointBackgroundColor: "#ffffff",
+          pointBorderColor: "#dc2626",
+          pointBorderWidth: 2,
+          tension: 0.22,
+          spanGaps: true,
+          yAxisID: "yPercent",
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+            padding: 14,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            afterTitle: (items) => {
+              const quarter = quarters[items?.[0]?.dataIndex];
+              return quarter ? formatRsFinancialPeriodRange(quarter.periodStart, quarter.periodEnd) : "";
+            },
+            label: (context) => {
+              if (context.parsed.y === null) {
+                return `${context.dataset.label}: -`;
+              }
+              if (context.dataset.yAxisID === "yRevenue") {
+                return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(1)}B`;
+              }
+              return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: false,
+          grid: { display: false },
+          ticks: { color: "#777770", maxRotation: 0, autoSkip: false, font: { size: 10 } },
+          border: { color: "#d8d8d2" },
+        },
+        yRevenue: {
+          position: "left",
+          beginAtZero: true,
+          suggestedMax: maximumRevenue > 0 ? maximumRevenue * 1.12 : 10,
+          title: { display: true, text: "Revenue ($B)", color: "#111827", font: { weight: "700" } },
+          ticks: {
+            color: "#111827",
+            callback: (value) => `$${Number(value).toFixed(0)}B`,
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#111827" },
+        },
+        yPercent: {
+          position: "right",
+          min: percentAxisMin,
+          max: percentAxisMax,
+          title: { display: true, text: "Margins / Growth (%)", color: "#b45309", font: { weight: "700" } },
+          ticks: {
+            color: "#8a5a0a",
+            callback: (value) => `${Number(value).toFixed(0)}%`,
+            maxTicksLimit: 7,
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: "#b45309" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
 }
 
 function normalizeCanslimTicker(ticker) {
@@ -9828,6 +9997,11 @@ function renderMarketCanslimOverview() {
       </section>
     </section>
   `;
+
+  createMarketCanslimFinancialChart(
+    usOverviewRoot.querySelector('[data-canslim-chart="financials"]'),
+    selected?.analysis?.financialItem,
+  );
 
   usOverviewRoot.querySelectorAll("[data-canslim-ticker]").forEach((button) => {
     button.addEventListener("click", () => {
