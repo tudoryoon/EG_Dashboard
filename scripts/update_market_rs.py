@@ -1281,8 +1281,7 @@ def compute_atr_series(high_series: pd.Series, low_series: pd.Series, close_seri
         ],
         axis=1,
     ).max(axis=1)
-    min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
-    return true_range.rolling(window, min_periods=min_periods).mean().dropna()
+    return true_range.rolling(window, min_periods=ATR_MIN_PERIODS).mean().dropna()
 
 
 def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> pd.Series:
@@ -1305,9 +1304,8 @@ def compute_atr_pct_series(high_series: pd.Series, low_series: pd.Series, close_
         ],
         axis=1,
     ).max(axis=1)
-    min_periods = ATR_MIN_PERIODS if len(frame) < window + 1 else window
     true_range_pct = (true_range / previous_close.where(previous_close > 0)) * 100
-    return true_range_pct.rolling(window, min_periods=min_periods).mean().dropna()
+    return true_range_pct.rolling(window, min_periods=ATR_MIN_PERIODS).mean().dropna()
 
 
 def compute_atr_pct(high_series: pd.Series, low_series: pd.Series, close_series: pd.Series, window: int = ATR_WINDOW) -> float | None:
