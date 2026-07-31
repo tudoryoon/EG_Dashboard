@@ -9122,6 +9122,14 @@ function createMarketCanslimFinancialChart(canvas, financialItem) {
   const percentAxisMin = minimumPercent < 0 ? Math.floor((minimumPercent - 5) / 10) * 10 : 0;
   const percentAxisMax = Math.max(10, Math.ceil((maximumPercent + 5) / 10) * 10);
   const maximumRevenue = Math.max(...revenueValues.filter((value) => value !== null), 0);
+  const revenueMagnitude = maximumRevenue > 0 ? 10 ** Math.floor(Math.log10(maximumRevenue)) : 10;
+  const revenueStep = revenueMagnitude / 2;
+  const revenueAxisMax = maximumRevenue > 0
+    ? Math.ceil((maximumRevenue * 1.12) / revenueStep) * revenueStep
+    : 10;
+  const revenueAxisMin = percentAxisMin < 0
+    ? revenueAxisMax * (percentAxisMin / percentAxisMax)
+    : 0;
 
   const chart = new Chart(canvas, {
     type: "bar",
@@ -9232,15 +9240,18 @@ function createMarketCanslimFinancialChart(canvas, financialItem) {
         },
         yRevenue: {
           position: "left",
-          beginAtZero: true,
-          suggestedMax: maximumRevenue > 0 ? maximumRevenue * 1.12 : 10,
+          min: revenueAxisMin,
+          max: revenueAxisMax,
           title: { display: true, text: "Revenue ($B)", color: "#111827", font: { weight: "700" } },
           ticks: {
             color: "#111827",
-            callback: (value) => `$${Number(value).toFixed(0)}B`,
+            callback: (value) => (Number(value) < 0 ? "" : `$${Number(value).toFixed(0)}B`),
             maxTicksLimit: 6,
           },
-          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          grid: {
+            color: (context) => (Number(context.tick.value) === 0 ? "rgba(17, 24, 39, 0.28)" : "rgba(70, 70, 66, 0.10)"),
+            lineWidth: (context) => (Number(context.tick.value) === 0 ? 1.4 : 1),
+          },
           border: { color: "#111827" },
         },
         yPercent: {
