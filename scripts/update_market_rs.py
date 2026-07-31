@@ -1214,6 +1214,7 @@ def build_payload(
             "high": serialize_price_line(high_window),
             "low": serialize_price_line(low_window),
             "volume": serialize_volume_line(volume_window),
+            "atr21Pct": serialize_price_line(ticker_atr_pct_series.reindex(history_rating_all.index)),
         }
 
     rows.sort(key=lambda item: (-int(item.get("rsRatingAll") or 0), item["ticker"]))

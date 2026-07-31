@@ -11084,7 +11084,13 @@ function createMarketRsAtrChart(canvas, row) {
   const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
-  const atrSeries = calculateAtrPctSeries(history.high ?? [], history.low ?? [], history.price ?? []);
+  const storedAtrSeries = Array.isArray(history.atr21Pct) && history.atr21Pct.length === labels.length
+    ? history.atr21Pct.map((value) => {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : null;
+      })
+    : null;
+  const atrSeries = storedAtrSeries ?? calculateAtrPctSeries(history.high ?? [], history.low ?? [], history.price ?? []);
   const selectedAtr = atrSeries.slice(startIndex);
   const atrValues = selectedAtr.filter((value) => Number.isFinite(value));
   const latestAtrIndex = getLastFiniteSeriesIndex(selectedAtr);
