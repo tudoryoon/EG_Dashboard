@@ -68,6 +68,8 @@ def fetch_bytes(url: str, attempts: int = 3) -> bytes:
         url,
         headers={
             "Accept": "application/json,text/csv,application/zip,*/*",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
             "User-Agent": "EG-Dashboard-DTCC-CDS/1.0",
         },
     )
@@ -83,10 +85,42 @@ def fetch_bytes(url: str, attempts: int = 3) -> bytes:
     raise RuntimeError(f"Failed to fetch {url}: {last_error}")
 
 
+def probe_expected_file(file_date: date) -> dict[str, Any] | None:
+    file_name = f"SEC_CUMULATIVE_CREDITS_{file_date.strftime('%Y_%m_%d')}.zip"
+    full_path = f"https://kgc0418-tdw-data-0.s3.amazonaws.com/sec/eod/{file_name}"
+    request = urllib.request.Request(
+        full_path,
+        headers={
+            "Accept": "application/zip,*/*",
+            "Cache-Control": "no-cache",
+            "Range": "bytes=0-0",
+            "User-Agent": "EG-Dashboard-DTCC-CDS/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            if response.status not in {200, 206}:
+                return None
+    except Exception:
+        return None
+    return {"fileName": file_name, "fullFilePath": full_path}
+
+
 def fetch_file_list() -> list[dict[str, Any]]:
-    payload = json.loads(fetch_bytes(LIST_URL).decode("utf-8"))
+    payload = json.loads(fetch_bytes(f"{LIST_URL}?_={int(time.time())}").decode("utf-8"))
     if not isinstance(payload, list):
         raise ValueError("Unexpected DTCC file-list response")
+    listed_dates = {
+        file_date
+        for entry in payload
+        if (file_date := parse_file_date(str(entry.get("fileName") or "")))
+    }
+    expected_date = datetime.now(UTC).date() - timedelta(days=1)
+    if expected_date not in listed_dates:
+        expected_entry = probe_expected_file(expected_date)
+        if expected_entry:
+            payload.append(expected_entry)
+            print(f"Added directly published DTCC file missing from file list: {expected_entry['fileName']}")
     return payload
 
 
