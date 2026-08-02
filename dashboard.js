@@ -17879,7 +17879,7 @@ function createUsMarginChart(canvas, company) {
   const hasAdjustments = (company.marginAdjustments ?? []).length > 0;
   const datasets = [
     {
-      label: hasAdjustments ? `Adjusted ${marginLabel}` : marginLabel,
+      label: hasAdjustments ? `Adjusted ${marginLabel}` : `Reported ${marginLabel}`,
       data: adjustedMargin,
       borderColor: "#2563eb",
       backgroundColor: "#2563eb",
