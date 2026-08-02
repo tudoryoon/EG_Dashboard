@@ -10667,15 +10667,12 @@ function ensureMarketRsInteractionMode() {
   return MARKET_RS_INTERACTION_MODE;
 }
 
-function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
+function buildMarketRsEarningsMarkers(row, selectedLabels, selectedPrice) {
   const earningsProfile = getMarketCanslimEarningsProfile(row?.ticker);
   const quarters = earningsProfile?.quarters ?? [];
   if (!quarters.length || !selectedLabels.length) {
     return { data: [], byIndex: new Map() };
   }
-  const markerY = Number.isFinite(priceMin) && Number.isFinite(priceMax)
-    ? priceMin + (priceMax - priceMin) * 0.08
-    : row?.price ?? 0;
   const byIndex = new Map();
   const rotations = [];
   const colors = [];
@@ -10698,7 +10695,9 @@ function buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax) {
       colors.push(Number.isFinite(surprisePct) && surprisePct < 0 ? "#dc2626" : "#16a34a");
       return {
         x: selectedLabels[index],
-        y: markerY,
+        y: 0.08,
+        chartDate: selectedLabels[index],
+        stockPrice: Number.isFinite(Number(selectedPrice?.[index])) ? Number(selectedPrice[index]) : null,
         releaseDate,
         earningsEvent: quarter,
       };
@@ -10809,7 +10808,7 @@ function createMarketRsChart(canvas, row) {
       priceMax += pad;
     }
   }
-  const earningsMarkers = buildMarketRsEarningsMarkers(row, selectedLabels, priceMin, priceMax);
+  const earningsMarkers = buildMarketRsEarningsMarkers(row, selectedLabels, selectedPrice);
   const interactionMode = ensureMarketRsInteractionMode();
   const ratingLatestIndex = getLastFiniteSeriesIndex(selectedRatings);
   const priceLatestIndex = getLastFiniteSeriesIndex(selectedPrice);
@@ -10839,7 +10838,7 @@ function createMarketRsChart(canvas, row) {
       spanGaps: true,
       pointRadius: (context) => (context.dataIndex === priceLatestIndex ? 3 : 0),
       pointHoverRadius: 4,
-      yAxisID: "y1",
+      yAxisID: "yEarnings",
     },
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
       label: series.label,
@@ -10915,6 +10914,9 @@ function createMarketRsChart(canvas, row) {
                   `${label} ${formatCanslimEarningsPercent(eps.surprisePct)}`,
                   `Actual ${formatRsFinancialEps(eps.actual)} / Est ${formatRsFinancialEps(eps.estimate)}`,
                   `Diff ${formatCanslimEarningsValue(eps.surpriseValue)}`,
+                  Number.isFinite(Number(context.raw?.stockPrice))
+                    ? `Stock Price ${context.raw.chartDate}: ${formatUsStockPrice(Number(context.raw.stockPrice))}`
+                    : "Stock Price: N/A",
                 ];
               }
               if (context.dataset.yAxisID === "y") {
@@ -10963,6 +10965,14 @@ function createMarketRsChart(canvas, row) {
             color: "#111827",
             callback: (value) => formatUsStockPrice(Number(value), value >= 100 ? 0 : 2),
           },
+        },
+        yEarnings: {
+          display: false,
+          min: 0,
+          max: 1,
+          grid: { display: false },
+          ticks: { display: false },
+          border: { display: false },
         },
       },
     },
