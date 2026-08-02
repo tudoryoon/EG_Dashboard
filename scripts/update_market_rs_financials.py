@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -14,7 +16,9 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
+BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-rs-financials-data.js"
+SEC_TICKER_CACHE_PATH = ROOT / "data" / "sec-company-tickers-cache.json"
 SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
@@ -24,6 +28,9 @@ SEC_HEADERS = {
     "Accept-Encoding": "gzip, deflate",
 }
 TARGET_MEMBERSHIPS = ("sp500", "nasdaq100")
+NON_COMPANY_TICKERS = {"DRAM"}
+UNSUPPORTED_AUTOMATED_TICKERS = {"VIK"}
+SEC_CIK_OVERRIDES = {"XOM": "0000034088"}
 
 REVENUE_TAGS = [
     "RevenueFromContractWithCustomerExcludingAssessedTax",
@@ -49,7 +56,10 @@ CAPEX_TAGS = [
 FINANCIAL_FORMS = {"10-Q", "10-K", "20-F", "40-F", "6-K"}
 EARNINGS_RELEASE_FORMS = {"8-K", "6-K"}
 EARNINGS_RELEASE_DOC_LIMIT = 8
-EARNINGS_RELEASE_FILING_SCAN_LIMIT = 8
+EARNINGS_RELEASE_FILING_SCAN_LIMIT = 12
+SEC_REQUEST_INTERVAL_SECONDS = 0.16
+_SEC_REQUEST_LOCK = threading.Lock()
+_SEC_LAST_REQUEST_AT = 0.0
 
 
 def read_js_payload(path: Path, variable_name: str) -> dict[str, Any]:
@@ -77,6 +87,21 @@ def read_previous_payload() -> dict[str, Any]:
         return read_js_payload(OUTPUT_PATH, "marketRsFinancialsData")
     except Exception:
         return {}
+
+
+def load_daily_briefing_tickers() -> set[str]:
+    payload = read_js_payload(BRIEFING_DATA_PATH, "marketBriefingData")
+    tickers: set[str] = set()
+    for sector in payload.get("sectorPanels", []):
+        if not isinstance(sector, dict):
+            continue
+        for item in sector.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            ticker = str(item.get("ticker") or "").strip().upper()
+            if ticker and ticker not in NON_COMPANY_TICKERS and "." not in ticker:
+                tickers.add(ticker)
+    return tickers
 
 
 def safe_round(value: float | None, digits: int = 2) -> float | None:
@@ -129,20 +154,47 @@ def scaled_amount(value: float | None, scale: float) -> float | None:
     return float(value) * scale
 
 
+def fetch_response(url: str) -> requests.Response:
+    global _SEC_LAST_REQUEST_AT
+    last_error: Exception | None = None
+    for attempt in range(5):
+        try:
+            with _SEC_REQUEST_LOCK:
+                wait_seconds = SEC_REQUEST_INTERVAL_SECONDS - (time.monotonic() - _SEC_LAST_REQUEST_AT)
+                if wait_seconds > 0:
+                    time.sleep(wait_seconds)
+                _SEC_LAST_REQUEST_AT = time.monotonic()
+            response = requests.get(url, headers=SEC_HEADERS, timeout=40)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as error:
+            last_error = error
+            if attempt == 4:
+                break
+            time.sleep(1.5 * (2**attempt))
+    raise RuntimeError(f"SEC request failed after retries: {url}") from last_error
+
+
 def fetch_json(url: str) -> dict[str, Any]:
-    response = requests.get(url, headers=SEC_HEADERS, timeout=40)
-    response.raise_for_status()
-    return response.json()
+    return fetch_response(url).json()
 
 
 def fetch_text(url: str) -> str:
-    response = requests.get(url, headers=SEC_HEADERS, timeout=40)
-    response.raise_for_status()
-    return response.text
+    return fetch_response(url).text
 
 
 def load_sec_ticker_map() -> dict[str, dict[str, Any]]:
-    payload = fetch_json(SEC_TICKER_URL)
+    try:
+        payload = fetch_json(SEC_TICKER_URL)
+        SEC_TICKER_CACHE_PATH.write_text(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    except Exception:
+        if not SEC_TICKER_CACHE_PATH.exists():
+            raise
+        payload = json.loads(SEC_TICKER_CACHE_PATH.read_text(encoding="utf-8"))
     mapping: dict[str, dict[str, Any]] = {}
     for item in payload.values():
         ticker = str(item.get("ticker") or "").upper()
@@ -240,10 +292,34 @@ def is_quarter_length_fact(start: str | None, end: str | None) -> bool:
     return days is not None and 45 <= days <= 125
 
 
+def is_same_quarter_year_ago(current_end: str | None, prior_end: str | None) -> bool:
+    current_date = parse_iso_date(current_end)
+    prior_date = parse_iso_date(prior_end)
+    if not current_date or not prior_date:
+        return False
+    return 330 <= (current_date - prior_date).days <= 400
+
+
 def fiscal_year_from_end(end: str | None, fallback: int | None = None) -> int | None:
     if end and re.match(r"\d{4}-\d{2}-\d{2}$", end):
         return int(end[:4])
     return fallback if isinstance(fallback, int) else None
+
+
+def annual_fiscal_year(fy: int | None, end: str | None, frame: str | None = None) -> int | None:
+    """Resolve the year of an annual fact without trusting stale comparison-row FY metadata."""
+    end_year = fiscal_year_from_end(end)
+    frame_match = re.match(r"CY(\d{4})$", str(frame or ""))
+    frame_year = int(frame_match.group(1)) if frame_match else None
+    if isinstance(frame_year, int):
+        return frame_year
+    if isinstance(fy, int) and isinstance(end_year, int):
+        # SEC comparison columns may retain the filing's current FY even when the
+        # fact itself ends two or more years earlier.
+        if abs(fy - end_year) > 1:
+            return end_year
+        return fy
+    return fy if isinstance(fy, int) else end_year
 
 
 def infer_quarter_period_from_range(
@@ -377,7 +453,7 @@ def extract_tag_series(
     annual_ranges = sorted(
         [
             {
-                "fy": fiscal_year_from_end(row.get("end"), row.get("fy")),
+                "fy": annual_fiscal_year(row.get("fy"), row.get("end"), row.get("frame")),
                 "start": row.get("start"),
                 "end": row.get("end"),
             }
@@ -426,13 +502,19 @@ def extract_tag_series(
         }
 
         if frame and re.match(r"CY\d{4}Q[1-4]$", frame):
+            if frame.endswith("Q4") and is_full_year_fact(row.get("start"), end):
+                annual_year = str(annual_fiscal_year(fy, end) or inferred_fy or frame[2:6])
+                existing_annual = annuals.get(annual_year)
+                if not existing_annual or str(item.get("filed") or "") >= str(existing_annual.get("filed") or ""):
+                    annuals[annual_year] = item
+                continue
             existing = quarters.get(period or "")
             if not existing or str(item.get("filed") or "") >= str(existing.get("filed") or ""):
                 quarters[period or ""] = item
             continue
 
         if frame and re.match(r"CY\d{4}$", frame):
-            year = str(fiscal_year_from_end(end, fy) or fiscal_year_key(fy, frame) or "")
+            year = str(annual_fiscal_year(fy, end, frame) or inferred_fy or "")
             if year and is_full_year_fact(row.get("start"), end):
                 annuals[year] = item
             continue
@@ -458,15 +540,25 @@ def extract_tag_series(
     if allow_annual_derive:
         for year, annual in annuals.items():
             q4_key = f"FY{year}Q4"
-            if q4_key in quarters:
-                continue
             q_values = [quarters.get(f"FY{year}Q{quarter}") for quarter in (1, 2, 3)]
             if all(item and item.get("value") is not None for item in q_values):
                 derived = dict(annual)
                 derived["value"] = float(annual["value"]) - sum(float(item["value"]) for item in q_values if item)
                 derived["start"] = next_day_iso(q_values[-1].get("end") if q_values[-1] else None)
                 derived["derived"] = "FY-Q1-Q2-Q3"
-                quarters[q4_key] = derived
+                existing_q4 = quarters.get(q4_key)
+                first_three_values = [float(item["value"]) for item in q_values if item]
+                first_three_average = sum(first_three_values) / 3
+                existing_q4_value = safe_float((existing_q4 or {}).get("value"))
+                existing_q4_looks_cumulative = (
+                    existing_q4_value is not None
+                    and min(first_three_values) > 0
+                    and existing_q4_value > sum(first_three_values)
+                    and existing_q4_value / first_three_average > 2.8
+                    and max(first_three_values) / min(first_three_values) < 2
+                )
+                if existing_q4 is None or existing_q4_looks_cumulative:
+                    quarters[q4_key] = derived
 
         for (year, quarter), item in ytd.items():
             period = item.get("period") or f"{year}Q{quarter}"
@@ -482,6 +574,38 @@ def extract_tag_series(
                 derived["start"] = next_day_iso(previous.get("end"))
                 derived["derived"] = f"YTD-Q{quarter - 1}"
                 quarters[period] = derived
+
+        # A few issuers expose a full-year fact with a quarter-looking frame. If
+        # Q1-Q3 are stable quarterly values and Q4 alone is clearly the annual
+        # total, convert it to the standalone fourth quarter.
+        derivable_tags = set(
+            REVENUE_TAGS + GROSS_PROFIT_TAGS + OPERATING_INCOME_TAGS + OCF_TAGS + CAPEX_TAGS
+        )
+        if selected_tag in derivable_tags:
+            fiscal_years = sorted(
+                {
+                    match.group(1)
+                    for period in quarters
+                    if (match := re.match(r"FY(\d{4})Q[1-4]$", period))
+                }
+            )
+            for year in fiscal_years:
+                q_items = [quarters.get(f"FY{year}Q{quarter}") for quarter in (1, 2, 3, 4)]
+                if not all(item and safe_float(item.get("value")) is not None for item in q_items):
+                    continue
+                q_values = [float(item["value"]) for item in q_items if item]
+                first_three = q_values[:3]
+                q4_value = q_values[3]
+                if min(first_three) <= 0 or q4_value <= 0:
+                    continue
+                stable_spread = max(first_three) / min(first_three)
+                first_three_average = sum(first_three) / 3
+                if q4_value > sum(first_three) and q4_value / first_three_average > 2.8 and stable_spread < 2:
+                    derived = dict(q_items[3] or {})
+                    derived["value"] = q4_value - sum(first_three)
+                    derived["start"] = next_day_iso((q_items[2] or {}).get("end"))
+                    derived["derived"] = "FY-Q1-Q2-Q3-stable-series"
+                    quarters[f"FY{year}Q4"] = derived
 
     return {key: value for key, value in quarters.items() if key}
 
@@ -580,11 +704,15 @@ def load_earnings_release_documents(cik: str) -> list[dict[str, Any]]:
     filing_dates = recent.get("filingDate", [])
     report_dates = recent.get("reportDate", [])
     primary_documents = recent.get("primaryDocument", [])
+    filing_items = recent.get("items", [])
     documents: list[dict[str, Any]] = []
 
     scanned = 0
     for index, form in enumerate(forms):
         if form not in EARNINGS_RELEASE_FORMS:
+            continue
+        item_codes = str(filing_items[index] if index < len(filing_items) else "")
+        if form == "8-K" and item_codes and "2.02" not in item_codes:
             continue
         scanned += 1
         if scanned > EARNINGS_RELEASE_FILING_SCAN_LIMIT:
@@ -614,7 +742,16 @@ def load_earnings_release_documents(cik: str) -> list[dict[str, Any]]:
             except Exception:
                 continue
             normalized = html.lower()
-            if "non-gaap" not in normalized and "non gaap" not in normalized and "free cash flow" not in normalized:
+            earnings_terms = sum(
+                term in normalized
+                for term in ("revenue", "gross margin", "operating income", "earnings per share")
+            )
+            if (
+                "non-gaap" not in normalized
+                and "non gaap" not in normalized
+                and "free cash flow" not in normalized
+                and earnings_terms < 2
+            ):
                 continue
             documents.append(
                 {
@@ -693,10 +830,15 @@ def extract_metrics_from_release_html(html: str) -> dict[str, Any]:
     scale = document_scale(html)
     metrics: dict[str, Any] = {
         "revenue": None,
+        "grossProfit": None,
+        "grossMarginPct": None,
         "nonGaapGrossProfit": None,
         "nonGaapGrossMarginPct": None,
+        "operatingIncome": None,
+        "operatingMarginPct": None,
         "nonGaapOperatingIncome": None,
         "nonGaapOperatingMarginPct": None,
+        "epsDiluted": None,
         "nonGaapEpsDiluted": None,
         "ocf": None,
         "fcf": None,
@@ -733,11 +875,17 @@ def extract_metrics_from_release_html(html: str) -> dict[str, Any]:
                     metrics["nonGaapGrossProfit"] = scaled_amount(gross_numeric, scale)
             elif has_non_gaap and "gross profit" in label and "margin" not in label:
                 metrics["nonGaapGrossProfit"] = scaled_amount(numeric, scale)
+            elif not has_adjusted and "gross margin" in label:
+                gross_numeric, gross_is_percent = first_numeric_after_label(values)
+                if gross_is_percent and plausible_percent(gross_numeric):
+                    metrics["grossMarginPct"] = gross_numeric
+            elif not has_adjusted and "gross profit" in label and "margin" not in label:
+                metrics["grossProfit"] = scaled_amount(numeric, scale)
 
             is_non_gaap_operating = has_non_gaap or has_adjusted
             if is_non_gaap_operating and any(term in label for term in ["operating margin", "margin from operations"]):
-                margin_numeric, _ = first_numeric_after_label(values, max_abs=100)
-                if plausible_percent(margin_numeric):
+                margin_numeric, margin_is_percent = first_numeric_after_label(values, max_abs=100)
+                if margin_is_percent and plausible_percent(margin_numeric):
                     metrics["nonGaapOperatingMarginPct"] = margin_numeric
             elif is_non_gaap_operating and any(
                 term in label
@@ -749,11 +897,24 @@ def extract_metrics_from_release_html(html: str) -> dict[str, Any]:
                 ]
             ) and "margin" not in label:
                 metrics["nonGaapOperatingIncome"] = scaled_amount(numeric, scale)
+            elif any(term in label for term in ["operating margin", "margin from operations"]):
+                margin_numeric, _ = first_numeric_after_label(values, max_abs=100)
+                if plausible_percent(margin_numeric):
+                    metrics["operatingMarginPct"] = margin_numeric
+            elif any(
+                term in label
+                for term in ["income from operations", "operating income", "operating profit", "profit from operations"]
+            ) and "margin" not in label:
+                metrics["operatingIncome"] = scaled_amount(numeric, scale)
 
             if has_non_gaap and any(term in label for term in ["diluted earnings per share", "diluted eps", "earnings per share", "net income per share"]):
                 eps_numeric, _ = first_numeric_after_label(values, max_abs=100)
                 if plausible_eps(eps_numeric):
                     metrics["nonGaapEpsDiluted"] = eps_numeric
+            elif not has_adjusted and any(term in label for term in ["diluted earnings per share", "diluted eps", "earnings per share", "net income per share"]):
+                eps_numeric, _ = first_numeric_after_label(values, max_abs=100)
+                if plausible_eps(eps_numeric):
+                    metrics["epsDiluted"] = eps_numeric
 
             if any(term in label for term in ["net cash provided by operating activities", "cash provided by operating activities", "operating cash flow"]) and not any(
                 term in label for term in ["percentage", "margin"]
@@ -794,6 +955,122 @@ def build_ir_release_metrics(cik: str) -> list[dict[str, Any]]:
     return releases
 
 
+def quarter_start_iso(period_end: str | None) -> str | None:
+    end_date = parse_iso_date(period_end)
+    if end_date is None:
+        return None
+    quarter_month = ((end_date.month - 1) // 3) * 3 + 1
+    return end_date.replace(month=quarter_month, day=1).date().isoformat()
+
+
+def build_ir_only_rows(releases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows_by_period: dict[str, dict[str, Any]] = {}
+    for release in releases:
+        period_end = str(release.get("reportDate") or "")
+        period_key = normalize_calendar_period(None, period_end)
+        if not period_key:
+            continue
+        metrics = release.get("metrics") or {}
+        revenue = safe_float(metrics.get("revenue"))
+        gross_margin = safe_float(metrics.get("nonGaapGrossMarginPct"))
+        if gross_margin is None:
+            gross_margin = safe_float(metrics.get("grossMarginPct"))
+        gross_profit = safe_float(metrics.get("nonGaapGrossProfit"))
+        if gross_profit is None:
+            gross_profit = safe_float(metrics.get("grossProfit"))
+        if gross_margin is None:
+            gross_margin = plausible_margin_from_amount(gross_profit, revenue)
+        operating_margin = safe_float(metrics.get("nonGaapOperatingMarginPct"))
+        if operating_margin is None:
+            operating_margin = safe_float(metrics.get("operatingMarginPct"))
+        operating_income = safe_float(metrics.get("nonGaapOperatingIncome"))
+        if operating_income is None:
+            operating_income = safe_float(metrics.get("operatingIncome"))
+        if operating_margin is None:
+            operating_margin = plausible_margin_from_amount(operating_income, revenue)
+        eps = safe_float(metrics.get("nonGaapEpsDiluted"))
+        if eps is None:
+            eps = safe_float(metrics.get("epsDiluted"))
+        source_label = f"Official IR earnings release ({release.get('form')} {release.get('filingDate')})"
+        adjusted = any(
+            metrics.get(key) is not None
+            for key in (
+                "nonGaapGrossProfit",
+                "nonGaapGrossMarginPct",
+                "nonGaapOperatingIncome",
+                "nonGaapOperatingMarginPct",
+                "nonGaapEpsDiluted",
+            )
+        )
+        adjusted_suffix = " Non-GAAP" if adjusted else " Reported"
+        row = {
+            "period": format_fiscal_period_label(period_key),
+            "periodKey": period_key,
+            "periodStart": quarter_start_iso(period_end),
+            "periodEnd": period_end,
+            "filed": release.get("filingDate"),
+            "revenue": safe_round(revenue, 0),
+            "revenueYoyPct": None,
+            "grossMarginPct": safe_round(gross_margin, 1),
+            "operatingMarginPct": safe_round(operating_margin, 1),
+            "operatingMarginYoyPp": None,
+            "epsDiluted": safe_round(eps, 2),
+            "ocf": safe_round(safe_float(metrics.get("ocf")), 0),
+            "fcf": safe_round(safe_float(metrics.get("fcf")), 0),
+            "irReleaseUrl": release.get("url"),
+            "irReleaseDate": release.get("filingDate"),
+            "metricSources": {
+                "revenue": source_label + " Reported",
+                "grossMarginPct": source_label + adjusted_suffix,
+                "operatingMarginPct": source_label + adjusted_suffix,
+                "epsDiluted": source_label + adjusted_suffix,
+                "ocf": source_label + " Reported",
+                "fcf": source_label + " Reported",
+            },
+        }
+        if any(row.get(key) is not None for key in ("revenue", "grossMarginPct", "operatingMarginPct", "epsDiluted")):
+            existing = rows_by_period.get(period_key)
+            if not existing or str(row.get("filed") or "") >= str(existing.get("filed") or ""):
+                rows_by_period[period_key] = row
+
+    rows = sorted(rows_by_period.values(), key=lambda item: str(item.get("periodKey") or ""), reverse=True)
+    by_period = {str(row.get("periodKey")): row for row in rows}
+    for row in rows:
+        period_key = str(row.get("periodKey") or "")
+        match = re.match(r"FY(\d{4})Q([1-4])$", period_key)
+        if not match:
+            continue
+        prior = by_period.get(f"FY{int(match.group(1)) - 1}Q{match.group(2)}")
+        if not prior:
+            continue
+        row["revenueYoyPct"] = safe_round(pct_change(row.get("revenue"), prior.get("revenue")), 1)
+        current_opm = safe_float(row.get("operatingMarginPct"))
+        prior_opm = safe_float(prior.get("operatingMarginPct"))
+        if current_opm is not None and prior_opm is not None:
+            row["operatingMarginYoyPp"] = safe_round(current_opm - prior_opm, 1)
+    return rows[:8]
+
+
+def recompute_quarterly_changes(rows: list[dict[str, Any]]) -> None:
+    by_period = {str(row.get("periodKey") or ""): row for row in rows}
+    for row in rows:
+        period_key = str(row.get("periodKey") or "")
+        match = re.match(r"FY(\d{4})Q([1-4])$", period_key)
+        if not match:
+            continue
+        prior = by_period.get(f"FY{int(match.group(1)) - 1}Q{match.group(2)}")
+        if not prior:
+            continue
+        row["revenueYoyPct"] = safe_round(pct_change(row.get("revenue"), prior.get("revenue")), 1)
+        current_opm = safe_float(row.get("operatingMarginPct"))
+        prior_opm = safe_float(prior.get("operatingMarginPct"))
+        row["operatingMarginYoyPp"] = (
+            safe_round(current_opm - prior_opm, 1)
+            if current_opm is not None and prior_opm is not None
+            else None
+        )
+
+
 def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]]) -> int:
     applied = 0
     for row in rows:
@@ -811,15 +1088,7 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
             continue
         metrics = release.get("metrics", {})
         source_label = f"IR earnings release ({release.get('form')} {release.get('filingDate')})"
-        revenue_value = metrics.get("revenue") or row.get("revenue")
-        if metrics.get("revenue") is not None and metric_preferred(row, "revenue", "revenue"):
-            row["revenue"] = safe_round(metrics.get("revenue"), 0)
-            metric_sources["revenue"] = source_label
-            applied += 1
-
         gross_margin = metrics.get("nonGaapGrossMarginPct")
-        if gross_margin is None and metrics.get("nonGaapGrossProfit") is not None and revenue_value:
-            gross_margin = plausible_margin_from_amount(metrics.get("nonGaapGrossProfit"), revenue_value)
         if plausible_percent(gross_margin):
             existing_gross_margin = safe_float(row.get("grossMarginPct"))
             likely_reconciliation_adjustment = (
@@ -836,8 +1105,6 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
                 applied += 1
 
         operating_margin = metrics.get("nonGaapOperatingMarginPct")
-        if operating_margin is None and metrics.get("nonGaapOperatingIncome") is not None and revenue_value:
-            operating_margin = plausible_margin_from_amount(metrics.get("nonGaapOperatingIncome"), revenue_value)
         if plausible_percent(operating_margin):
             existing_operating_margin = safe_float(row.get("operatingMarginPct"))
             likely_reconciliation_adjustment = (
@@ -855,19 +1122,6 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
                 metric_sources["operatingMarginPct"] = source_label + " Non-GAAP"
                 applied += 1
 
-        if plausible_eps(metrics.get("nonGaapEpsDiluted")):
-            row["epsDiluted"] = safe_round(metrics.get("nonGaapEpsDiluted"), 2)
-            metric_sources["epsDiluted"] = source_label + " Non-GAAP"
-            applied += 1
-        if plausible_cash_flow(metrics.get("ocf"), revenue_value):
-            row["ocf"] = safe_round(metrics.get("ocf"), 0)
-            metric_sources["ocf"] = source_label
-            applied += 1
-        if plausible_cash_flow(metrics.get("fcf"), revenue_value):
-            row["fcf"] = safe_round(metrics.get("fcf"), 0)
-            metric_sources["fcf"] = source_label
-            applied += 1
-
         row["irReleaseUrl"] = release.get("url")
         row["irReleaseDate"] = release.get("filingDate")
         row["metricSources"] = metric_sources
@@ -875,6 +1129,19 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
 
 
 def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]:
+    if ticker in UNSUPPORTED_AUTOMATED_TICKERS:
+        return {
+            "ticker": ticker,
+            "name": name,
+            "cik": cik,
+            "financialUpdatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "source": "Official filing review required",
+            "basis": "Automatic SEC extraction disabled because the issuer's reported units are not comparable with the US-GAAP parser.",
+            "irReleaseCount": 0,
+            "irValuesApplied": 0,
+            "nonGaapRows": 0,
+            "quarters": [],
+        }
     facts = fetch_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
     ir_releases = build_ir_release_metrics(cik)
     revenue = extract_tag_series(facts, REVENUE_TAGS)
@@ -909,9 +1176,16 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         period_match = re.match(r"FY(\d{4})Q([1-4])$", period)
         if period_match:
             prior_year_period = f"FY{int(period_match.group(1)) - 1}Q{period_match.group(2)}"
-        prior_revenue = revenue.get(prior_year_period, {}).get("value")
+        current_period_end = revenue.get(period, {}).get("end")
+        prior_period_end = revenue.get(prior_year_period, {}).get("end")
+        comparable_prior_period = is_same_quarter_year_ago(current_period_end, prior_period_end)
+        prior_revenue = (
+            revenue.get(prior_year_period, {}).get("value")
+            if comparable_prior_period
+            else None
+        )
         prior_op_margin = None
-        if prior_year_period:
+        if prior_year_period and comparable_prior_period:
             prior_op_margin = divide(operating_income.get(prior_year_period, {}).get("value"), revenue.get(prior_year_period, {}).get("value"))
         op_margin = divide(op_income_value, revenue_value)
         fcf_value = None
@@ -941,7 +1215,11 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
             }
         )
 
+    if not rows:
+        rows = build_ir_only_rows(ir_releases)
+    rows.sort(key=lambda item: str(item.get("periodKey") or ""), reverse=True)
     ir_values_applied = apply_ir_metrics(rows, ir_releases)
+    recompute_quarterly_changes(rows)
     non_gaap_rows = sum(
         1
         for row in rows[:8]
@@ -954,7 +1232,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         "cik": cik,
         "financialUpdatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "SEC EDGAR companyfacts + EDGAR earnings release exhibits",
-        "basis": "IR earnings-release Non-GAAP/adjusted metrics where extractable; SEC GAAP companyfacts fallback.",
+        "basis": "SEC GAAP companyfacts for Revenue, EPS, OCF, and FCF. Only explicitly percentage-labelled Non-GAAP GPM/OPM from official IR exhibits may replace GAAP margins.",
         "irReleaseCount": len(ir_releases),
         "irValuesApplied": ir_values_applied,
         "nonGaapRows": non_gaap_rows,
@@ -964,6 +1242,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
 
 def main() -> None:
     rs_payload = read_js_payload(RS_DATA_PATH, "marketRsData")
+    briefing_tickers = load_daily_briefing_tickers()
     extra_tickers_env = os.environ.get("MARKET_RS_FINANCIALS_EXTRA_TICKERS", "")
     extra_tickers = {
         ticker.strip().upper()
@@ -973,7 +1252,10 @@ def main() -> None:
     base_target_rows = [
         row
         for row in rs_payload.get("rows", [])
-        if any((row.get("memberships") or {}).get(key) for key in TARGET_MEMBERSHIPS)
+        if (
+            any((row.get("memberships") or {}).get(key) for key in TARGET_MEMBERSHIPS)
+            or str(row.get("ticker") or "").upper() in briefing_tickers
+        )
     ]
     target_rows_by_ticker = {
         str(row.get("ticker") or "").upper(): row
@@ -989,6 +1271,8 @@ def main() -> None:
     force_refresh = os.environ.get("MARKET_RS_FINANCIALS_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
     max_companies_text = os.environ.get("MARKET_RS_FINANCIALS_MAX_COMPANIES", "").strip()
     max_companies = int(max_companies_text) if max_companies_text.isdigit() and int(max_companies_text) > 0 else None
+    worker_text = os.environ.get("MARKET_RS_FINANCIALS_WORKERS", "4").strip()
+    workers = max(1, min(8, int(worker_text))) if worker_text.isdigit() else 4
     stale_days_text = os.environ.get("MARKET_RS_FINANCIALS_STALE_DAYS", "14").strip()
     try:
         stale_days = int(stale_days_text)
@@ -1000,8 +1284,23 @@ def main() -> None:
         for ticker in re.split(r"[\s,]+", target_tickers_env)
         if ticker.strip()
     }
-    ticker_map = load_sec_ticker_map()
     financials: dict[str, Any] = dict(previous_payload.get("financials") or {})
+    fallback_ticker_map = {
+        str(ticker).upper(): {
+            "cik": str(item.get("cik") or "").zfill(10),
+            "title": item.get("name") or ticker,
+        }
+        for ticker, item in financials.items()
+        if isinstance(item, dict) and item.get("cik")
+    }
+    try:
+        ticker_map = load_sec_ticker_map()
+    except Exception as error:
+        ticker_map = fallback_ticker_map
+        print(f"SEC ticker map unavailable; using {len(ticker_map)} cached profile mappings: {error}", flush=True)
+    for ticker, cik in SEC_CIK_OVERRIDES.items():
+        existing_mapping = ticker_map.get(ticker) or fallback_ticker_map.get(ticker) or {}
+        ticker_map[ticker] = {"cik": cik, "title": existing_mapping.get("title") or ticker}
     missing: list[str] = []
     errors: dict[str, str] = dict(previous_payload.get("errors") or {})
 
@@ -1023,7 +1322,12 @@ def main() -> None:
 
     sorted_rows = sorted(
         target_rows,
-        key=lambda item: (ticker_updated_at(str(item.get("ticker") or "").upper()), str(item.get("ticker"))),
+        key=lambda item: (
+            0 if str(item.get("ticker") or "").upper() in explicit_tickers else 1,
+            0 if str(item.get("ticker") or "").upper() in briefing_tickers else 1,
+            ticker_updated_at(str(item.get("ticker") or "").upper()),
+            str(item.get("ticker")),
+        ),
     )
     pending_rows = [
         row
@@ -1041,16 +1345,29 @@ def main() -> None:
         sp500_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("sp500"))
         nasdaq100_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("nasdaq100"))
         russell2000_count = sum(1 for row in target_rows if (row.get("memberships") or {}).get("russell2000"))
-        non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
-        covered_tickers = set(financials)
+        briefing_count = sum(
+            1 for row in target_rows if str(row.get("ticker") or "").upper() in briefing_tickers
+        )
+        non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("nonGaapRows") or 0) > 0)
+        official_ir_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
+        covered_tickers = {
+            ticker
+            for ticker, item in financials.items()
+            if isinstance(item, dict) and item.get("quarters")
+        }
         target_tickers = {str(row.get("ticker") or "").upper() for row in target_rows}
         pending_tickers = sorted(ticker for ticker in target_tickers if ticker and ticker not in covered_tickers)
+        briefing_covered = len(briefing_tickers & covered_tickers)
+        briefing_pending = len(briefing_tickers - covered_tickers)
         return {
             "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "scope": {
-                "universe": "S&P 500 + NASDAQ 100",
-                "universes": list(TARGET_MEMBERSHIPS) + (["russell2000_extra"] if extra_tickers else []),
+                "universe": "Daily Briefing + S&P 500 + NASDAQ 100",
+                "universes": ["dailyBriefing", *TARGET_MEMBERSHIPS] + (["manual_extra"] if extra_tickers else []),
                 "counts": {
+                    "dailyBriefing": briefing_count,
+                    "dailyBriefingCovered": briefing_covered,
+                    "dailyBriefingPending": briefing_pending,
                     "sp500": sp500_count,
                     "nasdaq100": nasdaq100_count,
                     "russell2000Extra": russell2000_count,
@@ -1058,19 +1375,20 @@ def main() -> None:
                     "covered": len([ticker for ticker in covered_tickers if ticker in target_tickers]),
                     "pending": len(pending_tickers),
                     "nonGaapCompanies": non_gaap_company_count,
+                    "officialIrCompanies": official_ir_company_count,
                 },
                 "tickers": sorted(row.get("ticker") for row in target_rows),
                 "pendingTickers": pending_tickers,
                 "source": "SEC EDGAR companyfacts + EDGAR 8-K/6-K earnings release exhibits",
-                "basis": "S&P500 and NASDAQ100 coverage. IR earnings-release Non-GAAP/adjusted metrics are preferred when extractable from official EDGAR exhibits; SEC GAAP companyfacts remains the fallback.",
+                "basis": "Daily Briefing, S&P500, and NASDAQ100 coverage. Revenue, EPS, OCF, and FCF use SEC GAAP companyfacts. Only explicitly percentage-labelled Non-GAAP GPM/OPM from official IR exhibits may replace GAAP margins. ETFs and unsupported non-US filing formats remain blank.",
             },
             "metrics": [
                 {"key": "revenue", "label": "Revenue", "unit": "usd", "note": "YoY is shown against the same quarter a year ago."},
-                {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Non-GAAP gross margin from IR release when extractable; GAAP fallback."},
-                {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Non-GAAP/adjusted operating margin from IR release when extractable; GAAP fallback. YoY pp change is shown where available."},
-                {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "Non-GAAP diluted EPS from IR release when extractable; GAAP fallback."},
+                {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Explicit percentage-labelled Non-GAAP gross margin from official IR release when available; SEC GAAP fallback."},
+                {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Explicit percentage-labelled Non-GAAP operating margin from official IR release when available; SEC GAAP fallback. YoY pp change is recomputed on the selected basis."},
+                {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "SEC GAAP diluted EPS. EPS surprise remains a separate Yahoo Finance dataset."},
                 {"key": "ocf", "label": "OCF", "unit": "usd"},
-                {"key": "fcf", "label": "FCF", "unit": "usd", "note": "Company-reported free cash flow from IR release when extractable; otherwise OCF minus absolute capex cash outflow."},
+                {"key": "fcf", "label": "FCF", "unit": "usd", "note": "SEC cash flow data: OCF minus absolute capex cash outflow."},
             ],
             "financials": dict(sorted(financials.items())),
             "missing": sorted(set(missing)),
@@ -1081,22 +1399,37 @@ def main() -> None:
         f"Target companies: {len(target_rows)}; existing: {len(financials)}; pending this run: {len(pending_rows)}",
         flush=True,
     )
-    for index, row in enumerate(pending_rows):
+
+    def process_company(row: dict[str, Any]) -> tuple[str, dict[str, Any] | None, str | None, bool]:
         ticker = str(row.get("ticker") or "").upper()
         mapping = next((ticker_map.get(candidate) for candidate in sec_ticker_candidates(ticker) if ticker_map.get(candidate)), None)
         if not mapping:
-            missing.append(ticker)
-            continue
+            return ticker, None, None, True
         try:
-            print(f"Processing {index + 1}/{len(pending_rows)} {ticker}", flush=True)
-            financials[ticker] = build_company_financials(ticker, str(row.get("name") or mapping["title"]), mapping["cik"])
-            errors.pop(ticker, None)
+            profile = build_company_financials(ticker, str(row.get("name") or mapping["title"]), mapping["cik"])
+            return ticker, profile, None, False
         except Exception as error:  # pragma: no cover - source variability
-            errors[ticker] = str(error)
-        time.sleep(0.12)
-        if (index + 1) % 10 == 0:
-            write_js_payload(OUTPUT_PATH, "marketRsFinancialsData", build_output_payload())
-            print(f"Checkpoint saved after {index + 1}/{len(pending_rows)}", flush=True)
+            return ticker, None, str(error), False
+
+    completed = 0
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_map = {executor.submit(process_company, row): row for row in pending_rows}
+        for future in as_completed(future_map):
+            ticker, profile, error, has_no_cik = future.result()
+            completed += 1
+            if has_no_cik:
+                missing.append(ticker)
+                print(f"Skipped {completed}/{len(pending_rows)} {ticker}: no SEC CIK", flush=True)
+            elif error:
+                errors[ticker] = error
+                print(f"Failed {completed}/{len(pending_rows)} {ticker}: {error}", flush=True)
+            elif profile is not None:
+                financials[ticker] = profile
+                errors.pop(ticker, None)
+                print(f"Processed {completed}/{len(pending_rows)} {ticker}", flush=True)
+            if completed % 10 == 0:
+                write_js_payload(OUTPUT_PATH, "marketRsFinancialsData", build_output_payload())
+                print(f"Checkpoint saved after {completed}/{len(pending_rows)}", flush=True)
 
     payload = build_output_payload()
     write_js_payload(OUTPUT_PATH, "marketRsFinancialsData", payload)

@@ -9016,22 +9016,9 @@ function renderMarketRsFinancials(row) {
   }
 
   const ticker = row.ticker;
-  const isFinancialsCovered = Boolean(row.memberships?.sp500 || row.memberships?.nasdaq100);
   const item = marketRsFinancialsData.financials?.[ticker];
   const updatedAt = marketRsFinancialsData.updatedAt ? formatKstDateTime(marketRsFinancialsData.updatedAt) : "";
   const scopeText = marketRsFinancialsData.scope?.basis ?? "SEC GAAP/XBRL proxy.";
-
-  if (!isFinancialsCovered) {
-    return `
-      <div class="market-rs-financial-panel">
-        <div class="market-rs-financial-head">
-          <strong>Quarterly Financials</strong>
-          <span>S&P 500 + NASDAQ 100 coverage</span>
-        </div>
-        <p class="market-rs-empty">Financials are currently available for S&P 500 and NASDAQ 100 names.</p>
-      </div>
-    `;
-  }
 
   if (!item?.quarters?.length) {
     return `
@@ -9040,24 +9027,36 @@ function renderMarketRsFinancials(row) {
           <strong>Quarterly Financials</strong>
           <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
         </div>
-        <p class="market-rs-empty">Recent quarterly financials were not available from SEC companyfacts for this ticker.</p>
+        <p class="market-rs-empty">Official IR/SEC quarterly financials are unavailable or not applicable for this ticker.</p>
       </div>
     `;
   }
+
+  const metricSource = (quarter, key) => escapeHtml(quarter.metricSources?.[key] ?? "Derived from official SEC filing data");
+  const adjustedQuarterCount = item.quarters.filter((quarter) =>
+    Object.values(quarter.metricSources ?? {}).some((source) => /non-gaap|adjusted/i.test(String(source))),
+  ).length;
+  const basisLabel = adjustedQuarterCount
+    ? `IR Adjusted ${adjustedQuarterCount}/${item.quarters.length}Q`
+    : "Reported GAAP";
+  const latestRelease = item.quarters.find((quarter) => quarter.irReleaseUrl)?.irReleaseUrl;
+  const basisMarkup = latestRelease
+    ? `<a href="${escapeHtml(latestRelease)}" target="_blank" rel="noreferrer">${basisLabel}</a>`
+    : `<span>${basisLabel}</span>`;
 
   const rows = item.quarters
     .map((quarter) => `
       <tr>
         <td>${quarter.period ?? "-"}</td>
         <td>${formatRsFinancialPeriodRange(quarter.periodStart, quarter.periodEnd)}</td>
-        <td>${formatRsFinancialUsd(quarter.revenue)}</td>
-        <td><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
-        <td>${formatRsFinancialMargin(quarter.grossMarginPct)}</td>
-        <td>${formatRsFinancialMargin(quarter.operatingMarginPct)}</td>
+        <td title="${metricSource(quarter, "revenue")}">${formatRsFinancialUsd(quarter.revenue)}</td>
+        <td title="Derived from same-quarter revenue"><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
+        <td title="${metricSource(quarter, "grossMarginPct")}">${formatRsFinancialMargin(quarter.grossMarginPct)}</td>
+        <td title="${metricSource(quarter, "operatingMarginPct")}">${formatRsFinancialMargin(quarter.operatingMarginPct)}</td>
         <td><span class="${getSignedValueClass(quarter.operatingMarginYoyPp)}">${formatRsFinancialPp(quarter.operatingMarginYoyPp)}</span></td>
-        <td>${formatRsFinancialEps(quarter.epsDiluted)}</td>
-        <td>${formatRsFinancialUsd(quarter.ocf)}</td>
-        <td>${formatRsFinancialUsd(quarter.fcf)}</td>
+        <td title="${metricSource(quarter, "epsDiluted")}">${formatRsFinancialEps(quarter.epsDiluted)}</td>
+        <td title="${metricSource(quarter, "ocf")}">${formatRsFinancialUsd(quarter.ocf)}</td>
+        <td title="${metricSource(quarter, "fcf")}">${formatRsFinancialUsd(quarter.fcf)}</td>
       </tr>
     `)
     .join("");
@@ -9069,7 +9068,7 @@ function renderMarketRsFinancials(row) {
           <strong>Quarterly Financials</strong>
           <p>Latest 8 quarters. Revenue YoY / OPM YoY pp included.</p>
         </div>
-        <span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span>
+        <div class="market-rs-financial-basis">${basisMarkup}<span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span></div>
       </div>
       <div class="market-canslim-financial-chart-wrap">
         <canvas data-canslim-chart="financials" aria-label="Quarterly revenue, margin, and revenue growth chart"></canvas>
@@ -9093,7 +9092,7 @@ function renderMarketRsFinancials(row) {
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <p class="market-rs-financial-note">${scopeText}</p>
+      <p class="market-rs-financial-note">${scopeText} Hover a value to see its metric-level source.</p>
     </div>
   `;
 }

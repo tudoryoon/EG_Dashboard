@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
@@ -26,6 +27,7 @@ def main() -> None:
     trend = load_payload("data/market-trend-score-data.js", "marketTrendScoreData")
     financials = load_payload("data/market-rs-financials-data.js", "marketRsFinancialsData")
     earnings = load_payload("data/market-canslim-earnings-data.js", "marketCanslimEarningsData")
+    briefing = load_payload("data/market-briefing-data.js", "marketBriefingData")
 
     rs_rows = rs.get("rows") or []
     rs_by_ticker = {row.get("ticker"): row for row in rs_rows if row.get("ticker")}
@@ -57,6 +59,60 @@ def main() -> None:
     require(financial_counts.get("sp500", 0) >= 450, "CANSLIM financial S&P 500 coverage is too small.")
     require(financial_counts.get("nasdaq100", 0) >= 90, "CANSLIM financial NASDAQ 100 coverage is too small.")
     require(financial_counts.get("covered", 0) >= 450, "CANSLIM financial profile coverage is too small.")
+    require(financial_counts.get("dailyBriefing", 0) >= 190, "CANSLIM Daily Briefing target coverage is too small.")
+    require(financial_counts.get("dailyBriefingCovered", 0) >= 185, "CANSLIM Daily Briefing financial coverage is too small.")
+    require(financial_counts.get("dailyBriefingPending", 99) <= 10, "Too many Daily Briefing CANSLIM profiles are pending.")
+
+    briefing_tickers = {
+        str(item.get("ticker") or "").upper()
+        for sector in briefing.get("sectorPanels") or []
+        for item in sector.get("items") or []
+        if item.get("ticker")
+        and str(item.get("ticker")).upper() != "DRAM"
+        and "." not in str(item.get("ticker"))
+    }
+    financial_profiles = financials.get("financials") or {}
+    require(len(briefing_tickers) >= 190, "Daily Briefing ticker extraction is unexpectedly small.")
+    for ticker in briefing_tickers:
+        quarters = (financial_profiles.get(ticker) or {}).get("quarters") or []
+        period_keys = [str(row.get("periodKey") or "") for row in quarters]
+        require(len(period_keys) == len(set(period_keys)), f"Duplicate CANSLIM quarters found for {ticker}.")
+        by_period = {str(row.get("periodKey") or ""): row for row in quarters}
+        for row in quarters:
+            period_match = re.match(r"^FY(\d{4})Q[1-4]$", str(row.get("periodKey") or ""))
+            end_match = re.match(r"^(\d{4})-", str(row.get("periodEnd") or ""))
+            if period_match and end_match:
+                require(
+                    abs(int(period_match.group(1)) - int(end_match.group(1))) <= 1,
+                    f"CANSLIM fiscal period/end-date mismatch for {ticker} {row.get('periodKey')}.",
+                )
+            metric_sources = row.get("metricSources") or {}
+            for metric in ("epsDiluted", "ocf", "fcf"):
+                require(
+                    not str(metric_sources.get(metric) or "").startswith("IR earnings release"),
+                    f"Unsafe automatic IR override found for {ticker} {row.get('periodKey')} {metric}.",
+                )
+
+        fiscal_years = {
+            match.group(1)
+            for period in by_period
+            if (match := re.match(r"^FY(\d{4})Q[1-4]$", period))
+        }
+        for fiscal_year in fiscal_years:
+            values = [
+                (by_period.get(f"FY{fiscal_year}Q{quarter}") or {}).get("revenue")
+                for quarter in (1, 2, 3, 4)
+            ]
+            if not all(isinstance(value, (int, float)) and value > 0 for value in values):
+                continue
+            first_three = values[:3]
+            first_three_average = sum(first_three) / 3
+            annual_looking_q4 = (
+                values[3] > sum(first_three)
+                and values[3] / first_three_average > 2.8
+                and max(first_three) / min(first_three) < 2
+            )
+            require(not annual_looking_q4, f"Annual-looking Q4 revenue remains for {ticker} FY{fiscal_year}.")
 
     earnings_scope = earnings.get("scope") or {}
     earnings_sources = earnings_scope.get("sources") or {}

@@ -7575,6 +7575,22 @@ h1 {
   font-size: 0.82rem;
 }
 
+.market-rs-financial-basis {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+}
+
+.market-rs-financial-basis a {
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .market-rs-financial-table-wrap {
   overflow-x: auto;
   border: 1px solid #ecece7;
