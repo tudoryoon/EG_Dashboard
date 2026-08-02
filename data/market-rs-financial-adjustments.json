@@ -1,0 +1,186 @@
+{
+  "policy": "Remove only separately quantified, non-recurring operating items. Keep reported results when no defensible bridge is available.",
+  "adjustments": {
+    "AAPL": [
+      {
+        "periodEnd": "2026-06-27",
+        "metric": "grossMarginPct",
+        "reportedImpactPp": 2.0,
+        "label": "Tariff refund",
+        "detail": "Apple said the tariff refund lifted reported gross margin by approximately 2.0 percentage points.",
+        "sourceLabel": "Apple FY26 Q3 earnings call",
+        "source": "https://www.apple.com/investor/earnings-call/"
+      }
+    ],
+    "GOOGL": [
+      {
+        "periodEnd": "2023-12-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -1.5,
+        "label": "Workforce and office-space optimization charges",
+        "detail": "Adds back $1.203B of severance and office-space exit charges plus $62M of accelerated rent and depreciation.",
+        "sourceLabel": "Alphabet Q4 2023 results",
+        "source": "https://abc.xyz/assets/95/eb/9cef90184e09bac553796896c633/2023q4-alphabet-earnings-release.pdf"
+      },
+      {
+        "periodEnd": "2024-03-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.9,
+        "label": "Severance-related charges",
+        "detail": "Adds back $716M of separately disclosed severance-related charges.",
+        "sourceLabel": "Alphabet Q1 2024 results",
+        "source": "https://abc.xyz/assets/91/b3/3f9213d14ce3ae27e1038e01a0e0/2024q1-alphabet-earnings-release-pdf.pdf"
+      },
+      {
+        "periodEnd": "2024-09-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.7,
+        "label": "Office-footprint optimization charge",
+        "detail": "Adds back the separately disclosed $607M office-footprint optimization charge.",
+        "sourceLabel": "Alphabet Q3 2024 earnings call",
+        "source": "https://abc.xyz/2024-q3-earnings-call/"
+      },
+      {
+        "periodEnd": "2025-06-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -1.5,
+        "label": "Legal settlement charge",
+        "detail": "Adds back the separately disclosed $1.4B legal settlement charge.",
+        "sourceLabel": "Alphabet Q2 2025 earnings call",
+        "source": "https://abc.xyz/2025-q2-earnings-call"
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -3.4,
+        "label": "European Commission fine",
+        "detail": "Alphabet disclosed a $3.5B EC fine and a 33.9% operating margin excluding the charge.",
+        "sourceLabel": "Alphabet Q3 2025 earnings call",
+        "source": "https://abc.xyz/investor/events/event-details/2025/2025-Q3-Earnings-Call-2025-4OI4Bac_Q9/default.aspx"
+      },
+      {
+        "periodEnd": "2025-12-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -1.8,
+        "label": "Waymo employee compensation charge",
+        "detail": "Adds back the separately disclosed $2.1B Waymo employee compensation charge.",
+        "sourceLabel": "Alphabet Q4 2025 results",
+        "source": "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000012/googexhibit991q42025.htm"
+      }
+    ],
+    "NVDA": [
+      {
+        "periodEnd": "2025-04-27",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -10.3,
+        "label": "H20 inventory and purchase-obligation charge",
+        "detail": "Adds back the separately disclosed $4.538B H20 charge.",
+        "sourceLabel": "NVIDIA FY26 Q1 results",
+        "source": "https://investor.nvidia.com/news/press-release-details/2025/NVIDIA-Announces-Financial-Results-for-First-Quarter-Fiscal-2026/"
+      },
+      {
+        "periodEnd": "2025-07-27",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": 0.4,
+        "label": "H20 charge release",
+        "detail": "Removes the separately disclosed $180M release of prior H20 charges.",
+        "sourceLabel": "NVIDIA FY26 Q2 results",
+        "source": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-second-quarter-fiscal-2026"
+      }
+    ],
+    "META": [
+      {
+        "periodEnd": "2023-09-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -1.1,
+        "label": "Restructuring charges",
+        "detail": "Adds back $380M of restructuring charges disclosed for the quarter.",
+        "sourceLabel": "Meta Q3 2023 results",
+        "source": "https://investor.atmeta.com/investor-news/press-release-details/2023/Meta-Reports-Third-Quarter-2023-Results/default.aspx"
+      },
+      {
+        "periodEnd": "2023-12-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -2.9,
+        "label": "Restructuring charges",
+        "detail": "Adds back $1.148B of restructuring charges disclosed for the quarter.",
+        "sourceLabel": "Meta Q4 2023 results",
+        "source": "https://investor.atmeta.com/investor-news/press-release-details/2024/Meta-Reports-Fourth-Quarter-and-Full-Year-2023-Results-Initiates-Quarterly-Dividend/default.aspx"
+      },
+      {
+        "periodEnd": "2024-03-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.7,
+        "label": "Facilities consolidation impairment",
+        "detail": "Adds back $240M of facilities-consolidation impairment charges.",
+        "sourceLabel": "Meta Q1 2024 results",
+        "source": "https://investor.atmeta.com/investor-news/press-release-details/2024/Meta-Reports-First-Quarter-2024-Results/default.aspx"
+      },
+      {
+        "periodEnd": "2024-06-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.1,
+        "label": "Facilities consolidation impairment",
+        "detail": "Adds back $41M of facilities-consolidation impairment charges.",
+        "sourceLabel": "Meta Q2 2024 results",
+        "source": "https://investor.atmeta.com/investor-news/press-release-details/2024/Meta-Reports-Second-Quarter-2024-Results/default.aspx"
+      },
+      {
+        "periodEnd": "2024-12-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": 3.0,
+        "label": "Legal reserve release, net of facilities impairment",
+        "detail": "Removes the $1.55B favorable legal-reserve release and adds back $94M of facilities-consolidation impairment.",
+        "sourceLabel": "Meta Q4 2024 results",
+        "source": "https://investor.atmeta.com/files/doc_financials/2024/q4/Meta-12-31-2024-Exhibit-99-1-FINAL.pdf"
+      },
+      {
+        "periodEnd": "2026-06-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -5.9,
+        "label": "Legal and restructuring charges",
+        "detail": "Adds back $2.40B of legal charges and $1.18B of severance costs.",
+        "sourceLabel": "Meta Q2 2026 results",
+        "source": "https://s21.q4cdn.com/399680738/files/doc_financials/2026/q2/Meta-06-30-2026-Exhibit-99-1-FINAL.pdf"
+      }
+    ],
+    "TSLA": [
+      {
+        "periodEnd": "2024-06-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -2.4,
+        "label": "Restructuring and other charges",
+        "detail": "Adds back $622M of restructuring and other charges.",
+        "sourceLabel": "Tesla Q2 2024 10-Q",
+        "source": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024032662/tsla-20240630.htm"
+      },
+      {
+        "periodEnd": "2024-09-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.2,
+        "label": "Restructuring and other charges",
+        "detail": "Adds back $55M of restructuring and other charges.",
+        "sourceLabel": "Tesla Q3 2024 10-Q",
+        "source": "https://www.sec.gov/Archives/edgar/data/1318605/000162828024043486/tsla-20240930.htm"
+      },
+      {
+        "periodEnd": "2025-03-31",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.5,
+        "label": "Restructuring and other charges",
+        "detail": "Adds back $94M of restructuring and other charges.",
+        "sourceLabel": "Tesla Q1 2025 comparative filing",
+        "source": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026026673/tsla-20260331.htm"
+      },
+      {
+        "periodEnd": "2025-09-30",
+        "metric": "operatingMarginPct",
+        "reportedImpactPp": -0.8,
+        "label": "Restructuring and other charges",
+        "detail": "Adds back $238M of restructuring and other charges.",
+        "sourceLabel": "Tesla Q3 2025 10-Q",
+        "source": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025045968/tsla-20250930.htm"
+      }
+    ]
+  }
+}

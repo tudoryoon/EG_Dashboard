@@ -73,10 +73,17 @@ def main() -> None:
     }
     financial_profiles = financials.get("financials") or {}
     require(len(briefing_tickers) >= 190, "Daily Briefing ticker extraction is unexpectedly small.")
+    adjusted_briefing_count = 0
     for ticker in briefing_tickers:
-        quarters = (financial_profiles.get(ticker) or {}).get("quarters") or []
+        profile = financial_profiles.get(ticker) or {}
+        quarters = profile.get("quarters") or []
+        if int(profile.get("adjustedRows") or 0) > 0:
+            adjusted_briefing_count += 1
         period_keys = [str(row.get("periodKey") or "") for row in quarters]
+        period_ends = [str(row.get("periodEnd") or "") for row in quarters if row.get("periodEnd")]
         require(len(period_keys) == len(set(period_keys)), f"Duplicate CANSLIM quarters found for {ticker}.")
+        require(len(period_ends) == len(set(period_ends)), f"Duplicate CANSLIM period-end dates found for {ticker}.")
+        require(period_ends == sorted(period_ends, reverse=True), f"CANSLIM period-end dates are not descending for {ticker}.")
         by_period = {str(row.get("periodKey") or ""): row for row in quarters}
         for row in quarters:
             period_match = re.match(r"^FY(\d{4})Q[1-4]$", str(row.get("periodKey") or ""))
@@ -86,11 +93,37 @@ def main() -> None:
                     abs(int(period_match.group(1)) - int(end_match.group(1))) <= 1,
                     f"CANSLIM fiscal period/end-date mismatch for {ticker} {row.get('periodKey')}.",
                 )
+            if row.get("periodStart") and row.get("periodEnd"):
+                require(
+                    str(row.get("periodStart")) <= str(row.get("periodEnd")),
+                    f"CANSLIM period start is after period end for {ticker} {row.get('periodKey')}.",
+                )
             metric_sources = row.get("metricSources") or {}
-            for metric in ("epsDiluted", "ocf", "fcf"):
+            for metric in ("ocf", "fcf"):
                 require(
                     not str(metric_sources.get(metric) or "").startswith("IR earnings release"),
                     f"Unsafe automatic IR override found for {ticker} {row.get('periodKey')} {metric}.",
+                )
+            eps_source = str(metric_sources.get("epsDiluted") or "")
+            if eps_source.startswith("IR earnings release"):
+                require(
+                    "Non-GAAP" in eps_source and isinstance(row.get("epsDiluted"), (int, float)),
+                    f"Unqualified IR EPS override found for {ticker} {row.get('periodKey')}.",
+                )
+                require(abs(float(row["epsDiluted"])) <= 10, f"Implausible IR EPS override found for {ticker} {row.get('periodKey')}.")
+                reported_eps = row.get("reportedEpsDiluted")
+                if isinstance(reported_eps, (int, float)) and reported_eps > 0:
+                    require(
+                        not (
+                            row["epsDiluted"] - reported_eps > 1.5
+                            and row["epsDiluted"] > reported_eps * 2.5
+                        ),
+                        f"IR EPS override resembles annual guidance for {ticker} {row.get('periodKey')}.",
+                    )
+            if any("Curated adjusted bridge" in str(source) for source in metric_sources.values()):
+                require(
+                    isinstance(row.get("curatedAdjustment"), dict) and row["curatedAdjustment"].get("source"),
+                    f"Curated adjustment lacks provenance for {ticker} {row.get('periodKey')}.",
                 )
 
         fiscal_years = {
@@ -113,6 +146,20 @@ def main() -> None:
                 and max(first_three) / min(first_three) < 2
             )
             require(not annual_looking_q4, f"Annual-looking Q4 revenue remains for {ticker} FY{fiscal_year}.")
+
+    require(adjusted_briefing_count >= 60, "Too few Daily Briefing companies retain verified adjusted financial rows.")
+    require(financial_counts.get("curatedAdjustedCompanies", 0) >= 5, "Curated one-off adjustment coverage regressed.")
+
+    apple_rows = (financial_profiles.get("AAPL") or {}).get("quarters") or []
+    apple_latest = next((row for row in apple_rows if row.get("periodEnd") == "2026-06-27"), None)
+    require(apple_latest is not None, "AAPL FY26 Q3 row is missing.")
+    require(apple_latest.get("grossMarginPct") == 48.1, "AAPL tariff-refund gross-margin bridge is missing.")
+    require(apple_latest.get("reportedGrossMarginPct") == 50.1, "AAPL reported gross margin was not preserved.")
+
+    nvidia_rows = (financial_profiles.get("NVDA") or {}).get("quarters") or []
+    nvidia_april_2026 = next((row for row in nvidia_rows if row.get("periodEnd") == "2026-04-26"), None)
+    require(nvidia_april_2026 is not None, "NVIDIA April 2026 quarter is missing.")
+    require(nvidia_april_2026.get("periodKey") == "FY2027Q1", "NVIDIA fiscal-year alignment regressed.")
 
     earnings_scope = earnings.get("scope") or {}
     earnings_sources = earnings_scope.get("sources") or {}

@@ -19,6 +19,7 @@ RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-rs-financials-data.js"
 SEC_TICKER_CACHE_PATH = ROOT / "data" / "sec-company-tickers-cache.json"
+FINANCIAL_ADJUSTMENTS_PATH = ROOT / "data" / "market-rs-financial-adjustments.json"
 SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
@@ -31,6 +32,7 @@ TARGET_MEMBERSHIPS = ("sp500", "nasdaq100")
 NON_COMPANY_TICKERS = {"DRAM"}
 UNSUPPORTED_AUTOMATED_TICKERS = {"VIK"}
 SEC_CIK_OVERRIDES = {"XOM": "0000034088"}
+IR_DERIVED_GROSS_MARGIN_BLOCKLIST = {"HPE", "NVTS"}
 
 REVENUE_TAGS = [
     "RevenueFromContractWithCustomerExcludingAssessedTax",
@@ -87,6 +89,17 @@ def read_previous_payload() -> dict[str, Any]:
         return read_js_payload(OUTPUT_PATH, "marketRsFinancialsData")
     except Exception:
         return {}
+
+
+def load_financial_adjustments() -> dict[str, list[dict[str, Any]]]:
+    if not FINANCIAL_ADJUSTMENTS_PATH.exists():
+        return {}
+    payload = json.loads(FINANCIAL_ADJUSTMENTS_PATH.read_text(encoding="utf-8"))
+    return {
+        str(ticker).upper(): rows
+        for ticker, rows in (payload.get("adjustments") or {}).items()
+        if isinstance(rows, list)
+    }
 
 
 def load_daily_briefing_tickers() -> set[str]:
@@ -306,20 +319,39 @@ def fiscal_year_from_end(end: str | None, fallback: int | None = None) -> int | 
     return fallback if isinstance(fallback, int) else None
 
 
-def annual_fiscal_year(fy: int | None, end: str | None, frame: str | None = None) -> int | None:
+def annual_fiscal_year(
+    fy: int | None,
+    end: str | None,
+    frame: str | None = None,
+    filed: str | None = None,
+) -> int | None:
     """Resolve the year of an annual fact without trusting stale comparison-row FY metadata."""
     end_year = fiscal_year_from_end(end)
     frame_match = re.match(r"CY(\d{4})$", str(frame or ""))
     frame_year = int(frame_match.group(1)) if frame_match else None
-    if isinstance(frame_year, int):
+    end_date = parse_iso_date(end)
+    filed_date = parse_iso_date(filed)
+    stale_comparison = bool(
+        end_date
+        and filed_date
+        and (filed_date - end_date).days > 300
+    )
+    if stale_comparison and isinstance(frame_year, int):
         return frame_year
+    if stale_comparison and isinstance(end_year, int):
+        return end_year
     if isinstance(fy, int) and isinstance(end_year, int):
         # SEC comparison columns may retain the filing's current FY even when the
-        # fact itself ends two or more years earlier.
+        # fact itself ends two or more years earlier. A one-year difference is
+        # normal for issuers such as NVIDIA whose fiscal year ends in January.
         if abs(fy - end_year) > 1:
             return end_year
         return fy
-    return fy if isinstance(fy, int) else end_year
+    if isinstance(fy, int):
+        return fy
+    if isinstance(frame_year, int):
+        return frame_year
+    return end_year
 
 
 def infer_quarter_period_from_range(
@@ -453,7 +485,7 @@ def extract_tag_series(
     annual_ranges = sorted(
         [
             {
-                "fy": annual_fiscal_year(row.get("fy"), row.get("end"), row.get("frame")),
+                "fy": annual_fiscal_year(row.get("fy"), row.get("end"), row.get("frame"), row.get("filed")),
                 "start": row.get("start"),
                 "end": row.get("end"),
             }
@@ -503,7 +535,7 @@ def extract_tag_series(
 
         if frame and re.match(r"CY\d{4}Q[1-4]$", frame):
             if frame.endswith("Q4") and is_full_year_fact(row.get("start"), end):
-                annual_year = str(annual_fiscal_year(fy, end) or inferred_fy or frame[2:6])
+                annual_year = str(annual_fiscal_year(fy, end, frame, row.get("filed")) or inferred_fy or frame[2:6])
                 existing_annual = annuals.get(annual_year)
                 if not existing_annual or str(item.get("filed") or "") >= str(existing_annual.get("filed") or ""):
                     annuals[annual_year] = item
@@ -514,7 +546,7 @@ def extract_tag_series(
             continue
 
         if frame and re.match(r"CY\d{4}$", frame):
-            year = str(annual_fiscal_year(fy, end, frame) or inferred_fy or "")
+            year = str(annual_fiscal_year(fy, end, frame, row.get("filed")) or inferred_fy or "")
             if year and is_full_year_fact(row.get("start"), end):
                 annuals[year] = item
             continue
@@ -802,6 +834,49 @@ def plausible_margin_from_amount(amount: float | None, revenue: float | None) ->
     return pct if plausible_percent(pct) else None
 
 
+def select_non_gaap_margin(
+    metrics: dict[str, Any],
+    *,
+    percent_key: str,
+    amount_key: str,
+    revenue: float | None,
+    reported_margin: float | None,
+    max_gap_pp: float,
+) -> tuple[float | None, str | None]:
+    candidates = [
+        (safe_float(metrics.get(percent_key)), "reported percentage"),
+        (plausible_margin_from_amount(safe_float(metrics.get(amount_key)), revenue), "derived from adjusted amount"),
+    ]
+    for candidate, method in candidates:
+        if not plausible_percent(candidate):
+            continue
+        if reported_margin is not None:
+            # Company-presented adjusted metrics generally add back operating
+            # costs. Reject reconciliation-line amounts accidentally parsed as
+            # the adjusted result, which otherwise create implausible margins.
+            if candidate < reported_margin - 3:
+                continue
+            if abs(candidate - reported_margin) > max_gap_pp:
+                continue
+            if (
+                method == "derived from adjusted amount"
+                and reported_margin > 5
+                and candidate - reported_margin > 15
+                and candidate / reported_margin > 2.5
+            ):
+                continue
+        return candidate, method
+    return None, None
+
+
+def plausible_non_gaap_eps(value: float | None, reported_eps: float | None) -> bool:
+    if not plausible_eps(value) or abs(float(value)) > 10:
+        return False
+    if reported_eps is None or reported_eps <= 0:
+        return True
+    return not (float(value) - reported_eps > 1.5 and float(value) > reported_eps * 2.5)
+
+
 def plausible_cash_flow(value: float | None, revenue: float | None) -> bool:
     if value is None:
         return False
@@ -1071,7 +1146,40 @@ def recompute_quarterly_changes(rows: list[dict[str, Any]]) -> None:
         )
 
 
-def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]]) -> int:
+def sanitize_financial_rows(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    valid_rows: list[dict[str, Any]] = []
+    rejected = 0
+    for row in rows:
+        start = parse_iso_date(row.get("periodStart"))
+        end = parse_iso_date(row.get("periodEnd"))
+        if start and end and start > end:
+            rejected += 1
+            continue
+        valid_rows.append(row)
+
+    rows_by_end: dict[str, dict[str, Any]] = {}
+    undated_rows: list[dict[str, Any]] = []
+    for row in valid_rows:
+        period_end = str(row.get("periodEnd") or "")
+        if not period_end:
+            undated_rows.append(row)
+            continue
+        existing = rows_by_end.get(period_end)
+        if existing is None:
+            rows_by_end[period_end] = row
+            continue
+        rejected += 1
+        # Prefer the row with the more recent filing only when duplicate dates
+        # survive the period-range check.
+        if str(row.get("filed") or "") > str(existing.get("filed") or ""):
+            rows_by_end[period_end] = row
+
+    cleaned = [*rows_by_end.values(), *undated_rows]
+    cleaned.sort(key=lambda item: str(item.get("periodKey") or ""), reverse=True)
+    return cleaned, rejected
+
+
+def apply_ir_metrics(ticker: str, rows: list[dict[str, Any]], releases: list[dict[str, Any]]) -> int:
     applied = 0
     for row in rows:
         metric_sources = {
@@ -1088,39 +1196,47 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
             continue
         metrics = release.get("metrics", {})
         source_label = f"IR earnings release ({release.get('form')} {release.get('filingDate')})"
-        gross_margin = metrics.get("nonGaapGrossMarginPct")
-        if plausible_percent(gross_margin):
-            existing_gross_margin = safe_float(row.get("grossMarginPct"))
-            likely_reconciliation_adjustment = (
-                abs(float(gross_margin)) < 0.05
-                or (
-                    existing_gross_margin is not None
-                    and float(gross_margin) < 5
-                    and existing_gross_margin > 10
-                )
-            )
-            if not likely_reconciliation_adjustment:
-                row["grossMarginPct"] = safe_round(gross_margin, 1)
-                metric_sources["grossMarginPct"] = source_label + " Non-GAAP"
-                applied += 1
+        revenue = safe_float(row.get("revenue"))
+        existing_gross_margin = safe_float(row.get("grossMarginPct"))
+        gross_metrics = metrics
+        if ticker in IR_DERIVED_GROSS_MARGIN_BLOCKLIST:
+            gross_metrics = {**metrics, "nonGaapGrossProfit": None}
+        gross_margin, gross_method = select_non_gaap_margin(
+            gross_metrics,
+            percent_key="nonGaapGrossMarginPct",
+            amount_key="nonGaapGrossProfit",
+            revenue=revenue,
+            reported_margin=existing_gross_margin,
+            max_gap_pp=25,
+        )
+        if gross_margin is not None:
+            row["reportedGrossMarginPct"] = existing_gross_margin
+            row["grossMarginPct"] = safe_round(gross_margin, 1)
+            metric_sources["grossMarginPct"] = source_label + f" Non-GAAP ({gross_method})"
+            applied += 1
 
-        operating_margin = metrics.get("nonGaapOperatingMarginPct")
-        if plausible_percent(operating_margin):
-            existing_operating_margin = safe_float(row.get("operatingMarginPct"))
-            likely_reconciliation_adjustment = (
-                abs(float(operating_margin)) < 0.05
-                or (
-                    existing_operating_margin is not None
-                    and (
-                        (float(operating_margin) < 0 and existing_operating_margin > 5)
-                        or (float(operating_margin) >= 95 and existing_operating_margin < 80)
-                    )
-                )
-            )
-            if not likely_reconciliation_adjustment:
-                row["operatingMarginPct"] = safe_round(operating_margin, 1)
-                metric_sources["operatingMarginPct"] = source_label + " Non-GAAP"
-                applied += 1
+        existing_operating_margin = safe_float(row.get("operatingMarginPct"))
+        operating_margin, operating_method = select_non_gaap_margin(
+            metrics,
+            percent_key="nonGaapOperatingMarginPct",
+            amount_key="nonGaapOperatingIncome",
+            revenue=revenue,
+            reported_margin=existing_operating_margin,
+            max_gap_pp=50,
+        )
+        if operating_margin is not None:
+            row["reportedOperatingMarginPct"] = existing_operating_margin
+            row["operatingMarginPct"] = safe_round(operating_margin, 1)
+            metric_sources["operatingMarginPct"] = source_label + f" Non-GAAP ({operating_method})"
+            applied += 1
+
+        non_gaap_eps = safe_float(metrics.get("nonGaapEpsDiluted"))
+        reported_eps = safe_float(row.get("epsDiluted"))
+        if plausible_non_gaap_eps(non_gaap_eps, reported_eps):
+            row["reportedEpsDiluted"] = reported_eps
+            row["epsDiluted"] = safe_round(non_gaap_eps, 2)
+            metric_sources["epsDiluted"] = source_label + " Non-GAAP"
+            applied += 1
 
         row["irReleaseUrl"] = release.get("url")
         row["irReleaseDate"] = release.get("filingDate")
@@ -1128,7 +1244,84 @@ def apply_ir_metrics(rows: list[dict[str, Any]], releases: list[dict[str, Any]])
     return applied
 
 
-def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]:
+def remove_profile_level_ir_outliers(rows: list[dict[str, Any]]) -> int:
+    removed = 0
+    for row in rows:
+        source = str((row.get("metricSources") or {}).get("epsDiluted") or "")
+        value = safe_float(row.get("epsDiluted"))
+        if "Non-GAAP" not in source or row.get("reportedEpsDiluted") is not None or value is None:
+            continue
+        peers = [
+            safe_float(peer.get("epsDiluted"))
+            for peer in rows
+            if peer is not row and safe_float(peer.get("epsDiluted")) is not None
+        ]
+        peers = sorted(value for value in peers if value is not None)
+        if len(peers) < 3:
+            continue
+        midpoint = len(peers) // 2
+        peer_median = (
+            peers[midpoint]
+            if len(peers) % 2
+            else (peers[midpoint - 1] + peers[midpoint]) / 2
+        )
+        if peer_median > 0 and value - peer_median > 1.5 and value > peer_median * 2.5:
+            row["epsDiluted"] = None
+            row.pop("reportedEpsDiluted", None)
+            row.setdefault("metricSources", {})["epsDiluted"] = "SEC GAAP companyfacts"
+            removed += 1
+    return removed
+
+
+def apply_curated_adjustments(
+    ticker: str,
+    rows: list[dict[str, Any]],
+    adjustments_by_ticker: dict[str, list[dict[str, Any]]],
+) -> int:
+    applied = 0
+    rows_by_end = {str(row.get("periodEnd") or ""): row for row in rows}
+    for adjustment in adjustments_by_ticker.get(ticker, []):
+        row = rows_by_end.get(str(adjustment.get("periodEnd") or ""))
+        metric = str(adjustment.get("metric") or "")
+        impact = safe_float(adjustment.get("reportedImpactPp"))
+        if not row or metric not in {"grossMarginPct", "operatingMarginPct"} or impact is None:
+            continue
+        reported_key = "reportedGrossMarginPct" if metric == "grossMarginPct" else "reportedOperatingMarginPct"
+        # Curated bridges always start from the SEC-reported value rather than a
+        # broader company Non-GAAP measure, so only the quantified one-off item
+        # is removed.
+        reported = safe_float(row.get(reported_key))
+        if reported is None:
+            reported = safe_float(row.get(metric))
+        if reported is None:
+            continue
+        adjusted = safe_round(reported - impact, 1)
+        row[reported_key] = reported
+        row[metric] = adjusted
+        source_label = str(adjustment.get("sourceLabel") or "Official company disclosure")
+        row.setdefault("metricSources", {})[metric] = f"Curated adjusted bridge: {source_label}"
+        row["curatedAdjustment"] = {
+            "metric": metric,
+            "reportedValue": reported,
+            "adjustedValue": adjusted,
+            "reportedImpactPp": impact,
+            "label": adjustment.get("label"),
+            "detail": adjustment.get("detail"),
+            "sourceLabel": source_label,
+            "source": adjustment.get("source"),
+        }
+        if adjustment.get("source"):
+            row["irReleaseUrl"] = adjustment.get("source")
+        applied += 1
+    return applied
+
+
+def build_company_financials(
+    ticker: str,
+    name: str,
+    cik: str,
+    adjustments_by_ticker: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
     if ticker in UNSUPPORTED_AUTOMATED_TICKERS:
         return {
             "ticker": ticker,
@@ -1217,13 +1410,23 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
 
     if not rows:
         rows = build_ir_only_rows(ir_releases)
-    rows.sort(key=lambda item: str(item.get("periodKey") or ""), reverse=True)
-    ir_values_applied = apply_ir_metrics(rows, ir_releases)
+    rows, rejected_structural_rows = sanitize_financial_rows(rows)
+    ir_values_applied = apply_ir_metrics(ticker, rows, ir_releases)
+    curated_adjustments_applied = apply_curated_adjustments(ticker, rows, adjustments_by_ticker)
+    rejected_ir_outliers = remove_profile_level_ir_outliers(rows)
     recompute_quarterly_changes(rows)
     non_gaap_rows = sum(
         1
         for row in rows[:8]
         if any("Non-GAAP" in str(source) for source in (row.get("metricSources") or {}).values())
+    )
+    adjusted_rows = sum(
+        1
+        for row in rows[:8]
+        if any(
+            re.search(r"non-gaap|adjusted", str(source), re.IGNORECASE)
+            for source in (row.get("metricSources") or {}).values()
+        )
     )
 
     return {
@@ -1232,10 +1435,14 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
         "cik": cik,
         "financialUpdatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "SEC EDGAR companyfacts + EDGAR earnings release exhibits",
-        "basis": "SEC GAAP companyfacts for Revenue, EPS, OCF, and FCF. Only explicitly percentage-labelled Non-GAAP GPM/OPM from official IR exhibits may replace GAAP margins.",
+        "basis": "Revenue, OCF, and derived FCF use SEC GAAP companyfacts. Company-presented Non-GAAP GPM, OPM, and EPS are used only when the official IR exhibit provides a defensible value; curated one-off bridges take precedence.",
         "irReleaseCount": len(ir_releases),
         "irValuesApplied": ir_values_applied,
+        "curatedAdjustmentsApplied": curated_adjustments_applied,
+        "rejectedIrOutliers": rejected_ir_outliers,
+        "rejectedStructuralRows": rejected_structural_rows,
         "nonGaapRows": non_gaap_rows,
+        "adjustedRows": adjusted_rows,
         "quarters": rows[:8],
     }
 
@@ -1243,6 +1450,7 @@ def build_company_financials(ticker: str, name: str, cik: str) -> dict[str, Any]
 def main() -> None:
     rs_payload = read_js_payload(RS_DATA_PATH, "marketRsData")
     briefing_tickers = load_daily_briefing_tickers()
+    adjustments_by_ticker = load_financial_adjustments()
     extra_tickers_env = os.environ.get("MARKET_RS_FINANCIALS_EXTRA_TICKERS", "")
     extra_tickers = {
         ticker.strip().upper()
@@ -1269,6 +1477,8 @@ def main() -> None:
     target_rows = list(target_rows_by_ticker.values())
     previous_payload = read_previous_payload()
     force_refresh = os.environ.get("MARKET_RS_FINANCIALS_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
+    daily_briefing_only = os.environ.get("MARKET_RS_FINANCIALS_DAILY_BRIEFING_ONLY", "").lower() in {"1", "true", "yes"}
+    recheck_adjusted_only = os.environ.get("MARKET_RS_FINANCIALS_RECHECK_ADJUSTED_ONLY", "").lower() in {"1", "true", "yes"}
     max_companies_text = os.environ.get("MARKET_RS_FINANCIALS_MAX_COMPANIES", "").strip()
     max_companies = int(max_companies_text) if max_companies_text.isdigit() and int(max_companies_text) > 0 else None
     worker_text = os.environ.get("MARKET_RS_FINANCIALS_WORKERS", "4").strip()
@@ -1333,7 +1543,17 @@ def main() -> None:
         row
         for row in sorted_rows
         if (
-            str(row.get("ticker") or "").upper() in explicit_tickers
+            not daily_briefing_only
+            or str(row.get("ticker") or "").upper() in briefing_tickers
+        )
+        and (
+            not recheck_adjusted_only
+            or int((financials.get(str(row.get("ticker") or "").upper()) or {}).get("adjustedRows") or 0) > 0
+        )
+        and (
+            daily_briefing_only
+            or recheck_adjusted_only
+            or str(row.get("ticker") or "").upper() in explicit_tickers
             or force_refresh
             or is_stale(str(row.get("ticker") or "").upper())
         )
@@ -1350,6 +1570,7 @@ def main() -> None:
         )
         non_gaap_company_count = sum(1 for item in financials.values() if int(item.get("nonGaapRows") or 0) > 0)
         official_ir_company_count = sum(1 for item in financials.values() if int(item.get("irValuesApplied") or 0) > 0)
+        curated_company_count = sum(1 for item in financials.values() if int(item.get("curatedAdjustmentsApplied") or 0) > 0)
         covered_tickers = {
             ticker
             for ticker, item in financials.items()
@@ -1376,17 +1597,18 @@ def main() -> None:
                     "pending": len(pending_tickers),
                     "nonGaapCompanies": non_gaap_company_count,
                     "officialIrCompanies": official_ir_company_count,
+                    "curatedAdjustedCompanies": curated_company_count,
                 },
                 "tickers": sorted(row.get("ticker") for row in target_rows),
                 "pendingTickers": pending_tickers,
                 "source": "SEC EDGAR companyfacts + EDGAR 8-K/6-K earnings release exhibits",
-                "basis": "Daily Briefing, S&P500, and NASDAQ100 coverage. Revenue, EPS, OCF, and FCF use SEC GAAP companyfacts. Only explicitly percentage-labelled Non-GAAP GPM/OPM from official IR exhibits may replace GAAP margins. ETFs and unsupported non-US filing formats remain blank.",
+                "basis": "Daily Briefing, S&P500, and NASDAQ100 coverage. Revenue, OCF, and derived FCF use SEC GAAP companyfacts. Official company Non-GAAP GPM, OPM, and EPS are used only when defensibly extractable; separately quantified one-off bridges are curated and take precedence. ETFs and unsupported non-US filing formats remain blank.",
             },
             "metrics": [
                 {"key": "revenue", "label": "Revenue", "unit": "usd", "note": "YoY is shown against the same quarter a year ago."},
-                {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Explicit percentage-labelled Non-GAAP gross margin from official IR release when available; SEC GAAP fallback."},
-                {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Explicit percentage-labelled Non-GAAP operating margin from official IR release when available; SEC GAAP fallback. YoY pp change is recomputed on the selected basis."},
-                {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "SEC GAAP diluted EPS. EPS surprise remains a separate Yahoo Finance dataset."},
+                {"key": "grossMarginPct", "label": "GPM", "unit": "percent", "note": "Official company Non-GAAP/adjusted gross margin when defensibly extractable; SEC GAAP fallback."},
+                {"key": "operatingMarginPct", "label": "OPM", "unit": "percent", "note": "Official company Non-GAAP/adjusted operating margin or a curated quantified one-off bridge; SEC GAAP fallback. YoY pp change is recomputed on the selected basis."},
+                {"key": "epsDiluted", "label": "EPS", "unit": "usdPerShare", "note": "Official company Non-GAAP diluted EPS when explicitly disclosed; SEC GAAP fallback. EPS surprise remains a separate Yahoo Finance dataset."},
                 {"key": "ocf", "label": "OCF", "unit": "usd"},
                 {"key": "fcf", "label": "FCF", "unit": "usd", "note": "SEC cash flow data: OCF minus absolute capex cash outflow."},
             ],
@@ -1406,7 +1628,12 @@ def main() -> None:
         if not mapping:
             return ticker, None, None, True
         try:
-            profile = build_company_financials(ticker, str(row.get("name") or mapping["title"]), mapping["cik"])
+            profile = build_company_financials(
+                ticker,
+                str(row.get("name") or mapping["title"]),
+                mapping["cik"],
+                adjustments_by_ticker,
+            )
             return ticker, profile, None, False
         except Exception as error:  # pragma: no cover - source variability
             return ticker, None, str(error), False
