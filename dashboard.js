@@ -10837,7 +10837,7 @@ function createMarketRsChart(canvas, row) {
       spanGaps: true,
       pointRadius: (context) => (context.dataIndex === priceLatestIndex ? 3 : 0),
       pointHoverRadius: 4,
-      yAxisID: "yEarnings",
+      yAxisID: "y1",
     },
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
       label: series.label,
@@ -10864,7 +10864,7 @@ function createMarketRsChart(canvas, row) {
       pointRadius: earningsMarkers.data.length ? 7 : 0,
       pointHoverRadius: 9,
       pointHitRadius: 12,
-      yAxisID: "y1",
+      yAxisID: "yEarnings",
       showLine: false,
       order: -1,
       isEarningsSurprise: true,
