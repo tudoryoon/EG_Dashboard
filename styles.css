@@ -6396,6 +6396,47 @@ h1 {
   height: 150px;
 }
 
+.us-margin-adjustment-note {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 0 2px 12px;
+  border-left: 3px solid #2563eb;
+  color: #55554f;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.us-margin-adjustment-kicker {
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.us-margin-adjustment-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.us-margin-adjustment-row strong {
+  color: #20201d;
+}
+
+.us-margin-adjustment-row a {
+  flex: 0 0 auto;
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.us-margin-adjustment-row a:hover {
+  text-decoration: underline;
+}
+
 .us-segment-block {
   margin-top: 14px;
   border-top: 1px solid #e2e2dc;

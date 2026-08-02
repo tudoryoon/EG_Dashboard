@@ -17806,28 +17806,99 @@ function renderMarketVixOverview() {
   }
 }
 
+function getUsMarginAdjustment(company, quarter) {
+  return (company.marginAdjustments ?? []).find((adjustment) => adjustment.quarter === quarter) ?? null;
+}
+
+function buildUsAdjustedMarginSeries(company) {
+  return (company.opm ?? []).map((value, index) => {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    const adjustment = getUsMarginAdjustment(company, company.labels?.[index]);
+    if (!adjustment || !Number.isFinite(adjustment.reportedImpactPp)) {
+      return value;
+    }
+    return Number((value - adjustment.reportedImpactPp).toFixed(1));
+  });
+}
+
+function buildUsMarginAdjustmentNote(company) {
+  const adjustments = company.marginAdjustments ?? [];
+  if (!adjustments.length) {
+    return "";
+  }
+
+  const marginLabel = company.marginLabel ?? "OPM";
+  const rows = adjustments
+    .map((adjustment) => {
+      const index = company.labels?.indexOf(adjustment.quarter) ?? -1;
+      const reported = index >= 0 ? company.opm?.[index] : null;
+      const adjusted = Number.isFinite(reported) && Number.isFinite(adjustment.reportedImpactPp)
+        ? Number((reported - adjustment.reportedImpactPp).toFixed(1))
+        : null;
+      const displayQuarter = index >= 0
+        ? getCompanyDisplayQuarterLabels({ ...company, labels: [adjustment.quarter] })[0]
+        : adjustment.quarter;
+      const values = Number.isFinite(reported) && Number.isFinite(adjusted)
+        ? `${reported.toFixed(1)}% -> ${adjusted.toFixed(1)}%`
+        : "";
+
+      return `
+        <div class="us-margin-adjustment-row">
+          <span><strong>${escapeHtml(displayQuarter)} ${escapeHtml(marginLabel)}</strong> ${escapeHtml(values)} · ${escapeHtml(adjustment.label)}</span>
+          <a href="${escapeHtml(adjustment.source)}" target="_blank" rel="noopener noreferrer">${escapeHtml(adjustment.sourceLabel ?? "Source")}</a>
+        </div>`;
+    })
+    .join("");
+
+  return `
+    <div class="us-margin-adjustment-note">
+      <span class="us-margin-adjustment-kicker">Adjusted margin bridge</span>
+      ${rows}
+    </div>`;
+}
+
 function createUsMarginChart(canvas, company) {
   if (typeof Chart === "undefined") {
     return;
   }
 
   const marginLabel = company.marginLabel ?? "OPM";
+  const adjustedMargin = buildUsAdjustedMarginSeries(company);
+  const hasAdjustments = (company.marginAdjustments ?? []).length > 0;
+  const datasets = [
+    {
+      label: hasAdjustments ? `Adjusted ${marginLabel}` : marginLabel,
+      data: adjustedMargin,
+      borderColor: "#2563eb",
+      backgroundColor: "#2563eb",
+      borderWidth: 2.2,
+      tension: 0.25,
+      pointRadius: hasAdjustments ? 1.6 : 0,
+      pointHoverRadius: 4,
+    },
+  ];
+
+  if (hasAdjustments) {
+    datasets.push({
+      label: `Reported ${marginLabel}`,
+      data: company.opm,
+      borderColor: "#8d8d86",
+      backgroundColor: "#8d8d86",
+      borderWidth: 1.6,
+      borderDash: [5, 4],
+      tension: 0.25,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+    });
+  }
 
   const chart = new Chart(canvas, {
     type: "line",
     data: {
       labels: company.displayLabels ?? company.labels,
-      datasets: [
-        {
-          label: marginLabel,
-          data: company.opm,
-          borderColor: "#2563eb",
-          backgroundColor: "#2563eb",
-          borderWidth: 2.2,
-          tension: 0.25,
-          pointRadius: 0,
-        },
-      ],
+      datasets,
     },
     options: {
       responsive: true,
@@ -17845,7 +17916,24 @@ function createUsMarginChart(canvas, company) {
             boxHeight: 8,
           },
         },
-        tooltip: { enabled: true },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            afterBody: (items) => {
+              const index = items?.[0]?.dataIndex;
+              const adjustment = Number.isInteger(index)
+                ? getUsMarginAdjustment(company, company.labels?.[index])
+                : null;
+              if (!adjustment) {
+                return "";
+              }
+              const impact = adjustment.reportedImpactPp > 0
+                ? `+${adjustment.reportedImpactPp.toFixed(1)}pp in reported margin`
+                : `${adjustment.reportedImpactPp.toFixed(1)}pp in reported margin`;
+              return [`${adjustment.label}: ${impact}`, adjustment.detail];
+            },
+          },
+        },
       },
       scales: {
         x: {
@@ -18019,7 +18107,7 @@ function renderUSOverview() {
           <div class="us-panel-head">
             <div>
               <h3>${company.name}</h3>
-              <p>Last 12 reported fiscal quarters with revenue, revenue YoY, and ${company.marginLabel ?? "OPM"}</p>
+              <p>Last 12 fiscal quarters. Margin is adjusted only for separately quantified non-recurring operating items.</p>
             </div>
           </div>
           <div class="us-mini-chart-wrap">
@@ -18028,6 +18116,7 @@ function renderUSOverview() {
           <div class="us-mini-chart-wrap us-mini-chart-wrap-secondary">
             <canvas data-us-margin="${company.name}"></canvas>
           </div>
+          ${buildUsMarginAdjustmentNote(company)}
           ${buildUsSegmentTable(company)}
         </article>`,
     )
@@ -18066,7 +18155,7 @@ function renderUSOverview() {
       <div class="us-section-head">
         <div>
           <h2>M7 Quarterly Earnings</h2>
-          <p>Company-reported fiscal quarter view. Charts show the latest 12 quarters, and segment tables show the latest 8 quarters.</p>
+          <p>${escapeHtml(usOverviewData.marginAdjustmentPolicy ?? "Reported margins are preserved; adjusted margins appear only where a separately quantified non-recurring operating item is disclosed.")}</p>
         </div>
       </div>
       <div class="us-mini-grid">${m7Markup}</div>
@@ -18096,6 +18185,7 @@ function renderUSOverview() {
       revenue: (company.revenue ?? []).slice(-12),
       revenueYoy: (company.revenueYoy ?? []).slice(-12),
       opm: (company.opm ?? []).slice(-12),
+      marginAdjustments: (company.marginAdjustments ?? []).filter((adjustment) => latestTwelveLabels.includes(adjustment.quarter)),
     };
     if (canvas) {
       createUsQuarterlyChart(canvas, chartCompany);

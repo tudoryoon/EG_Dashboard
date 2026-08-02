@@ -30,6 +30,8 @@ window.usOverviewData = (() => {
     return series;
   }
   const quarterLabels = ["23Q3", "23Q4", "24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1", "26Q2"];
+  const marginAdjustmentPolicy =
+    "Reported margin is preserved. Adjusted margin removes only separately quantified, non-recurring operating items. Non-operating gains and recurring business items are not adjusted.";
   const m7Quarterly = [
     {
       name: "Apple",
@@ -38,6 +40,16 @@ window.usOverviewData = (() => {
       revenue: [89.5, 119.6, 90.8, 85.8, 94.9, 124.3, 95.4, 94.0, 102.5, 143.8, 111.2, 109.4],
       revenueYoy: [-0.7, 2.0, -4.2, 4.9, 6.0, 3.9, 5.1, 9.6, 8.0, 15.7, 16.6, 16.4],
       opm: [44.5, 45.2, 45.9, 46.6, 46.3, 46.2, 46.9, 47.1, 46.5, 47.2, 49.3, 50.1],
+      marginAdjustments: [
+        {
+          quarter: "26Q2",
+          reportedImpactPp: 2.0,
+          label: "Tariff refund",
+          detail: "Apple said the tariff refund lifted reported GPM by approximately 2.0 percentage points.",
+          sourceLabel: "Apple FY26 Q3 earnings call",
+          source: "https://www.apple.com/investor/earnings-call/",
+        },
+      ],
       segments: [
         {
           name: "iPhone",
@@ -130,6 +142,7 @@ window.usOverviewData = (() => {
       revenue: [56.5, 62.0, 61.9, 64.7, 65.6, 69.6, 70.1, 76.4, 77.7, 81.3, 82.9, 90.0],
       revenueYoy: [12.8, 17.6, 17.0, 15.2, 16.1, 12.3, 13.3, 18.1, 18.4, 16.7, 18.3, 17.7],
       opm: [71.2, 68.4, 70.1, 69.6, 69.4, 68.7, 68.7, 68.6, 69.0, 68.0, 67.6, 67.2],
+      marginAdjustments: [],
       segments: [
         {
           name: "Productivity & Business Processes",
@@ -187,6 +200,7 @@ window.usOverviewData = (() => {
       revenue: [76.7, 86.3, 80.5, 84.7, 88.3, 96.5, 90.2, 96.4, 102.3, 113.8, 109.9, 119.8],
       revenueYoy: [11.0, 13.6, 15.3, 13.5, 15.1, 11.8, 12.0, 13.8, 15.9, 17.9, 21.8, 24.2],
       opm: [27.8, 27.5, 31.6, 32.4, 32.3, 32.1, 33.9, 32.4, 30.5, 31.6, 36.1, 34.0],
+      marginAdjustments: [],
       segments: [
         {
           name: "Search & Other",
@@ -260,6 +274,7 @@ window.usOverviewData = (() => {
       revenue: [143.1, 170.0, 143.3, 148.0, 158.9, 187.8, 155.7, 167.7, 180.2, 213.4, 181.5, 200.6],
       revenueYoy: [12.6, 13.9, 12.5, 10.1, 11.0, 10.5, 8.7, 13.3, 13.4, 13.6, 16.6, 19.6],
       opm: [7.8, 7.8, 10.7, 9.9, 11.0, 11.3, 11.8, 11.5, 9.7, 11.7, 13.2, 13.7],
+      marginAdjustments: [],
       segments: [
         {
           name: "North America",
@@ -333,6 +348,24 @@ window.usOverviewData = (() => {
       revenue: [13.5, 18.1, 22.1, 26.0, 30.0, 35.1, 39.3, 44.1, 46.7, 57.0, 68.1, 81.6],
       revenueYoy: [101.5, 205.5, 265.3, 262.1, 122.4, 93.6, 77.9, 69.2, 55.6, 62.5, 73.2, 85.2],
       opm: [50.3, 57.5, 61.6, 64.9, 62.1, 62.3, 61.1, 49.1, 60.8, 63.2, 65.0, 65.6],
+      marginAdjustments: [
+        {
+          quarter: "25Q2",
+          reportedImpactPp: -10.3,
+          label: "H20 inventory and purchase-obligation charge",
+          detail: "Adjusted OPM adds back the separately disclosed $4.538B H20 charge.",
+          sourceLabel: "NVIDIA FY26 Q1 results",
+          source: "https://investor.nvidia.com/news/press-release-details/2025/NVIDIA-Announces-Financial-Results-for-First-Quarter-Fiscal-2026/",
+        },
+        {
+          quarter: "25Q3",
+          reportedImpactPp: 0.4,
+          label: "H20 charge release",
+          detail: "Adjusted OPM removes the separately disclosed $180M release of prior H20 charges.",
+          sourceLabel: "NVIDIA FY26 Q2 results",
+          source: "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-second-quarter-fiscal-2026",
+        },
+      ],
       segments: [
         {
           name: "Data Center",
@@ -376,6 +409,16 @@ window.usOverviewData = (() => {
       revenue: [34.1, 40.1, 36.5, 39.1, 40.6, 48.4, 42.3, 47.5, 51.2, 59.9, 56.3, 60.8],
       revenueYoy: [23.1, 24.7, 27.6, 22.2, 19.1, 20.7, 15.9, 21.5, 26.1, 23.8, 33.1, 28.0],
       opm: [40.3, 40.8, 37.9, 38.0, 42.7, 48.3, 41.5, 43.0, 40.1, 41.3, 40.6, 30.9],
+      marginAdjustments: [
+        {
+          quarter: "26Q2",
+          reportedImpactPp: -5.9,
+          label: "Legal and restructuring charges",
+          detail: "Adjusted OPM adds back $2.40B of legal charges and $1.18B of severance costs.",
+          sourceLabel: "Meta Q2 2026 results",
+          source: "https://s21.q4cdn.com/399680738/files/doc_financials/2026/q2/Meta-06-30-2026-Exhibit-99-1-FINAL.pdf",
+        },
+      ],
       segments: [
         {
           name: "Family of Apps",
@@ -449,6 +492,7 @@ window.usOverviewData = (() => {
       revenue: [23.4, 25.2, 21.3, 25.5, 25.2, 28.5, 23.4, 25.8, 27.2, 29.1, 22.4, 28.2],
       revenueYoy: [9.1, 3.6, -8.6, 2.4, 7.7, 13.1, 9.9, 1.2, 7.9, 2.1, 15.8, 25.5],
       opm: [9.6, 8.7, 8.1, 7.4, 6.8, 6.2, 5.9, 6.1, 6.5, 7.0, 4.2, 1.4],
+      marginAdjustments: [],
       segments: [
         {
           name: "Automotive",
@@ -502,5 +546,5 @@ window.usOverviewData = (() => {
     },
   ];
 
-  return { quarterLabels, m7Quarterly };
+  return { quarterLabels, m7Quarterly, marginAdjustmentPolicy };
 })();
