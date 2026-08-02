@@ -11203,7 +11203,8 @@ function renderMarketRsOverview() {
     state.rsBriefingSector = "briefingAll";
   }
   const rows = getVisibleMarketRsRows(briefingSectorData);
-  const newHighBaseRows = getMarketRsBaseRows(briefingSectorData);
+  const monitoringUniverse = "all";
+  const monitoringBaseRows = marketRsData.rows ?? [];
   const selected = getSelectedMarketRsRow(rows);
   if (selected) {
     state.rsSelectedTicker = selected.ticker;
@@ -11302,19 +11303,19 @@ function renderMarketRsOverview() {
   const activeNewHighWindow = getMarketRsFilterNewHighWindow() ?? "1y";
   const activeNewHighLabel = getMarketRsNewHighLabel(activeNewHighWindow, activeNewHighKind);
   const briefingTickerSet = new Set(briefingSectorData.allTickers);
-  const newHighMonitorRows = newHighBaseRows
+  const newHighMonitorRows = monitoringBaseRows
     .filter((row) => !state.rsNewHighBriefingOnly || briefingTickerSet.has(row.ticker))
     .filter((row) => !state.rsNewHighLargeCapOnly || Number(row.marketCap) > 10_000_000_000);
   const newHighPanels = [
     {
       title: "RS New High 3M",
       tone: "rs",
-      rows: newHighMonitorRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "3m")),
+      rows: newHighMonitorRows.filter((row) => getMarketRsUniverseNewHigh(row, monitoringUniverse, "3m")),
     },
     {
       title: "RS New High 1Y",
       tone: "rs",
-      rows: newHighMonitorRows.filter((row) => getMarketRsUniverseNewHigh(row, state.rsUniverse, "1y")),
+      rows: newHighMonitorRows.filter((row) => getMarketRsUniverseNewHigh(row, monitoringUniverse, "1y")),
     },
     {
       title: "Price New High 3M",
@@ -11330,8 +11331,8 @@ function renderMarketRsOverview() {
     .map((panel) => {
       const panelRows = [...panel.rows].sort((left, right) => {
         const scoreDifference =
-          (getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity) -
-          (getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity);
+          (getMarketRsUniverseScore(right, monitoringUniverse) ?? -Infinity) -
+          (getMarketRsUniverseScore(left, monitoringUniverse) ?? -Infinity);
         if (scoreDifference !== 0) {
           return scoreDifference;
         }
@@ -11347,7 +11348,7 @@ function renderMarketRsOverview() {
             <button type="button" class="market-rs-new-high-item" data-rs-ticker="${row.ticker}" data-rs-monitor-item>
               <strong>${row.ticker}</strong>
               <span class="market-rs-new-high-meta">
-                <b>RS ${formatRsNumber(getMarketRsUniverseScore(row, state.rsUniverse))}</b>
+                <b>RS ${formatRsNumber(getMarketRsUniverseScore(row, monitoringUniverse))}</b>
                 ${sectorLabel ? `<em title="${sectorLabel}">${sectorLabel}</em>` : ""}
               </span>
               <small>${formatMarketCapCompact(row.marketCap)}</small>
@@ -11368,7 +11369,7 @@ function renderMarketRsOverview() {
       `;
     })
     .join("");
-  const periodLeaderRows = newHighBaseRows
+  const periodLeaderRows = monitoringBaseRows
     .filter((row) => !state.rsPeriodLeadersBriefingOnly || briefingTickerSet.has(row.ticker))
     .filter((row) => !state.rsPeriodLeadersLargeCapOnly || Number(row.marketCap) > 10_000_000_000);
   const periodLeaderPanels = [
@@ -11387,8 +11388,8 @@ function renderMarketRsOverview() {
             return periodDifference;
           }
           const scoreDifference =
-            (getMarketRsUniverseScore(right, state.rsUniverse) ?? -Infinity) -
-            (getMarketRsUniverseScore(left, state.rsUniverse) ?? -Infinity);
+            (getMarketRsUniverseScore(right, monitoringUniverse) ?? -Infinity) -
+            (getMarketRsUniverseScore(left, monitoringUniverse) ?? -Infinity);
           if (scoreDifference !== 0) {
             return scoreDifference;
           }
@@ -11518,7 +11519,7 @@ function renderMarketRsOverview() {
         <div class="market-rs-new-high-board-head">
           <div>
             <h2>New High Monitor</h2>
-            <p>${getMarketRsUniverseLabel(state.rsUniverse)} · RS Rating descending · 7 visible · scroll for all names</p>
+            <p>${getMarketRsUniverseLabel(monitoringUniverse)} universe · RS Rating descending · 7 visible · scroll for all names</p>
           </div>
           <div class="market-rs-period-controls">
             <label class="market-rs-new-high-cap-toggle">
@@ -11538,7 +11539,7 @@ function renderMarketRsOverview() {
         <div class="market-rs-new-high-board-head">
           <div>
             <h2>기간별 RS Leaders</h2>
-            <p>각 기간 RS 내림차순 · 7 visible · scroll for all names · 동점은 종합 RS와 시가총액 순</p>
+            <p>${getMarketRsUniverseLabel(monitoringUniverse)} universe · 각 기간 RS 내림차순 · 7 visible · scroll for all names · 동점은 종합 RS와 시가총액 순</p>
           </div>
           <div class="market-rs-period-controls">
             <label class="market-rs-new-high-cap-toggle">
@@ -11917,7 +11918,16 @@ function renderMarketRsOverview() {
     element.addEventListener("click", () => {
       if (element.hasAttribute("data-rs-monitor-item")) {
         state.query = "";
+        state.rsUniverse = "all";
         state.rsFilter = "all";
+        state.rsBriefingSector = "all";
+        state.rsMarketCapRange = "all";
+        state.rsCustomMarketCapMin = "";
+        state.rsCustomMarketCapMax = "";
+        state.rsScoreRange = "all";
+        state.rsCustomScoreMin = "";
+        state.rsCustomScoreMax = "";
+        resetRsCardLimit();
       }
       state.rsSelectedTicker = element.dataset.rsTicker;
       render();
