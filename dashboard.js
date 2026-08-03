@@ -5210,8 +5210,8 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
-    backgroundColor: cloudDashboardData.colors[series.key],
-    borderColor: cloudDashboardData.colors[series.key],
+    backgroundColor: series.color ?? cloudDashboardData.colors[series.key],
+    borderColor: series.color ?? cloudDashboardData.colors[series.key],
     borderWidth: 0,
     borderRadius: 4,
     barPercentage: options.barPercentage ?? 0.78,
@@ -5222,6 +5222,7 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const step = options.step ?? 10;
   const yMax = Math.ceil((maxValue * 1.1) / step) * step;
+  const tickEvery = options.tickEvery ?? 2;
 
   const chart = new Chart(canvas, {
     type: "bar",
@@ -5257,7 +5258,9 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
             autoSkip: false,
             maxRotation: 0,
             callback: (_, index) => {
-              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+              const isLatest = index === labels.length - 1;
+              const isInterval = index % tickEvery === 0 && index < labels.length - 2;
+              if (index === 0 || isLatest || isInterval) {
                 return labels[index] ?? "";
               }
               return "";
@@ -5267,7 +5270,8 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
         },
         y: {
           beginAtZero: true,
-          max: yMax,
+          min: options.min,
+          max: options.max ?? yMax,
           ticks: {
             color: "#8d8d86",
             callback: (value) => formatter(Number(value)),
@@ -5292,14 +5296,17 @@ function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
-    borderColor: cloudDashboardData.colors[series.key],
-    backgroundColor: cloudDashboardData.colors[series.key],
+    borderColor: series.color ?? cloudDashboardData.colors[series.key],
+    backgroundColor: series.color ?? cloudDashboardData.colors[series.key],
     borderWidth: 2.6,
-    tension: 0.24,
-    pointRadius: 3,
-    pointHoverRadius: 5,
+    borderDash: series.borderDash ?? [],
+    tension: series.stepped ? 0 : 0.24,
+    stepped: series.stepped ?? false,
+    showLine: series.showLine ?? true,
+    pointRadius: series.pointRadius ?? 3,
+    pointHoverRadius: series.pointHoverRadius ?? 5,
     pointHitRadius: 10,
-    spanGaps: options.spanGaps === true,
+    spanGaps: series.spanGaps ?? options.spanGaps === true,
   }));
 
   const allValues = panel.series.flatMap((series) => series.values.filter((value) => Number.isFinite(value)));
@@ -5419,7 +5426,7 @@ function buildCloudRpoRevenueRatioPanel() {
 
 function buildMicrosoftAiStatsMarkup(panel) {
   const labels = cloudDashboardData.labels ?? [];
-  const series = panel?.series?.[0] ?? null;
+  const series = panel?.series?.find((item) => item.key === "microsoftOfficial") ?? panel?.series?.[0] ?? null;
   const values = series?.values ?? [];
   const latestIndex = values.map((value, index) => (Number.isFinite(value) ? index : -1)).filter((index) => index >= 0).slice(-1)[0];
   if (latestIndex === undefined) {
@@ -5461,7 +5468,9 @@ function buildMicrosoftAiStatsMarkup(panel) {
 }
 
 function buildMicrosoftAiRatioPanel() {
-  const aiSeries = cloudDashboardData.microsoftAi?.series?.[0];
+  const aiSeries =
+    cloudDashboardData.microsoftAi?.series?.find((item) => item.key === "microsoftFloor") ??
+    cloudDashboardData.microsoftAi?.series?.[0];
   const microsoftRevenueSeries = cloudDashboardData.revenue?.series?.find((item) => item.key === "microsoft");
   const values = (aiSeries?.values ?? []).map((aiArr, index) => {
     const revenueMillions = microsoftRevenueSeries?.values?.[index];
@@ -5477,11 +5486,33 @@ function buildMicrosoftAiRatioPanel() {
     series: [
       {
         key: "microsoft",
-        name: "AI ARR / Intelligent Cloud",
+        name: "AI ARR Floor / Intelligent Cloud",
         values,
       },
     ],
   };
+}
+
+function buildCloudNetNewArrStatsMarkup(panel) {
+  const labels = cloudDashboardData.labels ?? [];
+  return (panel?.series ?? [])
+    .map((series) => {
+      const values = series.values ?? [];
+      const latestIndex = values.findLastIndex((value) => Number.isFinite(value));
+      const latestValue = latestIndex >= 0 ? values[latestIndex] : null;
+      const yearAgoValue = values[latestIndex - 4];
+      const yoy =
+        Number.isFinite(latestValue) && Number.isFinite(yearAgoValue) && yearAgoValue !== 0
+          ? ((latestValue - yearAgoValue) / Math.abs(yearAgoValue)) * 100
+          : null;
+      return `
+        <div class="cloud-rpo-stat">
+          <span>${series.name} Net New ARR</span>
+          <strong>${Number.isFinite(latestValue) ? formatCompactDollarMillions(latestValue) : "-"}</strong>
+          <small>${labels[latestIndex] ?? "-"}${Number.isFinite(yoy) ? ` · ${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% YoY` : ""}</small>
+        </div>`;
+    })
+    .join("");
 }
 
 function createCapexLineChart(canvas, labels, panel, formatter, minOverride = null) {
@@ -5867,11 +5898,37 @@ function renderCloudOverview() {
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
             <div>
+              <h3>${cloudDashboardData.netNewArr.title}</h3>
+              <p>${cloudDashboardData.netNewArr.subtitle}</p>
+            </div>
+          </div>
+          <div class="cloud-rpo-stats cloud-net-new-arr-stats">
+            ${buildCloudNetNewArrStatsMarkup(cloudDashboardData.netNewArr)}
+          </div>
+          <div class="cloud-net-new-arr-grid">
+            ${(cloudDashboardData.netNewArr.series ?? [])
+              .map(
+                (series) => `
+                  <section class="cloud-net-new-arr-item">
+                    <h4>${series.name}</h4>
+                    <p>${series.basis}</p>
+                    <div class="cloud-chart-wrap cloud-net-new-arr-chart">
+                      <canvas data-cloud-net-new-arr="${series.key}"></canvas>
+                    </div>
+                  </section>`,
+              )
+              .join("")}
+          </div>
+          <p class="cloud-rpo-note">이 지표는 회사가 공시한 ARR가 아니라 분기 매출 순증가분을 연율화한 성장 속도 프록시입니다. Azure는 독립 매출 비공개로 Altimeter / Clouded Judgement 추정치를 사용합니다.</p>
+        </article>
+        <article class="cloud-panel cloud-panel-wide">
+          <div class="us-panel-head">
+            <div>
               <h3>${cloudDashboardData.microsoftAi.title}</h3>
               <p>${cloudDashboardData.microsoftAi.subtitle}</p>
             </div>
           </div>
-          <div class="cloud-rpo-stats">
+          <div class="cloud-rpo-stats cloud-microsoft-ai-stats">
             ${buildMicrosoftAiStatsMarkup(cloudDashboardData.microsoftAi)}
           </div>
           <div class="cloud-ai-chart-grid">
@@ -5893,6 +5950,7 @@ function renderCloudOverview() {
   const revenueCanvas = usOverviewRoot.querySelector('[data-cloud-chart="revenue"]');
   const rpoCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo"]');
   const rpoRatioCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo-ratio"]');
+  const netNewArrCanvases = usOverviewRoot.querySelectorAll("[data-cloud-net-new-arr]");
   const microsoftAiCanvas = usOverviewRoot.querySelector('[data-cloud-chart="msft-ai-arr"]');
   const microsoftAiRatioCanvas = usOverviewRoot.querySelector('[data-cloud-chart="msft-ai-ratio"]');
 
@@ -5911,6 +5969,27 @@ function renderCloudOverview() {
   if (rpoRatioCanvas) {
     createCloudPointLineChart(rpoRatioCanvas, rpoRatioPanel, (value) => `${Number(value).toFixed(1)}x`, { step: 5, min: 0 });
   }
+  netNewArrCanvases.forEach((canvas) => {
+    const key = canvas.dataset.cloudNetNewArr;
+    const series = cloudDashboardData.netNewArr?.series?.find((item) => item.key === key);
+    if (!series) {
+      return;
+    }
+    createCloudBarChart(
+      canvas,
+      { series: [series] },
+      (value) => formatCompactDollarMillions(Number(value)),
+      {
+        labels: cloudDashboardData.labels,
+        step: 5000,
+        min: key === "amazon" ? -1000 : 0,
+        max: key === "microsoft" ? 20000 : 25000,
+        tickEvery: 4,
+        barPercentage: 0.72,
+        categoryPercentage: 0.88,
+      },
+    );
+  });
   if (microsoftAiCanvas) {
     createCloudPointLineChart(microsoftAiCanvas, cloudDashboardData.microsoftAi, (value) => `$${Number(value).toFixed(1)}B`, { step: 10, min: 0, spanGaps: true });
   }

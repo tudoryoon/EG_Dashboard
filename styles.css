@@ -2219,6 +2219,42 @@ h1 {
   gap: 14px;
 }
 
+.cloud-net-new-arr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.cloud-rpo-stats.cloud-net-new-arr-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cloud-rpo-stats.cloud-microsoft-ai-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cloud-net-new-arr-item {
+  min-width: 0;
+}
+
+.cloud-net-new-arr-item h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.cloud-net-new-arr-item p {
+  min-height: 32px;
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.cloud-net-new-arr-chart canvas {
+  height: 280px;
+}
+
 .market-panel-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -8345,6 +8381,22 @@ h1 {
 
   .us-mini-grid {
     grid-template-columns: 1fr;
+  }
+
+  .cloud-net-new-arr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-rpo-stats.cloud-net-new-arr-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-rpo-stats.cloud-microsoft-ai-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-net-new-arr-item p {
+    min-height: 0;
   }
 
   .market-rs-layout {

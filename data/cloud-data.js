@@ -76,7 +76,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS Revenue",
-        values: [18441, 19739, 20538, 21378, 21354, 22140, 23509, 24204, 25037, 26281, 27452, 28786, 29267, 30873, 33006, 35579, 37587, 42232],
+        values: [18441, 19739, 20538, 21378, 21354, 22140, 23059, 24204, 25037, 26281, 27452, 28786, 29267, 30873, 33006, 35579, 37587, 42232],
       },
       {
         key: "microsoft",
@@ -113,22 +113,62 @@ window.cloudDashboardData = {
       },
     ],
   },
+  netNewArr: {
+    title: "Quarterly Net New ARR Added (Proxy)",
+    subtitle: "Annualized sequential cloud-revenue addition: (current quarter revenue - prior quarter revenue) x 4.",
+    unit: "$MM",
+    source: "Company filings; Clouded Judgement / Altimeter methodology. Azure revenue is estimated because Microsoft does not disclose standalone Azure revenue.",
+    series: [
+      {
+        key: "amazon",
+        name: "AWS",
+        basis: "Company-reported AWS revenue",
+        values: [2644, 5192, 3196, 3360, -96, 3144, 3676, 4580, 3332, 4976, 4684, 5336, 1924, 6424, 8532, 10292, 8032, 18580],
+      },
+      {
+        key: "microsoft",
+        name: "Azure",
+        basis: "Altimeter / Clouded Judgement estimated Azure revenue",
+        values: [2102, 4404, 1775, 2975, 1087, 4748, 3582, 7402, 1992, 4967, 4300, 7312, 3113, 9516, 6642, 9499, 5096, 15915],
+      },
+      {
+        key: "google",
+        name: "Google Cloud",
+        basis: "Company-reported Google Cloud revenue",
+        values: [1120, 1820, 2368, 1788, 556, 2308, 1520, 3124, 1528, 3092, 4024, 2408, 1220, 5456, 6132, 10028, 9456, 18960],
+      },
+    ],
+  },
   microsoftAi: {
     title: "Microsoft AI Business ARR",
-    subtitle: "Microsoft-disclosed AI business annual revenue run rate. This is not AI-only RPO; it is an annualized revenue run-rate across Azure AI, Copilot, GitHub and other AI services.",
+    subtitle: "Official disclosure points plus a stepped last-disclosed floor. Microsoft did not provide a new AI ARR figure in FY26 Q4.",
     unit: "$B",
     source: "Microsoft earnings releases and earnings-call commentary",
     series: [
       {
-        key: "microsoft",
-        name: "MSFT AI ARR",
-        values: [null, null, null, null, null, null, null, null, null, null, null, 13.0, null, null, null, 22.0, 37.0, null],
+        key: "microsoftFloor",
+        name: "Last Disclosed Floor",
+        color: "#93b7ef",
+        borderDash: [7, 5],
+        stepped: true,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        values: [null, null, null, null, null, null, null, null, null, null, null, 13.0, 13.0, 13.0, 13.0, 13.0, 37.0, 37.0],
+      },
+      {
+        key: "microsoftOfficial",
+        name: "Official Disclosure",
+        color: "#2563eb",
+        showLine: false,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        values: [null, null, null, null, null, null, null, null, null, null, null, 13.0, null, null, null, null, 37.0, null],
       },
     ],
     notes: [
       "FY25 Q2: AI business surpassed $13B annual revenue run rate.",
-      "FY26 Q2: management commentary indicated AI business exceeded roughly $22B annual revenue run rate.",
       "FY26 Q3: AI business surpassed $37B annual revenue run rate, up 123% YoY.",
+      "FY26 Q4: no new AI ARR figure was disclosed; the chart carries $37B forward only as a lower bound.",
     ],
   },
 };
