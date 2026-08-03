@@ -1,5 +1,6 @@
 ﻿const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { quarterLabels: [], m7Quarterly: [] };
+const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, openAiUsers: null, anthropicAdoption: null, methodology: [], sources: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 const capexDashboardData = window.capexDashboardData ?? {
   quarterLabels: [],
@@ -111,6 +112,7 @@ const primaryTabMeta = {
   EtfStatus: { label: "ETF 현황" },
   RS: { label: "RS" },
   IndexTrend: { label: "Index Trend" },
+  LLM: { label: "LLM" },
   Cloud: { label: "Cloud" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
@@ -5945,6 +5947,317 @@ function createCapexAggregateComboChart(canvas, panel) {
   });
 
   charts.push(chart);
+}
+
+function createLlmRevenueChart(canvas) {
+  const panel = llmDashboardData.revenue;
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const datasets = (panel.series ?? []).map((series) => ({
+    label: series.name,
+    data: series.values,
+    sourceLabels: series.sourceLabels,
+    borderColor: llmDashboardData.colors?.[series.key] ?? "#111827",
+    backgroundColor: llmDashboardData.colors?.[series.key] ?? "#111827",
+    borderWidth: 3,
+    tension: 0.18,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    pointHitRadius: 12,
+    spanGaps: true,
+  }));
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: panel.labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 1)}B`,
+            afterLabel: (context) => {
+              const source = context.dataset.sourceLabels?.[context.dataIndex];
+              return source ? `Source: ${source}` : "";
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 8, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: 50,
+          ticks: { color: "#8d8d86", callback: (value) => `$${value}B`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createLlmOpenAiUsersChart(canvas) {
+  const panel = llmDashboardData.openAiUsers;
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const color = llmDashboardData.colors?.openai ?? "#111827";
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: panel.labels,
+      datasets: [
+        {
+          label: "ChatGPT WAU",
+          data: panel.values,
+          sourceLabels: panel.sourceLabels,
+          borderColor: color,
+          backgroundColor: "rgba(17, 24, 39, 0.10)",
+          fill: true,
+          borderWidth: 3,
+          tension: 0.22,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointHitRadius: 12,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `Weekly active users: ${Number(context.parsed.y).toFixed(0)}M`,
+            afterLabel: (context) => `Source: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 6, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: 1000,
+          ticks: { color: "#8d8d86", callback: (value) => `${value}M`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createLlmAnthropicAdoptionChart(canvas) {
+  const panel = llmDashboardData.anthropicAdoption;
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const color = llmDashboardData.colors?.anthropic ?? "#d97745";
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: panel.labels,
+      datasets: [
+        {
+          label: panel.totalCustomersLabel,
+          data: panel.totalCustomersK,
+          yAxisID: "yCustomers",
+          borderColor: color,
+          backgroundColor: color,
+          borderWidth: 3,
+          tension: 0.18,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointHitRadius: 12,
+          spanGaps: true,
+        },
+        {
+          label: panel.millionDollarLabel,
+          data: panel.millionDollarAccounts,
+          yAxisID: "yLarge",
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          borderWidth: 2.5,
+          borderDash: [7, 5],
+          tension: 0.18,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointHitRadius: 12,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => {
+              if (context.dataset.yAxisID === "yCustomers") {
+                const prefix = context.dataIndex === 0 ? "<" : "";
+                return `${context.dataset.label}: ${prefix}${Number(context.parsed.y).toFixed(0)}K`;
+              }
+              return `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString()} accounts`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 5, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        yCustomers: {
+          position: "left",
+          beginAtZero: true,
+          suggestedMax: 330,
+          ticks: { color: "#8d8d86", callback: (value) => `${value}K`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        yLarge: {
+          position: "right",
+          beginAtZero: true,
+          suggestedMax: 1100,
+          ticks: { color: "#8d8d86", callback: (value) => Number(value).toLocaleString(), maxTicksLimit: 6 },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function renderLlmOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+
+  usOverviewRoot.innerHTML = `
+    <section class="llm-overview">
+      <div class="us-section-head llm-section-head">
+        <div>
+          <h2>Frontier Model Dashboard</h2>
+          <p>OpenAI and Anthropic revenue run-rate and adoption milestones</p>
+        </div>
+        <span class="llm-updated">Updated ${llmDashboardData.updatedAt}</span>
+      </div>
+      <div class="llm-snapshot-strip">
+        ${(llmDashboardData.snapshots ?? [])
+          .map(
+            (item) => `
+              <div class="llm-snapshot is-${item.tone}">
+                <span>${item.provider}</span>
+                <strong>${item.value}</strong>
+                <p>${item.metric}</p>
+                <small>${item.asOf}</small>
+              </div>`,
+          )
+          .join("")}
+      </div>
+      <div class="llm-panel-grid">
+        <article class="llm-panel llm-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>${llmDashboardData.revenue?.title ?? "Revenue Run-Rate"}</h3>
+              <p>${llmDashboardData.revenue?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="llm-chart-wrap llm-chart-wrap-tall">
+            <canvas data-llm-chart="revenue"></canvas>
+          </div>
+          <p class="llm-chart-note">연환산 런레이트는 최근 월 매출을 12배한 속도 지표입니다. 감사된 연간 매출이나 계약 잔고 기준 SaaS ARR과는 다릅니다.</p>
+        </article>
+        <article class="llm-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${llmDashboardData.openAiUsers?.title ?? "OpenAI Adoption"}</h3>
+              <p>${llmDashboardData.openAiUsers?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="llm-chart-wrap">
+            <canvas data-llm-chart="openai-users"></canvas>
+          </div>
+        </article>
+        <article class="llm-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>${llmDashboardData.anthropicAdoption?.title ?? "Anthropic Adoption"}</h3>
+              <p>${llmDashboardData.anthropicAdoption?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="llm-chart-wrap">
+            <canvas data-llm-chart="anthropic-adoption"></canvas>
+          </div>
+        </article>
+        <article class="llm-panel llm-panel-wide llm-method-panel">
+          <div>
+            <h3>Reading Guide</h3>
+            <ul>
+              ${(llmDashboardData.methodology ?? []).map((item) => `<li>${item}</li>`).join("")}
+            </ul>
+          </div>
+          <div>
+            <h3>Sources</h3>
+            <div class="llm-source-list">
+              ${(llmDashboardData.sources ?? [])
+                .map((source) => `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.label}</a>`)
+                .join("")}
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+
+  const revenueCanvas = usOverviewRoot.querySelector('[data-llm-chart="revenue"]');
+  const openAiUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-users"]');
+  const anthropicAdoptionCanvas = usOverviewRoot.querySelector('[data-llm-chart="anthropic-adoption"]');
+  if (revenueCanvas) createLlmRevenueChart(revenueCanvas);
+  if (openAiUsersCanvas) createLlmOpenAiUsersChart(openAiUsersCanvas);
+  if (anthropicAdoptionCanvas) createLlmAnthropicAdoptionChart(anthropicAdoptionCanvas);
 }
 
 function renderCloudOverview() {
@@ -18644,7 +18957,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "Cds" ? " is-cds" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Cloud" ? " is-cloud" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "Cds" ? " is-cds" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "LLM" ? " is-llm" : ""}${tabKey === "Cloud" ? " is-cloud" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -18768,6 +19081,11 @@ function renderSummary(list) {
 
   if (state.tab === "IndexTrend") {
     summaryText.textContent = "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD";
+    return;
+  }
+
+  if (state.tab === "LLM") {
+    summaryText.textContent = "Frontier-model revenue run-rate and adoption milestones for OpenAI and Anthropic";
     return;
   }
 
@@ -19281,6 +19599,12 @@ function render() {
   if (state.tab === "IndexTrend") {
     renderSummary([]);
     renderIndexTrendOverview();
+    return;
+  }
+
+  if (state.tab === "LLM") {
+    renderSummary([]);
+    renderLlmOverview();
     return;
   }
 
