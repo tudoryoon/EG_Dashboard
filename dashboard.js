@@ -111,6 +111,7 @@ const primaryTabMeta = {
   EtfStatus: { label: "ETF 현황" },
   RS: { label: "RS" },
   IndexTrend: { label: "Index Trend" },
+  Cloud: { label: "Cloud" },
   Market: { label: "Market" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
@@ -122,7 +123,6 @@ const primaryTabMeta = {
 
 const bigTechSubtabMeta = {
   M7: { label: "M7" },
-  Cloud: { label: "Cloud" },
   Capex: { label: "Capex & 현금흐름" },
 };
 
@@ -18686,7 +18686,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "Cds" ? " is-cds" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "Cds" ? " is-cds" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "Cloud" ? " is-cloud" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -18813,6 +18813,11 @@ function renderSummary(list) {
     return;
   }
 
+  if (state.tab === "Cloud") {
+    summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and Microsoft Copilot dashboard";
+    return;
+  }
+
   if (state.tab === "EtfStatus") {
     summaryText.textContent = "Issuer-based ETF price and primary-market fund-flow tracking";
     return;
@@ -18870,11 +18875,6 @@ function renderSummary(list) {
 
   if (state.tab === "BigTech" && state.bigTechView === "M7") {
     summaryText.textContent = "";
-    return;
-  }
-
-  if (state.tab === "BigTech" && state.bigTechView === "Cloud") {
-    summaryText.textContent = "Cloud raw data dashboard";
     return;
   }
 
@@ -19290,12 +19290,6 @@ function render() {
     return;
   }
 
-  if (state.tab === "BigTech" && state.bigTechView === "Cloud") {
-    renderSummary([]);
-    renderCloudOverview();
-    return;
-  }
-
   if (state.tab === "BigTech" && state.bigTechView === "Capex") {
     renderSummary([]);
     renderCapexOverview();
@@ -19329,6 +19323,12 @@ function render() {
   if (state.tab === "IndexTrend") {
     renderSummary([]);
     renderIndexTrendOverview();
+    return;
+  }
+
+  if (state.tab === "Cloud") {
+    renderSummary([]);
+    renderCloudOverview();
     return;
   }
 

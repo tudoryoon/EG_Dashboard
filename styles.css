@@ -246,6 +246,19 @@ h1 {
   box-shadow: 0 14px 28px rgba(21, 128, 61, 0.2);
 }
 
+.country-button.is-cloud {
+  border-color: #b9d5e8;
+  background: linear-gradient(180deg, #f2f9fd, #e1f0f8);
+  color: #164e63;
+}
+
+.country-button.is-cloud.active {
+  border-color: #0e7490;
+  background: linear-gradient(135deg, #38a6c4, #0e7490);
+  color: #f5fdff;
+  box-shadow: 0 14px 28px rgba(14, 116, 144, 0.2);
+}
+
 .country-button.is-study {
   border-color: #b7d7d7;
   background: linear-gradient(180deg, #edf8f8, #dff2f2);
