@@ -26,7 +26,17 @@ jobs:
         run: python -m pip install pandas yfinance requests lxml html5lib openpyxl xlrd
 
       - name: Refresh market macro dashboard
-        run: python scripts/update_market_macro.py
+        run: |
+          for attempt in 1 2 3; do
+            if python scripts/update_market_macro.py; then
+              exit 0
+            fi
+            echo "::warning::Market macro refresh failed on attempt ${attempt}."
+            if [ "${attempt}" -lt 3 ]; then
+              sleep $((attempt * 30))
+            fi
+          done
+          exit 1
 
       - name: Commit updated market macro dashboard
         run: |

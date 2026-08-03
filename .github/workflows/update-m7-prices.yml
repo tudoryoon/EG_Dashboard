@@ -12,7 +12,7 @@ permissions:
 jobs:
   update-m7-prices:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,21 +23,60 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install pandas yfinance
+        run: python -m pip install pandas yfinance requests
 
-      - name: Refresh M7 price history
-        run: python scripts/update_m7_prices.py
-
-      - name: Commit updated price history
+      - name: Refresh M7 and memory comparison history
         run: |
-          if git diff --quiet -- data/m7-price-data.js; then
-            echo "No M7 price changes detected."
+          m7_updated=false
+          for attempt in 1 2 3; do
+            if python scripts/update_m7_prices.py; then
+              m7_updated=true
+              break
+            fi
+            echo "::warning::M7 price refresh failed on attempt ${attempt}."
+            if [ "${attempt}" -lt 3 ]; then
+              sleep $((attempt * 20))
+            fi
+          done
+
+          if [ "${m7_updated}" != "true" ]; then
+            echo "::error::M7 price refresh failed after three attempts."
+            exit 1
+          fi
+
+          study_updated=false
+          for attempt in 1 2 3; do
+            if python scripts/update_study_data.py; then
+              study_updated=true
+              break
+            fi
+            echo "::warning::NVDA vs Memory refresh failed on attempt ${attempt}."
+            if [ "${attempt}" -lt 3 ]; then
+              sleep $((attempt * 20))
+            fi
+          done
+
+          if [ "${study_updated}" != "true" ]; then
+            echo "::warning::Keeping the existing NVDA vs Memory dataset after three failed attempts."
+          fi
+
+      - name: Commit updated M7 and memory comparison history
+        run: |
+          changed_files=()
+          if ! git diff --quiet -- data/m7-price-data.js; then
+            changed_files+=(data/m7-price-data.js)
+          fi
+          if ! git diff --quiet -- data/study-data.js; then
+            changed_files+=(data/study-data.js)
+          fi
+          if [ "${#changed_files[@]}" -eq 0 ]; then
+            echo "No M7 or NVDA vs Memory changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/m7-price-data.js
+          python scripts/bump_data_cache_versions.py "${changed_files[@]}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/m7-price-data.js index.html
-          git commit -m "Update M7 price history" || exit 0
+          git add "${changed_files[@]}" index.html
+          git commit -m "Update M7 and memory comparison history" || exit 0
           git pull --rebase origin main
           git push
