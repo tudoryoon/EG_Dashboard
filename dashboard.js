@@ -5090,7 +5090,9 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
             maxRotation: 0,
             callback: (_, index) => {
               const labels = cloudDashboardData.labels ?? [];
-              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+              const isLatest = index === labels.length - 1;
+              const isInterval = index % 2 === 0 && index < labels.length - 2;
+              if (index === 0 || isLatest || isInterval) {
                 return labels[index] ?? "";
               }
               return "";
@@ -5175,7 +5177,9 @@ function createCloudRevenueBarChart(canvas, panel) {
             maxRotation: 0,
             callback: (_, index) => {
               const labels = cloudDashboardData.labels ?? [];
-              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+              const isLatest = index === labels.length - 1;
+              const isInterval = index % 2 === 0 && index < labels.length - 2;
+              if (index === 0 || isLatest || isInterval) {
                 return labels[index] ?? "";
               }
               return "";
@@ -5574,7 +5578,9 @@ function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
             autoSkip: false,
             maxRotation: 0,
             callback: (_, index) => {
-              if (index === 0 || index === labels.length - 1 || index % 2 === 0) {
+              const isLatest = index === labels.length - 1;
+              const isInterval = index % 2 === 0 && index < labels.length - 2;
+              if (index === 0 || isLatest || isInterval) {
                 return labels[index] ?? "";
               }
               return "";
