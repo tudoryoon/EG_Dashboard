@@ -5998,7 +5998,7 @@ function createLlmRevenueChart(canvas) {
             label: (context) => `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 1)}B`,
             afterLabel: (context) => {
               const source = context.dataset.sourceLabels?.[context.dataIndex];
-              return source ? `Source: ${source}` : "";
+              return source ? `출처: ${source}` : "";
             },
           },
         },
@@ -6060,8 +6060,8 @@ function createLlmOpenAiUsersChart(canvas) {
         tooltip: {
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
-            label: (context) => `Weekly active users: ${Number(context.parsed.y).toFixed(0)}M`,
-            afterLabel: (context) => `Source: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
+            label: (context) => `주간 활성 사용자: ${Number(context.parsed.y).toFixed(0)}M`,
+            afterLabel: (context) => `출처: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
           },
         },
       },
@@ -6098,7 +6098,7 @@ function createLlmOpenAiAgentUsersChart(canvas) {
       labels: panel.labels,
       datasets: [
         {
-          label: "Agent WAU",
+          label: "OpenAI Agent WAU",
           data: panel.values,
           sourceLabels: panel.sourceLabels,
           borderColor: color,
@@ -6122,8 +6122,8 @@ function createLlmOpenAiAgentUsersChart(canvas) {
         tooltip: {
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
-            label: (context) => `Weekly active users: ${Number(context.parsed.y).toFixed(0)}M`,
-            afterLabel: (context) => `Basis: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
+            label: (context) => `주간 활성 사용자: ${Number(context.parsed.y).toFixed(0)}M`,
+            afterLabel: (context) => `기준: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
           },
         },
       },
@@ -6250,8 +6250,8 @@ function renderLlmOverview() {
     <section class="llm-overview">
       <div class="us-section-head llm-section-head">
         <div>
-          <h2>Frontier Model Dashboard</h2>
-          <p>OpenAI and Anthropic revenue run-rate and adoption milestones</p>
+          <h2>프론티어 모델 대시보드</h2>
+          <p>OpenAI와 Anthropic의 매출 런레이트 및 사용자·기업 도입 추이</p>
         </div>
         <span class="llm-updated">Updated ${llmDashboardData.updatedAt}</span>
       </div>
@@ -6295,6 +6295,18 @@ function renderLlmOverview() {
         <article class="llm-panel">
           <div class="us-panel-head">
             <div>
+              <h3>${llmDashboardData.openAiAgentUsers?.title ?? "OpenAI Agent Adoption"}</h3>
+              <p>${llmDashboardData.openAiAgentUsers?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="llm-chart-wrap">
+            <canvas data-llm-chart="openai-agent-users"></canvas>
+          </div>
+          <p class="llm-chart-note">6월 5M은 Codex 단독, 7월은 Codex + ChatGPT Work 합산이므로 두 시계열의 기준이 완전히 같지는 않습니다.</p>
+        </article>
+        <article class="llm-panel llm-panel-wide">
+          <div class="us-panel-head">
+            <div>
               <h3>${llmDashboardData.anthropicAdoption?.title ?? "Anthropic Adoption"}</h3>
               <p>${llmDashboardData.anthropicAdoption?.subtitle ?? ""}</p>
             </div>
@@ -6303,27 +6315,15 @@ function renderLlmOverview() {
             <canvas data-llm-chart="anthropic-adoption"></canvas>
           </div>
         </article>
-        <article class="llm-panel llm-panel-wide">
-          <div class="us-panel-head">
-            <div>
-              <h3>${llmDashboardData.openAiAgentUsers?.title ?? "OpenAI Agent Adoption"}</h3>
-              <p>${llmDashboardData.openAiAgentUsers?.subtitle ?? ""}</p>
-            </div>
-          </div>
-          <div class="llm-chart-wrap">
-            <canvas data-llm-chart="openai-agent-users"></canvas>
-          </div>
-          <p class="llm-chart-note">2026년 6월 5M은 Codex 단독 WAU이며, GPT-5.6 출시 뒤 7월 수치는 Codex와 ChatGPT Work 합산입니다. 따라서 출시 전후를 완전히 동일한 모집단으로 비교하면 안 됩니다.</p>
-        </article>
         <article class="llm-panel llm-panel-wide llm-method-panel">
           <div>
-            <h3>Reading Guide</h3>
+            <h3>지표 해석</h3>
             <ul>
               ${(llmDashboardData.methodology ?? []).map((item) => `<li>${item}</li>`).join("")}
             </ul>
           </div>
           <div>
-            <h3>Sources</h3>
+            <h3>출처</h3>
             <div class="llm-source-list">
               ${(llmDashboardData.sources ?? [])
                 .map((source) => `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.label}</a>`)
@@ -19269,7 +19269,7 @@ function renderSummary(list) {
     if (state.techView === "Cloud") {
       summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and hyperscaler GPU pricing";
     } else if (state.techView === "LLM") {
-      summaryText.textContent = "Frontier-model revenue run-rate and adoption milestones for OpenAI and Anthropic";
+      summaryText.textContent = "OpenAI와 Anthropic 프론티어 모델의 매출 런레이트와 도입 추이";
     } else if (state.techView === "BigTech") {
       summaryText.textContent = "Big tech capex & cash flow dashboard";
     } else if (state.techView === "Semis") {

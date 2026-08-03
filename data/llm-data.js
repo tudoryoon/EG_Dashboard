@@ -7,36 +7,36 @@ window.llmDashboardData = {
   snapshots: [
     {
       provider: "OpenAI",
-      metric: "Tracked annualized revenue run-rate",
+      metric: "추적 연환산 매출 런레이트",
       value: "$41.3B",
-      asOf: "2026-07-22 · TickerTrends estimate",
+      asOf: "2026-07-22 · TickerTrends 추정",
       tone: "openai",
     },
     {
       provider: "Anthropic",
-      metric: "Tracked annualized revenue run-rate",
+      metric: "추적 연환산 매출 런레이트",
       value: "$74.1B",
-      asOf: "2026-07-22 · TickerTrends estimate",
+      asOf: "2026-07-22 · TickerTrends 추정",
       tone: "anthropic",
     },
     {
       provider: "OpenAI",
-      metric: "ChatGPT weekly active users",
+      metric: "ChatGPT 주간 활성 사용자",
       value: "900M+",
-      asOf: "2026-02 · company disclosed",
+      asOf: "2026-02 · 회사 발표",
       tone: "openai",
     },
     {
       provider: "OpenAI Agents",
-      metric: "Codex + ChatGPT Work WAU",
+      metric: "Codex + ChatGPT Work 합산 WAU",
       value: "10M+",
-      asOf: "2026-07-21 · company milestone",
+      asOf: "2026-07-21 · 회사 발표",
       tone: "openai",
     },
   ],
   revenue: {
-    title: "Frontier Model Revenue Run-Rate",
-    subtitle: "Solid: reported milestones · Dashed: TickerTrends tracking estimates · $B",
+    title: "OpenAI vs Anthropic 매출 런레이트",
+    subtitle: "실선: 실제 발표값 · 점선: TickerTrends 추정치 · 단위 $B",
     labels: [
       "2023-12",
       "2024-01",
@@ -57,7 +57,7 @@ window.llmDashboardData = {
     series: [
       {
         key: "openai",
-        name: "OpenAI actual",
+        name: "OpenAI 실제 발표",
         mode: "actual",
         values: [1.6, null, 3.4, 5.5, null, 10, 13, 20, null, 25, null, null, null, null, null],
         sourceLabels: [
@@ -80,7 +80,7 @@ window.llmDashboardData = {
       },
       {
         key: "openai",
-        name: "OpenAI tracking",
+        name: "OpenAI 추적치",
         mode: "tracking",
         values: [null, null, null, null, null, null, null, null, 21.4, 23.9, 26.9, 28.8, 33.0, 37.3, 41.3],
         sourceLabels: [
@@ -103,7 +103,7 @@ window.llmDashboardData = {
       },
       {
         key: "anthropic",
-        name: "Anthropic actual",
+        name: "Anthropic 실제 발표",
         mode: "actual",
         values: [null, 0.087, null, 1, 3, null, 5, 9, null, 14, 19, 30, 47, null, null],
         sourceLabels: [
@@ -126,7 +126,7 @@ window.llmDashboardData = {
       },
       {
         key: "anthropic",
-        name: "Anthropic tracking",
+        name: "Anthropic 추적치",
         mode: "tracking",
         values: [null, null, null, null, null, null, null, null, 10.2, 14.9, 21.7, 35.6, 54.6, 69.6, 74.1],
         sourceLabels: [
@@ -150,15 +150,15 @@ window.llmDashboardData = {
     ],
   },
   openAiUsers: {
-    title: "ChatGPT Weekly Active Users",
-    subtitle: "OpenAI-disclosed global WAU milestones; millions",
+    title: "ChatGPT 주간 활성 사용자(WAU)",
+    subtitle: "OpenAI가 발표한 글로벌 사용자 이정표 · 단위 백만 명",
     labels: ["2023-11", "2024-08", "2024-12", "2025-02", "2025-03", "2025-08", "2025-10", "2026-02"],
     values: [100, 200, 300, 400, 500, 700, 800, 900],
     sourceLabels: ["OpenAI", "OpenAI", "OpenAI", "OpenAI", "OpenAI", "OpenAI", "OpenAI", "OpenAI"],
   },
   openAiAgentUsers: {
-    title: "OpenAI Agent Weekly Active Users",
-    subtitle: "Codex-only through June; Codex + ChatGPT Work combined after GPT-5.6 launch; millions",
+    title: "OpenAI Agent 주간 활성 사용자(WAU)",
+    subtitle: "6월은 Codex 단독 · GPT-5.6 출시 후 Codex + ChatGPT Work 합산 · 단위 백만 명",
     labels: ["2026-06-02", "2026-07-12", "2026-07-13", "2026-07-14", "2026-07-16", "2026-07-21"],
     values: [5, 6, 7, 8, 9, 10],
     sourceLabels: [
@@ -171,20 +171,20 @@ window.llmDashboardData = {
     ],
   },
   anthropicAdoption: {
-    title: "Anthropic Enterprise Adoption",
-    subtitle: "Consumer active users are not disclosed; enterprise customer milestones are used instead",
+    title: "Anthropic 기업 도입 지표",
+    subtitle: "소비자 활성 사용자는 비공개이므로 기업 고객과 대형 계정 수를 대신 표시",
     labels: ["2023-08", "2024-02", "2025-08", "2026-02", "2026-04"],
     totalCustomersK: [1, null, 300, null, null],
     millionDollarAccounts: [null, 12, null, 500, 1000],
-    totalCustomersLabel: "Business customers (K, left)",
-    millionDollarLabel: "$1M+ annual-spend accounts (right)",
+    totalCustomersLabel: "기업 고객 수 (천 개, 좌축)",
+    millionDollarLabel: "연간 지출 $1M+ 계정 (우축)",
   },
   methodology: [
-    "Solid revenue lines are reported annualized run-rate milestones. Dashed lines are TickerTrends estimates for unreported periods and must not be read as company-disclosed ARR.",
-    "Revenue run-rate usually annualizes the latest monthly revenue. It is not audited full-year revenue and is not directly equivalent to contracted SaaS ARR.",
-    "ChatGPT adoption uses weekly active users. Anthropic does not publish a comparable Claude active-user series, so enterprise customers and $1M+ accounts are shown as separate adoption proxies.",
-    "The OpenAI agent series changes scope: June is Codex-only WAU, while July combines Codex and ChatGPT Work. It is separate from ChatGPT's 900M total WAU and has no product-level split.",
-    "Missing months are intentionally left blank. Lines connect only disclosed milestones and do not imply monthly observations.",
+    "매출 실선은 실제 발표된 연환산 런레이트이고, 점선은 미공개 기간에 대한 TickerTrends 추정치입니다. 점선을 회사 공식 ARR로 해석하면 안 됩니다.",
+    "Revenue run-rate는 보통 최근 월 매출을 12배한 속도 지표입니다. 감사된 연간 매출이나 계약 잔고 기준 SaaS ARR과는 다릅니다.",
+    "ChatGPT는 WAU를 사용합니다. Anthropic은 비교 가능한 Claude 활성 사용자 수를 공개하지 않아 기업 고객과 연간 지출 $1M 이상 계정을 도입 프록시로 표시합니다.",
+    "OpenAI Agent 계열은 기준이 바뀝니다. 6월은 Codex 단독 WAU, 7월은 Codex와 ChatGPT Work 합산이며 ChatGPT 전체 900M WAU와 별도입니다.",
+    "공개되지 않은 월은 빈칸으로 유지합니다. 선은 확인된 이정표를 연결할 뿐 매월 관측치가 있다는 의미는 아닙니다.",
   ],
   sources: [
     {
