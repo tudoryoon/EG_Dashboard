@@ -5416,47 +5416,28 @@ function createCloudNetNewArrChart(canvas, series) {
   charts.push(chart);
 }
 
-function createMicrosoftCopilotComboChart(canvas, panel) {
-  if (typeof Chart === "undefined" || !panel) {
+function createCloudGpuPricingChart(canvas, provider, panel) {
+  if (typeof Chart === "undefined" || !provider || !panel) {
     return;
   }
 
-  const quarterlyRevenue = panel.quarterlyRevenueRunRate ?? [];
-  const qoqGrowth = panel.impliedQoqGrowth ?? [];
-  const maxRevenue = Math.max(...quarterlyRevenue.filter((value) => Number.isFinite(value)), 0);
-  const maxGrowth = Math.max(...qoqGrowth.filter((value) => Number.isFinite(value)), 0);
   const chart = new Chart(canvas, {
-    type: "bar",
+    type: "line",
     data: {
-      labels: panel.labels ?? [],
-      datasets: [
-        {
-          type: "bar",
-          label: "M365 Copilot Quarterly Revenue Run-Rate",
-          data: quarterlyRevenue,
-          backgroundColor: "rgba(37, 99, 235, 0.78)",
-          borderColor: "#2563eb",
-          borderWidth: 0,
-          borderRadius: 4,
-          barPercentage: 0.64,
-          categoryPercentage: 0.72,
-          yAxisID: "yRevenue",
-        },
-        {
-          type: "line",
-          label: "Implied QoQ Growth",
-          data: qoqGrowth,
-          borderColor: "#d97706",
-          backgroundColor: "#d97706",
-          borderWidth: 2.6,
-          tension: 0.18,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointHitRadius: 12,
-          spanGaps: false,
-          yAxisID: "yGrowth",
-        },
-      ],
+      labels: provider.labels ?? [],
+      datasets: (provider.series ?? []).map((series) => ({
+        label: series.name,
+        data: series.values,
+        borderColor: panel.colors?.[series.key] ?? "#111827",
+        backgroundColor: panel.colors?.[series.key] ?? "#111827",
+        borderWidth: 2.6,
+        stepped: true,
+        tension: 0,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointHitRadius: 10,
+        spanGaps: false,
+      })),
     },
     options: {
       responsive: true,
@@ -5472,40 +5453,21 @@ function createMicrosoftCopilotComboChart(canvas, panel) {
         tooltip: {
           enabled: true,
           callbacks: {
-            afterTitle: (items) => panel.fiscalLabels?.[items?.[0]?.dataIndex] ?? "",
-            label: (context) => {
-              if (context.dataset.yAxisID === "yRevenue") {
-                const seats = panel.paidSeatsMillions?.[context.dataIndex];
-                const qualifier = panel.paidSeatQualifiers?.[context.dataIndex] ?? "";
-                return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(2)}B (${qualifier}${Number(seats).toFixed(0)}M seats)`;
-              }
-              return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`;
-            },
+            label: (context) => `${context.dataset.label}: $${Number(context.parsed.y).toFixed(3)} / GPU-hr`,
           },
         },
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#8d8d86", maxRotation: 0 },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 7, maxRotation: 0 },
           border: { color: "#d8d8d2" },
         },
-        yRevenue: {
-          position: "left",
+        y: {
           beginAtZero: true,
-          max: Math.ceil((maxRevenue * 1.2) / 0.5) * 0.5,
-          title: { display: true, text: "Quarterly run-rate ($B)", color: "#66665f" },
-          ticks: { color: "#2563eb", callback: (value) => `$${Number(value).toFixed(1)}B`, maxTicksLimit: 6 },
+          suggestedMax: provider.suggestedMax,
+          ticks: { color: "#8d8d86", callback: (value) => `$${Number(value).toFixed(0)}`, maxTicksLimit: 6 },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-        yGrowth: {
-          position: "right",
-          beginAtZero: true,
-          max: Math.ceil((maxGrowth + 10) / 10) * 10,
-          title: { display: true, text: "QoQ growth", color: "#66665f" },
-          ticks: { color: "#d97706", callback: (value) => `${Number(value).toFixed(0)}%`, maxTicksLimit: 6 },
-          grid: { drawOnChartArea: false },
           border: { color: "#d8d8d2" },
         },
       },
@@ -5676,32 +5638,6 @@ function buildCloudNetNewArrStatsMarkup(panel) {
         </div>`;
     })
     .join("");
-}
-
-function buildMicrosoftCopilotStatsMarkup(panel) {
-  const seats = panel?.paidSeatsMillions ?? [];
-  const quarterlyRunRate = panel?.quarterlyRevenueRunRate ?? [];
-  const annualRunRate = panel?.annualRevenueRunRate ?? [];
-  const latestIndex = seats.length - 1;
-  const qualifier = panel?.paidSeatQualifiers?.[latestIndex] ?? "";
-  const github = panel?.githubCopilot ?? {};
-
-  return `
-    <div class="cloud-rpo-stat">
-      <span>M365 Copilot Paid Seats</span>
-      <strong>${Number.isFinite(seats[latestIndex]) ? `${qualifier}${Number(seats[latestIndex]).toFixed(0)}M` : "-"}</strong>
-      <small>${panel?.labels?.[latestIndex] ?? "-"} · company disclosed</small>
-    </div>
-    <div class="cloud-rpo-stat">
-      <span>M365 Quarterly Revenue Run-Rate</span>
-      <strong>${Number.isFinite(quarterlyRunRate[latestIndex]) ? `$${Number(quarterlyRunRate[latestIndex]).toFixed(2)}B` : "-"}</strong>
-      <small>${Number.isFinite(annualRunRate[latestIndex]) ? `$${Number(annualRunRate[latestIndex]).toFixed(1)}B annualized` : "-"} · list-price proxy</small>
-    </div>
-    <div class="cloud-rpo-stat">
-      <span>GitHub Copilot Revenue Growth</span>
-      <strong>${Number.isFinite(github.revenueQoqGrowth) ? `${github.revenueQoqQualifier ?? ""}${Number(github.revenueQoqGrowth).toFixed(0)}% QoQ` : "-"}</strong>
-      <small>${github.latestQuarter ?? "-"} · dollar revenue undisclosed</small>
-    </div>`;
 }
 
 function createCapexLineChart(canvas, labels, panel, formatter, minOverride = null) {
@@ -6109,20 +6045,33 @@ function renderCloudOverview() {
           </div>
           <p class="cloud-rpo-note">막대(좌축)는 전분기 대비 매출 순증가분을 연율화한 Net New ARR 프록시이며, 점선(우축)은 해당 분기 매출을 4배한 ARR 프록시입니다. AWS와 Google Cloud는 회사 공시 매출, Azure는 독립 매출 비공개로 Altimeter / Clouded Judgement 추정계열을 사용합니다.</p>
         </article>
-        <article class="cloud-panel cloud-panel-wide">
+        <article class="cloud-panel cloud-panel-wide cloud-gpu-pricing-panel">
           <div class="us-panel-head">
             <div>
-              <h3>${cloudDashboardData.microsoftCopilot.title}</h3>
-              <p>${cloudDashboardData.microsoftCopilot.subtitle}</p>
+              <h3>${cloudDashboardData.gpuPricing.title}</h3>
+              <p>${cloudDashboardData.gpuPricing.subtitle}</p>
             </div>
+            <span class="cloud-gpu-updated">Updated ${cloudDashboardData.gpuPricing.updatedAt}</span>
           </div>
-          <div class="cloud-rpo-stats cloud-copilot-stats">
-            ${buildMicrosoftCopilotStatsMarkup(cloudDashboardData.microsoftCopilot)}
+          <div class="cloud-gpu-pricing-grid">
+            ${(cloudDashboardData.gpuPricing.providers ?? [])
+              .map(
+                (provider) => `
+                  <section class="cloud-gpu-price-item">
+                    <div class="cloud-gpu-price-head">
+                      <h4>${provider.name}</h4>
+                      <p>${provider.basis}</p>
+                    </div>
+                    <div class="cloud-chart-wrap cloud-gpu-price-chart">
+                      <canvas data-cloud-gpu-price="${provider.key}"></canvas>
+                    </div>
+                    <p class="cloud-gpu-price-note">${provider.note}</p>
+                    <a class="cloud-gpu-price-source" href="${provider.sourceUrl}" target="_blank" rel="noopener noreferrer">${provider.sourceName}</a>
+                  </section>`,
+              )
+              .join("")}
           </div>
-          <div class="cloud-chart-wrap cloud-chart-wrap-tall">
-            <canvas data-cloud-chart="msft-copilot-revenue"></canvas>
-          </div>
-          <p class="cloud-rpo-note">M365 막대는 분기말 유료 좌석에 공개 정가 $30/월을 적용한 매출 런레이트 프록시이며 실제 인식 매출이 아닙니다. 대형 고객 할인, E7 번들, 분기 중 좌석 추가와 사용량 과금 때문에 실제치는 달라질 수 있습니다. 이번 컨콜의 “60% 이상 QoQ”는 전체 Copilot이 아니라 <strong>GitHub Copilot 매출 성장률</strong>이고, 절대 매출액은 공개되지 않았습니다. Sources: <a href="${cloudDashboardData.microsoftCopilot.sourceUrls.fy26Q2}" target="_blank" rel="noopener noreferrer">FY26 Q2</a> · <a href="${cloudDashboardData.microsoftCopilot.sourceUrls.fy26Q3}" target="_blank" rel="noopener noreferrer">FY26 Q3</a> · <a href="${cloudDashboardData.microsoftCopilot.sourceUrls.fy26Q4}" target="_blank" rel="noopener noreferrer">FY26 Q4</a></p>
+          <p class="cloud-rpo-note">가격은 인스턴스 전체가 아니라 GPU 1개를 1시간 사용하는 비용으로 환산했습니다. 네트워크, CPU, 메모리와 구매 방식이 달라 업체 간 절대가격 비교보다는 각 업체 내부의 세대별 가격 변화에 더 적합합니다.</p>
         </article>
       </div>
     </section>
@@ -6134,7 +6083,7 @@ function renderCloudOverview() {
   const rpoCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo"]');
   const rpoRatioCanvas = usOverviewRoot.querySelector('[data-cloud-chart="rpo-ratio"]');
   const netNewArrCanvases = usOverviewRoot.querySelectorAll("[data-cloud-net-new-arr]");
-  const microsoftCopilotCanvas = usOverviewRoot.querySelector('[data-cloud-chart="msft-copilot-revenue"]');
+  const gpuPricingCanvases = usOverviewRoot.querySelectorAll("[data-cloud-gpu-price]");
 
   if (growthCanvas) {
     createCloudLineChart(growthCanvas, cloudDashboardData.yoyGrowth, (value) => `${Number(value).toFixed(1)}%`, 0);
@@ -6159,9 +6108,12 @@ function renderCloudOverview() {
     }
     createCloudNetNewArrChart(canvas, series);
   });
-  if (microsoftCopilotCanvas) {
-    createMicrosoftCopilotComboChart(microsoftCopilotCanvas, cloudDashboardData.microsoftCopilot);
-  }
+  gpuPricingCanvases.forEach((canvas) => {
+    const provider = cloudDashboardData.gpuPricing?.providers?.find((item) => item.key === canvas.dataset.cloudGpuPrice);
+    if (provider) {
+      createCloudGpuPricingChart(canvas, provider, cloudDashboardData.gpuPricing);
+    }
+  });
 }
 
 function renderPlaceholderOverview(title, description) {
@@ -18820,7 +18772,7 @@ function renderSummary(list) {
   }
 
   if (state.tab === "Cloud") {
-    summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and Microsoft Copilot dashboard";
+    summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and hyperscaler GPU pricing";
     return;
   }
 

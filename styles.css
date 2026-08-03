@@ -2160,6 +2160,17 @@ h1 {
   padding: 4px 0 2px;
 }
 
+.cloud-overview,
+.cloud-panel-grid,
+.cloud-panel,
+.cloud-chart-wrap,
+.cloud-net-new-arr-grid,
+.cloud-net-new-arr-item,
+.cloud-gpu-pricing-grid,
+.cloud-gpu-price-item {
+  min-width: 0;
+}
+
 .cloud-panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2181,6 +2192,7 @@ h1 {
 .cloud-chart-wrap canvas {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: 320px;
 }
 
@@ -2193,10 +2205,6 @@ h1 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 14px 0 12px;
-}
-
-.cloud-rpo-stats.cloud-copilot-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .cloud-rpo-stat {
@@ -2260,6 +2268,73 @@ h1 {
 
 .cloud-net-new-arr-chart canvas {
   height: 300px;
+}
+
+.cloud-gpu-updated {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cloud-gpu-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 14px;
+}
+
+.cloud-gpu-price-item {
+  min-width: 0;
+  padding: 0 18px;
+  border-left: 1px solid rgba(70, 70, 66, 0.12);
+}
+
+.cloud-gpu-price-item:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.cloud-gpu-price-item:last-child {
+  padding-right: 0;
+}
+
+.cloud-gpu-price-head h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.cloud-gpu-price-head p,
+.cloud-gpu-price-note {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.cloud-gpu-price-head p {
+  min-height: 34px;
+  margin: 4px 0 8px;
+}
+
+.cloud-gpu-price-chart canvas {
+  height: 280px;
+}
+
+.cloud-gpu-price-note {
+  min-height: 48px;
+  margin: 10px 0 4px;
+}
+
+.cloud-gpu-price-source {
+  color: #2563eb;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cloud-gpu-price-source:hover {
+  text-decoration: underline;
 }
 
 .market-panel-grid {
@@ -8390,13 +8465,27 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .cloud-gpu-pricing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-gpu-price-item,
+  .cloud-gpu-price-item:first-child,
+  .cloud-gpu-price-item:last-child {
+    padding: 18px 0;
+    border-top: 1px solid rgba(70, 70, 66, 0.12);
+    border-left: 0;
+  }
+
+  .cloud-gpu-price-item:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
   .cloud-rpo-stats.cloud-net-new-arr-stats {
     grid-template-columns: 1fr;
   }
 
-  .cloud-rpo-stats.cloud-copilot-stats {
-    grid-template-columns: 1fr;
-  }
 
   .cloud-net-new-arr-item p {
     min-height: 0;
