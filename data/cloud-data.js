@@ -142,4 +142,38 @@ window.cloudDashboardData = {
       },
     ],
   },
+  microsoftCopilot: {
+    title: "Microsoft Copilot Revenue Run-Rate",
+    subtitle: "M365 Copilot paid seats x the public $30 monthly list price. Bars are quarterly list-price revenue run-rate proxies; the line shows implied QoQ seat/revenue growth.",
+    unit: "$B",
+    labels: ["2025 Q4", "2026 Q1", "2026 Q2"],
+    fiscalLabels: ["FY26 Q2", "FY26 Q3", "FY26 Q4"],
+    paidSeatsMillions: [15.0, 20.0, 30.0],
+    paidSeatQualifiers: ["", ">", ">"],
+    quarterlyRevenueRunRate: [1.35, 1.8, 2.7],
+    annualRevenueRunRate: [5.4, 7.2, 10.8],
+    impliedQoqGrowth: [null, 33.3, 50.0],
+    githubCopilot: {
+      latestQuarter: "2026 Q2",
+      revenueQoqGrowth: 60.0,
+      revenueQoqQualifier: ">",
+      usersMillions: 50.0,
+      revenueLevel: null,
+    },
+    pricing: {
+      monthlyListPrice: 30.0,
+      currency: "USD",
+    },
+    source: "Microsoft earnings-call commentary and Microsoft 365 Copilot public list price",
+    sourceUrls: {
+      fy26Q2: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q2",
+      fy26Q3: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3",
+      fy26Q4: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q4",
+    },
+    notes: [
+      "M365 Copilot paid seats were 15M, over 20M, and over 30M in Microsoft FY26 Q2-Q4, respectively.",
+      "The revenue bars are list-price run-rate proxies, not Microsoft-reported GAAP Copilot revenue. Enterprise discounts, bundles, intra-quarter seat additions, and consumption revenue can make actual revenue differ.",
+      "The official >60% QoQ comment applies specifically to GitHub Copilot revenue after usage-based billing; Microsoft did not disclose its dollar revenue level.",
+    ],
+  },
 };

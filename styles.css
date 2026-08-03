@@ -2182,6 +2182,10 @@ h1 {
   margin: 14px 0 12px;
 }
 
+.cloud-rpo-stats.cloud-copilot-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .cloud-rpo-stat {
   display: grid;
   gap: 4px;
@@ -8374,6 +8378,10 @@ h1 {
   }
 
   .cloud-rpo-stats.cloud-net-new-arr-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-rpo-stats.cloud-copilot-stats {
     grid-template-columns: 1fr;
   }
 
