@@ -149,6 +149,97 @@ window.llmDashboardData = {
       },
     ],
   },
+  scaleSpeed: {
+    title: "ARR $10B · $50B · $100B 도달 속도",
+    subtitle: "각 사업·제품의 상용화 시작일부터 매출 런레이트 이정표까지 걸린 기간",
+    companies: [
+      {
+        name: "Anthropic",
+        color: "#d97745",
+        startDate: "2023-03-14",
+        startLabel: "Claude 상용 공개",
+        startUrl: "https://www.anthropic.com/news/introducing-claude",
+        basis: "TickerTrends 연환산 매출 추정치",
+        milestones: [
+          { amount: 10, years: 2.85, date: "2026-01-19", status: "tracking", sourceLabel: "TickerTrends 추정" },
+          { amount: 50, years: 3.19, date: "2026-05-21", status: "tracking", sourceLabel: "TickerTrends 추정" },
+        ],
+        latest: { amount: 74.1, years: 3.36, date: "2026-07-22", status: "tracking", sourceLabel: "TickerTrends 추정" },
+      },
+      {
+        name: "OpenAI",
+        color: "#111827",
+        startDate: "2020-06-11",
+        startLabel: "OpenAI API 공개",
+        startUrl: "https://openai.com/index/openai-api/",
+        basis: "회사 발표 연환산 매출 + TickerTrends 추정치",
+        milestones: [
+          { amount: 10, years: 4.99, date: "2025-06-09", status: "official", sourceLabel: "OpenAI / Reuters" },
+        ],
+        latest: { amount: 41.3, years: 6.11, date: "2026-07-22", status: "tracking", sourceLabel: "TickerTrends 추정" },
+      },
+      {
+        name: "Microsoft Cloud",
+        color: "#2563eb",
+        startDate: "2010-02-01",
+        startLabel: "Windows Azure GA",
+        startUrl: "https://blogs.microsoft.com/blog/2010/02/01/windows-azure-general-availability/",
+        basis: "Microsoft Commercial Cloud / Microsoft Cloud 연환산·연간 매출",
+        milestones: [
+          { amount: 10, years: 6.16, date: "2016-03-31", status: "official", sourceLabel: "Microsoft FY16 Q3" },
+          { amount: 50, years: 10.41, date: "2020-06-30", status: "official", sourceLabel: "Microsoft FY2020" },
+          { amount: 100, years: 12.41, date: "2022-06-30", status: "official", sourceLabel: "Microsoft FY2022" },
+        ],
+      },
+      {
+        name: "Adobe Digital Media",
+        color: "#dc2626",
+        startDate: "2012-05-07",
+        startLabel: "Creative Cloud 출시",
+        startUrl: "https://www.adobe.com/content/dam/cc/en/investor-relations/pdfs/ADBE-10K-FY12-FINAL.pdf",
+        basis: "Adobe가 공시한 Digital Media ARR",
+        milestones: [
+          { amount: 10, years: 8.56, date: "2020-11-27", status: "official", sourceLabel: "Adobe FY2020 Q4" },
+        ],
+      },
+      {
+        name: "AWS",
+        color: "#f59e0b",
+        startDate: "2006-03-14",
+        startLabel: "Amazon S3 공개",
+        startUrl: "https://aws.amazon.com/about-aws/our-origins/",
+        basis: "AWS 분기 매출 × 4 연환산",
+        milestones: [
+          { amount: 10, years: 10.05, date: "2016-03-31", status: "official", sourceLabel: "Amazon Q1 2016" },
+          { amount: 50, years: 14.8, date: "2020-12-31", status: "official", sourceLabel: "Amazon Q4 2020" },
+          { amount: 100, years: 18.05, date: "2024-03-31", status: "official", sourceLabel: "Amazon Q1 2024" },
+        ],
+      },
+      {
+        name: "Salesforce",
+        color: "#0891b2",
+        startDate: "1999-03-08",
+        startLabel: "Salesforce 창업",
+        startUrl: "https://www.salesforce.com/news/stories/salesforces-20th-anniversary-celebrating-two-decades-of-our-ohana/",
+        basis: "분기 구독·지원 매출 × 4 연환산",
+        milestones: [
+          { amount: 10, years: 18.9, date: "2018-01-31", status: "official", sourceLabel: "Salesforce FY2018 Q4" },
+        ],
+      },
+      {
+        name: "ServiceNow",
+        color: "#16a34a",
+        startDate: "2004-01-01",
+        startLabel: "ServiceNow 창업(연도 기준)",
+        startUrl: "https://www.servicenow.com/in/workflow/platform-foundations/what-does-servicenow-do.html",
+        basis: "분기 구독 매출 × 4 연환산",
+        milestones: [
+          { amount: 10, years: 20.25, date: "2024-03-31", status: "official", sourceLabel: "ServiceNow Q1 2024" },
+        ],
+      },
+    ],
+    note: "빠른 규모 확장을 비교하기 위한 프록시입니다. AI 기업은 연환산 매출 런레이트, Adobe는 공식 ARR, AWS·Microsoft Cloud·Salesforce·ServiceNow는 클라우드 또는 구독 매출의 연간·연환산치이므로 회계적으로 완전히 동일한 ARR 비교는 아닙니다. Microsoft Cloud는 Azure 단일 매출이 아닌 복수 클라우드 제품 묶음이며, 2010년 Azure GA를 출발점으로 둔 비교 프록시입니다.",
+  },
   openAiUsers: {
     title: "ChatGPT 주간 활성 사용자(WAU)",
     subtitle: "OpenAI가 발표한 글로벌 사용자 이정표 · 단위 백만 명",
@@ -234,6 +325,42 @@ window.llmDashboardData = {
     {
       label: "Anthropic Series G: enterprise adoption milestones",
       url: "https://www.anthropic.com/news/anthropic-raises-30-billion-series-g-funding-380-billion-post-money-valuation",
+    },
+    {
+      label: "Microsoft Commercial Cloud: $10B run rate (FY2016 Q3)",
+      url: "https://www.microsoft.com/en-us/Investor/earnings/FY-2016-Q3/press-release-webcast?EventID=158657",
+    },
+    {
+      label: "Microsoft Commercial Cloud: $50B annual revenue (FY2020)",
+      url: "https://www.microsoft.com/investor/reports/ar20/index.html",
+    },
+    {
+      label: "Microsoft Cloud: $100B annualized revenue (FY2022)",
+      url: "https://www.microsoft.com/investor/reports/ar22/index.html",
+    },
+    {
+      label: "AWS: $10B annualized revenue threshold (Q1 2016)",
+      url: "https://press.aboutamazon.com/2016/4/amazon-com-announces-first-quarter-sales-up-28-to-29-1-billion",
+    },
+    {
+      label: "AWS: $50B annualized revenue threshold (Q4 2020)",
+      url: "https://ir.aboutamazon.com/files/doc_financials/2020/q4/Amazon-Q4-2020-Earnings-Release.pdf",
+    },
+    {
+      label: "AWS: $100B annual revenue run rate (Q1 2024)",
+      url: "https://ir.aboutamazon.com/news-release/news-release-details/2024/Amazon-com-Announces-First-Quarter-Results-68b9258cd/default.aspx",
+    },
+    {
+      label: "Adobe Digital Media ARR: $10.18B (FY2020 Q4)",
+      url: "https://www.adobe.com/content/dam/cc/in/about-adobe/newsroom/pdfs/2020/Adobe_Reprots_Record_Q4_and_Fiscal_2020_Revenue_IN_20201223.pdf",
+    },
+    {
+      label: "Salesforce subscription revenue: FY2018 Q4",
+      url: "https://investor.salesforce.com/news/news-details/2018/Salesforce-Announces-Record-Fourth-Quarter-and-Full-Year-Fiscal-2018-Results/default.aspx",
+    },
+    {
+      label: "ServiceNow subscription revenue: Q1 2024",
+      url: "https://newsroom.servicenow.com/press-releases/details/2024/ServiceNow-Reports-First-Quarter-2024-Financial-Results-04-24-2024-traffic/default.aspx",
     },
   ],
 };

@@ -1,6 +1,6 @@
 ﻿const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { quarterLabels: [], m7Quarterly: [] };
-const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, openAiUsers: null, openAiAgentUsers: null, anthropicAdoption: null, methodology: [], sources: [] };
+const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, scaleSpeed: null, openAiUsers: null, openAiAgentUsers: null, anthropicAdoption: null, methodology: [], sources: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 const capexDashboardData = window.capexDashboardData ?? {
   quarterLabels: [],
@@ -6023,6 +6023,109 @@ function createLlmRevenueChart(canvas) {
   charts.push(chart);
 }
 
+function createLlmScaleSpeedChart(canvas) {
+  const panel = llmDashboardData.scaleSpeed;
+  const companies = panel?.companies ?? [];
+  if (typeof Chart === "undefined" || !companies.length) {
+    return;
+  }
+
+  const milestoneStyles = {
+    10: { color: "#16a34a", pointStyle: "circle" },
+    50: { color: "#2563eb", pointStyle: "rectRot" },
+    100: { color: "#7c3aed", pointStyle: "triangle" },
+    latest: { color: "#d97706", pointStyle: "circle" },
+  };
+
+  const datasets = companies.map((company, companyIndex) => {
+    const points = [
+      ...(company.milestones ?? []).map((milestone) => ({
+        x: milestone.years,
+        y: companyIndex,
+        kind: "milestone",
+        ...milestone,
+      })),
+      ...(company.latest ? [{ x: company.latest.years, y: companyIndex, kind: "latest", ...company.latest }] : []),
+    ].sort((left, right) => left.x - right.x);
+
+    return {
+      label: company.name,
+      company,
+      data: points,
+      showLine: true,
+      borderColor: company.color,
+      borderWidth: 2,
+      tension: 0,
+      pointRadius: points.map((point) => (point.amount === 100 ? 7.5 : 6.5)),
+      pointHoverRadius: points.map((point) => (point.amount === 100 ? 9.5 : 8.5)),
+      pointHitRadius: 14,
+      pointStyle: points.map((point) => milestoneStyles[point.kind === "latest" ? "latest" : point.amount]?.pointStyle ?? "circle"),
+      pointBackgroundColor: points.map((point) =>
+        point.status === "tracking" ? "#ffffff" : milestoneStyles[point.kind === "latest" ? "latest" : point.amount]?.color ?? company.color,
+      ),
+      pointBorderColor: points.map((point) => milestoneStyles[point.kind === "latest" ? "latest" : point.amount]?.color ?? company.color),
+      pointBorderWidth: points.map((point) => (point.status === "tracking" ? 3 : 2)),
+    };
+  });
+
+  const maxYears = Math.max(...datasets.flatMap((dataset) => dataset.data.map((point) => point.x)), 20);
+  const chart = new Chart(canvas, {
+    type: "scatter",
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", intersect: true },
+      layout: { padding: { right: 12 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.dataset?.label ?? "",
+            label: (context) => {
+              const point = context.raw;
+              return point.kind === "latest"
+                ? `현재 추적치: $${Number(point.amount).toFixed(1)}B · ${Number(point.years).toFixed(2)}년차`
+                : `$${Number(point.amount).toFixed(0)}B 도달: ${Number(point.years).toFixed(2)}년`;
+            },
+            afterLabel: (context) => {
+              const point = context.raw;
+              const status = point.status === "tracking" ? "추정치" : "공식 발표·공시";
+              return [`기준일: ${point.date}`, `구분: ${status}`, `근거: ${point.sourceLabel}`, `산식: ${context.dataset.company?.basis ?? ""}`];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          min: 0,
+          suggestedMax: Math.ceil(maxYears + 1),
+          title: { display: true, text: "상용화·사업 시작 후 경과연수", color: "#66665f", font: { weight: "700" } },
+          ticks: { color: "#8d8d86", callback: (value) => `${value}년`, maxTicksLimit: 8 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: -0.5,
+          max: companies.length - 0.5,
+          reverse: true,
+          ticks: {
+            stepSize: 1,
+            color: "#4c4c47",
+            font: { weight: "700" },
+            callback: (value) => companies[Math.round(Number(value))]?.name ?? "",
+          },
+          grid: { color: "rgba(70, 70, 66, 0.08)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function createLlmOpenAiUsersChart(canvas) {
   const panel = llmDashboardData.openAiUsers;
   if (typeof Chart === "undefined" || !panel) {
@@ -6245,6 +6348,13 @@ function renderLlmOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
+  const scaleSpeed = llmDashboardData.scaleSpeed;
+  const formatScaleMilestone = (company, amount) => {
+    const milestone = (company.milestones ?? []).find((item) => item.amount === amount);
+    if (!milestone) return '<span class="llm-scale-empty">미도달</span>';
+    const estimateLabel = milestone.status === "tracking" ? " · 추정" : "";
+    return `<strong>${Number(milestone.years).toFixed(2)}년${estimateLabel}</strong><small>${milestone.date}</small>`;
+  };
 
   usOverviewRoot.innerHTML = `
     <section class="llm-overview">
@@ -6280,6 +6390,55 @@ function renderLlmOverview() {
             <canvas data-llm-chart="revenue"></canvas>
           </div>
           <p class="llm-chart-note">연환산 런레이트는 최근 월 매출을 12배한 속도 지표입니다. 감사된 연간 매출이나 계약 잔고 기준 SaaS ARR과는 다릅니다.</p>
+        </article>
+        <article class="llm-panel llm-panel-wide">
+          <div class="us-panel-head llm-scale-head">
+            <div>
+              <h3>${scaleSpeed?.title ?? "ARR Scale-Up Speed"}</h3>
+              <p>${scaleSpeed?.subtitle ?? ""}</p>
+            </div>
+            <div class="llm-scale-legend" aria-label="차트 범례">
+              <span><i class="is-10"></i>$10B</span>
+              <span><i class="is-50"></i>$50B</span>
+              <span><i class="is-100"></i>$100B</span>
+              <span><i class="is-tracking"></i>최신 추정치</span>
+            </div>
+          </div>
+          <div class="llm-chart-wrap llm-scale-chart-wrap">
+            <canvas data-llm-chart="scale-speed"></canvas>
+          </div>
+          <div class="llm-scale-table-wrap">
+            <table class="llm-scale-table">
+              <thead>
+                <tr>
+                  <th>기업·사업</th>
+                  <th>속도 측정 시작</th>
+                  <th>$10B</th>
+                  <th>$50B</th>
+                  <th>$100B</th>
+                  <th>현재 추적 위치</th>
+                  <th>지표 기준</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(scaleSpeed?.companies ?? [])
+                  .map(
+                    (company) => `
+                      <tr>
+                        <th>${company.name}</th>
+                        <td><a href="${company.startUrl}" target="_blank" rel="noopener noreferrer">${company.startLabel}</a><small>${company.startDate}</small></td>
+                        <td>${formatScaleMilestone(company, 10)}</td>
+                        <td>${formatScaleMilestone(company, 50)}</td>
+                        <td>${formatScaleMilestone(company, 100)}</td>
+                        <td>${company.latest ? `<strong>$${Number(company.latest.amount).toFixed(1)}B · ${Number(company.latest.years).toFixed(2)}년차</strong><small>${company.latest.date} · 추정</small>` : '<span class="llm-scale-empty">—</span>'}</td>
+                        <td>${company.basis}</td>
+                      </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+          <p class="llm-chart-note">${scaleSpeed?.note ?? ""}</p>
         </article>
         <article class="llm-panel">
           <div class="us-panel-head">
@@ -6336,10 +6495,12 @@ function renderLlmOverview() {
   `;
 
   const revenueCanvas = usOverviewRoot.querySelector('[data-llm-chart="revenue"]');
+  const scaleSpeedCanvas = usOverviewRoot.querySelector('[data-llm-chart="scale-speed"]');
   const openAiUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-users"]');
   const openAiAgentUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-agent-users"]');
   const anthropicAdoptionCanvas = usOverviewRoot.querySelector('[data-llm-chart="anthropic-adoption"]');
   if (revenueCanvas) createLlmRevenueChart(revenueCanvas);
+  if (scaleSpeedCanvas) createLlmScaleSpeedChart(scaleSpeedCanvas);
   if (openAiUsersCanvas) createLlmOpenAiUsersChart(openAiUsersCanvas);
   if (openAiAgentUsersCanvas) createLlmOpenAiAgentUsersChart(openAiAgentUsersCanvas);
   if (anthropicAdoptionCanvas) createLlmAnthropicAdoptionChart(anthropicAdoptionCanvas);

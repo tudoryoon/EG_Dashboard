@@ -1958,6 +1958,126 @@ h1 {
   height: 360px;
 }
 
+.llm-scale-head {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.llm-scale-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  color: #66665f;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.llm-scale-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.llm-scale-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.llm-scale-legend .is-10 {
+  color: #16a34a;
+}
+
+.llm-scale-legend .is-50 {
+  color: #2563eb;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.llm-scale-legend .is-100 {
+  width: 0;
+  height: 0;
+  border: 0;
+  border-right: 6px solid transparent;
+  border-bottom: 11px solid #7c3aed;
+  border-left: 6px solid transparent;
+  border-radius: 0;
+  background: transparent;
+}
+
+.llm-scale-legend .is-tracking {
+  color: #d97706;
+  background: #fff;
+}
+
+.llm-scale-chart-wrap canvas {
+  height: 390px;
+}
+
+.llm-scale-table-wrap {
+  margin-top: 12px;
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+}
+
+.llm-scale-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  color: #4c4c47;
+  font-size: 0.75rem;
+}
+
+.llm-scale-table th,
+.llm-scale-table td {
+  padding: 10px 9px;
+  border-bottom: 1px solid rgba(216, 216, 210, 0.75);
+  text-align: left;
+  vertical-align: top;
+}
+
+.llm-scale-table thead th {
+  color: #71716a;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.llm-scale-table tbody th {
+  color: var(--ink);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.llm-scale-table strong,
+.llm-scale-table small {
+  display: block;
+}
+
+.llm-scale-table small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.67rem;
+  white-space: nowrap;
+}
+
+.llm-scale-table a {
+  color: #155e75;
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.llm-scale-empty {
+  color: #aaa9a2;
+}
+
 .llm-chart-note {
   margin: 10px 0 0;
   color: var(--muted);
@@ -2018,6 +2138,18 @@ h1 {
 
   .llm-panel-wide {
     grid-column: auto;
+  }
+
+  .llm-scale-head {
+    display: grid;
+  }
+
+  .llm-scale-legend {
+    justify-content: flex-start;
+  }
+
+  .llm-scale-chart-wrap canvas {
+    height: 360px;
   }
 }
 
