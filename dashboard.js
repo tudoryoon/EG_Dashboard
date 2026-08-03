@@ -150,16 +150,12 @@ const researchSubtabMeta = {
   MemoryCapa: { label: "Memory CAPA" },
   ModelTrends: { label: "Model Trends" },
   Comparisons: { label: "NVDA vs Memory" },
+  M7: { label: "M7" },
 };
 
 const marketIndexSubtabMeta = {
   Trend: { label: "Index Trend" },
   Total: { label: "Total Dashboard" },
-};
-
-const bigTechSubtabMeta = {
-  M7: { label: "M7" },
-  Capex: { label: "Capex & 현금흐름" },
 };
 
 const semisSubtabMeta = {
@@ -350,7 +346,6 @@ const state = {
   techView: "Cloud",
   flowsView: "EtfStatus",
   researchView: "DataCenter",
-  bigTechView: "M7",
   semisView: "MemorySpot",
   currency: "USD",
   sector: "All",
@@ -3936,9 +3931,6 @@ function companiesByCountry(country) {
 }
 
 function activeDashboardKey() {
-  if (state.tab === "Tech" && state.techView === "BigTech") {
-    return state.bigTechView;
-  }
   if (state.tab === "Taiwan") {
     return "Taiwan";
   }
@@ -19088,12 +19080,6 @@ function renderNestedSubtabs() {
     setActive = (viewKey) => {
       state.marketIndexView = viewKey;
     };
-  } else if (state.tab === "Tech" && state.techView === "BigTech") {
-    entries = Object.entries(bigTechSubtabMeta);
-    activeKey = state.bigTechView;
-    setActive = (viewKey) => {
-      state.bigTechView = viewKey;
-    };
   } else if (state.tab === "Tech" && state.techView === "Semis") {
     entries = Object.entries(semisSubtabMeta);
     activeKey = state.semisView;
@@ -19208,7 +19194,7 @@ function renderSummary(list) {
     } else if (state.techView === "LLM") {
       summaryText.textContent = "Frontier-model revenue run-rate and adoption milestones for OpenAI and Anthropic";
     } else if (state.techView === "BigTech") {
-      summaryText.textContent = state.bigTechView === "M7" ? "" : "Big tech capex & cash flow dashboard";
+      summaryText.textContent = "Big tech capex & cash flow dashboard";
     } else if (state.techView === "Semis") {
       summaryText.textContent = state.semisView === "MemorySpot" ? "Memory data dashboard workspace" : "GPU rental price dashboard workspace";
     } else {
@@ -19237,6 +19223,8 @@ function renderSummary(list) {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
     } else if (state.researchView === "ModelTrends") {
       summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
+    } else if (state.researchView === "M7") {
+      summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }
@@ -19661,8 +19649,7 @@ function render() {
       return;
     }
     if (state.techView === "BigTech") {
-      if (state.bigTechView === "Capex") renderCapexOverview();
-      else renderUSOverview();
+      renderCapexOverview();
       return;
     }
     if (state.techView === "Semis") {
@@ -19693,6 +19680,10 @@ function render() {
     }
     if (state.researchView === "ModelTrends") {
       renderOpenrouterOverview();
+      return;
+    }
+    if (state.researchView === "M7") {
+      renderUSOverview();
       return;
     }
     renderStudyOverview();
