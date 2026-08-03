@@ -1,6 +1,6 @@
 ﻿const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { quarterLabels: [], m7Quarterly: [] };
-const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, openAiUsers: null, anthropicAdoption: null, methodology: [], sources: [] };
+const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, openAiUsers: null, openAiAgentUsers: null, anthropicAdoption: null, methodology: [], sources: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 const capexDashboardData = window.capexDashboardData ?? {
   quarterLabels: [],
@@ -5968,10 +5968,11 @@ function createLlmRevenueChart(canvas) {
     data: series.values,
     sourceLabels: series.sourceLabels,
     borderColor: llmDashboardData.colors?.[series.key] ?? "#111827",
-    backgroundColor: llmDashboardData.colors?.[series.key] ?? "#111827",
-    borderWidth: 3,
+    backgroundColor: series.mode === "tracking" ? "#ffffff" : llmDashboardData.colors?.[series.key] ?? "#111827",
+    borderWidth: series.mode === "tracking" ? 2.5 : 3,
+    borderDash: series.mode === "tracking" ? [7, 5] : [],
     tension: 0.18,
-    pointRadius: 4,
+    pointRadius: series.mode === "tracking" ? 3.5 : 4,
     pointHoverRadius: 6,
     pointHitRadius: 12,
     spanGaps: true,
@@ -6010,7 +6011,7 @@ function createLlmRevenueChart(canvas) {
         },
         y: {
           beginAtZero: true,
-          suggestedMax: 50,
+          suggestedMax: 80,
           ticks: { color: "#8d8d86", callback: (value) => `$${value}B`, maxTicksLimit: 6 },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
@@ -6073,6 +6074,68 @@ function createLlmOpenAiUsersChart(canvas) {
         y: {
           beginAtZero: true,
           suggestedMax: 1000,
+          ticks: { color: "#8d8d86", callback: (value) => `${value}M`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createLlmOpenAiAgentUsersChart(canvas) {
+  const panel = llmDashboardData.openAiAgentUsers;
+  if (typeof Chart === "undefined" || !panel) {
+    return;
+  }
+
+  const color = "#2563eb";
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: panel.labels,
+      datasets: [
+        {
+          label: "Agent WAU",
+          data: panel.values,
+          sourceLabels: panel.sourceLabels,
+          borderColor: color,
+          backgroundColor: "rgba(37, 99, 235, 0.10)",
+          fill: true,
+          borderWidth: 3,
+          tension: 0.16,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointHitRadius: 14,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `Weekly active users: ${Number(context.parsed.y).toFixed(0)}M`,
+            afterLabel: (context) => `Basis: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 6, maxRotation: 0 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: 11,
           ticks: { color: "#8d8d86", callback: (value) => `${value}M`, maxTicksLimit: 6 },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
@@ -6240,6 +6303,18 @@ function renderLlmOverview() {
             <canvas data-llm-chart="anthropic-adoption"></canvas>
           </div>
         </article>
+        <article class="llm-panel llm-panel-wide">
+          <div class="us-panel-head">
+            <div>
+              <h3>${llmDashboardData.openAiAgentUsers?.title ?? "OpenAI Agent Adoption"}</h3>
+              <p>${llmDashboardData.openAiAgentUsers?.subtitle ?? ""}</p>
+            </div>
+          </div>
+          <div class="llm-chart-wrap">
+            <canvas data-llm-chart="openai-agent-users"></canvas>
+          </div>
+          <p class="llm-chart-note">2026년 6월 5M은 Codex 단독 WAU이며, GPT-5.6 출시 뒤 7월 수치는 Codex와 ChatGPT Work 합산입니다. 따라서 출시 전후를 완전히 동일한 모집단으로 비교하면 안 됩니다.</p>
+        </article>
         <article class="llm-panel llm-panel-wide llm-method-panel">
           <div>
             <h3>Reading Guide</h3>
@@ -6262,9 +6337,11 @@ function renderLlmOverview() {
 
   const revenueCanvas = usOverviewRoot.querySelector('[data-llm-chart="revenue"]');
   const openAiUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-users"]');
+  const openAiAgentUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-agent-users"]');
   const anthropicAdoptionCanvas = usOverviewRoot.querySelector('[data-llm-chart="anthropic-adoption"]');
   if (revenueCanvas) createLlmRevenueChart(revenueCanvas);
   if (openAiUsersCanvas) createLlmOpenAiUsersChart(openAiUsersCanvas);
+  if (openAiAgentUsersCanvas) createLlmOpenAiAgentUsersChart(openAiAgentUsersCanvas);
   if (anthropicAdoptionCanvas) createLlmAnthropicAdoptionChart(anthropicAdoptionCanvas);
 }
 
