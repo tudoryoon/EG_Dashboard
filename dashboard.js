@@ -107,20 +107,54 @@ const gpuCloudRuntime = {
 };
 
 const primaryTabMeta = {
-  DailyBriefing: { label: "Daily Briefing" },
-  Cds: { label: "CDS" },
-  EtfStatus: { label: "ETF 현황" },
+  DailyBriefing: { label: "Daily Briefing", className: "is-daily-briefing" },
+  Screening: { label: "Screening", className: "is-screening", defaultView: "RS" },
+  Market: { label: "Market", className: "is-market", defaultView: "Index" },
+  Tech: { label: "Tech", className: "is-tech", defaultView: "Cloud" },
+  Flows: { label: "Flows", className: "is-flows", defaultView: "EtfStatus" },
+  Taiwan: { label: "Taiwan", className: "is-taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
+  Research: { label: "Research", className: "is-research", defaultView: "DataCenter" },
+};
+
+const screeningSubtabMeta = {
   RS: { label: "RS" },
-  IndexTrend: { label: "Index Trend" },
-  LLM: { label: "LLM" },
+  TrendScore: { label: "추세스코어" },
+  Canslim: { label: "CANSLIM" },
+};
+
+const marketSubtabMeta = {
+  Index: { label: "Index" },
+  Macro: { label: "Macro" },
+  Liquidity: { label: "Liquidity" },
+  VIX: { label: "VIX" },
+  Breadth: { label: "Breadth" },
+  Valuation: { label: "Valuation" },
+  FxCommodities: { label: "FX & Commodities" },
+};
+
+const techSubtabMeta = {
   Cloud: { label: "Cloud" },
-  Market: { label: "Market" },
+  LLM: { label: "LLM" },
   BigTech: { label: "Big Tech" },
   Semis: { label: "Semis" },
-  Infra: { label: "Infra" },
-  Taiwan: { label: "Taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
-  DataTrend: { label: "Data Trend" },
-  Study: { label: "Study" },
+  PowerInfra: { label: "Power Infra" },
+};
+
+const flowsSubtabMeta = {
+  EtfStatus: { label: "ETF 현황" },
+  Cds: { label: "CDS" },
+};
+
+const researchSubtabMeta = {
+  DataCenter: { label: "Data Center" },
+  MemoryCapa: { label: "Memory CAPA" },
+  ModelTrends: { label: "Model Trends" },
+  Comparisons: { label: "Comparisons" },
+};
+
+const marketIndexSubtabMeta = {
+  Trend: { label: "Index Trend" },
+  Total: { label: "Total Dashboard" },
 };
 
 const bigTechSubtabMeta = {
@@ -128,29 +162,9 @@ const bigTechSubtabMeta = {
   Capex: { label: "Capex & 현금흐름" },
 };
 
-const marketSubtabMeta = {
-  VIX: { label: "VIX" },
-  Breadth: { label: "Breadth" },
-  TrendScore: { label: "추세스코어" },
-  Canslim: { label: "CANSLIM" },
-  Overview: { label: "Price" },
-  Macro: { label: "Macro" },
-  Liquidity: { label: "Liquidity" },
-  Valuation: { label: "Valuation" },
-  FxCommodities: { label: "FX & Commodities" },
-};
-
-const accentMarketSubtabs = new Set(["VIX", "Breadth", "TrendScore", "Canslim"]);
-
 const semisSubtabMeta = {
   MemorySpot: { label: "Memory Data" },
   GPUCloud: { label: "GPU Rental Price" },
-};
-
-const studySubtabMeta = {
-  MemoryCap: { label: "Memory Market Cap" },
-  DataCenter: { label: "Data Center" },
-  MemoryCapa: { label: "Memory Capa" },
 };
 
 const studyDataCenterSortOptions = [
@@ -335,7 +349,12 @@ const FX_CURRENCY_OPTIONS = [
 
 const state = {
   tab: "DailyBriefing",
-  marketView: "Overview",
+  screeningView: "RS",
+  marketView: "Index",
+  marketIndexView: "Trend",
+  techView: "Cloud",
+  flowsView: "EtfStatus",
+  researchView: "DataCenter",
   bigTechView: "M7",
   semisView: "MemorySpot",
   currency: "USD",
@@ -343,7 +362,6 @@ const state = {
   query: "",
   sort: "marketCapDesc",
   m7PriceRange: "3y",
-  studyView: "MemoryCap",
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
   studyCdsRange: studyCdsData.defaultRange ?? "1y",
@@ -493,6 +511,8 @@ const sortSelect = document.querySelector("#sort-select");
 const sortBox = document.querySelector(".sortbox");
 const countrySwitch = document.querySelector("#country-switch");
 const subtabSwitch = document.querySelector("#subtab-switch");
+const nestedSubtabSwitch = document.querySelector("#nested-subtab-switch");
+const nestedSubtabRow = document.querySelector("#nested-subtab-row");
 const currencySwitch = document.querySelector("#currency-switch");
 const sectorChips = document.querySelector("#sector-chips");
 const companyGrid = document.querySelector("#company-grid");
@@ -3920,7 +3940,7 @@ function companiesByCountry(country) {
 }
 
 function activeDashboardKey() {
-  if (state.tab === "BigTech") {
+  if (state.tab === "Tech" && state.techView === "BigTech") {
     return state.bigTechView;
   }
   if (state.tab === "Taiwan") {
@@ -8516,7 +8536,8 @@ function openMarketRsTicker(ticker) {
     return;
   }
 
-  state.tab = "RS";
+  state.tab = "Screening";
+  state.screeningView = "RS";
   state.rsUniverse = "all";
   state.rsFilter = "all";
   state.rsBriefingSector = "briefingAll";
@@ -10067,7 +10088,7 @@ function buildCanslimS(row) {
 }
 
 function buildCanslimL(row) {
-  const universe = state.marketView === "Canslim" ? state.canslimUniverse : state.rsUniverse;
+  const universe = state.screeningView === "Canslim" ? state.canslimUniverse : state.rsUniverse;
   const score = Number(getMarketRsUniverseScore(row ?? {}, universe) ?? row?.rsRatingAll);
   let status = "pending";
   if (Number.isFinite(score)) {
@@ -18957,7 +18978,7 @@ function renderCountries() {
   Object.entries(primaryTabMeta).forEach(([tabKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `country-button${state.tab === tabKey ? " active" : ""}${tabKey === "Taiwan" ? " is-taiwan" : ""}${tabKey === "DailyBriefing" ? " is-daily-briefing" : ""}${tabKey === "Cds" ? " is-cds" : ""}${tabKey === "EtfStatus" ? " is-etf-status" : ""}${tabKey === "RS" ? " is-rs" : ""}${tabKey === "IndexTrend" ? " is-index-trend" : ""}${tabKey === "LLM" ? " is-llm" : ""}${tabKey === "Cloud" ? " is-cloud" : ""}${tabKey === "Study" ? " is-study" : ""}${tabKey === "DataTrend" ? " is-data-trend" : ""}`;
+    button.className = `country-button${state.tab === tabKey ? " active" : ""}${meta.className ? ` ${meta.className}` : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
       state.tab = tabKey;
@@ -18966,11 +18987,21 @@ function renderCountries() {
       } else {
         state.currency = "USD";
       }
-      if (tabKey === "RS") {
+      if (tabKey === "Screening") {
+        state.screeningView = meta.defaultView;
         state.query = "";
         if (searchInput) {
           searchInput.value = "";
         }
+      } else if (tabKey === "Market") {
+        state.marketView = meta.defaultView;
+        state.marketIndexView = "Trend";
+      } else if (tabKey === "Tech") {
+        state.techView = meta.defaultView;
+      } else if (tabKey === "Flows") {
+        state.flowsView = meta.defaultView;
+      } else if (tabKey === "Research") {
+        state.researchView = meta.defaultView;
       }
       state.sector = "All";
       render();
@@ -18983,22 +19014,41 @@ function renderSubtabs() {
   subtabSwitch.innerHTML = "";
   let entries = [];
   let activeKey = "";
+  let setActive = null;
 
-  if (state.tab === "Market") {
+  if (state.tab === "Screening") {
+    entries = Object.entries(screeningSubtabMeta);
+    activeKey = state.screeningView;
+    setActive = (viewKey) => {
+      state.screeningView = viewKey;
+      state.query = "";
+      if (searchInput) searchInput.value = "";
+    };
+  } else if (state.tab === "Market") {
     entries = Object.entries(marketSubtabMeta);
     activeKey = state.marketView;
-  } else if (state.tab === "BigTech") {
-    entries = Object.entries(bigTechSubtabMeta);
-    activeKey = state.bigTechView;
-  } else if (state.tab === "Semis") {
-    entries = Object.entries(semisSubtabMeta);
-    activeKey = state.semisView;
-  } else if (state.tab === "Study") {
-    entries = Object.entries(studySubtabMeta);
-    activeKey = state.studyView;
-  } else if (state.tab === "DataTrend") {
-    entries = Object.entries(dataTrendSubtabMeta);
-    activeKey = state.dataTrendView;
+    setActive = (viewKey) => {
+      state.marketView = viewKey;
+      if (viewKey === "Index") state.marketIndexView = "Trend";
+    };
+  } else if (state.tab === "Tech") {
+    entries = Object.entries(techSubtabMeta);
+    activeKey = state.techView;
+    setActive = (viewKey) => {
+      state.techView = viewKey;
+    };
+  } else if (state.tab === "Flows") {
+    entries = Object.entries(flowsSubtabMeta);
+    activeKey = state.flowsView;
+    setActive = (viewKey) => {
+      state.flowsView = viewKey;
+    };
+  } else if (state.tab === "Research") {
+    entries = Object.entries(researchSubtabMeta);
+    activeKey = state.researchView;
+    setActive = (viewKey) => {
+      state.researchView = viewKey;
+    };
   } else {
     subtabSwitch.classList.add("hidden");
     return;
@@ -19009,29 +19059,67 @@ function renderSubtabs() {
   entries.forEach(([viewKey, meta]) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `subtab-chip${activeKey === viewKey ? " active" : ""}${state.tab === "Market" && accentMarketSubtabs.has(viewKey) ? " is-market-accent" : ""}`;
+    button.className = `subtab-chip is-${state.tab.toLowerCase()}${activeKey === viewKey ? " active" : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
-      if (state.tab === "Market") {
-        state.marketView = viewKey;
-        if (viewKey === "RS" || viewKey === "TrendScore" || viewKey === "Canslim") {
-          state.query = "";
-          if (searchInput) {
-            searchInput.value = "";
-          }
-        }
-      } else if (state.tab === "BigTech") {
-        state.bigTechView = viewKey;
-      } else if (state.tab === "Semis") {
-        state.semisView = viewKey;
-      } else if (state.tab === "Study") {
-        state.studyView = viewKey;
-      } else if (state.tab === "DataTrend") {
-        state.dataTrendView = viewKey;
-      }
+      setActive?.(viewKey);
       render();
     });
     subtabSwitch.appendChild(button);
+  });
+}
+
+function renderNestedSubtabs() {
+  if (!nestedSubtabSwitch || !nestedSubtabRow) {
+    return;
+  }
+  nestedSubtabSwitch.innerHTML = "";
+  let entries = [];
+  let activeKey = "";
+  let setActive = null;
+
+  if (state.tab === "Market" && state.marketView === "Index") {
+    entries = Object.entries(marketIndexSubtabMeta);
+    activeKey = state.marketIndexView;
+    setActive = (viewKey) => {
+      state.marketIndexView = viewKey;
+    };
+  } else if (state.tab === "Tech" && state.techView === "BigTech") {
+    entries = Object.entries(bigTechSubtabMeta);
+    activeKey = state.bigTechView;
+    setActive = (viewKey) => {
+      state.bigTechView = viewKey;
+    };
+  } else if (state.tab === "Tech" && state.techView === "Semis") {
+    entries = Object.entries(semisSubtabMeta);
+    activeKey = state.semisView;
+    setActive = (viewKey) => {
+      state.semisView = viewKey;
+    };
+  } else if (state.tab === "Research" && state.researchView === "ModelTrends") {
+    entries = Object.entries(dataTrendSubtabMeta);
+    activeKey = state.dataTrendView;
+    setActive = (viewKey) => {
+      state.dataTrendView = viewKey;
+    };
+  }
+
+  if (!entries.length) {
+    nestedSubtabRow.classList.add("hidden");
+    return;
+  }
+
+  nestedSubtabRow.classList.remove("hidden");
+  entries.forEach(([viewKey, meta]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `nested-subtab-chip${activeKey === viewKey ? " active" : ""}`;
+    button.textContent = meta.label;
+    button.addEventListener("click", () => {
+      setActive?.(viewKey);
+      render();
+    });
+    nestedSubtabSwitch.appendChild(button);
   });
 }
 
@@ -19074,48 +19162,23 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
-  if (state.tab === "RS") {
-    summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
-    return;
-  }
-
-  if (state.tab === "IndexTrend") {
-    summaryText.textContent = "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD";
-    return;
-  }
-
-  if (state.tab === "LLM") {
-    summaryText.textContent = "Frontier-model revenue run-rate and adoption milestones for OpenAI and Anthropic";
-    return;
-  }
-
-  if (state.tab === "Cloud") {
-    summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and hyperscaler GPU pricing";
-    return;
-  }
-
-  if (state.tab === "EtfStatus") {
-    summaryText.textContent = "Issuer-based ETF price and primary-market fund-flow tracking";
-    return;
-  }
-
-  if (state.tab === "Cds") {
-    summaryText.textContent = "DTCC-reported 5Y single-name CDS transaction spreads for major US technology companies";
-    return;
-  }
-
-  if (state.tab === "Study") {
-    if (state.studyView === "DataCenter") {
-      summaryText.textContent = "Study dashboard for AI data-center deals, power capacity, partners, locations, and construction status";
+  if (state.tab === "Screening") {
+    if (state.screeningView === "RS") {
+      summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
+    } else if (state.screeningView === "TrendScore") {
+      summaryText.textContent = "NASDAQ100, S&P500, and Russell 2000 trend score rankings with daily rank history";
     } else {
-      summaryText.textContent = "Study dashboard for focused market-cap and cross-market comparisons";
+      summaryText.textContent = "CANSLIM coverage, financial trends, and earnings-surprise history across the RS universe";
     }
     return;
   }
 
   if (state.tab === "Market") {
-    if (state.marketView === "Overview") {
-      summaryText.textContent = "Price dashboard for major indexes and cross-asset total dashboard";
+    if (state.marketView === "Index") {
+      summaryText.textContent =
+        state.marketIndexView === "Trend"
+          ? "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD"
+          : "Price dashboard for major indexes and the cross-asset total dashboard";
       return;
     }
     if (state.marketView === "FxCommodities") {
@@ -19142,25 +19205,21 @@ function renderSummary(list) {
       summaryText.textContent = "Daily market breadth dashboard workspace";
       return;
     }
-    if (state.marketView === "TrendScore") {
-      summaryText.textContent = "NASDAQ100 and S&P500 trend score rankings with daily rank history";
-      return;
+    return;
+  }
+
+  if (state.tab === "Tech") {
+    if (state.techView === "Cloud") {
+      summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and hyperscaler GPU pricing";
+    } else if (state.techView === "LLM") {
+      summaryText.textContent = "Frontier-model revenue run-rate and adoption milestones for OpenAI and Anthropic";
+    } else if (state.techView === "BigTech") {
+      summaryText.textContent = state.bigTechView === "M7" ? "" : "Big tech capex & cash flow dashboard";
+    } else if (state.techView === "Semis") {
+      summaryText.textContent = state.semisView === "MemorySpot" ? "Memory data dashboard workspace" : "GPU rental price dashboard workspace";
+    } else {
+      summaryText.textContent = "데이터센터 전력망 스트레스를 보는 일별 전력 허브 가격 대시보드";
     }
-    return;
-  }
-
-  if (state.tab === "BigTech" && state.bigTechView === "M7") {
-    summaryText.textContent = "";
-    return;
-  }
-
-  if (state.tab === "BigTech" && state.bigTechView === "Capex") {
-    summaryText.textContent = "Big tech capex & cash flow dashboard";
-    return;
-  }
-
-  if (state.tab === "Semis") {
-    summaryText.textContent = state.semisView === "MemorySpot" ? "Memory spot dashboard workspace" : "GPU rental price dashboard workspace";
     return;
   }
 
@@ -19169,16 +19228,27 @@ function renderSummary(list) {
     return;
   }
 
-  if (state.tab === "Infra") {
-    summaryText.textContent = "데이터센터 전력망 스트레스를 보는 일별 전력 허브 가격 대시보드";
+  if (state.tab === "Flows") {
+    summaryText.textContent =
+      state.flowsView === "EtfStatus"
+        ? "Issuer-based ETF price and primary-market fund-flow tracking"
+        : "DTCC-reported 5Y single-name CDS transaction spreads for major US technology companies";
     return;
   }
 
-  if (state.tab === "DataTrend") {
-    summaryText.textContent =
-      state.dataTrendView === "Openrouter"
-        ? "OpenRouter AI model rankings, token usage, market share, and leaderboard"
-        : "X and Reddit keyword mention trend dashboard workspace";
+  if (state.tab === "Research") {
+    if (state.researchView === "DataCenter") {
+      summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
+    } else if (state.researchView === "MemoryCapa") {
+      summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
+    } else if (state.researchView === "ModelTrends") {
+      summaryText.textContent =
+        state.dataTrendView === "Openrouter"
+          ? "OpenRouter AI model rankings, token usage, market share, and leaderboard"
+          : "X and Reddit keyword mention trend dashboard workspace";
+    } else {
+      summaryText.textContent = "Focused market-cap and cross-market research comparisons";
+    }
     return;
   }
 
@@ -19519,8 +19589,7 @@ function renderOpenrouterOverview() {
 function render() {
   destroyCharts();
   ensureValidSelection();
-  const showRsToolbar =
-    state.tab === "RS" || (state.tab === "Market" && (state.marketView === "TrendScore" || state.marketView === "Canslim"));
+  const showRsToolbar = state.tab === "Screening";
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
   }
@@ -19529,11 +19598,11 @@ function render() {
   }
   if (searchInput) {
     if (showRsToolbar) {
-      if (state.tab === "RS") {
+      if (state.screeningView === "RS") {
         searchInput.placeholder = "Search ticker or company...";
-      } else if (state.marketView === "TrendScore") {
+      } else if (state.screeningView === "TrendScore") {
         searchInput.placeholder = "Search trend score ticker...";
-      } else if (state.marketView === "Canslim") {
+      } else if (state.screeningView === "Canslim") {
         searchInput.placeholder = "Search CANSLIM ticker...";
       } else {
         searchInput.placeholder = "Search ticker or company...";
@@ -19544,33 +19613,9 @@ function render() {
   }
   renderCountries();
   renderSubtabs();
+  renderNestedSubtabs();
   renderCurrencies();
   renderSectors();
-
-  if (state.tab === "DataTrend") {
-    renderSummary([]);
-    if (state.dataTrendView === "Openrouter") {
-      renderOpenrouterOverview();
-      return;
-    }
-    renderPlaceholderOverview(
-      "Data Trend Dashboard",
-      "X와 Reddit에서 특정 키워드가 얼마나 자주 언급되는지 추적하는 영역입니다. 다음 단계에서 키워드 목록, 수집 소스, 일별/주별 집계 방식, 감성/급증률 지표를 붙이면 됩니다.",
-    );
-    return;
-  }
-
-  if (state.tab === "BigTech" && state.bigTechView === "M7") {
-    renderSummary([]);
-    renderUSOverview();
-    return;
-  }
-
-  if (state.tab === "BigTech" && state.bigTechView === "Capex") {
-    renderSummary([]);
-    renderCapexOverview();
-    return;
-  }
 
   if (state.tab === "DailyBriefing") {
     renderSummary([]);
@@ -19578,80 +19623,19 @@ function render() {
     return;
   }
 
-  if (state.tab === "Cds") {
+  if (state.tab === "Screening") {
     renderSummary([]);
-    renderStudyCdsOverview();
-    return;
-  }
-
-  if (state.tab === "EtfStatus") {
-    renderSummary([]);
-    renderStudyEtfTrackingOverview();
-    return;
-  }
-
-  if (state.tab === "RS") {
-    renderSummary([]);
-    renderMarketRsOverview();
-    return;
-  }
-
-  if (state.tab === "IndexTrend") {
-    renderSummary([]);
-    renderIndexTrendOverview();
-    return;
-  }
-
-  if (state.tab === "LLM") {
-    renderSummary([]);
-    renderLlmOverview();
-    return;
-  }
-
-  if (state.tab === "Cloud") {
-    renderSummary([]);
-    renderCloudOverview();
-    return;
-  }
-
-  if (state.tab === "Study") {
-    renderSummary([]);
-    if (state.studyView === "DataCenter") {
-      renderStudyDataCenterOverview();
-      return;
-    }
-    if (state.studyView === "MemoryCapa") {
-      renderStudyMemoryCapaOverview();
-      return;
-    }
-    renderStudyOverview();
-    return;
-  }
-
-  if (state.tab === "Semis") {
-    renderSummary([]);
-    if (state.semisView === "MemorySpot") {
-      renderMemorySpotOverview();
-      return;
-    }
-    if (state.semisView === "GPUCloud") {
-      renderGpuCloudOverview();
-      return;
-    }
-    renderPlaceholderOverview("Semis Dashboard", "CPU, ASIC, 광통신 같은 주제를 여기에 모아두면 확장성이 좋아집니다. 다음 데이터가 들어오면 이 영역부터 붙이면 됩니다.");
-    return;
-  }
-
-  if (state.tab === "Infra") {
-    renderSummary([]);
-    renderInfraOverview();
+    if (state.screeningView === "RS") renderMarketRsOverview();
+    else if (state.screeningView === "TrendScore") renderMarketTrendScoreOverview();
+    else renderMarketCanslimOverview();
     return;
   }
 
   if (state.tab === "Market") {
     renderSummary([]);
-    if (state.marketView === "Overview") {
-      renderMarketOverview();
+    if (state.marketView === "Index") {
+      if (state.marketIndexView === "Total") renderMarketOverview();
+      else renderIndexTrendOverview();
       return;
     }
     if (state.marketView === "FxCommodities") {
@@ -19678,14 +19662,62 @@ function render() {
       renderMarketBreadthOverview();
       return;
     }
-    if (state.marketView === "TrendScore") {
-      renderMarketTrendScoreOverview();
+    return;
+  }
+
+  if (state.tab === "Tech") {
+    renderSummary([]);
+    if (state.techView === "Cloud") {
+      renderCloudOverview();
       return;
     }
-    if (state.marketView === "Canslim") {
-      renderMarketCanslimOverview();
+    if (state.techView === "LLM") {
+      renderLlmOverview();
       return;
     }
+    if (state.techView === "BigTech") {
+      if (state.bigTechView === "Capex") renderCapexOverview();
+      else renderUSOverview();
+      return;
+    }
+    if (state.techView === "Semis") {
+      if (state.semisView === "GPUCloud") renderGpuCloudOverview();
+      else renderMemorySpotOverview();
+      return;
+    }
+    renderInfraOverview();
+    return;
+  }
+
+  if (state.tab === "Flows") {
+    renderSummary([]);
+    if (state.flowsView === "Cds") renderStudyCdsOverview();
+    else renderStudyEtfTrackingOverview();
+    return;
+  }
+
+  if (state.tab === "Research") {
+    renderSummary([]);
+    if (state.researchView === "DataCenter") {
+      renderStudyDataCenterOverview();
+      return;
+    }
+    if (state.researchView === "MemoryCapa") {
+      renderStudyMemoryCapaOverview();
+      return;
+    }
+    if (state.researchView === "ModelTrends") {
+      if (state.dataTrendView === "Openrouter") {
+        renderOpenrouterOverview();
+      } else {
+        renderPlaceholderOverview(
+          "Model Trends Dashboard",
+          "X와 Reddit에서 특정 키워드가 얼마나 자주 언급되는지 추적하는 영역입니다. 다음 단계에서 키워드 목록, 수집 소스, 일별/주별 집계 방식, 감성/급증률 지표를 붙이면 됩니다.",
+        );
+      }
+      return;
+    }
+    renderStudyOverview();
     return;
   }
 
@@ -19703,15 +19735,15 @@ searchInput.addEventListener("input", (event) => {
     window.clearTimeout(searchRenderTimer);
     searchRenderTimer = null;
   }
-  if (state.tab === "RS" || (state.tab === "Market" && (state.marketView === "TrendScore" || state.marketView === "Canslim"))) {
+  if (state.tab === "Screening") {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
-      if (state.tab === "RS") {
+      if (state.screeningView === "RS") {
         resetRsCardLimit();
-      } else if (state.marketView === "TrendScore") {
+      } else if (state.screeningView === "TrendScore") {
         resetTrendScoreCardLimit();
       }
-      if (state.marketView === "Canslim") {
+      if (state.screeningView === "Canslim") {
         resetCanslimCardLimit();
       }
       render();
