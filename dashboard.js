@@ -133,9 +133,9 @@ const marketSubtabMeta = {
 };
 
 const techSubtabMeta = {
-  Cloud: { label: "Cloud" },
   LLM: { label: "LLM" },
-  BigTech: { label: "Big Tech" },
+  Cloud: { label: "Cloud" },
+  BigTech: { label: "Capex & FCF" },
   Semis: { label: "Semis" },
   PowerInfra: { label: "Power Infra" },
 };
