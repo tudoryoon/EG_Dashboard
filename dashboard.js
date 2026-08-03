@@ -117,6 +117,8 @@ const primaryTabMeta = {
 };
 
 const screeningSubtabMeta = {
+  VIX: { label: "VIX" },
+  Breadth: { label: "Breadth" },
   RS: { label: "RS" },
   TrendScore: { label: "추세스코어" },
   Canslim: { label: "CANSLIM" },
@@ -126,8 +128,6 @@ const marketSubtabMeta = {
   Index: { label: "Index" },
   Macro: { label: "Macro" },
   Liquidity: { label: "Liquidity" },
-  VIX: { label: "VIX" },
-  Breadth: { label: "Breadth" },
   Valuation: { label: "Valuation" },
   FxCommodities: { label: "FX & Commodities" },
 };
@@ -19163,7 +19163,11 @@ function renderSectors() {
 
 function renderSummary(list) {
   if (state.tab === "Screening") {
-    if (state.screeningView === "RS") {
+    if (state.screeningView === "VIX") {
+      summaryText.textContent = "2018-01-01 이후 수집 가능한 VIX family history와 최신 CBOE settlement curve";
+    } else if (state.screeningView === "Breadth") {
+      summaryText.textContent = "Daily market breadth dashboard workspace";
+    } else if (state.screeningView === "RS") {
       summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
     } else if (state.screeningView === "TrendScore") {
       summaryText.textContent = "NASDAQ100, S&P500, and Russell 2000 trend score rankings with daily rank history";
@@ -19195,14 +19199,6 @@ function renderSummary(list) {
     }
     if (state.marketView === "Valuation") {
       summaryText.textContent = "Long-term valuation dashboard using Shiller CAPE and S&P 500 monthly data";
-      return;
-    }
-    if (state.marketView === "VIX") {
-      summaryText.textContent = "2018-01-01 이후 수집 가능한 VIX family history와 최신 CBOE settlement curve";
-      return;
-    }
-    if (state.marketView === "Breadth") {
-      summaryText.textContent = "Daily market breadth dashboard workspace";
       return;
     }
     return;
@@ -19589,7 +19585,7 @@ function renderOpenrouterOverview() {
 function render() {
   destroyCharts();
   ensureValidSelection();
-  const showRsToolbar = state.tab === "Screening";
+  const showRsToolbar = state.tab === "Screening" && ["RS", "TrendScore", "Canslim"].includes(state.screeningView);
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
   }
@@ -19625,7 +19621,9 @@ function render() {
 
   if (state.tab === "Screening") {
     renderSummary([]);
-    if (state.screeningView === "RS") renderMarketRsOverview();
+    if (state.screeningView === "VIX") renderMarketVixOverview();
+    else if (state.screeningView === "Breadth") renderMarketBreadthOverview();
+    else if (state.screeningView === "RS") renderMarketRsOverview();
     else if (state.screeningView === "TrendScore") renderMarketTrendScoreOverview();
     else renderMarketCanslimOverview();
     return;
@@ -19652,14 +19650,6 @@ function render() {
     }
     if (state.marketView === "Valuation") {
       renderMarketValuationOverview();
-      return;
-    }
-    if (state.marketView === "VIX") {
-      renderMarketVixOverview();
-      return;
-    }
-    if (state.marketView === "Breadth") {
-      renderMarketBreadthOverview();
       return;
     }
     return;
