@@ -11,6 +11,7 @@ import ast
 import json
 import math
 import re
+import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,13 @@ KOREA_SYMBOLS = {
     "samsungPreferred": {"naver": "005935", "label": "Samsung Electronics Pref.", "ticker": "005935 KS"},
     "skHynix": {"naver": "000660", "label": "SK Hynix", "ticker": "000660 KS"},
 }
+
+CXMT_SYMBOL = "688825.SS"
+CXMT_LISTING_DATE = "2026-07-27"
+# Post-greenshoe total shares from the STAR Market offering result.
+CXMT_LISTED_SHARES = 67_884_099_077
+
+yf.set_tz_cache_location(str(Path(tempfile.gettempdir()) / "eg-dashboard-yfinance-cache"))
 
 
 def load_window_json(path: Path, variable_name: str) -> dict[str, Any]:
@@ -150,7 +158,9 @@ def build_study_data() -> dict[str, Any]:
     market_rs = load_window_json(DATA_DIR / "market-rs-data.js", "marketRsData")
 
     krw_usd = yf_close_series("KRW=X", START_DATE)
+    cny_usd = yf_close_series("CNY=X", START_DATE)
     mu_prices = yf_close_series("MU", START_DATE)
+    cxmt_prices = yf_close_series(CXMT_SYMBOL, CXMT_LISTING_DATE)
     nvda_prices = extract_nvda_prices(m7_price)
 
     nvda_shares = extract_us_shares(market_rs, "NVDA")
@@ -162,22 +172,35 @@ def build_study_data() -> dict[str, Any]:
         korea_prices[key] = fetch_naver_prices(meta["naver"], START_DATE, end_date)
         korea_shares[key] = fetch_naver_listed_shares(meta["naver"])
 
+    common_cutoff = min(
+        str(krw_usd.index[-1]),
+        str(cny_usd.index[-1]),
+        str(mu_prices.index[-1]),
+        str(cxmt_prices.index[-1]),
+        str(nvda_prices.index[-1]),
+        *(str(series.index[-1]) for series in korea_prices.values()),
+    )
+
     all_dates = sorted(
         {
-            *[d for d in krw_usd.index if d >= START_DATE],
-            *[d for d in nvda_prices.index if d >= START_DATE],
-            *[d for d in mu_prices.index if d >= START_DATE],
-            *[d for series in korea_prices.values() for d in series.index if d >= START_DATE],
+            *[d for d in krw_usd.index if START_DATE <= d <= common_cutoff],
+            *[d for d in cny_usd.index if START_DATE <= d <= common_cutoff],
+            *[d for d in nvda_prices.index if START_DATE <= d <= common_cutoff],
+            *[d for d in mu_prices.index if START_DATE <= d <= common_cutoff],
+            *[d for d in cxmt_prices.index if CXMT_LISTING_DATE <= d <= common_cutoff],
+            *[d for series in korea_prices.values() for d in series.index if START_DATE <= d <= common_cutoff],
         }
     )
     if not all_dates:
         raise ValueError("No dates available for Study dataset")
 
     fx = align_forward(krw_usd, all_dates)
+    cny_fx = align_forward(cny_usd, all_dates)
     samsung_close = align_forward(korea_prices["samsung"], all_dates)
     samsung_preferred_close = align_forward(korea_prices["samsungPreferred"], all_dates)
     hynix_close = align_forward(korea_prices["skHynix"], all_dates)
     mu_close = align_forward(mu_prices, all_dates)
+    cxmt_close = align_forward(cxmt_prices, all_dates)
     nvda_close = align_forward(nvda_prices, all_dates)
 
     samsung_common_cap = samsung_close * korea_shares["samsung"] / fx
@@ -185,8 +208,10 @@ def build_study_data() -> dict[str, Any]:
     samsung_cap = samsung_common_cap + samsung_preferred_cap
     hynix_cap = hynix_close * korea_shares["skHynix"] / fx
     mu_cap = mu_close * mu_shares
+    cxmt_cap = cxmt_close * CXMT_LISTED_SHARES / cny_fx
     nvda_cap = nvda_close * nvda_shares
-    basket_cap = samsung_cap + hynix_cap + mu_cap
+    core_memory_cap = samsung_cap + hynix_cap + mu_cap
+    basket_cap = core_memory_cap + cxmt_cap.fillna(0)
     ratio = basket_cap / nvda_cap
     spread = basket_cap - nvda_cap
 
@@ -204,6 +229,8 @@ def build_study_data() -> dict[str, Any]:
     latest = {
         "date": latest_date,
         "memoryBasketT": finite_or_none(basket_cap.get(latest_date) / 1_000_000_000_000, 3),
+        "coreMemoryBasketT": finite_or_none(core_memory_cap.get(latest_date) / 1_000_000_000_000, 3),
+        "cxmtT": finite_or_none(cxmt_cap.get(latest_date) / 1_000_000_000_000, 3),
         "nvdaT": finite_or_none(nvda_cap.get(latest_date) / 1_000_000_000_000, 3),
         "spreadT": finite_or_none(spread.get(latest_date) / 1_000_000_000_000, 3),
         "ratio": finite_or_none(ratio.get(latest_date), 3),
@@ -230,20 +257,29 @@ def build_study_data() -> dict[str, Any]:
             "nvdaPrice": "Existing data/m7-price-data.js",
             "usShares": "Existing data/market-rs-data.js sharesOutstanding",
             "muPrice": "Yahoo Finance daily close via yfinance because local RS history does not cover 2025-01",
+            "cxmtPrice": "Yahoo Finance 688825.SS daily close from the 2026-07-27 STAR Market listing",
+            "cxmtShares": "67,884,099,077 post-greenshoe shares from the CXMT STAR Market offering result",
+            "cxmtListing": "https://english.sse.com.cn/news/newsrelease/voice/c/c_20260716_10825660.shtml",
             "fx": "Yahoo Finance KRW=X daily close",
+            "cnyFx": "Yahoo Finance CNY=X daily close",
             "unit": "USD trillions",
         },
         "dashboards": {
             "memoryVsNvda": {
-                "title": "Samsung* + SK Hynix + Micron vs NVIDIA Market Cap",
-                "subtitle": "Market cap in USD trillions, from 2025-01-01.",
+                "title": "NVIDIA vs Memory Market Cap",
+                "subtitle": "Market cap in USD trillions from 2025-01-01; CXMT is included from its 2026-07-27 listing.",
                 "dates": selected_dates,
                 "latest": latest,
                 "series": {
                     "memoryBasket": {
-                        "label": "Samsung* + SK Hynix + Micron",
+                        "label": "Memory incl. CXMT",
                         "values": values(basket_cap),
                         "color": "#111827",
+                    },
+                    "coreMemoryBasket": {
+                        "label": "Samsung* + SK Hynix + Micron",
+                        "values": values(core_memory_cap),
+                        "color": "#64748b",
                     },
                     "nvda": {
                         "label": "NVIDIA",
@@ -274,6 +310,11 @@ def build_study_data() -> dict[str, Any]:
                         "label": "Micron",
                         "values": values(mu_cap),
                         "color": "#dc2626",
+                    },
+                    "cxmt": {
+                        "label": "CXMT",
+                        "values": values(cxmt_cap),
+                        "color": "#7c3aed",
                     },
                     "ratio": {
                         "label": "Basket / NVIDIA",

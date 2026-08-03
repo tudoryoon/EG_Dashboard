@@ -149,7 +149,7 @@ const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
   MemoryCapa: { label: "Memory CAPA" },
   ModelTrends: { label: "Model Trends" },
-  Comparisons: { label: "Comparisons" },
+  Comparisons: { label: "NVDA vs Memory" },
 };
 
 const marketIndexSubtabMeta = {
@@ -171,11 +171,6 @@ const studyDataCenterSortOptions = [
   { key: "dateDesc", label: "최신순" },
   { key: "dateAsc", label: "오래된순" },
 ];
-
-const dataTrendSubtabMeta = {
-  Openrouter: { label: "Openrouter" },
-  Mentions: { label: "Mentions" },
-};
 
 const MARKET_BREADTH_SOURCE_URL = "https://stockbee.blogspot.com/p/mm.html";
 const MARKET_BREADTH_SHEET_URL =
@@ -496,7 +491,6 @@ const state = {
   ),
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
   ornnGpuRange: "3y",
-  dataTrendView: "Openrouter",
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
   openrouterScale: "linear",
 };
@@ -1064,9 +1058,11 @@ function buildStudyMemoryPayload(rangeKey) {
   const seriesConfig = [
     { key: "memoryBasket", width: 3.2, order: 1 },
     { key: "nvda", width: 3.2, order: 2 },
-    { key: "samsung", width: 1.6, dash: [6, 5], order: 3 },
-    { key: "skHynix", width: 1.6, dash: [6, 5], order: 4 },
-    { key: "micron", width: 1.6, dash: [6, 5], order: 5 },
+    { key: "coreMemoryBasket", width: 1.8, dash: [8, 5], order: 3 },
+    { key: "samsung", width: 1.5, dash: [6, 5], order: 4 },
+    { key: "skHynix", width: 1.5, dash: [6, 5], order: 5 },
+    { key: "micron", width: 1.5, dash: [6, 5], order: 6 },
+    { key: "cxmt", width: 1.9, dash: [3, 4], order: 7 },
   ];
 
   const datasets = seriesConfig
@@ -15297,24 +15293,29 @@ function renderStudyOverview() {
       <section class="us-panel study-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>Memory Market Cap vs NVIDIA</h2>
-            <p>삼성전자 + SK하이닉스 + Micron 시가총액과 NVIDIA 시가총액을 2025년 1월 1일부터 USD 기준으로 비교합니다.</p>
+            <h2>NVDA vs Memory</h2>
+            <p>삼성전자* + SK하이닉스 + Micron + CXMT 시가총액과 NVIDIA를 USD 기준으로 비교합니다. CXMT는 상장일인 2026년 7월 27일부터 합산됩니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
             <div class="us-price-updated">Updated ${studyData.updatedAt || latest.date || "-"}</div>
           </div>
         </div>
-        <div class="study-kpi-grid">
+        <div class="study-kpi-grid study-kpi-grid-4">
           <article class="study-kpi-card">
-            <span>Samsung* + SK Hynix + MU</span>
+            <span>Memory incl. CXMT</span>
             <strong>${formatStudyTrillion(latest.memoryBasketT, 3)}</strong>
-            <small>${formatSignedPercent(latest.memoryBasketChangePct)} since 2025-01-01</small>
+            <small>Core ${formatStudyTrillion(latest.coreMemoryBasketT, 3)} + CXMT ${formatStudyTrillion(latest.cxmtT, 3)}</small>
           </article>
           <article class="study-kpi-card study-kpi-card-green">
             <span>NVIDIA</span>
             <strong>${formatStudyTrillion(latest.nvdaT, 3)}</strong>
             <small>${formatSignedPercent(latest.nvdaChangePct)} since 2025-01-01</small>
+          </article>
+          <article class="study-kpi-card">
+            <span>CXMT (688825)</span>
+            <strong>${formatStudyTrillion(latest.cxmtT, 3)}</strong>
+            <small>STAR Market · listed 2026-07-27</small>
           </article>
           <article class="study-kpi-card">
             <span>Basket / NVIDIA</span>
@@ -15325,7 +15326,10 @@ function renderStudyOverview() {
         <div class="market-trend-meta">
           <span>국내 종목: 네이버 일별 종가와 상장주식수</span>
           <span>*Samsung은 삼성전자우 포함 시총</span>
-          <span>미국 종목: 기존 대시보드 데이터 기반</span>
+          <span>
+            미국 종목: 기존 대시보드 데이터 기반 ·
+            <a href="${escapeHtml(studyData.source?.cxmtListing || "#")}" target="_blank" rel="noopener noreferrer">CXMT: STAR Market 688825</a>
+          </span>
         </div>
         <div class="us-price-chart-wrap us-price-chart-wrap-large study-chart-wrap">
           <canvas data-study-chart="memory-vs-nvda"></canvas>
@@ -19096,12 +19100,6 @@ function renderNestedSubtabs() {
     setActive = (viewKey) => {
       state.semisView = viewKey;
     };
-  } else if (state.tab === "Research" && state.researchView === "ModelTrends") {
-    entries = Object.entries(dataTrendSubtabMeta);
-    activeKey = state.dataTrendView;
-    setActive = (viewKey) => {
-      state.dataTrendView = viewKey;
-    };
   }
 
   if (!entries.length) {
@@ -19238,10 +19236,7 @@ function renderSummary(list) {
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
     } else if (state.researchView === "ModelTrends") {
-      summaryText.textContent =
-        state.dataTrendView === "Openrouter"
-          ? "OpenRouter AI model rankings, token usage, market share, and leaderboard"
-          : "X and Reddit keyword mention trend dashboard workspace";
+      summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }
@@ -19697,14 +19692,7 @@ function render() {
       return;
     }
     if (state.researchView === "ModelTrends") {
-      if (state.dataTrendView === "Openrouter") {
-        renderOpenrouterOverview();
-      } else {
-        renderPlaceholderOverview(
-          "Model Trends Dashboard",
-          "X와 Reddit에서 특정 키워드가 얼마나 자주 언급되는지 추적하는 영역입니다. 다음 단계에서 키워드 목록, 수집 소스, 일별/주별 집계 방식, 감성/급증률 지표를 붙이면 됩니다.",
-        );
-      }
+      renderOpenrouterOverview();
       return;
     }
     renderStudyOverview();

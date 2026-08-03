@@ -3877,6 +3877,10 @@ h1 {
   margin: 18px 0 14px;
 }
 
+.study-kpi-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .study-kpi-card {
   display: flex;
   min-height: 104px;
