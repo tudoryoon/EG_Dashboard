@@ -12047,6 +12047,23 @@ function createMarketRsChart(canvas, row) {
         pointHoverRadius: 4,
         yAxisID: "y1",
       };
+  const dailyReturnDataset = useCandlestick
+    ? {
+        type: "line",
+        label: "1D Return",
+        data: selectedPrice,
+        borderColor: "transparent",
+        backgroundColor: "transparent",
+        borderWidth: 0,
+        showLine: false,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        pointHitRadius: 0,
+        yAxisID: "y1",
+        isDailyReturn: true,
+        dailyReturns: candlestickData.map((candle) => candle.changePct),
+      }
+    : null;
 
   const chartDatasets = [
     {
@@ -12063,6 +12080,7 @@ function createMarketRsChart(canvas, row) {
       hidden: !isMarketRsChartSeriesVisible("rs"),
     },
     priceDataset,
+    ...(dailyReturnDataset ? [dailyReturnDataset] : []),
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
       label: series.label,
       data: emaSeries[series.key] ?? [],
@@ -12121,6 +12139,7 @@ function createMarketRsChart(canvas, row) {
             usePointStyle: true,
             boxWidth: 8,
             boxHeight: 8,
+            filter: (legendItem, chartData) => !chartData.datasets[legendItem.datasetIndex]?.isDailyReturn,
           },
         },
         tooltip: {
@@ -12128,13 +12147,29 @@ function createMarketRsChart(canvas, row) {
           mode: interactionMode,
           intersect: false,
           filter: (context) => !context.dataset.isMovingAverage,
+          itemSort: (left, right) => Number(Boolean(right.dataset.isDailyReturn)) - Number(Boolean(left.dataset.isDailyReturn)),
           callbacks: {
             title: (items) => {
               const earningsItem = items?.find((item) => item.dataset.isEarningsSurprise);
               const releaseDate = earningsItem?.raw?.releaseDate;
               return releaseDate ? `Earnings Release ${releaseDate}` : items?.[0]?.label ?? "";
             },
+            labelTextColor: (context) => {
+              if (!context.dataset.isDailyReturn) {
+                return "#f8fafc";
+              }
+              const changePct = Number(context.dataset.dailyReturns?.[context.dataIndex]);
+              return changePct > 0 ? "#34d399" : changePct < 0 ? "#fb7185" : "#cbd5e1";
+            },
             label: (context) => {
+              if (context.dataset.isDailyReturn) {
+                const changePct = Number(context.dataset.dailyReturns?.[context.dataIndex]);
+                if (!Number.isFinite(changePct)) {
+                  return null;
+                }
+                const marker = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "•";
+                return `${marker} 1D ${formatSignedPercent(changePct)}`;
+              }
               if (context.dataset.isEarningsSurprise) {
                 const event = context.raw?.earningsEvent;
                 const eps = event?.eps ?? {};
@@ -12155,9 +12190,6 @@ function createMarketRsChart(canvas, row) {
                   return [
                     `Open ${formatUsStockPrice(candle.o)} · High ${formatUsStockPrice(candle.h)}`,
                     `Low ${formatUsStockPrice(candle.l)} · Close ${formatUsStockPrice(candle.c)}`,
-                    ...(Number.isFinite(candle.changePct)
-                      ? [`1D ${formatSignedPercent(candle.changePct)} vs previous close`]
-                      : []),
                   ];
                 }
               }
