@@ -77,6 +77,7 @@ const studyMemoryCapaData = window.studyMemoryCapaData ?? { updatedAt: "", unit:
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
+const easyconomicsGpuIndexData = window.easyconomicsGpuIndexData ?? { updatedAt: "", source: {}, labels: [], backfillValues: [], dailyValues: [], coverage: {} };
 const infraGridData = window.infraGridData ?? { updatedAt: "", source: {}, items: [], fuelColors: {} };
 const openrouterRankingsData = window.openrouterRankingsData ?? {
   updatedAt: "",
@@ -14613,6 +14614,128 @@ function createGpuLineChart(canvas, labels, datasets, formatter) {
   charts.push(chart);
 }
 
+function createEasyconomicsGpuIndexChart(canvas, payload) {
+  if (typeof Chart === "undefined" || !canvas || !payload?.labels?.length) {
+    return;
+  }
+  const labels = payload.labels;
+  const allValues = [
+    ...(payload.backfillValues ?? []),
+    ...(payload.dailyValues ?? []),
+    Number(payload.baseValue) || 100,
+  ]
+    .filter((value) => value !== null && value !== "" && Number.isFinite(Number(value)))
+    .map(Number);
+  const minValue = allValues.length ? Math.min(...allValues) : 70;
+  const maxValue = allValues.length ? Math.max(...allValues) : 110;
+  const yMin = Math.floor((minValue - 4) / 5) * 5;
+  const yMax = Math.ceil((maxValue + 4) / 5) * 5;
+  const baseValue = Number(payload.baseValue) || 100;
+  const tickIndexes = [];
+  const seenMonths = new Set();
+  labels.forEach((label, index) => {
+    const monthKey = String(label).slice(0, 7);
+    const month = Number(monthKey.slice(5, 7));
+    if (!seenMonths.has(monthKey) && Number.isFinite(month) && month % 2 === 1) {
+      tickIndexes.push(index);
+    }
+    seenMonths.add(monthKey);
+  });
+  if (!tickIndexes.includes(labels.length - 1)) {
+    tickIndexes.push(labels.length - 1);
+  }
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "GetDeploying backfill (weekly)",
+          data: payload.backfillValues ?? [],
+          borderColor: "#94a3b8",
+          backgroundColor: "#94a3b8",
+          borderWidth: 2,
+          borderDash: [5, 4],
+          tension: 0.14,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          pointHitRadius: 9,
+          spanGaps: false,
+        },
+        {
+          label: "Easyconomics daily",
+          data: payload.dailyValues ?? [],
+          borderColor: "#0f766e",
+          backgroundColor: "#0f766e",
+          borderWidth: 2.8,
+          tension: 0.14,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointHitRadius: 10,
+          spanGaps: false,
+        },
+        {
+          label: `Base ${baseValue.toFixed(0)}`,
+          data: labels.map(() => baseValue),
+          borderColor: "#d97706",
+          backgroundColor: "#d97706",
+          borderWidth: 1.2,
+          borderDash: [3, 5],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          spanGaps: true,
+          isGpuIndexBaseline: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          filter: (context) => !context.dataset.isGpuIndexBaseline,
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(2)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatYearMonthPeriodLabel(labels[value]),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => Number(value).toFixed(0), maxTicksLimit: 7 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function getGpuCloudItems() {
   return gpuCloudData.items ?? [];
 }
@@ -14813,6 +14936,7 @@ function renderGpuCloudOverview() {
   }
 
   const semiSeries = getGpuSemiAnalysisSeries();
+  const easyIndex = easyconomicsGpuIndexData;
   const ornnSeriesEntries = getOrnnGpuSeriesEntries();
   const activeOrnnSeries = getActiveOrnnGpuSeries();
   const ornnGpuTabsMarkup = ornnSeriesEntries
@@ -14921,6 +15045,34 @@ function renderGpuCloudOverview() {
             <canvas data-ornn-gpu-index="overview"></canvas>
           </div>
         </article>
+        <article class="memory-panel gpu-rental-index-panel">
+          <div class="us-panel-head">
+            <div>
+              <h3>Easyconomics Cloud GPU Price Index</h3>
+              <p>주요 클라우드 GPU 임대료를 공급자 동일가중 방식으로 집계한 시장 종합지수 (2025-01-06=100).</p>
+            </div>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span><a href="${easyIndex.source?.pageUrl ?? "https://easyconomics.com/gpu-price-index"}" target="_blank" rel="noreferrer">Easyconomics GPU Price Index</a></span>
+            <span>${easyIndex.updatedAt || "-"} | ${Number.isFinite(Number(easyIndex.latestValue)) ? Number(easyIndex.latestValue).toFixed(2) : "N/A"}</span>
+            <span>WoW ${formatGpuCloudChange(Number(easyIndex.weeklyChangePct))}</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Coverage</span>
+            <span class="memory-stat-value">${easyIndex.coverage?.gpuCount ?? "-"} GPUs | ${easyIndex.coverage?.providerCount ?? "-"} providers</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Method</span>
+            <span class="memory-stat-value">2026-07-27 이전 GetDeploying 주간 백필, 이후 Easyconomics 일간 지수. 2026-07-27의 88.34에서 두 구간을 접합했습니다.</span>
+          </div>
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">Source</span>
+            <span class="memory-stat-value"><a href="${easyIndex.source?.backfillUrl ?? "https://getdeploying.com/gpu-price-index"}" target="_blank" rel="noreferrer">${easyIndex.source?.backfillName ?? "GetDeploying GPU Price Index"}</a> + dstack gpuhunt 기반 Easyconomics 공개 API</span>
+          </div>
+          <div class="memory-chart-wrap">
+            <canvas data-easyconomics-gpu-index="overview"></canvas>
+          </div>
+        </article>
       </section>
     </section>
   `;
@@ -14947,6 +15099,11 @@ function renderGpuCloudOverview() {
       ],
       (value) => `$${Number(value).toFixed(2)}`,
     );
+  }
+
+  const easyIndexCanvas = usOverviewRoot.querySelector('[data-easyconomics-gpu-index="overview"]');
+  if (easyIndexCanvas && easyIndex.labels?.length) {
+    createEasyconomicsGpuIndexChart(easyIndexCanvas, easyIndex);
   }
 
   usOverviewRoot.querySelectorAll("[data-ornn-gpu]").forEach((button) => {

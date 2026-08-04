@@ -2304,6 +2304,14 @@ h1 {
   margin-bottom: 14px;
 }
 
+.gpu-rental-index-panel {
+  grid-column: 1 / -1;
+}
+
+.gpu-rental-index-panel .memory-chart-wrap canvas {
+  height: 300px;
+}
+
 .gpu-term-table {
   display: grid;
   gap: 0;
