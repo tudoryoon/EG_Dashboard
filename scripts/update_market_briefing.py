@@ -22,8 +22,6 @@ USER_AGENT = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "2y"
 ROTATION_HISTORY_POINTS = 252
 MAX_DAILY_RETURN_PCT = 300.0
-PRICE_SCALE_JUMP_THRESHOLD = 4.0
-PRICE_SCALE_FACTORS = (2.0, 3.0, 4.0, 5.0, 10.0, 20.0)
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
 INDEX_CARD_CONFIGS = [
     {"key": "dowjones", "label": "Dow Jones (DIA)", "symbol": "^DJI"},
@@ -746,7 +744,6 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
         close = close.dropna()
         close = pd.Series(close, dtype=float).sort_index().dropna()
         close = close[~close.index.duplicated(keep="last")]
-        close = repair_price_scale_jumps(close)
         if len(close) >= 2:
             close_map[symbol] = close.rename(symbol)
     fill_latest_chart_close_gaps(close_map)
@@ -780,7 +777,6 @@ def fetch_ohlc_frames(symbols: list[str]) -> dict[str, pd.DataFrame]:
         output = output.dropna(subset=["close"]).sort_index()
         output = output[~output.index.duplicated(keep="last")]
         if len(output) >= 2:
-            output["close"] = repair_price_scale_jumps(pd.Series(output["close"], dtype=float))
             frames[symbol] = output.dropna(subset=["high", "low", "close"])
     for symbol, output in list(frames.items()):
         finalized_ohlc = fetch_chart_finalized_ohlc(symbol)
@@ -907,43 +903,6 @@ def fill_latest_chart_close_gaps(close_map: dict[str, pd.Series]) -> None:
         filled = pd.concat([series, pd.Series([latest_close], index=[target_date], name=symbol)]).sort_index().dropna()
         filled = filled[~filled.index.duplicated(keep="last")]
         close_map[symbol] = filled.rename(symbol)
-
-
-def closest_price_scale_factor(ratio: float) -> float | None:
-    if ratio < PRICE_SCALE_JUMP_THRESHOLD:
-        return None
-    factor = min(PRICE_SCALE_FACTORS, key=lambda value: abs(value - ratio))
-    if abs(ratio / factor - 1.0) <= 0.35:
-        return factor
-    return None
-
-
-def repair_price_scale_jumps(series: pd.Series) -> pd.Series:
-    if len(series) < 2:
-        return series
-
-    adjusted: list[float] = []
-    suffix_multiplier = 1.0
-    for raw_value in series:
-        value = normalize_number(raw_value)
-        if value is None:
-            adjusted.append(float("nan"))
-            continue
-        candidate = value * suffix_multiplier
-        if adjusted and adjusted[-1] and math.isfinite(adjusted[-1]):
-            previous = adjusted[-1]
-            if previous > 0 and candidate > 0:
-                ratio = candidate / previous
-                up_factor = closest_price_scale_factor(ratio)
-                down_factor = closest_price_scale_factor(1.0 / ratio) if ratio else None
-                if up_factor is not None:
-                    suffix_multiplier /= up_factor
-                    candidate = value * suffix_multiplier
-                elif down_factor is not None:
-                    adjusted = [entry / down_factor if math.isfinite(entry) else entry for entry in adjusted]
-        adjusted.append(candidate)
-
-    return pd.Series(adjusted, index=series.index, name=series.name).dropna()
 
 
 def compute_recent_day_change(series: pd.Series, max_abs_return: float = MAX_DAILY_RETURN_PCT) -> tuple[float | None, float | None, float | None]:
