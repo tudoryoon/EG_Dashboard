@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -77,18 +78,42 @@ MANUAL_RELEASE_OVERRIDES = {
     },
 }
 
-ISM_DATES_2026 = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"]
-MANUAL_SERIES_DATA = {
+ISM_MONTH_SLUGS = [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+]
+ISM_REPORT_CONFIG = {
     "ism_services": {
-        "services_pmi": [53.8, 56.1, 54.0, 53.6, 54.5, 54.0],
-        "services_prices": [66.6, 63.0, 70.7, 70.7, 71.3, 67.7],
-        "services_employment": [50.3, 51.8, 45.2, 48.0, 47.9, 51.2],
-        "services_new_orders": [53.1, 58.6, 60.6, 53.5, 57.3, 55.1],
+        "path": "services",
+        "reportName": "Services",
+        "seriesLabels": {
+            "services_pmi": ["servicespmi"],
+            "services_business_activity": ["businessactivityproduction", "businessactivity"],
+            "services_new_orders": ["neworders"],
+            "services_employment": ["employment"],
+            "services_prices": ["prices"],
+        },
     },
     "ism_manufacturing": {
-        "manufacturing_pmi": [52.6, 52.4, 52.7, 52.7, 54.0, 53.3],
-        "manufacturing_new_orders": [57.1, 55.8, 53.5, 54.1, 56.8, 56.0],
-        "manufacturing_prices": [59.0, 70.5, 78.3, 84.6, 82.1, 73.0],
+        "path": "pmi",
+        "reportName": "Manufacturing",
+        "seriesLabels": {
+            "manufacturing_pmi": ["manufacturingpmi"],
+            "manufacturing_new_orders": ["neworders"],
+            "manufacturing_production": ["production"],
+            "manufacturing_employment": ["employment"],
+            "manufacturing_prices": ["prices"],
+        },
     },
 }
 
@@ -186,15 +211,16 @@ INDICATORS: list[dict[str, Any]] = [
         "title": "ISM Services PMI",
         "category": "Business Cycle",
         "startMonth": "2008-01",
-        "sourceLabel": "ISM public report",
-        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/june/",
-        "status": "manual",
-        "statusNote": "Official ISM monthly report snapshots through June 2026",
+        "sourceLabel": "Institute for Supply Management (ISM)",
+        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/",
+        "status": "auto",
+        "statusNote": "Official ISM monthly report pages",
         "series": [
             SeriesConfig("services_pmi", "Services PMI", None, "index", "#111827", True),
-            SeriesConfig("services_prices", "Prices", None, "index", "#d93025"),
-            SeriesConfig("services_employment", "Employment", None, "index", "#2563eb"),
+            SeriesConfig("services_business_activity", "Business Activity", None, "index", "#16a34a"),
             SeriesConfig("services_new_orders", "New Orders", None, "index", "#0f766e"),
+            SeriesConfig("services_employment", "Employment", None, "index", "#2563eb"),
+            SeriesConfig("services_prices", "Prices", None, "index", "#d93025"),
         ],
     },
     {
@@ -202,13 +228,15 @@ INDICATORS: list[dict[str, Any]] = [
         "title": "ISM Manufacturing PMI",
         "category": "Business Cycle",
         "startMonth": "1948-01",
-        "sourceLabel": "ISM public report",
-        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/june/",
-        "status": "manual",
-        "statusNote": "Official ISM monthly report snapshots through June 2026",
+        "sourceLabel": "Institute for Supply Management (ISM)",
+        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/",
+        "status": "auto",
+        "statusNote": "Official ISM monthly report pages",
         "series": [
             SeriesConfig("manufacturing_pmi", "Manufacturing PMI", None, "index", "#111827", True),
-            SeriesConfig("manufacturing_new_orders", "New Orders", None, "index", "#2563eb"),
+            SeriesConfig("manufacturing_new_orders", "New Orders", None, "index", "#0f766e"),
+            SeriesConfig("manufacturing_production", "Production", None, "index", "#16a34a"),
+            SeriesConfig("manufacturing_employment", "Employment", None, "index", "#2563eb"),
             SeriesConfig("manufacturing_prices", "Prices Paid", None, "index", "#d93025"),
         ],
     },
@@ -283,6 +311,150 @@ def fetch_text(url: str, timeout: int = 20, attempts: int = 3) -> str:
             last_error = error
             time.sleep(0.8 * (attempt + 1))
     raise RuntimeError(f"Failed to fetch {url}") from last_error
+
+
+def normalize_ism_label(value: str) -> str:
+    return "".join(character for character in value.lower() if character.isascii() and character.isalnum())
+
+
+def matches_ism_alias(label: str, alias: str) -> bool:
+    return label == alias or (alias.endswith("pmi") and label.startswith(alias))
+
+
+def parse_ism_official_history(indicator_key: str) -> dict[str, Any]:
+    from bs4 import BeautifulSoup
+
+    report_config = ISM_REPORT_CONFIG[indicator_key]
+    report_name = str(report_config["reportName"])
+    series_labels = report_config["seriesLabels"]
+    by_series: dict[str, dict[str, float]] = {series_key: {} for series_key in series_labels}
+    source_urls: dict[str, str] = {}
+    errors: list[str] = []
+    session = requests.Session()
+    # ISM redirects browser-like user agents to its member SSO. Its public
+    # report pages remain available to a plain HTTP client.
+    session.trust_env = False
+    headers = {"User-Agent": "curl/8.5.0", "Accept": "text/html"}
+
+    for month_slug in ISM_MONTH_SLUGS:
+        url = (
+            "https://www.ismworld.org/supply-management-news-and-reports/reports/"
+            f"ism-pmi-reports/{report_config['path']}/{month_slug}/"
+        )
+        try:
+            response = session.get(url, headers=headers, timeout=25)
+            response.raise_for_status()
+            if "ecommerce.ismworld.org" in response.url:
+                raise RuntimeError("redirected to ISM member login")
+            soup = BeautifulSoup(response.text, "html.parser")
+            headings = " ".join(heading.get_text(" ", strip=True) for heading in soup.find_all("h1"))
+            report_match = re.search(
+                rf"({'|'.join(ISM_MONTH_SLUGS)})\s+(20\d{{2}})\s+ISM.*?{re.escape(report_name)}",
+                headings,
+                flags=re.IGNORECASE,
+            )
+            if not report_match:
+                continue
+            report_month = datetime.strptime(
+                f"{report_match.group(1).title()} {report_match.group(2)}", "%B %Y"
+            ).strftime("%Y-%m")
+
+            page_values: dict[str, float] = {}
+            for table in soup.find_all("table"):
+                table_values: dict[str, float] = {}
+                for row in table.find_all("tr"):
+                    cells = [cell.get_text(" ", strip=True) for cell in row.find_all(["th", "td"])]
+                    if len(cells) < 2:
+                        continue
+                    normalized_label = normalize_ism_label(cells[0])
+                    matched_key = next(
+                        (
+                            series_key
+                            for series_key, aliases in series_labels.items()
+                            if any(matches_ism_alias(normalized_label, alias) for alias in aliases)
+                        ),
+                        None,
+                    )
+                    if not matched_key:
+                        continue
+                    value_match = re.search(r"-?\d+(?:\.\d+)?", cells[1].replace(",", ""))
+                    if value_match:
+                        table_values[matched_key] = float(value_match.group(0))
+                if len(table_values) >= 3 and next(iter(series_labels)) in table_values:
+                    page_values = table_values
+                    break
+
+            if not page_values:
+                continue
+            for series_key, value in page_values.items():
+                by_series[series_key][report_month] = value
+
+            # The latest official report embeds 12 months of headline PMI and
+            # four months of each subindex. Older month pages disappear over
+            # time, so harvest those embedded history tables as well.
+            primary_key = next(iter(series_labels))
+            for table in soup.find_all("table"):
+                rows = table.find_all("tr")
+                if len(rows) < 2:
+                    continue
+                header_cells = [
+                    cell.get_text(" ", strip=True) for cell in rows[0].find_all(["th", "td"])
+                ]
+                if not header_cells:
+                    continue
+                normalized_header = normalize_ism_label(header_cells[0])
+                history_key: str | None = None
+                value_index = -1
+                if normalized_header == "month" and len(header_cells) > 1:
+                    normalized_series_header = normalize_ism_label(header_cells[1])
+                    if any(
+                        matches_ism_alias(normalized_series_header, alias)
+                        for alias in series_labels[primary_key]
+                    ):
+                        history_key = primary_key
+                        value_index = 1
+                else:
+                    history_key = next(
+                        (
+                            series_key
+                            for series_key, aliases in series_labels.items()
+                            if any(matches_ism_alias(normalized_header, alias) for alias in aliases)
+                        ),
+                        None,
+                    )
+                if not history_key:
+                    continue
+                for row in rows[1:]:
+                    cells = [cell.get_text(" ", strip=True) for cell in row.find_all(["th", "td"])]
+                    if len(cells) < 2:
+                        continue
+                    month_match = re.fullmatch(r"([A-Za-z]+)\s+(20\d{2})", cells[0].strip())
+                    if not month_match:
+                        continue
+                    try:
+                        history_month = datetime.strptime(
+                            f"{month_match.group(1)[:3].title()} {month_match.group(2)}", "%b %Y"
+                        ).strftime("%Y-%m")
+                    except ValueError:
+                        continue
+                    value_cell = cells[value_index]
+                    value_match = re.search(r"-?\d+(?:\.\d+)?", value_cell.replace(",", ""))
+                    if value_match:
+                        by_series[history_key][history_month] = float(value_match.group(0))
+            source_urls[report_month] = url
+        except Exception as error:  # pragma: no cover - network variability
+            errors.append(f"{month_slug}: {error}")
+
+    available_months = sorted({month for values in by_series.values() for month in values})
+    if not available_months:
+        raise RuntimeError("No official ISM report tables were available" + (f" ({'; '.join(errors)})" if errors else ""))
+    latest_month = available_months[-1]
+    return {
+        "series": by_series,
+        "latestMonth": latest_month,
+        "latestUrl": source_urls.get(latest_month),
+        "errors": errors,
+    }
 
 
 def fred_csv_urls(series_id: str, start_month: str) -> list[str]:
@@ -664,6 +836,13 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
     indicator_series: list[dict[str, Any]] = []
     latest_months: list[str] = []
     available_start_months: list[str] = []
+    ism_history: dict[str, Any] | None = None
+    ism_fetch_error: str | None = None
+    if config["key"] in ISM_REPORT_CONFIG:
+        try:
+            ism_history = parse_ism_official_history(config["key"])
+        except Exception as error:  # pragma: no cover - network variability
+            ism_fetch_error = str(error)
     series_by_key = {
         str(series.get("key")): series
         for series in (existing_indicator or {}).get("series", [])
@@ -672,16 +851,12 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
 
     for series in config["series"]:
         existing_series = series_by_key.get(series.key, {})
-        if config["status"] != "auto" or not series.source_id:
-            manual_values = MANUAL_SERIES_DATA.get(config["key"], {}).get(series.key)
-            if manual_values:
-                by_month = dict(zip(existing_series.get("dates", []), existing_series.get("values", [])))
-                by_month.update(dict(zip(ISM_DATES_2026, manual_values)))
-                dates = sorted(by_month)
-                values = [float(by_month[month]) for month in dates]
-            else:
-                dates = list(existing_series.get("dates", []))
-                values = [float(value) for value in existing_series.get("values", [])]
+        if config["key"] in ISM_REPORT_CONFIG:
+            by_month = dict(zip(existing_series.get("dates", []), existing_series.get("values", [])))
+            if ism_history:
+                by_month.update(ism_history["series"].get(series.key, {}))
+            dates = sorted(by_month)
+            values = [float(by_month[month]) for month in dates]
             payload_series = {
                 "key": series.key,
                 "label": series.label,
@@ -695,6 +870,9 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                 "latestRelease": existing_series.get("latestRelease"),
                 **compute_snapshot(dates, values),
             }
+            if ism_fetch_error:
+                payload_series["fetchStatus"] = "stale" if dates else "error"
+                payload_series["fetchError"] = ism_fetch_error
             if dates:
                 latest_months.append(dates[-1])
                 available_start_months.append(dates[0])
@@ -816,7 +994,7 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
         "availableStartMonth": available_start_month,
         "latestMonth": latest_month,
         "sourceLabel": config["sourceLabel"],
-        "sourceUrl": config["sourceUrl"],
+        "sourceUrl": (ism_history or {}).get("latestUrl") or config["sourceUrl"],
         "status": config["status"],
         "statusNote": config.get("statusNote"),
         "series": indicator_series,
