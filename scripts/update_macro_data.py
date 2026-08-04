@@ -14,7 +14,8 @@ import requests
 
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "macro-indicators-data.js"
-COMMON_START_MONTH = "2010-04"
+ISM_HISTORY_PATH = Path(__file__).resolve().parents[1] / "data" / "ism-history-2016.json"
+COMMON_START_MONTH = "2016-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
 BLS_TIMESERIES_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
@@ -211,10 +212,10 @@ INDICATORS: list[dict[str, Any]] = [
         "title": "ISM Services PMI",
         "category": "Business Cycle",
         "startMonth": "2008-01",
-        "sourceLabel": "Institute for Supply Management (ISM)",
+        "sourceLabel": "ISM official / Trading Economics history",
         "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/",
         "status": "auto",
-        "statusNote": "Official ISM monthly report pages",
+        "statusNote": "2016+ historical archive with recent months overwritten by official ISM reports",
         "series": [
             SeriesConfig("services_pmi", "Services PMI", None, "index", "#111827", True),
             SeriesConfig("services_business_activity", "Business Activity", None, "index", "#16a34a"),
@@ -228,10 +229,10 @@ INDICATORS: list[dict[str, Any]] = [
         "title": "ISM Manufacturing PMI",
         "category": "Business Cycle",
         "startMonth": "1948-01",
-        "sourceLabel": "Institute for Supply Management (ISM)",
+        "sourceLabel": "ISM official / Trading Economics history",
         "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/",
         "status": "auto",
-        "statusNote": "Official ISM monthly report pages",
+        "statusNote": "2016+ historical archive with recent months overwritten by official ISM reports",
         "series": [
             SeriesConfig("manufacturing_pmi", "Manufacturing PMI", None, "index", "#111827", True),
             SeriesConfig("manufacturing_new_orders", "New Orders", None, "index", "#0f766e"),
@@ -298,6 +299,24 @@ def load_existing_payload() -> dict[str, Any]:
         return json.loads(text)
     except Exception:
         return {}
+
+
+def load_ism_history() -> dict[str, dict[str, float]]:
+    if not ISM_HISTORY_PATH.exists():
+        return {}
+    try:
+        payload = json.loads(ISM_HISTORY_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return {
+        str(series_key): {
+            str(month): float(value)
+            for month, value in values.items()
+            if str(month) >= COMMON_START_MONTH
+        }
+        for series_key, values in payload.get("series", {}).items()
+        if isinstance(values, dict)
+    }
 
 
 def fetch_text(url: str, timeout: int = 20, attempts: int = 3) -> str:
@@ -838,6 +857,7 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
     available_start_months: list[str] = []
     ism_history: dict[str, Any] | None = None
     ism_fetch_error: str | None = None
+    ism_baseline = load_ism_history() if config["key"] in ISM_REPORT_CONFIG else {}
     if config["key"] in ISM_REPORT_CONFIG:
         try:
             ism_history = parse_ism_official_history(config["key"])
@@ -852,7 +872,8 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
     for series in config["series"]:
         existing_series = series_by_key.get(series.key, {})
         if config["key"] in ISM_REPORT_CONFIG:
-            by_month = dict(zip(existing_series.get("dates", []), existing_series.get("values", [])))
+            by_month = dict(ism_baseline.get(series.key, {}))
+            by_month.update(zip(existing_series.get("dates", []), existing_series.get("values", [])))
             if ism_history:
                 by_month.update(ism_history["series"].get(series.key, {}))
             dates = sorted(by_month)

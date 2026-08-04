@@ -43,7 +43,7 @@ const marketBreadthData = window.marketBreadthData ?? {
   source: {},
   panels: {},
 };
-const macroIndicatorsData = window.macroIndicatorsData ?? { updatedAt: "", commonStartMonth: "2010-04", indicators: [], categories: [] };
+const macroIndicatorsData = window.macroIndicatorsData ?? { updatedAt: "", commonStartMonth: "2016-01", indicators: [], categories: [] };
 const marketRsData = window.marketRsData ?? {
   updatedAt: "",
   benchmark: { symbol: "^GSPC", label: "S&P 500" },
@@ -17347,7 +17347,7 @@ function renderMarketMacroOverview() {
           </div>
           <div class="market-rs-metric">
             <span>Coverage</span>
-            <strong>${state.macroHistoryMode === "common" ? "2010-04+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
+            <strong>${state.macroHistoryMode === "common" ? "2016-01+" : indicator.availableStartMonth ?? indicator.startMonth ?? "-"}</strong>
           </div>
         </div>
       `
@@ -17385,7 +17385,7 @@ function renderMarketMacroOverview() {
           <canvas data-macro-indicator-chart></canvas>
         </div>
         <p class="market-rs-chart-caption">
-          ${indicator?.title ?? "-"} / ${series?.label ?? "-"}${selectedKoLabel ? ` (${selectedKoLabel})` : ""} / ${getMacroChartKindLabel(selectedChartKind)} / ${state.macroHistoryMode === "common" ? "2010-04+ common view" : "full history"}
+          ${indicator?.title ?? "-"} / ${series?.label ?? "-"}${selectedKoLabel ? ` (${selectedKoLabel})` : ""} / ${getMacroChartKindLabel(selectedChartKind)} / ${state.macroHistoryMode === "common" ? "2016-01+ common view" : "full history"}
         </p>
         ${selectedKoNote ? `<p class="macro-ko-chart-note">${selectedKoNote}</p>` : ""}
         <div class="macro-release-table-wrap">
@@ -17498,7 +17498,7 @@ function renderMarketMacroOverview() {
           <div>
             <h2>Historical Chart</h2>
             <p class="macro-clean-copy">CPI, PCE, PPI처럼 추세가 중요한 지표는 YoY 중심으로 보고, 실업률과 PMI처럼 레벨이 중요한 지표는 레벨로 봅니다.</p>
-            <p>개별 지표는 각 지표별 전체 기간 또는 공통 시작월 2010-04 이후 구간으로 볼 수 있습니다.</p>
+            <p>개별 지표는 각 지표별 전체 기간 또는 공통 시작월 2016-01 이후 구간으로 볼 수 있습니다.</p>
           </div>
         </div>
         <div class="market-rs-controls macro-chart-controls">
@@ -17509,7 +17509,7 @@ function renderMarketMacroOverview() {
           <div>
             <span class="market-rs-control-label">History</span>
             <div class="market-rs-chip-row">
-              <button type="button" class="market-rs-chip${state.macroHistoryMode === "common" ? " active" : ""}" data-macro-mode="common">2010-04+</button>
+              <button type="button" class="market-rs-chip${state.macroHistoryMode === "common" ? " active" : ""}" data-macro-mode="common">2016-01+</button>
               <button type="button" class="market-rs-chip${state.macroHistoryMode === "full" ? " active" : ""}" data-macro-mode="full">Full History</button>
             </div>
           </div>
