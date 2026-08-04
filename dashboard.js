@@ -495,6 +495,7 @@ let marketCanslimDirectionCache = null;
 const marketRsRowByTicker = new Map((marketRsData.rows ?? []).map((row) => [row.ticker, row]));
 
 const charts = [];
+let marketRsDetailChart = null;
 
 const searchInput = document.querySelector("#search-input");
 const sortSelect = document.querySelector("#sort-select");
@@ -4938,6 +4939,7 @@ function createMacroDashboardChart(canvas, rangeKey) {
 
 function destroyCharts() {
   charts.splice(0).forEach((chart) => chart.destroy());
+  marketRsDetailChart = null;
 }
 
 function parseQuarterLabel(label) {
@@ -11858,12 +11860,35 @@ function createMarketRsChart(canvas, row) {
             },
           },
         },
+        zoom: {
+          limits: {
+            x: { min: "original", max: "original", minRange: 20 },
+          },
+          pan: {
+            enabled: true,
+            mode: "x",
+            threshold: 5,
+          },
+          zoom: {
+            wheel: {
+              enabled: true,
+              speed: 0.08,
+            },
+            pinch: {
+              enabled: true,
+            },
+            mode: "x",
+          },
+        },
       },
       scales: {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            const indexes = buildRegularDateTickIndexes(selectedLabels, state.rsHistoryRange);
+            const minimumIndex = Number.isFinite(axis.min) ? Math.ceil(axis.min) : 0;
+            const maximumIndex = Number.isFinite(axis.max) ? Math.floor(axis.max) : selectedLabels.length - 1;
+            const indexes = buildRegularDateTickIndexes(selectedLabels, state.rsHistoryRange)
+              .filter((index) => index >= minimumIndex && index <= maximumIndex);
             axis.ticks = indexes.map((index) => ({ value: index }));
           },
           ticks: {
@@ -11910,6 +11935,7 @@ function createMarketRsChart(canvas, row) {
     },
   });
 
+  marketRsDetailChart = chart;
   charts.push(chart);
 }
 
@@ -12464,6 +12490,13 @@ function renderMarketRsOverview() {
       >${chartType.label}</button>
     `,
   ).join("");
+  const rsChartZoomButtons = `
+    <div class="market-rs-chart-zoom-controls" role="group" aria-label="RS chart zoom controls">
+      <button type="button" data-rs-chart-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+      <button type="button" data-rs-chart-zoom="out" aria-label="Zoom out" title="Zoom out">-</button>
+      <button type="button" class="market-rs-chart-zoom-reset" data-rs-chart-zoom="reset">Reset</button>
+    </div>
+  `;
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -12577,7 +12610,7 @@ function renderMarketRsOverview() {
         </div>
       </article>
 
-      <section class="market-rs-layout">
+      <section class="market-rs-layout market-rs-screening-layout">
         <article class="us-panel market-rs-leaders">
           <div class="us-section-head">
             <div>
@@ -12654,6 +12687,7 @@ function renderMarketRsOverview() {
               <span>Chart Lines</span>
               <div class="market-rs-chip-row">${rsChartSeriesChips}</div>
             </div>
+            ${rsChartZoomButtons}
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
@@ -12859,6 +12893,21 @@ function renderMarketRsOverview() {
       state.rsPriceChartType = chartType;
       syncMarketRsPriceChartTypeButtons();
       refreshMarketRsChartOnly();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-chart-zoom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!marketRsDetailChart) {
+        return;
+      }
+      const action = button.dataset.rsChartZoom;
+      if (action === "reset" && typeof marketRsDetailChart.resetZoom === "function") {
+        marketRsDetailChart.resetZoom();
+      } else if (action === "in" && typeof marketRsDetailChart.zoom === "function") {
+        marketRsDetailChart.zoom({ x: 1.25 });
+      } else if (action === "out" && typeof marketRsDetailChart.zoom === "function") {
+        marketRsDetailChart.zoom({ x: 0.8 });
+      }
     });
   });
   usOverviewRoot.querySelectorAll("[data-rs-sort]").forEach((button) => {

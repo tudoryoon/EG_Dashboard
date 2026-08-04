@@ -18,7 +18,6 @@ import update_market_rs as rs
 ROOT = Path(__file__).resolve().parents[1]
 RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 TREND_SCRIPT_PATH = ROOT / "scripts" / "update_market_trend_score.py"
-MARKET_PRICE_DATA_PATH = ROOT / "data" / "market-price-data.js"
 INDEX_PATH = ROOT / "index.html"
 MANUAL_CONFIG_PATH = ROOT / "data" / "market-rs-manual-tickers.json"
 
@@ -255,17 +254,6 @@ def compute_history_rating(
     return values
 
 
-def load_sp500_benchmark(history_dates: list[str]) -> pd.Series:
-    payload = load_js_payload(MARKET_PRICE_DATA_PATH, "marketPriceData")
-    item = payload.get("items", {}).get("sp500", {})
-    series = pd.Series(
-        item.get("values", []),
-        index=pd.Index(pd.to_datetime(item.get("dates", [])), name="date"),
-        dtype="float64",
-    )
-    return series.reindex(pd.to_datetime(history_dates)).ffill()
-
-
 def list_from_series(series: pd.Series, digits: int = 2) -> list[float | int | None]:
     output: list[float | int | None] = []
     for value in series.tolist():
@@ -347,16 +335,8 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
         "memberships": {"sp500": False, "nasdaq100": False, "dowjones": False, "russell2000": False},
     }
 
-    benchmark = load_sp500_benchmark(history_dates)
-    rs_line = price_history.div(benchmark)
     history = {
-        "rsRating": [],
         "rsRatingAll": [],
-        "rsRatingSp500": [None for _ in history_dates],
-        "rsRatingNasdaq100": [None for _ in history_dates],
-        "rsRatingDowjones": [None for _ in history_dates],
-        "rsRatingRussell2000": [None for _ in history_dates],
-        "rsLine": rs.normalize_line(rs_line),
         "price": list_from_series(price_history, 2),
         "open": list_from_series(frame["open"].reindex(history_index), 2),
         "high": list_from_series(frame["high"].reindex(history_index), 2),
@@ -523,7 +503,6 @@ def main() -> None:
         history = new_histories[ticker]
         latest_rating = row.get("rsRatingAll")
         history_rating = compute_history_rating(payload, ticker, row.pop("_historyPriceSeries"), latest_rating)
-        history["rsRating"] = history_rating
         history["rsRatingAll"] = history_rating
         update_new_high_flags(row, history)
         row.pop("_history", None)

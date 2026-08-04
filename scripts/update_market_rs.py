@@ -17,9 +17,9 @@ import yfinance as yf
 
 
 WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
-PRICE_PERIOD = "3y"
+PRICE_PERIOD = "5y"
 BENCHMARK_SYMBOL = "^GSPC"
-HISTORY_POINTS = 252
+HISTORY_POINTS = 252 * 3
 MIN_MARKET_CAP_USD = 200_000_000
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
 SHARES_REFRESH_RATIO_LOW = 0.70
@@ -986,7 +986,6 @@ def build_payload(
         for member in get_manual_universe_members()
         if normalize_ticker(member.get("ticker"))
     }
-    benchmark = adjusted_close_frame[BENCHMARK_SYMBOL].dropna()
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_open = open_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
@@ -1048,7 +1047,6 @@ def build_payload(
     history_dates = [date.strftime("%Y-%m-%d") for date in rs_rating_all.index[history_start_loc : latest_loc + 1]]
     history_rating_all = rs_rating_all.iloc[history_start_loc : latest_loc + 1]
 
-    benchmark_history = benchmark.reindex(history_rating_all.index)
     rows = []
     histories: dict[str, dict[str, object]] = {}
 
@@ -1070,8 +1068,6 @@ def build_payload(
         high_window = stock_high[ticker].reindex(history_rating_all.index) if ticker in stock_high.columns else pd.Series(index=history_rating_all.index, dtype=float)
         low_window = stock_low[ticker].reindex(history_rating_all.index) if ticker in stock_low.columns else pd.Series(index=history_rating_all.index, dtype=float)
         volume_window = stock_volume[ticker].reindex(history_rating_all.index) if ticker in stock_volume.columns else pd.Series(index=history_rating_all.index, dtype=float)
-        adjusted_window = stock_adjusted_close[ticker].reindex(history_rating_all.index)
-        rs_line = adjusted_window.div(benchmark_history)
         shares_outstanding = shares_cache.get(ticker)
         if shares_outstanding is not None and not isinstance(shares_outstanding, int):
             try:
@@ -1183,39 +1179,31 @@ def build_payload(
             },
         }
         rows.append(row)
-        histories[ticker] = {
-            "rsRating": [
-                None if pd.isna(value) else int(value)
-                for value in history_rating_all[ticker].tolist()
-            ],
+        history_payload = {
             "rsRatingAll": [
                 None if pd.isna(value) else int(value)
                 for value in history_rating_all[ticker].tolist()
             ],
-            "rsRatingSp500": [
-                None if pd.isna(value) else int(value)
-                for value in history_sp500_series.reindex(history_rating_all.index).tolist()
-            ],
-            "rsRatingNasdaq100": [
-                None if pd.isna(value) else int(value)
-                for value in history_nasdaq100_series.reindex(history_rating_all.index).tolist()
-            ],
-            "rsRatingDowjones": [
-                None if pd.isna(value) else int(value)
-                for value in history_dowjones_series.reindex(history_rating_all.index).tolist()
-            ],
-            "rsRatingRussell2000": [
-                None if pd.isna(value) else int(value)
-                for value in history_russell2000_series.reindex(history_rating_all.index).tolist()
-            ],
-            "rsLine": normalize_line(rs_line),
             "price": serialize_price_line(raw_price_window),
             "open": serialize_price_line(open_window),
             "high": serialize_price_line(high_window),
             "low": serialize_price_line(low_window),
             "volume": serialize_volume_line(volume_window),
-            "atr21Pct": serialize_price_line(ticker_atr_pct_series.reindex(history_rating_all.index)),
         }
+        universe_history_series = {
+            "rsRatingSp500": history_sp500_series,
+            "rsRatingNasdaq100": history_nasdaq100_series,
+            "rsRatingDowjones": history_dowjones_series,
+            "rsRatingRussell2000": history_russell2000_series,
+        }
+        for history_key, history_series in universe_history_series.items():
+            aligned_values = history_series.reindex(history_rating_all.index)
+            if aligned_values.notna().any():
+                history_payload[history_key] = [
+                    None if pd.isna(value) else int(value)
+                    for value in aligned_values.tolist()
+                ]
+        histories[ticker] = history_payload
 
     rows.sort(key=lambda item: (-int(item.get("rsRatingAll") or 0), item["ticker"]))
     return {

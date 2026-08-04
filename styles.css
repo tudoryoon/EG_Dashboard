@@ -7483,6 +7483,15 @@ h1 {
   gap: 14px;
 }
 
+.market-rs-screening-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.market-rs-screening-layout .market-rs-card-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-height: 470px;
+}
+
 .market-rs-new-high-board {
   min-width: 0;
   padding: 4px 0 2px;
@@ -8107,6 +8116,39 @@ h1 {
   margin-top: 14px;
 }
 
+.market-rs-chart-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.market-rs-chart-zoom-controls button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #252620;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.market-rs-chart-zoom-controls button:hover {
+  border-color: #9b9b92;
+  background: #f4f4f0;
+}
+
+.market-rs-chart-zoom-controls .market-rs-chart-zoom-reset {
+  min-width: 58px;
+  font-size: 0.75rem;
+}
+
 .market-rs-chart-controls .market-rs-chart-control-row {
   margin-top: 0;
 }
@@ -8173,6 +8215,14 @@ h1 {
 .market-rs-chart-wrap {
   height: 360px;
   margin-top: 14px;
+}
+
+.market-rs-screening-layout .market-rs-chart-wrap {
+  height: 440px;
+}
+
+.market-rs-screening-layout [data-rs-chart="detail"] {
+  touch-action: pan-y;
 }
 
 .market-rs-mdd-chart-wrap {
@@ -8905,6 +8955,10 @@ h1 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .market-rs-screening-layout .market-rs-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .briefing-news-layout {
     grid-template-columns: 1fr;
   }
@@ -9051,6 +9105,15 @@ h1 {
 
   .market-rs-card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .market-rs-screening-layout .market-rs-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-rs-chart-zoom-controls {
+    width: 100%;
+    margin-left: 0;
   }
 
   .market-rs-risk-chart-grid {

@@ -34,7 +34,16 @@ def main() -> None:
     history_dates = rs.get("historyDates") or []
     require(len(rs_rows) >= 2_000, f"RS universe is unexpectedly small: {len(rs_rows)}")
     require(bool(history_dates), "RS history dates are empty.")
+    require(len(history_dates) >= 740, f"RS history is shorter than the intended 3Y window: {len(history_dates)}")
     require(rs.get("updatedAt") == history_dates[-1], "RS updatedAt and latest history date differ.")
+    rs_histories = rs.get("histories") or {}
+    require(len(rs_histories) == len(rs_rows), "RS history count differs from the RS row count.")
+    for ticker, history in rs_histories.items():
+        for history_key in ("price", "open", "high", "low", "volume", "rsRatingAll"):
+            require(
+                len(history.get(history_key) or []) == len(history_dates),
+                f"RS {history_key} length differs from historyDates for {ticker}.",
+            )
 
     membership_counts = {
         key: sum(1 for row in rs_rows if (row.get("memberships") or {}).get(key))
