@@ -14,6 +14,8 @@ MARKET_PRICE_DATA_PATH = ROOT / "data" / "market-price-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-trend-score-data.js"
 HISTORY_POINTS = 252
 ATR_MIN_PERIODS = 2
+PROVISIONAL_LONG_TREND_MIN_PERIODS = 50
+PROVISIONAL_LONG_TREND_TICKERS = {"DRAM"}
 
 UNIVERSES = {
     "all": {
@@ -175,7 +177,12 @@ def position_for_score(score: int | None) -> float | None:
     return POSITION_BY_SCORE.get(max(0, min(10, score)))
 
 
-def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
+def build_score_frame(
+    price: pd.Series,
+    relative: pd.Series,
+    *,
+    provisional_long_trend: bool = False,
+) -> pd.DataFrame:
     price = price.astype("float64")
     relative = relative.astype("float64")
     frame = pd.DataFrame({"price": price, "relative": relative})
@@ -188,15 +195,21 @@ def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
     frame["rs50"] = frame["relative"].rolling(50).mean()
     frame["rs200"] = frame["relative"].rolling(200).mean()
 
+    price_long = frame["sma200"]
+    rs_long = frame["rs200"]
+    if provisional_long_trend:
+        price_long = frame["price"].rolling(200, min_periods=PROVISIONAL_LONG_TREND_MIN_PERIODS).mean()
+        rs_long = frame["relative"].rolling(200, min_periods=PROVISIONAL_LONG_TREND_MIN_PERIODS).mean()
+
     absolute_conditions = [
-        frame["price"] > frame["sma200"],
-        frame["sma50"] > frame["sma200"],
+        frame["price"] > price_long,
+        frame["sma50"] > price_long,
         frame["price"] > frame["sma50"],
         frame["sma50"] > frame["sma50"].shift(5),
     ]
     relative_conditions = [
-        frame["relative"] > frame["rs200"],
-        frame["rs50"] > frame["rs200"],
+        frame["relative"] > rs_long,
+        frame["rs50"] > rs_long,
         frame["relative"] > frame["rs50"],
         frame["rs50"] > frame["rs50"].shift(5),
     ]
@@ -208,7 +221,7 @@ def build_score_frame(price: pd.Series, relative: pd.Series) -> pd.DataFrame:
     frame["absoluteScore"] = sum(condition.astype("float64") for condition in absolute_conditions)
     frame["relativeScore"] = sum(condition.astype("float64") for condition in relative_conditions)
     frame["momentumScore"] = sum(condition.astype("float64") for condition in momentum_conditions)
-    ready = frame[["sma200", "rs200"]].notna().all(axis=1)
+    ready = pd.concat([price_long, rs_long], axis=1).notna().all(axis=1)
     frame["score"] = (frame["absoluteScore"] + frame["relativeScore"] + frame["momentumScore"]).where(ready)
     frame["deviation10EmaPct"] = ((frame["price"] / frame["ema10"]) - 1) * 100
     frame["deviation20Pct"] = ((frame["price"] / frame["sma20"]) - 1) * 100
@@ -482,7 +495,11 @@ def build_universe_payload(
             relative = price.div(benchmark_window)
             if relative.dropna().empty:
                 continue
-            cached_frame = build_score_frame(price, relative)
+            cached_frame = build_score_frame(
+                price,
+                relative,
+                provisional_long_trend=ticker in PROVISIONAL_LONG_TREND_TICKERS,
+            )
             for history_key in ["open", "high", "low", "volume"]:
                 values = (history.get(history_key) or [])[-len(dates):]
                 if values:
@@ -580,6 +597,14 @@ def build_universe_payload(
                 "climaxSource": climax.get("source"),
                 "zone": score_label(score_value),
                 "state": state,
+                **(
+                    {
+                        "scoreBasis": "available-history-provisional",
+                        "historySessions": int(len(frame["price"].dropna())),
+                    }
+                    if ticker in PROVISIONAL_LONG_TREND_TICKERS and len(frame["price"].dropna()) < 200
+                    else {}
+                ),
             }
         )
         output_histories[ticker] = {
@@ -634,6 +659,7 @@ def build_payload() -> dict:
         "scoring": {
             "label": "Trend Score",
             "description": "Price trend 4 points, benchmark-relative RS line trend 4 points, and short-term momentum 2 points. NASDAQ100, S&P500, and Russell 2000 use their own index benchmarks; ALL uses the S&P500 benchmark.",
+            "provisionalNote": "DRAM has fewer than 200 sessions, so its long-term conditions use the available-history average after 50 sessions until a full 200-session history is available.",
             "absolute": [
                 "Price > 200DMA",
                 "50DMA > 200DMA",

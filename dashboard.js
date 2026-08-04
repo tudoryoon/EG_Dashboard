@@ -13318,6 +13318,12 @@ function renderMarketTrendScoreOverview() {
               <span>Base Weight</span>
               <strong>${formatTrendSignedPercent(selected?.baseWeightPct)}</strong>
             </div>
+            ${selected?.scoreBasis === "available-history-provisional" ? `
+              <div class="market-rs-metric">
+                <span>Score Basis</span>
+                <strong>${selected.historySessions ?? "-"}D provisional</strong>
+              </div>
+            ` : ""}
           </div>
           <div class="market-rs-extension-panel">
             <div class="market-rs-extension-title">
