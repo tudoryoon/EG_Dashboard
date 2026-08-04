@@ -8153,6 +8153,10 @@ h1 {
   margin-top: 0;
 }
 
+.market-rs-chart-range-row {
+  flex-basis: 100%;
+}
+
 .market-rs-chart-control-row > span {
   color: var(--muted);
   font-size: 0.82rem;

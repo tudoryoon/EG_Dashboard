@@ -11448,8 +11448,8 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
       const spacing = visiblePoints.length > 1
         ? Math.abs(visiblePoints[1].x - visiblePoints[0].x)
         : chart.chartArea.width;
-      const bodyWidth = Math.max(2.6, Math.min(13, spacing * 0.82));
-      const wickWidth = spacing >= 4 ? 1.35 : 1.1;
+      const bodyWidth = Math.max(3.2, Math.min(15, spacing * 0.9));
+      const wickWidth = spacing >= 4 ? 1.45 : 1.2;
 
       chart.ctx.save();
       chart.ctx.beginPath();
@@ -11478,7 +11478,7 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
         const yLow = yScale.getPixelForValue(low);
         const yClose = yScale.getPixelForValue(close);
         const bodyTop = Math.min(yOpen, yClose);
-        const bodyHeight = Math.max(1.8, Math.abs(yClose - yOpen));
+        const bodyHeight = Math.max(2.2, Math.abs(yClose - yOpen));
 
         chart.ctx.strokeStyle = color;
         chart.ctx.fillStyle = color;
@@ -11529,6 +11529,14 @@ function syncMarketRsPriceChartTypeButtons() {
   });
 }
 
+function syncMarketRsChartRangeButtons() {
+  usOverviewRoot.querySelectorAll("[data-rs-range]").forEach((button) => {
+    const isActive = button.dataset.rsRange === state.rsHistoryRange;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
 function updateMarketRsEmaReadout(labels, emaSeries, index) {
   const readout = usOverviewRoot.querySelector("[data-rs-ema-readout]");
   if (!readout) {
@@ -11556,6 +11564,224 @@ function updateMarketRsEmaReadout(labels, emaSeries, index) {
   readout.innerHTML = `<time>${labels[safeIndex] ?? "-"}</time>${items}`;
 }
 
+function getMarketRsVisibleIndexRange(chart) {
+  const labelCount = chart?.data?.labels?.length ?? 0;
+  if (!labelCount) {
+    return { min: 0, max: -1 };
+  }
+  const xScale = chart?.scales?.x;
+  const min = Number.isFinite(xScale?.min) ? Math.max(0, Math.ceil(xScale.min)) : 0;
+  const max = Number.isFinite(xScale?.max)
+    ? Math.min(labelCount - 1, Math.floor(xScale.max))
+    : labelCount - 1;
+  return { min, max };
+}
+
+function fitMarketRsChartYToVisible(chart = marketRsDetailChart) {
+  if (!chart?.data?.datasets?.length || !chart.scales?.x) {
+    return;
+  }
+  const visibleRange = getMarketRsVisibleIndexRange(chart);
+  if (visibleRange.max < visibleRange.min) {
+    return;
+  }
+
+  const ratingValues = [];
+  const priceValues = [];
+  chart.data.datasets.forEach((dataset, datasetIndex) => {
+    if (!chart.isDatasetVisible(datasetIndex) || dataset.isEarningsSurprise) {
+      return;
+    }
+    const target = dataset.yAxisID === "y" ? ratingValues : dataset.yAxisID === "y1" ? priceValues : null;
+    if (!target) {
+      return;
+    }
+    for (let index = visibleRange.min; index <= visibleRange.max; index += 1) {
+      if (dataset.isCandlestick) {
+        const candle = dataset.ohlc?.[index];
+        [candle?.o, candle?.h, candle?.l, candle?.c].forEach((value) => {
+          const numeric = Number(value);
+          if (Number.isFinite(numeric)) {
+            target.push(numeric);
+          }
+        });
+      } else {
+        const rawValue = dataset.data?.[index];
+        const numeric = Number(rawValue && typeof rawValue === "object" ? rawValue.y : rawValue);
+        if (Number.isFinite(numeric)) {
+          target.push(numeric);
+        }
+      }
+    }
+  });
+
+  if (ratingValues.length && chart.options.scales?.y) {
+    let min = Math.floor((Math.min(...ratingValues) - 3) / 5) * 5;
+    let max = Math.ceil((Math.max(...ratingValues) + 3) / 5) * 5;
+    if (max - min < 12) {
+      const midpoint = (max + min) / 2;
+      min = Math.floor((midpoint - 6) / 5) * 5;
+      max = Math.ceil((midpoint + 6) / 5) * 5;
+    }
+    min = Math.max(1, min);
+    max = Math.min(99, max);
+    chart.options.scales.y.min = min;
+    chart.options.scales.y.max = max;
+    chart.options.scales.y.ticks.stepSize = max - min <= 20 ? 5 : 10;
+  }
+
+  if (priceValues.length && chart.options.scales?.y1) {
+    let min = Math.min(...priceValues);
+    let max = Math.max(...priceValues);
+    if (min === max) {
+      const pad = Math.max(1, Math.abs(max) * 0.05);
+      min -= pad;
+      max += pad;
+    } else {
+      const pad = (max - min) * 0.07;
+      min -= pad;
+      max += pad;
+    }
+    chart.options.scales.y1.min = Math.max(0, min);
+    chart.options.scales.y1.max = max;
+  }
+  chart.update("none");
+}
+
+function attachMarketRsYAxisDrag(chart) {
+  const canvas = chart?.canvas;
+  if (!canvas) {
+    return;
+  }
+  canvas.__marketRsYAxisDragCleanup?.();
+
+  let dragState = null;
+  const getPosition = (event) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * (chart.width / Math.max(1, rect.width)),
+      y: (event.clientY - rect.top) * (chart.height / Math.max(1, rect.height)),
+    };
+  };
+  const getAxisAtPosition = (position) => [chart.scales?.y, chart.scales?.y1].find(
+    (scale) => scale
+      && scale.options?.display !== false
+      && position.x >= scale.left
+      && position.x <= scale.right
+      && position.y >= scale.top
+      && position.y <= scale.bottom,
+  ) ?? null;
+  const updateCursor = (event) => {
+    if (dragState) {
+      canvas.style.cursor = "ns-resize";
+      return;
+    }
+    canvas.style.cursor = getAxisAtPosition(getPosition(event)) ? "ns-resize" : "";
+  };
+  const endDrag = (event) => {
+    if (!dragState) {
+      return;
+    }
+    if (event && canvas.hasPointerCapture?.(event.pointerId)) {
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already be released by the browser.
+      }
+    }
+    dragState = null;
+    canvas.style.cursor = "";
+  };
+  const handlePointerDown = (event) => {
+    const position = getPosition(event);
+    const scale = getAxisAtPosition(position);
+    if (!scale || !Number.isFinite(scale.min) || !Number.isFinite(scale.max) || scale.max <= scale.min) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const span = scale.max - scale.min;
+    const anchor = scale.getValueForPixel(position.y);
+    dragState = {
+      axisId: scale.id,
+      startY: position.y,
+      initialSpan: span,
+      anchor,
+      anchorRatio: Math.max(0, Math.min(1, (anchor - scale.min) / span)),
+    };
+    try {
+      canvas.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Synthetic or interrupted pointers can be scaled without capture.
+    }
+    canvas.style.cursor = "ns-resize";
+  };
+  const handlePointerMove = (event) => {
+    if (!dragState) {
+      updateCursor(event);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const position = getPosition(event);
+    const isRatingAxis = dragState.axisId === "y";
+    const minimumSpan = isRatingAxis ? 5 : Math.max(0.01, dragState.initialSpan * 0.08);
+    const maximumSpan = isRatingAxis ? 98 : dragState.initialSpan * 12;
+    const scaleFactor = Math.exp((position.y - dragState.startY) / 180);
+    const nextSpan = Math.max(minimumSpan, Math.min(maximumSpan, dragState.initialSpan * scaleFactor));
+    let nextMin = dragState.anchor - (dragState.anchorRatio * nextSpan);
+    let nextMax = nextMin + nextSpan;
+
+    if (isRatingAxis) {
+      if (nextMin < 1) {
+        nextMax += 1 - nextMin;
+        nextMin = 1;
+      }
+      if (nextMax > 99) {
+        nextMin -= nextMax - 99;
+        nextMax = 99;
+      }
+      nextMin = Math.max(1, nextMin);
+      chart.options.scales.y.ticks.stepSize = nextMax - nextMin <= 15 ? 2 : nextMax - nextMin <= 35 ? 5 : 10;
+    } else if (nextMin < 0) {
+      nextMax -= nextMin;
+      nextMin = 0;
+    }
+    chart.options.scales[dragState.axisId].min = nextMin;
+    chart.options.scales[dragState.axisId].max = nextMax;
+    chart.update("none");
+  };
+  const handleDoubleClick = (event) => {
+    if (!getAxisAtPosition(getPosition(event))) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    fitMarketRsChartYToVisible(chart);
+  };
+  const handlePointerLeave = () => {
+    if (!dragState) {
+      canvas.style.cursor = "";
+    }
+  };
+
+  canvas.addEventListener("pointerdown", handlePointerDown, true);
+  canvas.addEventListener("pointermove", handlePointerMove, true);
+  canvas.addEventListener("pointerup", endDrag, true);
+  canvas.addEventListener("pointercancel", endDrag, true);
+  canvas.addEventListener("pointerleave", handlePointerLeave, true);
+  canvas.addEventListener("dblclick", handleDoubleClick, true);
+  canvas.__marketRsYAxisDragCleanup = () => {
+    canvas.removeEventListener("pointerdown", handlePointerDown, true);
+    canvas.removeEventListener("pointermove", handlePointerMove, true);
+    canvas.removeEventListener("pointerup", endDrag, true);
+    canvas.removeEventListener("pointercancel", endDrag, true);
+    canvas.removeEventListener("pointerleave", handlePointerLeave, true);
+    canvas.removeEventListener("dblclick", handleDoubleClick, true);
+    canvas.style.cursor = "";
+  };
+}
+
 function zoomMarketRsChartToLatest(direction) {
   const chart = marketRsDetailChart;
   const xScale = chart?.scales?.x;
@@ -11577,11 +11803,12 @@ function zoomMarketRsChartToLatest(direction) {
 
   if (typeof chart.zoomScale === "function") {
     chart.zoomScale("x", nextRange, "none");
-    return;
+  } else {
+    chart.options.scales.x.min = nextRange.min;
+    chart.options.scales.x.max = nextRange.max;
+    chart.update("none");
   }
-  chart.options.scales.x.min = nextRange.min;
-  chart.options.scales.x.max = nextRange.max;
-  chart.update("none");
+  fitMarketRsChartYToVisible(chart);
 }
 
 const MARKET_RS_INTERACTION_MODE = "marketRsEarningsAware";
@@ -11949,6 +12176,7 @@ function createMarketRsChart(canvas, row) {
             enabled: true,
             mode: "x",
             threshold: 5,
+            onPanComplete: ({ chart: activeChart }) => fitMarketRsChartYToVisible(activeChart),
           },
           zoom: {
             wheel: {
@@ -11959,6 +12187,7 @@ function createMarketRsChart(canvas, row) {
               enabled: true,
             },
             mode: "x",
+            onZoomComplete: ({ chart: activeChart }) => fitMarketRsChartYToVisible(activeChart),
           },
         },
       },
@@ -12017,6 +12246,7 @@ function createMarketRsChart(canvas, row) {
   });
 
   marketRsDetailChart = chart;
+  attachMarketRsYAxisDrag(chart);
   updateMarketRsEmaReadout(selectedLabels, emaSeries, selectedLabels.length - 1);
   charts.push(chart);
 }
@@ -12271,13 +12501,16 @@ function renderMarketRsOverview() {
       `,
     )
     .join("");
-  const rangeChips = (marketRsData.historyRanges ?? [])
+  const historyRangeByKey = new Map((marketRsData.historyRanges ?? []).map((range) => [range.key, range]));
+  const chartRangeChips = ["1m", "3m", "6m", "1y", "3y", "ytd"]
+    .map((key) => historyRangeByKey.get(key) ?? { key, label: key.toUpperCase() })
     .map(
       (range) => `
         <button
           type="button"
           class="market-rs-chip${state.rsHistoryRange === range.key ? " active" : ""}"
           data-rs-range="${range.key}"
+          aria-pressed="${state.rsHistoryRange === range.key ? "true" : "false"}"
         >${range.label}</button>
       `,
     )
@@ -12646,10 +12879,6 @@ function renderMarketRsOverview() {
             <div class="market-rs-chip-row">${universeChips}</div>
           </div>
           <div class="market-rs-control-block">
-            <span class="market-rs-control-label">Detail Range</span>
-            <div class="market-rs-chip-row">${rangeChips}</div>
-          </div>
-          <div class="market-rs-control-block">
             <span class="market-rs-control-label">Filter</span>
             <div class="market-rs-chip-row">${filterChips}</div>
           </div>
@@ -12761,6 +12990,10 @@ function renderMarketRsOverview() {
             </div>
           </div>
           <div class="market-rs-chart-controls">
+            <div class="market-rs-chart-control-row market-rs-chart-range-row">
+              <span>Chart Range</span>
+              <div class="market-rs-chip-row">${chartRangeChips}</div>
+            </div>
             <div class="market-rs-chart-control-row">
               <span>Price</span>
               <div class="market-rs-price-style-toggle" role="group" aria-label="Price chart style">${rsPriceChartTypeButtons}</div>
@@ -12834,7 +13067,8 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsHistoryRange = button.dataset.rsRange;
-      render();
+      syncMarketRsChartRangeButtons();
+      refreshMarketRsChartOnly();
     });
   });
   usOverviewRoot.querySelectorAll("[data-rs-filter]").forEach((button) => {
@@ -12986,6 +13220,7 @@ function renderMarketRsOverview() {
       const action = button.dataset.rsChartZoom;
       if (action === "reset" && typeof marketRsDetailChart.resetZoom === "function") {
         marketRsDetailChart.resetZoom();
+        fitMarketRsChartYToVisible(marketRsDetailChart);
       } else if (action === "in") {
         zoomMarketRsChartToLatest("in");
       } else if (action === "out") {
