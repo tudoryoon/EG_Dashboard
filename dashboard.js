@@ -4493,7 +4493,7 @@ function getMacroDashboardSeriesByKey(seriesKey) {
   return null;
 }
 
-function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color }) {
+function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, axis = "percent", formatter = null }) {
   const series = getMacroDashboardSeriesByKey(seriesKey);
   if (!series?.dates?.length) {
     return null;
@@ -4515,8 +4515,8 @@ function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color }
     dates,
     values: cleanValues,
     color,
-    axis: "percent",
-    formatter: kind === "mom_change" ? "number1" : "percent2",
+    axis,
+    formatter: formatter ?? (kind === "mom_change" ? "number1" : "percent2"),
     normalize: false,
     dash: [4, 4],
     fillForward: true,
@@ -4728,6 +4728,24 @@ function getMacroDashboardItems() {
       kind: "level",
       color: "#2563eb",
     }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:ism_manufacturing_pmi",
+      label: "ISM Manufacturing PMI",
+      seriesKey: "manufacturing_pmi",
+      kind: "level",
+      color: "#111827",
+      axis: "diffusion",
+      formatter: "number1",
+    }),
+    buildMacroIndicatorDashboardItem({
+      key: "indicator:ism_services_pmi",
+      label: "ISM Services PMI",
+      seriesKey: "services_pmi",
+      kind: "level",
+      color: "#0f766e",
+      axis: "diffusion",
+      formatter: "number1",
+    }),
   ];
 
   return maybeItems.filter(Boolean);
@@ -4804,7 +4822,7 @@ function buildMacroDashboardChartPayload(rangeKey) {
       pointHoverRadius: 4,
       pointHitRadius: 10,
       spanGaps: true,
-      yAxisID: item.axis === "percent" ? "yPercent" : "y",
+      yAxisID: item.axis === "percent" ? "yPercent" : item.axis === "diffusion" ? "yDiffusion" : "y",
       formatter: item.formatter,
       normalize: item.normalize,
     };
@@ -4890,6 +4908,23 @@ function createMacroDashboardChart(canvas, rangeKey) {
             display: true,
             text: "Rates / Inflation / Labor",
             color: "#8d8d86",
+          },
+          grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+        yDiffusion: {
+          display: (context) => context.chart.data.datasets.some((dataset) => dataset.yAxisID === "yDiffusion"),
+          position: "right",
+          suggestedMin: 30,
+          suggestedMax: 70,
+          ticks: {
+            color: "#0f766e",
+            callback: (value) => Number(value).toFixed(0),
+          },
+          title: {
+            display: true,
+            text: "ISM Diffusion Index",
+            color: "#0f766e",
           },
           grid: { drawOnChartArea: false },
           border: { color: "#d8d8d2" },
@@ -17475,8 +17510,8 @@ function renderMarketMacroOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Macro Total Dashboard</h2>
-            <p class="macro-clean-copy">미국 기준금리, 명목금리, 실질금리, S&P500, 인플레, 고용, 원자재를 한 그래프에서 비교합니다.</p>
-            <p>Rates and macro indicators use the right axis; S&P500 and commodities are normalized to 100 on the left axis.</p>
+            <p class="macro-clean-copy">미국 기준금리, 명목금리, 실질금리, S&P500, 인플레, 고용, 원자재, ISM을 한 그래프에서 비교합니다.</p>
+            <p>Rates and macro indicators use the right axes; S&P500 and commodities are normalized to 100 on the left axis.</p>
           </div>
           <div class="m7-range-row">${macroDashboardRangeMarkup}</div>
         </div>
@@ -17484,6 +17519,7 @@ function renderMarketMacroOverview() {
           <span>실질금리 = US 5Y - 5Y 기대 인플레이션(T5YIE)</span>
           <span>좌측축: 주식/원자재 Start=100</span>
           <span>우측축: 금리/인플레/고용률 %</span>
+          <span>ISM축: 50 기준 확산지수</span>
         </div>
         <div class="total-date-row">
           <label class="total-date-field">

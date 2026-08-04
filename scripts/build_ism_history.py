@@ -11,8 +11,8 @@ from typing import Any
 import requests
 
 
-START_DATE = "2016-01-01"
-OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "ism-history-2016.json"
+START_DATE = "1990-01-01"
+OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "ism-history.json"
 PAGE_URL = "https://tradingeconomics.com/united-states/business-confidence"
 CHART_BASE_URL = "https://d3ii0wo49og5mi.cloudfront.net/economics"
 SERIES_SYMBOLS = {
@@ -26,6 +26,18 @@ SERIES_SYMBOLS = {
     "services_new_orders": "USAINMNO",
     "services_employment": "USAINME",
     "services_prices": "USAINMP",
+}
+SERIES_START_MONTHS = {
+    "manufacturing_pmi": "1990-01",
+    "manufacturing_new_orders": "1990-01",
+    "manufacturing_production": "1990-01",
+    "manufacturing_employment": "1990-01",
+    "manufacturing_prices": "2003-01",
+    "services_pmi": "1997-07",
+    "services_business_activity": "1997-07",
+    "services_new_orders": "1997-07",
+    "services_employment": "1997-07",
+    "services_prices": "1997-07",
 }
 
 
@@ -46,7 +58,13 @@ def read_chart_credentials(session: requests.Session) -> tuple[str, str]:
     return token_match.group(1), key_match.group(1)
 
 
-def fetch_series(session: requests.Session, symbol: str, token: str, key: str) -> dict[str, float]:
+def fetch_series(
+    session: requests.Session,
+    symbol: str,
+    token: str,
+    key: str,
+    expected_start_month: str,
+) -> dict[str, float]:
     response = session.get(
         f"{CHART_BASE_URL}/{symbol.lower()}",
         params={"d1": START_DATE},
@@ -62,8 +80,8 @@ def fetch_series(session: requests.Session, symbol: str, token: str, key: str) -
         for row in rows
         if len(row) >= 4 and row[0] is not None and str(row[3])[:7] >= START_DATE[:7]
     }
-    if not values or min(values) != START_DATE[:7]:
-        raise RuntimeError(f"{symbol} history does not begin at {START_DATE[:7]}")
+    if not values or min(values) != expected_start_month:
+        raise RuntimeError(f"{symbol} history does not begin at {expected_start_month}")
     return values
 
 
@@ -72,15 +90,15 @@ def main() -> None:
     session.trust_env = False
     token, key = read_chart_credentials(session)
     series = {
-        series_key: fetch_series(session, symbol, token, key)
+        series_key: fetch_series(session, symbol, token, key, SERIES_START_MONTHS[series_key])
         for series_key, symbol in SERIES_SYMBOLS.items()
     }
     payload = {
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "startMonth": START_DATE[:7],
-        "sourceLabel": "Trading Economics historical chart archive",
+        "sourceLabel": "Trading Economics NAPM/ISM historical chart archive",
         "sourceUrl": PAGE_URL,
-        "note": "Historical baseline only. Recent months are overwritten by official ISM monthly reports.",
+        "note": "NAPM/ISM historical baseline from 1990. Services history begins at its actual July 1997 launch, and manufacturing Prices Paid begins in January 2003 in the public archive. Recent months are overwritten by official ISM monthly reports.",
         "series": series,
     }
     OUTPUT_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

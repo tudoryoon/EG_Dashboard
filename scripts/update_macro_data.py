@@ -14,7 +14,7 @@ import requests
 
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "macro-indicators-data.js"
-ISM_HISTORY_PATH = Path(__file__).resolve().parents[1] / "data" / "ism-history-2016.json"
+ISM_HISTORY_PATH = Path(__file__).resolve().parents[1] / "data" / "ism-history.json"
 COMMON_START_MONTH = "2016-01"
 FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 FRED_GATEWAY_BASE = "https://www.ivo-welch.info/cgi-bin/fredwrap?symbol="
@@ -211,11 +211,11 @@ INDICATORS: list[dict[str, Any]] = [
         "key": "ism_services",
         "title": "ISM Services PMI",
         "category": "Business Cycle",
-        "startMonth": "2008-01",
-        "sourceLabel": "ISM official / Trading Economics history",
+        "startMonth": "1997-07",
+        "sourceLabel": "Trading Economics NAPM/ISM archive / ISM official recent reports",
         "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/services/",
         "status": "auto",
-        "statusNote": "2016+ historical archive with recent months overwritten by official ISM reports",
+        "statusNote": "Full history from the July 1997 survey launch; recent months overwritten by official ISM reports",
         "series": [
             SeriesConfig("services_pmi", "Services PMI", None, "index", "#111827", True),
             SeriesConfig("services_business_activity", "Business Activity", None, "index", "#16a34a"),
@@ -228,11 +228,11 @@ INDICATORS: list[dict[str, Any]] = [
         "key": "ism_manufacturing",
         "title": "ISM Manufacturing PMI",
         "category": "Business Cycle",
-        "startMonth": "1948-01",
-        "sourceLabel": "ISM official / Trading Economics history",
+        "startMonth": "1990-01",
+        "sourceLabel": "Trading Economics NAPM/ISM archive / ISM official recent reports",
         "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/",
         "status": "auto",
-        "statusNote": "2016+ historical archive with recent months overwritten by official ISM reports",
+        "statusNote": "NAPM/ISM full history from 1990; recent months overwritten by official ISM reports",
         "series": [
             SeriesConfig("manufacturing_pmi", "Manufacturing PMI", None, "index", "#111827", True),
             SeriesConfig("manufacturing_new_orders", "New Orders", None, "index", "#0f766e"),
@@ -312,7 +312,6 @@ def load_ism_history() -> dict[str, dict[str, float]]:
         str(series_key): {
             str(month): float(value)
             for month, value in values.items()
-            if str(month) >= COMMON_START_MONTH
         }
         for series_key, values in payload.get("series", {}).items()
         if isinstance(values, dict)
