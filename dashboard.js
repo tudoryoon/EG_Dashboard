@@ -5447,9 +5447,10 @@ function createCloudGpuPricingChart(canvas, provider, panel) {
         borderColor: panel.colors?.[series.key] ?? "#111827",
         backgroundColor: panel.colors?.[series.key] ?? "#111827",
         borderWidth: 2.6,
-        stepped: true,
+        showLine: provider.chartMode !== "snapshot",
+        stepped: provider.chartMode === "step",
         tension: 0,
-        pointRadius: 3,
+        pointRadius: provider.chartMode === "snapshot" ? 5 : 3,
         pointHoverRadius: 5,
         pointHitRadius: 10,
         spanGaps: false,
@@ -6624,19 +6625,36 @@ function renderCloudOverview() {
                 (provider) => `
                   <section class="cloud-gpu-price-item">
                     <div class="cloud-gpu-price-head">
-                      <h4>${provider.name}</h4>
+                      <div class="cloud-gpu-price-title-row">
+                        <h4>${provider.name}</h4>
+                        <span>${provider.observationType ?? "공개가격"}</span>
+                      </div>
                       <p>${provider.basis}</p>
                     </div>
                     <div class="cloud-chart-wrap cloud-gpu-price-chart">
                       <canvas data-cloud-gpu-price="${provider.key}"></canvas>
                     </div>
                     <p class="cloud-gpu-price-note">${provider.note}</p>
-                    <a class="cloud-gpu-price-source" href="${provider.sourceUrl}" target="_blank" rel="noopener noreferrer">${provider.sourceName}</a>
+                    <div class="cloud-gpu-price-detail">
+                      <strong>자료 출처</strong>
+                      <div class="cloud-gpu-price-source-list">
+                        ${(provider.sourceLinks ?? [])
+                          .map(
+                            (source) =>
+                              `<a class="cloud-gpu-price-source" href="${source.url}" target="_blank" rel="noopener noreferrer">${source.label}</a>`,
+                          )
+                          .join("")}
+                      </div>
+                    </div>
+                    <div class="cloud-gpu-price-detail cloud-gpu-price-limit">
+                      <strong>한계</strong>
+                      <p>${provider.limitations ?? "공개 가격표의 범위 안에서만 비교할 수 있습니다."}</p>
+                    </div>
                   </section>`,
               )
               .join("")}
           </div>
-          <p class="cloud-rpo-note">가격은 인스턴스 전체가 아니라 GPU 1개를 1시간 사용하는 비용으로 환산했습니다. 네트워크, CPU, 메모리와 구매 방식이 달라 업체 간 절대가격 비교보다는 각 업체 내부의 세대별 가격 변화에 더 적합합니다.</p>
+          <p class="cloud-rpo-note"><strong>읽는 법:</strong> VM 또는 UltraServer 전체 공개가격을 공식 GPU 수로 나눈 단순 환산치입니다. 세 업체의 리전, 네트워크, CPU·메모리 구성과 구매 방식이 다르므로 업체 간 절대가격 순위가 아니라 각 가격의 방향과 세대별 격차를 확인하는 용도로 봐야 합니다.</p>
         </article>
       </div>
     </section>
