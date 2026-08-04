@@ -433,6 +433,7 @@ const state = {
   rsTableSortKey: "rs",
   rsTableSortDirection: "desc",
   rsVisibleCardCount: RS_CARD_BATCH_SIZE,
+  rsPriceChartType: "candle",
   rsChartSeries: {
     rs: true,
     ema10: false,
@@ -11424,6 +11425,64 @@ const MARKET_RS_CHART_SERIES = [
   { key: "ema200", label: "200EMA", period: 200, color: "#7c3aed" },
 ];
 
+const MARKET_RS_PRICE_CHART_TYPES = [
+  { key: "candle", label: "Candle" },
+  { key: "line", label: "Line" },
+];
+
+const MARKET_RS_CANDLESTICK_PLUGIN = {
+  id: "marketRsCandlestick",
+  beforeDatasetsDraw(chart) {
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      if (!dataset.isCandlestick || !chart.isDatasetVisible(datasetIndex)) {
+        return;
+      }
+      const meta = chart.getDatasetMeta(datasetIndex);
+      const yScale = meta.yScale;
+      if (!yScale || !meta.data?.length) {
+        return;
+      }
+      const visiblePoints = meta.data.filter((point) => Number.isFinite(point?.x));
+      const spacing = visiblePoints.length > 1
+        ? Math.abs(visiblePoints[1].x - visiblePoints[0].x)
+        : chart.chartArea.width;
+      const bodyWidth = Math.max(1.5, Math.min(9, spacing * 0.62));
+
+      chart.ctx.save();
+      meta.data.forEach((point, index) => {
+        const candle = dataset.ohlc?.[index];
+        const open = candle?.o;
+        const high = candle?.h;
+        const low = candle?.l;
+        const close = candle?.c;
+        if (![point?.x, open, high, low, close].every(Number.isFinite)) {
+          return;
+        }
+
+        const isUp = close > open;
+        const isDown = close < open;
+        const color = isUp ? "#16864a" : isDown ? "#d93025" : "#6b7280";
+        const yOpen = yScale.getPixelForValue(open);
+        const yHigh = yScale.getPixelForValue(high);
+        const yLow = yScale.getPixelForValue(low);
+        const yClose = yScale.getPixelForValue(close);
+        const bodyTop = Math.min(yOpen, yClose);
+        const bodyHeight = Math.max(1.2, Math.abs(yClose - yOpen));
+
+        chart.ctx.strokeStyle = color;
+        chart.ctx.fillStyle = color;
+        chart.ctx.lineWidth = 1;
+        chart.ctx.beginPath();
+        chart.ctx.moveTo(point.x, yHigh);
+        chart.ctx.lineTo(point.x, yLow);
+        chart.ctx.stroke();
+        chart.ctx.fillRect(point.x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+      });
+      chart.ctx.restore();
+    });
+  },
+};
+
 function isMarketRsChartSeriesVisible(key) {
   return state.rsChartSeries?.[key] !== false;
 }
@@ -11447,6 +11506,14 @@ function syncMarketRsChartSeriesButtons() {
     const seriesKey = button.dataset.rsChartSeries;
     button.classList.toggle("active", isMarketRsChartSeriesVisible(seriesKey));
     button.setAttribute("aria-pressed", isMarketRsChartSeriesVisible(seriesKey) ? "true" : "false");
+  });
+}
+
+function syncMarketRsPriceChartTypeButtons() {
+  usOverviewRoot.querySelectorAll("[data-rs-price-chart-type]").forEach((button) => {
+    const isActive = button.dataset.rsPriceChartType === state.rsPriceChartType;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
 }
 
@@ -11590,6 +11657,25 @@ function createMarketRsChart(canvas, row) {
   const selectedRatings = ratingSeries.values.slice(startIndex);
   const fullPrice = history.price ?? [];
   const selectedPrice = fullPrice.slice(startIndex);
+  const selectedOpen = (history.open ?? []).slice(startIndex);
+  const selectedHigh = (history.high ?? []).slice(startIndex);
+  const selectedLow = (history.low ?? []).slice(startIndex);
+  const finiteCandleValue = (value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  };
+  const candlestickData = selectedLabels.map((label, index) => ({
+    x: label,
+    o: finiteCandleValue(selectedOpen[index]),
+    h: finiteCandleValue(selectedHigh[index]),
+    l: finiteCandleValue(selectedLow[index]),
+    c: finiteCandleValue(selectedPrice[index]),
+  }));
+  const useCandlestick = state.rsPriceChartType !== "line"
+    && candlestickData.some((candle) => [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite));
   const emaSeries = Object.fromEntries(
     MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => [
       series.key,
@@ -11599,6 +11685,8 @@ function createMarketRsChart(canvas, row) {
   const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
   const priceValues = [
     ...selectedPrice,
+    ...(useCandlestick ? selectedHigh : []),
+    ...(useCandlestick ? selectedLow : []),
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period && isMarketRsChartSeriesVisible(series.key)).flatMap((series) => emaSeries[series.key] ?? []),
   ].filter((value) => Number.isFinite(value));
   let ratingMin = ratingValues.length ? Math.floor((Math.min(...ratingValues) - 3) / 5) * 5 : 1;
@@ -11629,6 +11717,36 @@ function createMarketRsChart(canvas, row) {
   const priceLatestIndex = getLastFiniteSeriesIndex(selectedPrice);
   const ratingLabelUniverse = getMarketRsUniverseLabel(ratingSeries.universeKey);
 
+  const priceDataset = useCandlestick
+    ? {
+        type: "line",
+        label: "Stock Price(R) · Candle",
+        data: selectedPrice,
+        borderColor: "#111827",
+        backgroundColor: "#111827",
+        showLine: false,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 8,
+        pointStyle: "rect",
+        yAxisID: "y1",
+        isCandlestick: true,
+        ohlc: candlestickData,
+      }
+    : {
+        type: "line",
+        label: "Stock Price(R) · Line",
+        data: selectedPrice,
+        borderColor: "#111827",
+        backgroundColor: "#111827",
+        borderWidth: 2,
+        tension: 0.18,
+        spanGaps: true,
+        pointRadius: (context) => (context.dataIndex === priceLatestIndex ? 3 : 0),
+        pointHoverRadius: 4,
+        yAxisID: "y1",
+      };
+
   const chartDatasets = [
     {
       label: `RS Rating(L) (${ratingLabelUniverse})`,
@@ -11643,18 +11761,7 @@ function createMarketRsChart(canvas, row) {
       yAxisID: "y",
       hidden: !isMarketRsChartSeriesVisible("rs"),
     },
-    {
-      label: "Stock Price(R)",
-      data: selectedPrice,
-      borderColor: "#111827",
-      backgroundColor: "#111827",
-      borderWidth: 2,
-      tension: 0.18,
-      spanGaps: true,
-      pointRadius: (context) => (context.dataIndex === priceLatestIndex ? 3 : 0),
-      pointHoverRadius: 4,
-      yAxisID: "y1",
-    },
+    priceDataset,
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
       label: series.label,
       data: emaSeries[series.key] ?? [],
@@ -11689,6 +11796,7 @@ function createMarketRsChart(canvas, row) {
 
   const chart = new Chart(canvas, {
     type: "line",
+    plugins: [MARKET_RS_CANDLESTICK_PLUGIN],
     data: {
       labels: selectedLabels,
       datasets: chartDatasets,
@@ -11733,6 +11841,15 @@ function createMarketRsChart(canvas, row) {
                     ? `Stock Price ${context.raw.chartDate}: ${formatUsStockPrice(Number(context.raw.stockPrice))}`
                     : "Stock Price: N/A",
                 ];
+              }
+              if (context.dataset.isCandlestick) {
+                const candle = context.dataset.ohlc?.[context.dataIndex];
+                if (candle && [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite)) {
+                  return [
+                    `Open ${formatUsStockPrice(candle.o)} · High ${formatUsStockPrice(candle.h)}`,
+                    `Low ${formatUsStockPrice(candle.l)} · Close ${formatUsStockPrice(candle.c)}`,
+                  ];
+                }
               }
               if (context.dataset.yAxisID === "y") {
                 return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(0)}`;
@@ -12337,6 +12454,16 @@ function renderMarketRsOverview() {
       </button>
     `,
   ).join("");
+  const rsPriceChartTypeButtons = MARKET_RS_PRICE_CHART_TYPES.map(
+    (chartType) => `
+      <button
+        type="button"
+        class="market-rs-price-style-button${state.rsPriceChartType === chartType.key ? " active" : ""}"
+        data-rs-price-chart-type="${chartType.key}"
+        aria-pressed="${state.rsPriceChartType === chartType.key ? "true" : "false"}"
+      >${chartType.label}</button>
+    `,
+  ).join("");
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -12518,9 +12645,15 @@ function renderMarketRsOverview() {
               ${extensionMarkup || '<p class="market-rs-empty">Extension data will appear after the next RS data refresh.</p>'}
             </div>
           </div>
-          <div class="market-rs-chart-control-row">
-            <span>Chart Lines</span>
-            <div class="market-rs-chip-row">${rsChartSeriesChips}</div>
+          <div class="market-rs-chart-controls">
+            <div class="market-rs-chart-control-row">
+              <span>Price</span>
+              <div class="market-rs-price-style-toggle" role="group" aria-label="Price chart style">${rsPriceChartTypeButtons}</div>
+            </div>
+            <div class="market-rs-chart-control-row">
+              <span>Chart Lines</span>
+              <div class="market-rs-chip-row">${rsChartSeriesChips}</div>
+            </div>
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-rs-chart="detail"></canvas>
@@ -12714,6 +12847,17 @@ function renderMarketRsOverview() {
         [seriesKey]: !isMarketRsChartSeriesVisible(seriesKey),
       };
       syncMarketRsChartSeriesButtons();
+      refreshMarketRsChartOnly();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-rs-price-chart-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const chartType = button.dataset.rsPriceChartType;
+      if (!MARKET_RS_PRICE_CHART_TYPES.some((item) => item.key === chartType)) {
+        return;
+      }
+      state.rsPriceChartType = chartType;
+      syncMarketRsPriceChartTypeButtons();
       refreshMarketRsChartOnly();
     });
   });
