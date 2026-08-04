@@ -2,6 +2,11 @@ name: Update Market RS
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/update_market_rs.py"
   schedule:
     # 19:27 UTC = 04:27 KST. Main RS / Trend Score run.
     - cron: "27 19 * * *"

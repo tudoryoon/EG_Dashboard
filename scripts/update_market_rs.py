@@ -19,6 +19,7 @@ import yfinance as yf
 WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "5y"
 BENCHMARK_SYMBOL = "^GSPC"
+# Five years of source prices preserve a full three-year RS window after the 12-month ranking warmup.
 HISTORY_POINTS = 252 * 3
 MIN_MARKET_CAP_USD = 200_000_000
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
