@@ -8213,8 +8213,54 @@ h1 {
 }
 
 .market-rs-chart-wrap {
+  position: relative;
   height: 360px;
   margin-top: 14px;
+}
+
+.market-rs-ema-readout {
+  position: absolute;
+  top: 42px;
+  left: 54px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 11px;
+  max-width: calc(100% - 118px);
+  padding: 5px 8px;
+  border: 1px solid rgba(28, 28, 26, 0.1);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #555650;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.market-rs-ema-readout time {
+  color: #77786f;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-rs-ema-readout-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-rs-ema-readout-item i {
+  width: 8px;
+  height: 2px;
+  background: var(--ema-color, #111827);
+}
+
+.market-rs-ema-readout-item b {
+  color: #30312c;
+  font-size: inherit;
 }
 
 .market-rs-screening-layout .market-rs-chart-wrap {
@@ -9114,6 +9160,11 @@ h1 {
   .market-rs-chart-zoom-controls {
     width: 100%;
     margin-left: 0;
+  }
+
+  .market-rs-ema-readout {
+    left: 42px;
+    max-width: calc(100% - 88px);
   }
 
   .market-rs-risk-chart-grid {

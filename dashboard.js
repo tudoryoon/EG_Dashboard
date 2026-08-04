@@ -11529,6 +11529,33 @@ function syncMarketRsPriceChartTypeButtons() {
   });
 }
 
+function updateMarketRsEmaReadout(labels, emaSeries, index) {
+  const readout = usOverviewRoot.querySelector("[data-rs-ema-readout]");
+  if (!readout) {
+    return;
+  }
+  const selectedSeries = MARKET_RS_CHART_SERIES.filter(
+    (series) => series.period && isMarketRsChartSeriesVisible(series.key),
+  );
+  if (!selectedSeries.length) {
+    readout.hidden = true;
+    return;
+  }
+
+  const safeIndex = Math.max(0, Math.min(labels.length - 1, Number.isFinite(index) ? index : labels.length - 1));
+  const items = selectedSeries.map((series) => {
+    const value = Number(emaSeries[series.key]?.[safeIndex]);
+    return `
+      <span class="market-rs-ema-readout-item" style="--ema-color:${series.color}">
+        <i></i><b>${series.label}</b>
+        <span>${Number.isFinite(value) ? formatUsStockPrice(value) : "-"}</span>
+      </span>
+    `;
+  }).join("");
+  readout.hidden = false;
+  readout.innerHTML = `<time>${labels[safeIndex] ?? "-"}</time>${items}`;
+}
+
 function zoomMarketRsChartToLatest(direction) {
   const chart = marketRsDetailChart;
   const xScale = chart?.scales?.x;
@@ -11713,6 +11740,13 @@ function createMarketRsChart(canvas, row) {
     h: finiteCandleValue(selectedHigh[index]),
     l: finiteCandleValue(selectedLow[index]),
     c: finiteCandleValue(selectedPrice[index]),
+    changePct: (() => {
+      const currentClose = finiteCandleValue(fullPrice[startIndex + index]);
+      const previousClose = finiteCandleValue(fullPrice[startIndex + index - 1]);
+      return Number.isFinite(currentClose) && Number.isFinite(previousClose) && previousClose !== 0
+        ? ((currentClose / previousClose) - 1) * 100
+        : null;
+    })(),
   }));
   const useCandlestick = state.rsPriceChartType !== "line"
     && candlestickData.some((candle) => [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite));
@@ -11815,6 +11849,7 @@ function createMarketRsChart(canvas, row) {
       pointHoverRadius: 3,
       yAxisID: "y1",
       hidden: !isMarketRsChartSeriesVisible(series.key),
+      isMovingAverage: true,
     })),
     {
       type: "scatter",
@@ -11846,6 +11881,10 @@ function createMarketRsChart(canvas, row) {
       maintainAspectRatio: false,
       animation: false,
       interaction: { mode: interactionMode, axis: "x", intersect: false },
+      onHover: (_, activeElements) => {
+        const hoveredIndex = activeElements?.[0]?.index;
+        updateMarketRsEmaReadout(selectedLabels, emaSeries, hoveredIndex);
+      },
       plugins: {
         legend: {
           position: "top",
@@ -11861,6 +11900,7 @@ function createMarketRsChart(canvas, row) {
           position: "nearest",
           mode: interactionMode,
           intersect: false,
+          filter: (context) => !context.dataset.isMovingAverage,
           callbacks: {
             title: (items) => {
               const earningsItem = items?.find((item) => item.dataset.isEarningsSurprise);
@@ -11888,6 +11928,9 @@ function createMarketRsChart(canvas, row) {
                   return [
                     `Open ${formatUsStockPrice(candle.o)} · High ${formatUsStockPrice(candle.h)}`,
                     `Low ${formatUsStockPrice(candle.l)} · Close ${formatUsStockPrice(candle.c)}`,
+                    ...(Number.isFinite(candle.changePct)
+                      ? [`1D ${formatSignedPercent(candle.changePct)} vs previous close`]
+                      : []),
                   ];
                 }
               }
@@ -11974,6 +12017,7 @@ function createMarketRsChart(canvas, row) {
   });
 
   marketRsDetailChart = chart;
+  updateMarketRsEmaReadout(selectedLabels, emaSeries, selectedLabels.length - 1);
   charts.push(chart);
 }
 
@@ -12728,6 +12772,7 @@ function renderMarketRsOverview() {
             ${rsChartZoomButtons}
           </div>
           <div class="chart-wrap market-rs-chart-wrap">
+            <div class="market-rs-ema-readout" data-rs-ema-readout aria-label="Selected EMA values"></div>
             <canvas data-rs-chart="detail"></canvas>
           </div>
           <div class="market-rs-risk-chart-grid">
