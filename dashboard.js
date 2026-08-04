@@ -11448,9 +11448,18 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
       const spacing = visiblePoints.length > 1
         ? Math.abs(visiblePoints[1].x - visiblePoints[0].x)
         : chart.chartArea.width;
-      const bodyWidth = Math.max(1.5, Math.min(9, spacing * 0.62));
+      const bodyWidth = Math.max(2.6, Math.min(13, spacing * 0.82));
+      const wickWidth = spacing >= 4 ? 1.35 : 1.1;
 
       chart.ctx.save();
+      chart.ctx.beginPath();
+      chart.ctx.rect(
+        chart.chartArea.left,
+        chart.chartArea.top,
+        chart.chartArea.width,
+        chart.chartArea.height,
+      );
+      chart.ctx.clip();
       meta.data.forEach((point, index) => {
         const candle = dataset.ohlc?.[index];
         const open = candle?.o;
@@ -11463,22 +11472,23 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
 
         const isUp = close > open;
         const isDown = close < open;
-        const color = isUp ? "#16864a" : isDown ? "#d93025" : "#6b7280";
+        const color = isUp ? "#089981" : isDown ? "#f23645" : "#6b7280";
         const yOpen = yScale.getPixelForValue(open);
         const yHigh = yScale.getPixelForValue(high);
         const yLow = yScale.getPixelForValue(low);
         const yClose = yScale.getPixelForValue(close);
         const bodyTop = Math.min(yOpen, yClose);
-        const bodyHeight = Math.max(1.2, Math.abs(yClose - yOpen));
+        const bodyHeight = Math.max(1.8, Math.abs(yClose - yOpen));
 
         chart.ctx.strokeStyle = color;
         chart.ctx.fillStyle = color;
-        chart.ctx.lineWidth = 1;
+        chart.ctx.lineWidth = wickWidth;
         chart.ctx.beginPath();
         chart.ctx.moveTo(point.x, yHigh);
         chart.ctx.lineTo(point.x, yLow);
         chart.ctx.stroke();
         chart.ctx.fillRect(point.x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+        chart.ctx.strokeRect(point.x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
       });
       chart.ctx.restore();
     });
@@ -11517,6 +11527,34 @@ function syncMarketRsPriceChartTypeButtons() {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
+}
+
+function zoomMarketRsChartToLatest(direction) {
+  const chart = marketRsDetailChart;
+  const xScale = chart?.scales?.x;
+  const labelCount = chart?.data?.labels?.length ?? 0;
+  if (!chart || !xScale || labelCount < 2) {
+    return;
+  }
+
+  const latestIndex = labelCount - 1;
+  const currentMin = Number.isFinite(xScale.min) ? Math.max(0, Math.ceil(xScale.min)) : 0;
+  const currentMax = Number.isFinite(xScale.max) ? Math.min(latestIndex, Math.floor(xScale.max)) : latestIndex;
+  const currentSpan = Math.max(20, currentMax - currentMin + 1);
+  const scaleFactor = direction === "in" ? 0.5 : 1.75;
+  const nextSpan = Math.max(20, Math.min(labelCount, Math.round(currentSpan * scaleFactor)));
+  const nextRange = {
+    min: Math.max(0, latestIndex - nextSpan + 1),
+    max: latestIndex,
+  };
+
+  if (typeof chart.zoomScale === "function") {
+    chart.zoomScale("x", nextRange, "none");
+    return;
+  }
+  chart.options.scales.x.min = nextRange.min;
+  chart.options.scales.x.max = nextRange.max;
+  chart.update("none");
 }
 
 const MARKET_RS_INTERACTION_MODE = "marketRsEarningsAware";
@@ -12903,10 +12941,10 @@ function renderMarketRsOverview() {
       const action = button.dataset.rsChartZoom;
       if (action === "reset" && typeof marketRsDetailChart.resetZoom === "function") {
         marketRsDetailChart.resetZoom();
-      } else if (action === "in" && typeof marketRsDetailChart.zoom === "function") {
-        marketRsDetailChart.zoom({ x: 1.25 });
-      } else if (action === "out" && typeof marketRsDetailChart.zoom === "function") {
-        marketRsDetailChart.zoom({ x: 0.8 });
+      } else if (action === "in") {
+        zoomMarketRsChartToLatest("in");
+      } else if (action === "out") {
+        zoomMarketRsChartToLatest("out");
       }
     });
   });
