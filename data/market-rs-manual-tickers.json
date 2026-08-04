@@ -485,6 +485,17 @@
       "sharesOutstanding": 675802413
     },
     {
+      "ticker": "P",
+      "name": "Everpure, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 332404932
+    },
+    {
       "ticker": "PL",
       "name": "Planet Labs PBC",
       "memberships": {

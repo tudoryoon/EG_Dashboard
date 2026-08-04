@@ -229,6 +229,7 @@ SECTOR_GROUPS = [
             {"ticker": "NOW", "label": "NOW US", "name": "ServiceNow", "query": "ServiceNow stock"},
             {"ticker": "SNOW", "label": "SNOW US", "name": "Snowflake", "query": "Snowflake stock"},
             {"ticker": "NTAP", "label": "NTAP US", "name": "NetApp", "query": "NetApp stock"},
+            {"ticker": "P", "label": "P US", "name": "Everpure", "query": "Everpure stock"},
         ],
     },
     {
@@ -781,6 +782,19 @@ def fetch_ohlc_frames(symbols: list[str]) -> dict[str, pd.DataFrame]:
         if len(output) >= 2:
             output["close"] = repair_price_scale_jumps(pd.Series(output["close"], dtype=float))
             frames[symbol] = output.dropna(subset=["high", "low", "close"])
+    for symbol, output in list(frames.items()):
+        finalized_ohlc = fetch_chart_finalized_ohlc(symbol)
+        if finalized_ohlc is None:
+            continue
+        finalized_date, finalized_high, finalized_low, finalized_close = finalized_ohlc
+        if not output.empty and is_same_price_date(output.index.max(), finalized_date):
+            continue
+        output.loc[finalized_date, ["high", "low", "close"]] = [
+            finalized_high,
+            finalized_low,
+            finalized_close,
+        ]
+        frames[symbol] = output.sort_index().dropna(subset=["high", "low", "close"])
     return frames
 
 
@@ -821,10 +835,67 @@ def fetch_chart_latest_close(symbol: str, target_date: pd.Timestamp) -> float | 
     return None
 
 
+def fetch_chart_finalized_ohlc(symbol: str) -> tuple[pd.Timestamp, float, float, float] | None:
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote_plus(symbol)}"
+    try:
+        response = requests.get(
+            url,
+            params={"range": "5d", "interval": "1d", "includePrePost": "false", "events": "history"},
+            headers=USER_AGENT,
+            timeout=10,
+        )
+        response.raise_for_status()
+        result = (response.json().get("chart", {}).get("result") or [None])[0]
+        meta = (result or {}).get("meta") or {}
+        timestamps = (result or {}).get("timestamp") or []
+        quote = (((result or {}).get("indicators") or {}).get("quote") or [{}])[0]
+        market_time = normalize_number(meta.get("regularMarketTime"))
+        market_price = normalize_number(meta.get("regularMarketPrice"))
+        if market_time is None or market_price is None or market_price <= 0:
+            return None
+        timezone_name = str(meta.get("exchangeTimezoneName") or "America/New_York")
+        local_market_time = pd.to_datetime(int(market_time), unit="s", utc=True).tz_convert(timezone_name)
+    except Exception:
+        return None
+    if (local_market_time.hour, local_market_time.minute) < (15, 59):
+        return None
+    market_date = local_market_time.tz_localize(None).normalize()
+    target_day = market_date.date()
+    highs = quote.get("high") or []
+    lows = quote.get("low") or []
+    for index, raw_timestamp in enumerate(timestamps):
+        timestamp = pd.Timestamp(datetime.fromtimestamp(raw_timestamp, timezone.utc)).date()
+        if timestamp != target_day:
+            continue
+        high = normalize_number(highs[index] if index < len(highs) else None)
+        low = normalize_number(lows[index] if index < len(lows) else None)
+        if high is not None and low is not None:
+            return market_date, high, low, market_price
+    return None
+
+
+def fetch_chart_finalized_close(symbol: str) -> tuple[pd.Timestamp, float] | None:
+    finalized_ohlc = fetch_chart_finalized_ohlc(symbol)
+    if finalized_ohlc is None:
+        return None
+    market_date, _, _, market_price = finalized_ohlc
+    return market_date, market_price
+
+
 def fill_latest_chart_close_gaps(close_map: dict[str, pd.Series]) -> None:
     benchmark = close_map.get(ROTATION_BENCHMARK_SYMBOL)
     if benchmark is None or benchmark.empty:
         return
+
+    finalized_benchmark = fetch_chart_finalized_close(ROTATION_BENCHMARK_SYMBOL)
+    if finalized_benchmark is not None:
+        finalized_date, finalized_close = finalized_benchmark
+        if not is_same_price_date(benchmark.index.max(), finalized_date):
+            benchmark = pd.concat(
+                [benchmark, pd.Series([finalized_close], index=[finalized_date], name=ROTATION_BENCHMARK_SYMBOL)]
+            ).sort_index().dropna()
+            benchmark = benchmark[~benchmark.index.duplicated(keep="last")]
+            close_map[ROTATION_BENCHMARK_SYMBOL] = benchmark.rename(ROTATION_BENCHMARK_SYMBOL)
 
     target_date = benchmark.index.max()
     for symbol, series in list(close_map.items()):

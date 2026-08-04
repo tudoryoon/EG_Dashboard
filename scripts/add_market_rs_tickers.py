@@ -143,6 +143,16 @@ def download_ohlcv(ticker: str) -> pd.DataFrame:
     if "adjClose" not in frame.columns:
         frame["adjClose"] = frame["close"]
     frame.index = pd.to_datetime(frame.index).tz_localize(None)
+    raw_close_frame, adjusted_close_frame = rs.fill_closed_session_close_gaps_from_spark(
+        [ticker],
+        frame[["close"]].rename(columns={"close": ticker}),
+        frame[["adjClose"]].rename(columns={"adjClose": ticker}),
+        frame[["open"]].rename(columns={"open": ticker}),
+        frame[["high"]].rename(columns={"high": ticker}),
+        frame[["low"]].rename(columns={"low": ticker}),
+    )
+    frame["close"] = raw_close_frame[ticker].reindex(frame.index)
+    frame["adjClose"] = adjusted_close_frame[ticker].reindex(frame.index)
     return frame[["open", "high", "low", "close", "adjClose", "volume"]]
 
 
