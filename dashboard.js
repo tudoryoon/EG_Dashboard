@@ -11449,8 +11449,10 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
       const spacing = visiblePoints.length > 1
         ? Math.abs(visiblePoints[1].x - visiblePoints[0].x)
         : chart.chartArea.width;
-      const bodyWidth = Math.max(3.2, Math.min(15, spacing * 0.9));
-      const wickWidth = spacing >= 4 ? 1.45 : 1.2;
+      const pixelRatio = Number(chart.currentDevicePixelRatio) || 1;
+      const snapToPixel = (value) => Math.round(value * pixelRatio) / pixelRatio;
+      const bodyWidth = snapToPixel(Math.max(1.25, Math.min(12, spacing * 0.72)));
+      const wickWidth = spacing >= 5 ? 1.3 : 1;
 
       chart.ctx.save();
       chart.ctx.beginPath();
@@ -11478,18 +11480,18 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
         const yHigh = yScale.getPixelForValue(high);
         const yLow = yScale.getPixelForValue(low);
         const yClose = yScale.getPixelForValue(close);
-        const bodyTop = Math.min(yOpen, yClose);
-        const bodyHeight = Math.max(2.2, Math.abs(yClose - yOpen));
+        const centerX = snapToPixel(point.x);
+        const bodyTop = snapToPixel(Math.min(yOpen, yClose));
+        const bodyHeight = snapToPixel(Math.max(1.6, Math.abs(yClose - yOpen)));
 
         chart.ctx.strokeStyle = color;
         chart.ctx.fillStyle = color;
         chart.ctx.lineWidth = wickWidth;
         chart.ctx.beginPath();
-        chart.ctx.moveTo(point.x, yHigh);
-        chart.ctx.lineTo(point.x, yLow);
+        chart.ctx.moveTo(centerX, snapToPixel(yHigh));
+        chart.ctx.lineTo(centerX, snapToPixel(yLow));
         chart.ctx.stroke();
-        chart.ctx.fillRect(point.x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
-        chart.ctx.strokeRect(point.x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+        chart.ctx.fillRect(snapToPixel(centerX - bodyWidth / 2), bodyTop, bodyWidth, bodyHeight);
       });
       chart.ctx.restore();
     });
@@ -11791,15 +11793,18 @@ function zoomMarketRsChartToLatest(direction) {
     return;
   }
 
-  const latestIndex = labelCount - 1;
-  const currentMin = Number.isFinite(xScale.min) ? Math.max(0, Math.ceil(xScale.min)) : 0;
+  const firstIndex = chart.$marketRsDataBounds?.firstIndex ?? 0;
+  const latestIndex = chart.$marketRsDataBounds?.latestIndex ?? labelCount - 1;
+  const edgePaddingCount = chart.$marketRsDataBounds?.edgePaddingCount ?? 0;
+  const currentMin = Number.isFinite(xScale.min) ? Math.max(firstIndex, Math.ceil(xScale.min)) : firstIndex;
   const currentMax = Number.isFinite(xScale.max) ? Math.min(latestIndex, Math.floor(xScale.max)) : latestIndex;
   const currentSpan = Math.max(20, currentMax - currentMin + 1);
   const scaleFactor = direction === "in" ? 0.5 : 1.75;
-  const nextSpan = Math.max(20, Math.min(labelCount, Math.round(currentSpan * scaleFactor)));
+  const dataPointCount = Math.max(1, latestIndex - firstIndex + 1);
+  const nextSpan = Math.max(20, Math.min(dataPointCount, Math.round(currentSpan * scaleFactor)));
   const nextRange = {
-    min: Math.max(0, latestIndex - nextSpan + 1),
-    max: latestIndex,
+    min: Math.max(firstIndex, latestIndex - nextSpan + 1),
+    max: Math.min(labelCount - 1, latestIndex + edgePaddingCount),
   };
 
   if (typeof chart.zoomScale === "function") {
@@ -11984,6 +11989,22 @@ function createMarketRsChart(canvas, row) {
       calculateEmaSeries(fullPrice, series.period).slice(startIndex),
     ]),
   );
+  const edgePaddingCount = Math.max(1, Math.min(10, Math.round(selectedLabels.length * 0.012)));
+  const padSeries = (values) => [
+    ...Array(edgePaddingCount).fill(null),
+    ...values,
+    ...Array(edgePaddingCount).fill(null),
+  ];
+  const chartLabels = [
+    ...Array.from({ length: edgePaddingCount }, (_, index) => `__rs_left_${index}`),
+    ...selectedLabels,
+    ...Array.from({ length: edgePaddingCount }, (_, index) => `__rs_right_${index}`),
+  ];
+  const paddedEmaSeries = Object.fromEntries(
+    Object.entries(emaSeries).map(([key, values]) => [key, padSeries(values)]),
+  );
+  const firstDataIndex = edgePaddingCount;
+  const latestDataIndex = firstDataIndex + selectedLabels.length - 1;
   const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
   const priceValues = [
     ...selectedPrice,
@@ -12023,7 +12044,7 @@ function createMarketRsChart(canvas, row) {
     ? {
         type: "line",
         label: "Stock Price(R) · Candle",
-        data: selectedPrice,
+        data: padSeries(selectedPrice),
         borderColor: "#111827",
         backgroundColor: "#111827",
         showLine: false,
@@ -12033,18 +12054,18 @@ function createMarketRsChart(canvas, row) {
         pointStyle: "rect",
         yAxisID: "y1",
         isCandlestick: true,
-        ohlc: candlestickData,
+        ohlc: padSeries(candlestickData),
       }
     : {
         type: "line",
         label: "Stock Price(R) · Line",
-        data: selectedPrice,
+        data: padSeries(selectedPrice),
         borderColor: "#111827",
         backgroundColor: "#111827",
         borderWidth: 2,
         tension: 0.18,
         spanGaps: true,
-        pointRadius: (context) => (context.dataIndex === priceLatestIndex ? 3 : 0),
+        pointRadius: (context) => (context.dataIndex === priceLatestIndex + firstDataIndex ? 3 : 0),
         pointHoverRadius: 4,
         yAxisID: "y1",
       };
@@ -12052,7 +12073,7 @@ function createMarketRsChart(canvas, row) {
     ? {
         type: "line",
         label: "1D Return",
-        data: selectedPrice,
+        data: padSeries(selectedPrice),
         borderColor: "transparent",
         backgroundColor: "transparent",
         borderWidth: 0,
@@ -12062,20 +12083,20 @@ function createMarketRsChart(canvas, row) {
         pointHitRadius: 0,
         yAxisID: "y1",
         isDailyReturn: true,
-        dailyReturns: candlestickData.map((candle) => candle.changePct),
+        dailyReturns: padSeries(candlestickData.map((candle) => candle.changePct)),
       }
     : null;
 
   const chartDatasets = [
     {
       label: `RS Rating(L) (${ratingLabelUniverse})`,
-      data: selectedRatings,
+      data: padSeries(selectedRatings),
       borderColor: "#d93025",
       backgroundColor: "#d93025",
       borderWidth: 2.6,
       tension: 0.18,
       spanGaps: true,
-      pointRadius: (context) => (context.dataIndex === ratingLatestIndex ? 3 : 0),
+      pointRadius: (context) => (context.dataIndex === ratingLatestIndex + firstDataIndex ? 3 : 0),
       pointHoverRadius: 4,
       yAxisID: "y",
       hidden: !isMarketRsChartSeriesVisible("rs"),
@@ -12084,14 +12105,14 @@ function createMarketRsChart(canvas, row) {
     ...(dailyReturnDataset ? [dailyReturnDataset] : []),
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
       label: series.label,
-      data: emaSeries[series.key] ?? [],
+      data: paddedEmaSeries[series.key] ?? [],
       borderColor: series.color,
       backgroundColor: series.color,
       borderWidth: series.period >= 50 ? 1.8 : 1.6,
       borderDash: [5, 5],
       tension: 0.18,
       spanGaps: true,
-      pointRadius: (context) => (context.dataIndex === getLastFiniteSeriesIndex(emaSeries[series.key]) ? 2 : 0),
+      pointRadius: (context) => (context.dataIndex === getLastFiniteSeriesIndex(emaSeries[series.key]) + firstDataIndex ? 2 : 0),
       pointHoverRadius: 3,
       yAxisID: "y1",
       hidden: !isMarketRsChartSeriesVisible(series.key),
@@ -12119,17 +12140,20 @@ function createMarketRsChart(canvas, row) {
     type: "line",
     plugins: [MARKET_RS_CANDLESTICK_PLUGIN],
     data: {
-      labels: selectedLabels,
+      labels: chartLabels,
       datasets: chartDatasets,
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
+      layout: {
+        padding: { left: 16, right: 16 },
+      },
       interaction: { mode: interactionMode, axis: "x", intersect: false },
       onHover: (_, activeElements) => {
         const hoveredIndex = activeElements?.[0]?.index;
-        updateMarketRsEmaReadout(selectedLabels, emaSeries, hoveredIndex);
+        updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, hoveredIndex);
       },
       plugins: {
         legend: {
@@ -12226,11 +12250,13 @@ function createMarketRsChart(canvas, row) {
       },
       scales: {
         x: {
+          offset: true,
           grid: { display: false },
           afterBuildTicks: (axis) => {
             const minimumIndex = Number.isFinite(axis.min) ? Math.ceil(axis.min) : 0;
-            const maximumIndex = Number.isFinite(axis.max) ? Math.floor(axis.max) : selectedLabels.length - 1;
+            const maximumIndex = Number.isFinite(axis.max) ? Math.floor(axis.max) : chartLabels.length - 1;
             const indexes = buildRegularDateTickIndexes(selectedLabels, state.rsHistoryRange)
+              .map((index) => index + firstDataIndex)
               .filter((index) => index >= minimumIndex && index <= maximumIndex);
             axis.ticks = indexes.map((index) => ({ value: index }));
           },
@@ -12240,7 +12266,7 @@ function createMarketRsChart(canvas, row) {
             maxRotation: 0,
             callback: (_, index, ticks) => {
               const labelIndex = ticks?.[index]?.value;
-              return formatRangeAxisDate(selectedLabels[labelIndex], state.rsHistoryRange);
+              return formatRangeAxisDate(selectedLabels[labelIndex - firstDataIndex], state.rsHistoryRange);
             },
           },
         },
@@ -12278,9 +12304,14 @@ function createMarketRsChart(canvas, row) {
     },
   });
 
+  chart.$marketRsDataBounds = {
+    firstIndex: firstDataIndex,
+    latestIndex: latestDataIndex,
+    edgePaddingCount,
+  };
   marketRsDetailChart = chart;
   attachMarketRsYAxisDrag(chart);
-  updateMarketRsEmaReadout(selectedLabels, emaSeries, selectedLabels.length - 1);
+  updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, latestDataIndex);
   charts.push(chart);
 }
 

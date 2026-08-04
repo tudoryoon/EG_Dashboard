@@ -29,6 +29,8 @@ BATCH_SIZE = int(os.getenv("MARKET_RS_BATCH_SIZE", "15"))
 BATCH_SLEEP = float(os.getenv("MARKET_RS_BATCH_SLEEP", "0.6"))
 RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
 RETRY_ATTEMPTS = int(os.getenv("MARKET_RS_RETRY_ATTEMPTS", "4"))
+# Yahoo Spark currently accepts up to 20 symbols per request.
+SPARK_BATCH_SIZE = int(os.getenv("MARKET_RS_SPARK_BATCH_SIZE", "20"))
 LOOKBACKS = {
     "1w": 5,
     "2w": 10,
@@ -600,6 +602,93 @@ def fetch_price_frames(
     low_frame = pd.concat(low_map.values(), axis=1).sort_index()
     volume_frame = pd.concat(volume_map.values(), axis=1).sort_index()
     return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+
+def fill_closed_session_close_gaps_from_spark(
+    symbols: list[str],
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    session_indexes = [
+        frame.dropna(how="all").index.max()
+        for frame in (open_frame, high_frame, low_frame)
+        if not frame.empty and not frame.dropna(how="all").empty
+    ]
+    if not session_indexes:
+        return raw_close_frame, adjusted_close_frame
+    target_date = max(session_indexes)
+    candidates = []
+    for symbol in symbols:
+        if symbol not in open_frame.columns or symbol not in high_frame.columns or symbol not in low_frame.columns:
+            continue
+        session_values = (
+            open_frame.at[target_date, symbol] if target_date in open_frame.index else None,
+            high_frame.at[target_date, symbol] if target_date in high_frame.index else None,
+            low_frame.at[target_date, symbol] if target_date in low_frame.index else None,
+        )
+        if not all(pd.notna(value) for value in session_values):
+            continue
+        current_close = (
+            raw_close_frame.at[target_date, symbol]
+            if target_date in raw_close_frame.index and symbol in raw_close_frame.columns
+            else None
+        )
+        if pd.isna(current_close):
+            candidates.append(symbol)
+    if not candidates:
+        return raw_close_frame, adjusted_close_frame
+
+    filled = 0
+    for start in range(0, len(candidates), SPARK_BATCH_SIZE):
+        batch = candidates[start : start + SPARK_BATCH_SIZE]
+        try:
+            response = requests.get(
+                "https://query1.finance.yahoo.com/v7/finance/spark",
+                params={"symbols": ",".join(batch), "range": "5d", "interval": "1d"},
+                headers=WIKI_HEADERS,
+                timeout=60,
+            )
+            response.raise_for_status()
+            results = response.json().get("spark", {}).get("result", [])
+        except Exception as error:
+            print(f"Unable to fetch Yahoo Spark close fallback batch: {error}", flush=True)
+            continue
+
+        for result in results:
+            symbol = normalize_ticker(result.get("symbol"))
+            payloads = result.get("response") or []
+            if not symbol or not payloads:
+                continue
+            meta = payloads[0].get("meta") or {}
+            market_time = safe_float(meta.get("regularMarketTime"))
+            market_price = safe_float(meta.get("regularMarketPrice"))
+            if market_time is None or market_price is None or market_price <= 0:
+                continue
+            timezone_name = str(meta.get("exchangeTimezoneName") or "America/New_York")
+            try:
+                local_market_time = pd.to_datetime(int(market_time), unit="s", utc=True).tz_convert(timezone_name)
+            except Exception:
+                continue
+            if (local_market_time.hour, local_market_time.minute) < (15, 59):
+                continue
+            market_date = local_market_time.tz_localize(None).normalize()
+            if market_date != pd.Timestamp(target_date).normalize():
+                continue
+            raw_close_frame.at[target_date, symbol] = market_price
+            adjusted_close_frame.at[target_date, symbol] = market_price
+            filled += 1
+
+    if filled:
+        raw_close_frame = raw_close_frame.sort_index()
+        adjusted_close_frame = adjusted_close_frame.sort_index()
+        print(
+            f"Filled {filled} finalized {target_date:%Y-%m-%d} closes from Yahoo Spark regularMarketPrice.",
+            flush=True,
+        )
+    return raw_close_frame, adjusted_close_frame
 
 
 def ensure_symbol_price_frames(
@@ -1431,6 +1520,14 @@ def main() -> None:
         high_frame,
         low_frame,
         volume_frame,
+    )
+    raw_close_frame, adjusted_close_frame = fill_closed_session_close_gaps_from_spark(
+        symbols + [BENCHMARK_SYMBOL],
+        raw_close_frame,
+        adjusted_close_frame,
+        open_frame,
+        high_frame,
+        low_frame,
     )
     existing_rows = load_existing_rows()
     refresh_symbols = detect_share_refresh_symbols(symbols, existing_rows, raw_close_frame)
