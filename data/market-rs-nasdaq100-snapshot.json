@@ -1,5 +1,5 @@
 {
-  "updatedAt": "Aug 4, 2026",
+  "updatedAt": "Aug 5, 2026",
   "source": "https://api.nasdaq.com/api/quote/list-type/nasdaq100",
   "rows": [
     {
@@ -137,10 +137,6 @@
     {
       "Ticker": "DXCM",
       "Name": "DexCom, Inc. Common Stock"
-    },
-    {
-      "Ticker": "EA",
-      "Name": "Electronic Arts Inc. Common Stock"
     },
     {
       "Ticker": "EXC",
