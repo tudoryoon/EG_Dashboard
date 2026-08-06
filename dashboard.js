@@ -11573,10 +11573,15 @@ function getMarketRsVisibleIndexRange(chart) {
     return { min: 0, max: -1 };
   }
   const xScale = chart?.scales?.x;
-  const min = Number.isFinite(xScale?.min) ? Math.max(0, Math.ceil(xScale.min)) : 0;
+  const dataBounds = chart?.$marketRsDataBounds;
+  const firstIndex = Number.isFinite(dataBounds?.firstIndex) ? dataBounds.firstIndex : 0;
+  const latestIndex = Number.isFinite(dataBounds?.latestIndex) ? dataBounds.latestIndex : labelCount - 1;
+  const min = Number.isFinite(xScale?.min)
+    ? Math.max(firstIndex, Math.ceil(xScale.min))
+    : firstIndex;
   const max = Number.isFinite(xScale?.max)
-    ? Math.min(labelCount - 1, Math.floor(xScale.max))
-    : labelCount - 1;
+    ? Math.min(latestIndex, Math.floor(xScale.max))
+    : latestIndex;
   return { min, max };
 }
 
@@ -11610,7 +11615,11 @@ function fitMarketRsChartYToVisible(chart = marketRsDetailChart) {
         });
       } else {
         const rawValue = dataset.data?.[index];
-        const numeric = Number(rawValue && typeof rawValue === "object" ? rawValue.y : rawValue);
+        const chartValue = rawValue && typeof rawValue === "object" ? rawValue.y : rawValue;
+        if (chartValue === null || chartValue === undefined || chartValue === "") {
+          continue;
+        }
+        const numeric = Number(chartValue);
         if (Number.isFinite(numeric)) {
           target.push(numeric);
         }
