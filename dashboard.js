@@ -416,7 +416,7 @@ const state = {
   briefingRotationDistributionXAxis: "score",
   briefingRotationDistributionCorrWindow: "3m",
   rsUniverse: "all",
-  rsHistoryRange: "3y",
+  rsHistoryRange: "1y",
   rsSelectedTicker: "",
   rsFilter: "all",
   rsBriefingSector: "briefingAll",
@@ -11819,6 +11819,25 @@ function zoomMarketRsChartToLatest(direction) {
 
 const MARKET_RS_INTERACTION_MODE = "marketRsEarningsAware";
 
+function isMarketRsPointerInsideDataBounds(chart, event) {
+  const bounds = chart?.$marketRsDataBounds;
+  const xScale = chart?.scales?.x;
+  const pointerX = Number(event?.x);
+  if (!bounds || !xScale || !Number.isFinite(pointerX)) {
+    return true;
+  }
+
+  const firstPixel = xScale.getPixelForValue(bounds.firstIndex);
+  const latestPixel = xScale.getPixelForValue(bounds.latestIndex);
+  if (!Number.isFinite(firstPixel) || !Number.isFinite(latestPixel)) {
+    return true;
+  }
+
+  const dataSpan = Math.max(1, bounds.latestIndex - bounds.firstIndex);
+  const halfStep = Math.abs(latestPixel - firstPixel) / dataSpan / 2;
+  return pointerX >= firstPixel - halfStep && pointerX <= latestPixel + halfStep;
+}
+
 function ensureMarketRsInteractionMode() {
   const modes = Chart?.Interaction?.modes;
   if (!modes) {
@@ -11826,6 +11845,9 @@ function ensureMarketRsInteractionMode() {
   }
   if (!modes[MARKET_RS_INTERACTION_MODE]) {
     modes[MARKET_RS_INTERACTION_MODE] = (chart, event, options, useFinalPosition) => {
+      if (!isMarketRsPointerInsideDataBounds(chart, event)) {
+        return [];
+      }
       const directItems = modes.nearest(
         chart,
         event,
@@ -11843,7 +11865,7 @@ function ensureMarketRsInteractionMode() {
         event,
         { ...options, axis: "x", intersect: false },
         useFinalPosition,
-      );
+      ).filter((item) => !chart.data.datasets[item.datasetIndex]?.isEarningsSurprise);
     };
   }
   return MARKET_RS_INTERACTION_MODE;
