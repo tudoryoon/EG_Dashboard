@@ -14798,6 +14798,104 @@ function createEasyconomicsGpuIndexChart(canvas, payload) {
   charts.push(chart);
 }
 
+function createEasyconomicsRentalSeriesChart(canvas, series) {
+  if (typeof Chart === "undefined" || !canvas || !series?.dates?.length) {
+    return;
+  }
+
+  const labels = series.dates;
+  const values = (series.values ?? []).map((value) => (Number.isFinite(Number(value)) ? Number(value) : null));
+  const finiteValues = values.filter(Number.isFinite);
+  if (!finiteValues.length) {
+    return;
+  }
+
+  const minValue = Math.min(...finiteValues);
+  const maxValue = Math.max(...finiteValues);
+  const span = Math.max(maxValue - minValue, 0.05);
+  const padding = Math.max(span * 0.12, 0.015);
+  const yMin = Math.floor((minValue - padding) * 100) / 100;
+  const yMax = Math.ceil((maxValue + padding) * 100) / 100;
+  const tickIndexes = [];
+  let previousMonth = "";
+  labels.forEach((label, index) => {
+    const month = String(label).slice(0, 7);
+    if (month !== previousMonth) {
+      tickIndexes.push(index);
+      previousMonth = month;
+    }
+  });
+  const finalTickIndex = tickIndexes[tickIndexes.length - 1] ?? 0;
+  if (!tickIndexes.includes(labels.length - 1) && labels.length - 1 - finalTickIndex >= 10) {
+    tickIndexes.push(labels.length - 1);
+  }
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: series.label ?? `${series.market ?? "Neo-Cloud"} / ${series.gpu ?? "GPU"}`,
+          data: values,
+          borderColor: "#0f9f83",
+          backgroundColor: "rgba(15, 159, 131, 0.10)",
+          borderWidth: 2.4,
+          tension: 0.16,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          pointHitRadius: 9,
+          fill: false,
+          spanGaps: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${series.label ?? "GPU rental"}: $${Number(context.parsed.y).toFixed(2)}/GPU-hour`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatYearMonthPeriodLabel(labels[value]),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => `$${Number(value).toFixed(2)}`,
+            maxTicksLimit: 7,
+          },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
 function getGpuCloudItems() {
   return gpuCloudData.items ?? [];
 }
@@ -14999,6 +15097,30 @@ function renderGpuCloudOverview() {
 
   const semiSeries = getGpuSemiAnalysisSeries();
   const easyIndex = easyconomicsGpuIndexData;
+  const easyRentalSeries = Object.values(easyIndex.rentalSeries ?? {})
+    .filter((series) => series?.key && series?.dates?.length && series?.values?.length)
+    .sort((left, right) => (left.gpu === "H100" ? -1 : right.gpu === "H100" ? 1 : 0));
+  const easyRentalMarkup = easyRentalSeries
+    .map(
+      (series) => `
+        <section class="gpu-rental-neo-series">
+          <div class="gpu-rental-neo-head">
+            <div>
+              <span class="gpu-rental-neo-kicker">ACCUMULATED GPU RENTAL INDEX</span>
+              <h4>${series.label ?? `${series.market ?? "Neo-Cloud"} / ${series.gpu ?? "GPU"}`}</h4>
+            </div>
+            <strong>$${Number(series.latestValue).toFixed(2)}<small>/GPU-hour</small></strong>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${series.dates?.[0] ?? "-"} - ${series.latestDate ?? series.dates?.at(-1) ?? "-"}</span>
+            <span>${series.sourceMode === "public_api" ? "공개 API" : "공개 차트 복원"}</span>
+          </div>
+          <div class="memory-chart-wrap gpu-rental-neo-chart">
+            <canvas data-easyconomics-rental-series="${series.key}"></canvas>
+          </div>
+        </section>`,
+    )
+    .join("");
   const ornnSeriesEntries = getOrnnGpuSeriesEntries();
   const activeOrnnSeries = getActiveOrnnGpuSeries();
   const ornnGpuTabsMarkup = ornnSeriesEntries
@@ -15110,29 +15232,16 @@ function renderGpuCloudOverview() {
         <article class="memory-panel gpu-rental-index-panel">
           <div class="us-panel-head">
             <div>
-              <h3>Easyconomics Cloud GPU Price Index</h3>
-              <p>주요 클라우드 GPU 임대료를 공급자 동일가중 방식으로 집계한 시장 종합지수 (2025-01-06=100).</p>
+              <h3>Easyconomics Accumulated GPU Rental Index</h3>
+              <p>Neo-Cloud의 GPU별 누적 임대가격 추이입니다. 종합지수가 아니라 실제 달러/GPU-hour 수준을 표시합니다.</p>
             </div>
           </div>
-          <div class="memory-card-meta gpu-term-meta">
-            <span><a href="${easyIndex.source?.pageUrl ?? "https://easyconomics.com/gpu-price-index"}" target="_blank" rel="noreferrer">Easyconomics GPU Price Index</a></span>
-            <span>${easyIndex.updatedAt || "-"} | ${Number.isFinite(Number(easyIndex.latestValue)) ? Number(easyIndex.latestValue).toFixed(2) : "N/A"}</span>
-            <span>WoW ${formatGpuCloudChange(Number(easyIndex.weeklyChangePct))}</span>
+          <div class="gpu-rental-neo-grid">
+            ${easyRentalMarkup || '<p class="memory-error">GPU별 임대가격 시계열을 불러오지 못했습니다.</p>'}
           </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Coverage</span>
-            <span class="memory-stat-value">${easyIndex.coverage?.gpuCount ?? "-"} GPUs | ${easyIndex.coverage?.providerCount ?? "-"} providers</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Method</span>
-            <span class="memory-stat-value">2026-07-27 이전 GetDeploying 주간 백필, 이후 Easyconomics 일간 지수. 2026-07-27의 88.34에서 두 구간을 접합했습니다.</span>
-          </div>
-          <div class="memory-stat-row">
-            <span class="memory-stat-label">Source</span>
-            <span class="memory-stat-value"><a href="${easyIndex.source?.backfillUrl ?? "https://getdeploying.com/gpu-price-index"}" target="_blank" rel="noreferrer">${easyIndex.source?.backfillName ?? "GetDeploying GPU Price Index"}</a> + dstack gpuhunt 기반 Easyconomics 공개 API</span>
-          </div>
-          <div class="memory-chart-wrap">
-            <canvas data-easyconomics-gpu-index="overview"></canvas>
+          <div class="gpu-rental-source-note">
+            <a href="${easyIndex.source?.pageUrl ?? "https://easyconomics.com/gpu-price-index"}" target="_blank" rel="noreferrer">Easyconomics GPU Price Index</a>
+            <span>초기 구간은 공개 차트 캡처를 좌표 기준으로 복원해 $0.01 단위로 반올림했습니다. 공개 API가 정상화되면 동일 시계열을 자동 갱신합니다.</span>
           </div>
         </article>
       </section>
@@ -15163,10 +15272,12 @@ function renderGpuCloudOverview() {
     );
   }
 
-  const easyIndexCanvas = usOverviewRoot.querySelector('[data-easyconomics-gpu-index="overview"]');
-  if (easyIndexCanvas && easyIndex.labels?.length) {
-    createEasyconomicsGpuIndexChart(easyIndexCanvas, easyIndex);
-  }
+  usOverviewRoot.querySelectorAll("[data-easyconomics-rental-series]").forEach((canvas) => {
+    const series = easyRentalSeries.find((item) => item.key === canvas.dataset.easyconomicsRentalSeries);
+    if (series) {
+      createEasyconomicsRentalSeriesChart(canvas, series);
+    }
+  });
 
   usOverviewRoot.querySelectorAll("[data-ornn-gpu]").forEach((button) => {
     button.addEventListener("click", () => {
