@@ -2321,9 +2321,14 @@ h1 {
   min-width: 0;
 }
 
-.gpu-rental-neo-series + .gpu-rental-neo-series {
+.gpu-rental-neo-series:nth-child(even) {
   padding-left: 24px;
   border-left: 1px solid #e4e4df;
+}
+
+.gpu-rental-neo-series:nth-child(n + 3) {
+  padding-top: 22px;
+  border-top: 1px solid #e4e4df;
 }
 
 .gpu-rental-neo-head {
@@ -2367,6 +2372,67 @@ h1 {
 
 .gpu-rental-index-panel .gpu-rental-neo-chart canvas {
   height: 260px;
+}
+
+.gpu-rental-composite-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 0.8fr);
+  gap: 26px;
+  margin-top: 18px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e4e4df;
+}
+
+.gpu-rental-composite-chart {
+  min-width: 0;
+}
+
+.gpu-rental-composite-canvas canvas {
+  height: 330px;
+}
+
+.gpu-rental-method {
+  min-width: 0;
+  padding-left: 24px;
+  border-left: 1px solid #e4e4df;
+}
+
+.gpu-rental-method h4 {
+  margin: 0 0 16px;
+  color: #20201d;
+  font-size: 1.1rem;
+}
+
+.gpu-rental-method ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.gpu-rental-method li {
+  padding-left: 4px;
+  color: #55554f;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.gpu-rental-method li strong,
+.gpu-rental-method li span {
+  display: block;
+}
+
+.gpu-rental-method li strong {
+  margin-bottom: 2px;
+  color: #20201d;
+  font-size: 0.82rem;
+}
+
+.gpu-rental-method > p {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
 }
 
 .gpu-rental-source-note {
@@ -9211,7 +9277,19 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .gpu-rental-neo-series + .gpu-rental-neo-series {
+  .gpu-rental-neo-series:nth-child(even),
+  .gpu-rental-neo-series:nth-child(n + 3) {
+    padding-top: 22px;
+    padding-left: 0;
+    border-top: 1px solid #e4e4df;
+    border-left: 0;
+  }
+
+  .gpu-rental-composite-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gpu-rental-method {
     padding-top: 22px;
     padding-left: 0;
     border-top: 1px solid #e4e4df;

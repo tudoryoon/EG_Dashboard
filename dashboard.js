@@ -77,7 +77,7 @@ const studyMemoryCapaData = window.studyMemoryCapaData ?? { updatedAt: "", unit:
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
-const easyconomicsGpuIndexData = window.easyconomicsGpuIndexData ?? { updatedAt: "", source: {}, labels: [], backfillValues: [], dailyValues: [], coverage: {} };
+const egGpuRentalIndexData = window.egGpuRentalIndexData ?? { updatedAt: "", source: {}, methodology: {}, labels: [], indexValues: [], models: {} };
 const infraGridData = window.infraGridData ?? { updatedAt: "", source: {}, items: [], fuelColors: {} };
 const openrouterRankingsData = window.openrouterRankingsData ?? {
   updatedAt: "",
@@ -14952,14 +14952,31 @@ function createGpuLineChart(canvas, labels, datasets, formatter) {
   charts.push(chart);
 }
 
-function createEasyconomicsGpuIndexChart(canvas, payload) {
+function getGpuHistoryTickIndexes(labels, canvasWidth) {
+  if (!labels.length) {
+    return [];
+  }
+  const maxTickCount = Math.max(4, Math.floor((canvasWidth || 600) / 88));
+  const step = Math.max(1, Math.ceil((labels.length - 1) / Math.max(1, maxTickCount - 1)));
+  const indexes = [];
+  for (let index = 0; index < labels.length; index += step) {
+    indexes.push(index);
+  }
+  if (!indexes.includes(labels.length - 1)) {
+    indexes.push(labels.length - 1);
+  }
+  return indexes;
+}
+
+function createEgGpuRentalIndexChart(canvas, payload) {
   if (typeof Chart === "undefined" || !canvas || !payload?.labels?.length) {
     return;
   }
   const labels = payload.labels;
   const allValues = [
-    ...(payload.backfillValues ?? []),
-    ...(payload.dailyValues ?? []),
+    ...(payload.indexValues ?? []),
+    ...(payload.bandLowValues ?? []),
+    ...(payload.bandHighValues ?? []),
     Number(payload.baseValue) || 100,
   ]
     .filter((value) => value !== null && value !== "" && Number.isFinite(Number(value)))
@@ -14969,19 +14986,7 @@ function createEasyconomicsGpuIndexChart(canvas, payload) {
   const yMin = Math.floor((minValue - 4) / 5) * 5;
   const yMax = Math.ceil((maxValue + 4) / 5) * 5;
   const baseValue = Number(payload.baseValue) || 100;
-  const tickIndexes = [];
-  const seenMonths = new Set();
-  labels.forEach((label, index) => {
-    const monthKey = String(label).slice(0, 7);
-    const month = Number(monthKey.slice(5, 7));
-    if (!seenMonths.has(monthKey) && Number.isFinite(month) && month % 2 === 1) {
-      tickIndexes.push(index);
-    }
-    seenMonths.add(monthKey);
-  });
-  if (!tickIndexes.includes(labels.length - 1)) {
-    tickIndexes.push(labels.length - 1);
-  }
+  const tickIndexes = getGpuHistoryTickIndexes(labels, canvas.clientWidth);
 
   const chart = new Chart(canvas, {
     type: "line",
@@ -14989,29 +14994,39 @@ function createEasyconomicsGpuIndexChart(canvas, payload) {
       labels,
       datasets: [
         {
-          label: "GetDeploying backfill (weekly)",
-          data: payload.backfillValues ?? [],
-          borderColor: "#94a3b8",
-          backgroundColor: "#94a3b8",
-          borderWidth: 2,
-          borderDash: [5, 4],
-          tension: 0.14,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-          pointHitRadius: 9,
-          spanGaps: false,
+          label: "80th percentile",
+          data: payload.bandHighValues ?? [],
+          borderColor: "rgba(15, 159, 131, 0)",
+          backgroundColor: "rgba(15, 159, 131, 0.12)",
+          borderWidth: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          fill: "+1",
+          spanGaps: true,
+          isGpuIndexBand: true,
         },
         {
-          label: "Easyconomics daily",
-          data: payload.dailyValues ?? [],
+          label: "20th percentile",
+          data: payload.bandLowValues ?? [],
+          borderColor: "rgba(15, 159, 131, 0)",
+          backgroundColor: "rgba(15, 159, 131, 0)",
+          borderWidth: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          spanGaps: true,
+          isGpuIndexBand: true,
+        },
+        {
+          label: "EG GPU Rental Index",
+          data: payload.indexValues ?? [],
           borderColor: "#0f766e",
           backgroundColor: "#0f766e",
-          borderWidth: 2.8,
-          tension: 0.14,
-          pointRadius: 3,
+          borderWidth: 3,
+          tension: 0.12,
+          pointRadius: 2.5,
           pointHoverRadius: 6,
           pointHitRadius: 10,
-          spanGaps: false,
+          spanGaps: true,
         },
         {
           label: `Base ${baseValue.toFixed(0)}`,
@@ -15036,10 +15051,16 @@ function createEasyconomicsGpuIndexChart(canvas, payload) {
         legend: {
           position: "top",
           align: "start",
-          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+          labels: {
+            color: "#66665f",
+            usePointStyle: true,
+            boxWidth: 8,
+            boxHeight: 8,
+            filter: (item, data) => !data.datasets[item.datasetIndex]?.isGpuIndexBand,
+          },
         },
         tooltip: {
-          filter: (context) => !context.dataset.isGpuIndexBaseline,
+          filter: (context) => !context.dataset.isGpuIndexBaseline && !context.dataset.isGpuIndexBand,
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(2)}`,
@@ -15074,13 +15095,15 @@ function createEasyconomicsGpuIndexChart(canvas, payload) {
   charts.push(chart);
 }
 
-function createEasyconomicsRentalSeriesChart(canvas, series) {
+function createEgGpuModelPriceChart(canvas, series) {
   if (typeof Chart === "undefined" || !canvas || !series?.dates?.length) {
     return;
   }
 
   const labels = series.dates;
-  const values = (series.values ?? []).map((value) => (Number.isFinite(Number(value)) ? Number(value) : null));
+  const values = (series.values ?? []).map((value) => (
+    value !== null && value !== "" && Number.isFinite(Number(value)) ? Number(value) : null
+  ));
   const finiteValues = values.filter(Number.isFinite);
   if (!finiteValues.length) {
     return;
@@ -15092,19 +15115,7 @@ function createEasyconomicsRentalSeriesChart(canvas, series) {
   const padding = Math.max(span * 0.12, 0.015);
   const yMin = Math.floor((minValue - padding) * 100) / 100;
   const yMax = Math.ceil((maxValue + padding) * 100) / 100;
-  const tickIndexes = [];
-  let previousMonth = "";
-  labels.forEach((label, index) => {
-    const month = String(label).slice(0, 7);
-    if (month !== previousMonth) {
-      tickIndexes.push(index);
-      previousMonth = month;
-    }
-  });
-  const finalTickIndex = tickIndexes[tickIndexes.length - 1] ?? 0;
-  if (!tickIndexes.includes(labels.length - 1) && labels.length - 1 - finalTickIndex >= 10) {
-    tickIndexes.push(labels.length - 1);
-  }
+  const tickIndexes = getGpuHistoryTickIndexes(labels, canvas.clientWidth);
 
   const chart = new Chart(canvas, {
     type: "line",
@@ -15372,27 +15383,27 @@ function renderGpuCloudOverview() {
   }
 
   const semiSeries = getGpuSemiAnalysisSeries();
-  const easyIndex = easyconomicsGpuIndexData;
-  const easyRentalSeries = Object.values(easyIndex.rentalSeries ?? {})
-    .filter((series) => series?.key && series?.dates?.length && series?.values?.length)
-    .sort((left, right) => (left.gpu === "H100" ? -1 : right.gpu === "H100" ? 1 : 0));
-  const easyRentalMarkup = easyRentalSeries
+  const egIndex = egGpuRentalIndexData;
+  const egModelSeries = Object.values(egIndex.models ?? {})
+    .filter((series) => series?.display && series?.key && series?.dates?.length && series?.values?.length);
+  const egModelMarkup = egModelSeries
     .map(
       (series) => `
         <section class="gpu-rental-neo-series">
           <div class="gpu-rental-neo-head">
             <div>
-              <span class="gpu-rental-neo-kicker">ACCUMULATED GPU RENTAL INDEX</span>
-              <h4>${series.label ?? `${series.market ?? "Neo-Cloud"} / ${series.gpu ?? "GPU"}`}</h4>
+              <span class="gpu-rental-neo-kicker">MARKET MODEL PRICE</span>
+              <h4>${series.label ?? "GPU"}</h4>
             </div>
             <strong>$${Number(series.latestValue).toFixed(2)}<small>/GPU-hour</small></strong>
           </div>
           <div class="memory-card-meta gpu-term-meta">
             <span>${series.dates?.[0] ?? "-"} - ${series.latestDate ?? series.dates?.at(-1) ?? "-"}</span>
-            <span>${series.sourceMode === "public_api" ? "공개 API" : "공개 차트 복원"}</span>
+            <span>${series.latestProviderCount ?? 0} providers</span>
+            <span>${Number(series.latestOfferCount ?? 0).toLocaleString()} offers</span>
           </div>
           <div class="memory-chart-wrap gpu-rental-neo-chart">
-            <canvas data-easyconomics-rental-series="${series.key}"></canvas>
+            <canvas data-eg-gpu-model="${series.key}"></canvas>
           </div>
         </section>`,
     )
@@ -15508,16 +15519,48 @@ function renderGpuCloudOverview() {
         <article class="memory-panel gpu-rental-index-panel">
           <div class="us-panel-head">
             <div>
-              <h3>Easyconomics Accumulated GPU Rental Index</h3>
-              <p>Neo-Cloud의 GPU별 누적 임대가격 추이입니다. 종합지수가 아니라 실제 달러/GPU-hour 수준을 표시합니다.</p>
+              <h3>EG GPU Rental Index</h3>
+              <p>공개 원천 카탈로그에서 매일 독립 산출하는 On-demand GPU 임대가격 지수입니다.</p>
             </div>
           </div>
+          <div class="gpu-rental-composite-grid">
+            <section class="gpu-rental-composite-chart">
+              <div class="gpu-rental-neo-head">
+                <div>
+                  <span class="gpu-rental-neo-kicker">FIXED-PANEL COMPOSITE · BASE ${egIndex.baseDate ?? "-"} = 100</span>
+                  <h4>H100 80GB · A100 80GB · L40S</h4>
+                </div>
+                <strong>${Number(egIndex.latestValue).toFixed(2)}<small>${Number.isFinite(egIndex.weeklyChangePct) ? `${egIndex.weeklyChangePct > 0 ? "+" : ""}${egIndex.weeklyChangePct.toFixed(2)}% WoW` : "WoW N/A"}</small></strong>
+              </div>
+              <div class="memory-card-meta gpu-term-meta">
+                <span>${egIndex.updatedAt ?? "-"}</span>
+                <span>${egIndex.latestSnapshot?.catalogVersion ?? "-"}</span>
+                <span>${egIndex.latestSnapshot?.providerCount ?? 0} providers</span>
+                <span>${Number(egIndex.latestSnapshot?.offerCount ?? 0).toLocaleString()} eligible offers</span>
+              </div>
+              <div class="memory-chart-wrap gpu-rental-composite-canvas">
+                <canvas data-eg-gpu-index="composite"></canvas>
+              </div>
+            </section>
+            <aside class="gpu-rental-method">
+              <span class="gpu-rental-neo-kicker">INDEX METHODOLOGY</span>
+              <h4>지수 산식</h4>
+              <ol>
+                <li><strong>오퍼 정규화</strong><span>인스턴스 시간당 가격 ÷ GPU 개수</span></li>
+                <li><strong>공급자 가격</strong><span>각 공급자의 모델별 On-demand 오퍼 중앙값</span></li>
+                <li><strong>모델 시장가격</strong><span>공급자 중앙값들의 중앙값, 최소 4개 공급자</span></li>
+                <li><strong>모델 상대지수</strong><span>100 × 현재 모델가격 ÷ 기준일 모델가격</span></li>
+                <li><strong>EG 종합지수</strong><span>고정 3모델 상대지수의 중앙값</span></li>
+              </ol>
+              <p>옅은 영역은 세 모델 상대지수의 20~80백분위 범위입니다. Spot·예약가격은 제외합니다.</p>
+            </aside>
+          </div>
           <div class="gpu-rental-neo-grid">
-            ${easyRentalMarkup || '<p class="memory-error">GPU별 임대가격 시계열을 불러오지 못했습니다.</p>'}
+            ${egModelMarkup || '<p class="memory-error">GPU별 임대가격 시계열을 불러오지 못했습니다.</p>'}
           </div>
           <div class="gpu-rental-source-note">
-            <a href="${easyIndex.source?.pageUrl ?? "https://easyconomics.com/gpu-price-index"}" target="_blank" rel="noreferrer">Easyconomics GPU Price Index</a>
-            <span>초기 구간은 공개 차트 캡처를 좌표 기준으로 복원해 $0.01 단위로 반올림했습니다. 공개 API가 정상화되면 동일 시계열을 자동 갱신합니다.</span>
+            <a href="${egIndex.source?.repositoryUrl ?? "https://github.com/dstackai/gpuhunt"}" target="_blank" rel="noreferrer">dstack gpuhunt</a>
+            <span>Source: dstack gpuhunt public catalog (${egIndex.source?.license ?? "MPL-2.0"}) · Calculation: EG Dashboard. 과거는 공개 카탈로그 주간 백필, 배포 이후는 매일 동일 산식으로 누적합니다.</span>
           </div>
         </article>
       </section>
@@ -15548,10 +15591,15 @@ function renderGpuCloudOverview() {
     );
   }
 
-  usOverviewRoot.querySelectorAll("[data-easyconomics-rental-series]").forEach((canvas) => {
-    const series = easyRentalSeries.find((item) => item.key === canvas.dataset.easyconomicsRentalSeries);
+  const egCompositeCanvas = usOverviewRoot.querySelector('[data-eg-gpu-index="composite"]');
+  if (egCompositeCanvas) {
+    createEgGpuRentalIndexChart(egCompositeCanvas, egIndex);
+  }
+
+  usOverviewRoot.querySelectorAll("[data-eg-gpu-model]").forEach((canvas) => {
+    const series = egModelSeries.find((item) => item.key === canvas.dataset.egGpuModel);
     if (series) {
-      createEasyconomicsRentalSeriesChart(canvas, series);
+      createEgGpuModelPriceChart(canvas, series);
     }
   });
 
