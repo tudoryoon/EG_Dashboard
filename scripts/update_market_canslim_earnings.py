@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -16,6 +17,17 @@ BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
 MARKET_RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 FALLBACK_TICKERS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"]
 MAX_WORKERS = 8
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Refresh Yahoo Finance EPS surprise history.")
+    parser.add_argument(
+        "--scope",
+        choices=("all", "daily-briefing"),
+        default="all",
+        help="Refresh the full RS universe or only Daily Briefing tickers while preserving all other profiles.",
+    )
+    return parser.parse_args()
 
 
 def clean_number(value: object, digits: int = 4) -> float | None:
@@ -167,15 +179,17 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
 
 
 def main() -> None:
+    args = parse_args()
     briefing_tickers = load_daily_briefing_tickers()
     nasdaq100_tickers = load_market_rs_universe_tickers("nasdaq100")
     sp500_tickers = load_market_rs_universe_tickers("sp500")
     russell2000_tickers = load_market_rs_universe_tickers("russell2000")
     tickers = merge_ticker_lists(briefing_tickers, nasdaq100_tickers, sp500_tickers, russell2000_tickers) or FALLBACK_TICKERS
+    refresh_tickers = briefing_tickers if args.scope == "daily-briefing" else tickers
     existing_profiles = load_existing_profiles()
-    profiles: dict[str, object] = {}
+    refreshed_profiles: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(build_ticker_payload, ticker): ticker for ticker in tickers}
+        futures = {executor.submit(build_ticker_payload, ticker): ticker for ticker in refresh_tickers}
         for future in as_completed(futures):
             ticker = futures[future]
             try:
@@ -185,8 +199,13 @@ def main() -> None:
             if not profile.get("quarters") and ticker in existing_profiles:
                 profile = dict(existing_profiles[ticker])
                 profile["fallback"] = True
-            profiles[ticker] = profile
-    profiles = {ticker: profiles[ticker] for ticker in tickers if ticker in profiles}
+            refreshed_profiles[ticker] = profile
+
+    if args.scope == "daily-briefing":
+        profiles = dict(existing_profiles)
+        profiles.update(refreshed_profiles)
+    else:
+        profiles = {ticker: refreshed_profiles[ticker] for ticker in tickers if ticker in refreshed_profiles}
     covered_count = sum(1 for profile in profiles.values() if profile.get("quarters"))
     payload = {
         "updatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -195,6 +214,8 @@ def main() -> None:
             "source": "Yahoo Finance via yfinance earnings_dates",
             "tickerCount": len(tickers),
             "coveredCount": covered_count,
+            "refreshMode": args.scope,
+            "refreshedTickerCount": len(refresh_tickers),
             "sources": {
                 "dailyBriefing": len(briefing_tickers),
                 "nasdaq100": len(nasdaq100_tickers),
@@ -213,7 +234,7 @@ def main() -> None:
         newline="\n",
     )
     print(f"Wrote {OUTPUT_PATH}")
-    print(f"Tickers: {len(tickers)} / EPS profiles with data: {covered_count}")
+    print(f"Tickers: {len(profiles)} / refreshed: {len(refresh_tickers)} / EPS profiles with data: {covered_count}")
     print(
         "Sources: "
         f"Daily Briefing {len(briefing_tickers)} / "
