@@ -352,6 +352,7 @@ const state = {
   sector: "All",
   query: "",
   sort: "marketCapDesc",
+  m7PriceMode: "relative",
   m7PriceRange: "3y",
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
@@ -1012,6 +1013,108 @@ function createRelativePriceChart(canvas, priceData, rangeKey) {
 
 function createM7RelativeChart(canvas, rangeKey) {
   createRelativePriceChart(canvas, m7PriceData, rangeKey);
+}
+
+function formatM7MarketCap(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  if (Math.abs(numeric) >= 1000) {
+    return `$${(numeric / 1000).toFixed(digits)}T`;
+  }
+  return `$${numeric.toFixed(0)}B`;
+}
+
+function buildM7MarketCapChartPayload(rangeKey) {
+  const items = Object.entries(m7PriceData?.items ?? {});
+  const allDates = [...new Set(items.flatMap(([, item]) => item.dates ?? []))].sort();
+  if (!allDates.length) {
+    return { labels: [], datasets: [] };
+  }
+
+  const latestDate = allDates[allDates.length - 1];
+  const startDate = shiftDateByRange(latestDate, rangeKey, m7PriceData?.startDate ?? "2017-01-01");
+  const labels = allDates.filter((label) => label >= startDate);
+  const datasets = items.map(([key, item]) => {
+    const dateIndex = new Map((item.dates ?? []).map((date, index) => [date, index]));
+    return {
+      key,
+      label: item.label,
+      data: labels.map((label) => {
+        const pointIndex = dateIndex.get(label);
+        const value = pointIndex === undefined ? null : item.marketCaps?.[pointIndex];
+        return Number.isFinite(value) ? value : null;
+      }),
+      borderColor: item.color,
+      backgroundColor: item.color,
+      borderWidth: 2.2,
+      tension: 0.18,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHitRadius: 10,
+      spanGaps: true,
+    };
+  });
+  return { labels, datasets };
+}
+
+function createM7MarketCapChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+  const payload = buildM7MarketCapChartPayload(rangeKey);
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: payload,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            title: (tooltipItems) => tooltipItems?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${formatM7MarketCap(context.parsed.y, 2)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0).map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: "#8d8d86",
+            callback: (value) => formatM7MarketCap(value),
+            maxTicksLimit: 7,
+          },
+          title: { display: true, text: "Market Cap (USD)", color: "#8d8d86" },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
 }
 
 function createMarketRelativeChart(canvas, rangeKey) {
@@ -19847,21 +19950,43 @@ function renderUSOverview() {
         </button>`,
     )
     .join("");
+  const isMarketCapMode = state.m7PriceMode === "marketCap";
+  const modeMarkup = [
+    { key: "relative", label: "Relative Performance" },
+    { key: "marketCap", label: "Market Cap" },
+  ]
+    .map(
+      (mode) => `
+        <button
+          type="button"
+          class="m7-mode-chip${state.m7PriceMode === mode.key ? " active" : ""}"
+          data-m7-mode="${mode.key}"
+          aria-pressed="${state.m7PriceMode === mode.key ? "true" : "false"}"
+        >
+          ${mode.label}
+        </button>`,
+    )
+    .join("");
 
   usOverviewRoot.innerHTML = `
     <section class="us-panel us-price-panel">
       <div class="us-section-head us-price-head">
         <div>
-          <h2>M7 Relative Performance</h2>
-          <p>Daily close normalized to 100 at the selected start date. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.</p>
+          <h2>${isMarketCapMode ? "M7 Market Capitalization" : "M7 Relative Performance"}</h2>
+          <p>${
+            isMarketCapMode
+              ? `Daily market capitalization based on close and historical shares outstanding. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.`
+              : `Daily close normalized to 100 at the selected start date. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.`
+          }</p>
         </div>
         <div class="us-price-controls">
+          <div class="m7-mode-row" role="group" aria-label="M7 chart mode">${modeMarkup}</div>
           <div class="m7-range-row">${rangeMarkup}</div>
           <div class="us-price-updated">Updated ${m7PriceData.updatedAt || "-"}</div>
         </div>
       </div>
       <div class="us-price-chart-wrap">
-        <canvas data-m7-relative="performance"></canvas>
+        <canvas data-m7-chart="performance"></canvas>
       </div>
     </section>
     <section class="us-m7-section">
@@ -19882,9 +20007,20 @@ function renderUSOverview() {
     });
   });
 
-  const relativeCanvas = usOverviewRoot.querySelector('[data-m7-relative="performance"]');
-  if (relativeCanvas) {
-    createM7RelativeChart(relativeCanvas, state.m7PriceRange);
+  usOverviewRoot.querySelectorAll("[data-m7-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.m7PriceMode = button.dataset.m7Mode === "marketCap" ? "marketCap" : "relative";
+      render();
+    });
+  });
+
+  const m7Canvas = usOverviewRoot.querySelector('[data-m7-chart="performance"]');
+  if (m7Canvas) {
+    if (isMarketCapMode) {
+      createM7MarketCapChart(m7Canvas, state.m7PriceRange);
+    } else {
+      createM7RelativeChart(m7Canvas, state.m7PriceRange);
+    }
   }
 
   usOverviewData.m7Quarterly.forEach((company) => {

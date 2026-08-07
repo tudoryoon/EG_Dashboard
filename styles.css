@@ -6923,6 +6923,32 @@ h1 {
   gap: 8px;
 }
 
+.m7-mode-row {
+  display: flex;
+  padding: 3px;
+  border: 1px solid #d8d8d2;
+  border-radius: 8px;
+  background: #f1f1ed;
+}
+
+.m7-mode-chip {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #66665f;
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.m7-mode-chip.active {
+  background: #20201d;
+  color: #fff;
+}
+
 .m7-range-chip {
   padding: 8px 12px;
   border: 1px solid #d8d8d2;
@@ -9175,6 +9201,10 @@ h1 {
 
   .m7-range-row {
     justify-content: flex-start;
+  }
+
+  .m7-mode-row {
+    align-self: flex-start;
   }
 
   .gpu-rental-neo-grid {
