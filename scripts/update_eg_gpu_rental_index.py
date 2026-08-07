@@ -6,13 +6,14 @@ import io
 import json
 import os
 import statistics
+import time
 import urllib.parse
 import zipfile
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -74,6 +75,8 @@ KNOWN_BACKFILL_VERSIONS = {
     "2026-06-07": "20260607-17495",
     "2026-06-14": "20260614-17607",
     "2026-06-21": "20260621-17714",
+    "2026-07-26": "20260726-18405",
+    "2026-08-02": "20260802-18552",
 }
 
 HYPERSCALERS = {"aws", "azure", "gcp", "oci"}
@@ -137,8 +140,17 @@ def request_bytes(url: str, *, accept: str = "*/*") -> bytes:
         headers["Authorization"] = f"Bearer {token}"
         headers["X-GitHub-Api-Version"] = "2022-11-28"
     request = Request(url, headers=headers)
-    with urlopen(request, timeout=90) as response:  # nosec B310 - fixed public data hosts
-        return response.read()
+    for attempt in range(4):
+        try:
+            with urlopen(request, timeout=90) as response:  # nosec B310 - fixed public data hosts
+                return response.read()
+        except HTTPError:
+            raise
+        except (OSError, TimeoutError, URLError):
+            if attempt == 3:
+                raise
+            time.sleep(2 ** attempt)
+    raise RuntimeError(f"Unable to fetch {url}")
 
 
 def fetch_text(url: str) -> str:
@@ -514,8 +526,9 @@ def main() -> None:
             else:
                 try:
                     snapshot = download_historical_snapshot(target)
-                except HTTPError as exc:
-                    print(f"Skipped {target}: source request failed with HTTP {exc.code}")
+                except (HTTPError, URLError) as exc:
+                    status = getattr(exc, "code", exc.__class__.__name__)
+                    print(f"Skipped {target}: source request failed ({status})")
                     continue
             if snapshot is None:
                 print(f"Skipped {target}: no successful public catalog snapshot")
