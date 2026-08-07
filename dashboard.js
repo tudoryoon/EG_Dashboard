@@ -77,6 +77,7 @@ const studyMemoryCapaData = window.studyMemoryCapaData ?? { updatedAt: "", unit:
 const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: [], dashboard: {} };
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
+const easyconomicsGpuIndexData = window.easyconomicsGpuIndexData ?? { benchmarkUpdatedAt: "", benchmarkSource: {}, rentalSeries: {} };
 const egGpuRentalIndexData = window.egGpuRentalIndexData ?? { updatedAt: "", source: {}, methodology: {}, labels: [], indexValues: [], models: {} };
 const infraGridData = window.infraGridData ?? { updatedAt: "", source: {}, items: [], fuelColors: {} };
 const openrouterRankingsData = window.openrouterRankingsData ?? {
@@ -15017,7 +15018,7 @@ function createEgGpuRentalIndexChart(canvas, payload) {
           isGpuIndexBand: true,
         },
         {
-          label: "EG GPU Rental Index",
+          label: "EG Neo-Cloud Proxy Index",
           data: payload.indexValues ?? [],
           borderColor: "#0f766e",
           backgroundColor: "#0f766e",
@@ -15173,6 +15174,123 @@ function createEgGpuModelPriceChart(canvas, series) {
             callback: (value) => `$${Number(value).toFixed(2)}`,
             maxTicksLimit: 7,
           },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createGpuBenchmarkComparisonChart(canvas, benchmarkSeries, proxySeries) {
+  if (typeof Chart === "undefined" || !canvas || !benchmarkSeries?.dates?.length) {
+    return;
+  }
+
+  const benchmarkStart = benchmarkSeries.dates[0];
+  const comparableProxyDates = (proxySeries?.dates ?? []).filter((item) => item >= benchmarkStart);
+  const labels = [...new Set([...(benchmarkSeries.dates ?? []), ...comparableProxyDates])].sort();
+  const alignValues = (dates, values) => {
+    const valueByDate = new Map((dates ?? []).map((item, index) => [item, values?.[index] ?? null]));
+    return labels.map((item) => {
+      const value = valueByDate.get(item);
+      return value !== null && value !== "" && Number.isFinite(Number(value)) ? Number(value) : null;
+    });
+  };
+  const benchmarkValues = alignValues(benchmarkSeries.dates, benchmarkSeries.values);
+  const proxyValues = proxySeries ? alignValues(proxySeries.dates, proxySeries.values) : [];
+  const finiteValues = [...benchmarkValues, ...proxyValues].filter(Number.isFinite);
+  if (!finiteValues.length) {
+    return;
+  }
+
+  const minValue = Math.min(...finiteValues);
+  const maxValue = Math.max(...finiteValues);
+  const span = Math.max(maxValue - minValue, 0.05);
+  const padding = Math.max(span * 0.14, 0.02);
+  const yMin = Math.max(0, Math.floor((minValue - padding) * 100) / 100);
+  const yMax = Math.ceil((maxValue + padding) * 100) / 100;
+  const tickIndexes = [];
+  const seenMonths = new Set();
+  labels.forEach((label, index) => {
+    const month = String(label).slice(0, 7);
+    if (!seenMonths.has(month)) {
+      seenMonths.add(month);
+      tickIndexes.push(index);
+    }
+  });
+
+  const datasets = [
+    {
+      label: "Public Neo-Cloud Benchmark",
+      data: benchmarkValues,
+      borderColor: "#111827",
+      backgroundColor: "#111827",
+      borderWidth: 2.8,
+      tension: 0.16,
+      pointRadius: 1.8,
+      pointHoverRadius: 5,
+      pointHitRadius: 9,
+      spanGaps: true,
+    },
+  ];
+  if (proxySeries) {
+    datasets.push({
+      label: "EG Neo-Cloud Proxy",
+      data: proxyValues,
+      borderColor: "#0f9f83",
+      backgroundColor: "#0f9f83",
+      borderWidth: 2.2,
+      borderDash: [6, 4],
+      tension: 0.12,
+      pointRadius: 2.2,
+      pointHoverRadius: 5,
+      pointHitRadius: 9,
+      spanGaps: true,
+    });
+  }
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: $${Number(context.parsed.y).toFixed(2)}/GPU-hour`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatYearMonthPeriodLabel(labels[value]),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: yMin,
+          max: yMax,
+          ticks: { color: "#8d8d86", callback: (value) => `$${Number(value).toFixed(2)}`, maxTicksLimit: 7 },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
           border: { color: "#d8d8d2" },
         },
@@ -15383,16 +15501,45 @@ function renderGpuCloudOverview() {
   }
 
   const semiSeries = getGpuSemiAnalysisSeries();
+  const publicBenchmark = easyconomicsGpuIndexData;
+  const publicBenchmarkSeries = Object.values(publicBenchmark.rentalSeries ?? {})
+    .filter((series) => series?.key && series?.dates?.length && series?.values?.length)
+    .sort((left, right) => (left.gpu === "H100" ? -1 : right.gpu === "H100" ? 1 : 0));
   const egIndex = egGpuRentalIndexData;
   const egModelSeries = Object.values(egIndex.models ?? {})
     .filter((series) => series?.display && series?.key && series?.dates?.length && series?.values?.length);
+  const benchmarkProxyKeys = { neo_cloud_h100: "h100_80", neo_cloud_a100: "a100_80" };
+  const benchmarkMarkup = publicBenchmarkSeries
+    .map((series) => {
+      const proxySeries = egIndex.models?.[benchmarkProxyKeys[series.key]];
+      return `
+        <section class="gpu-rental-neo-series">
+          <div class="gpu-rental-neo-head">
+            <div>
+              <span class="gpu-rental-neo-kicker">PUBLIC NEO-CLOUD BENCHMARK</span>
+              <h4>${series.label ?? `${series.market ?? "Neo-Cloud"} / ${series.gpu ?? "GPU"}`}</h4>
+            </div>
+            <strong>$${Number(series.latestValue).toFixed(2)}<small>/GPU-hour</small></strong>
+          </div>
+          <div class="memory-card-meta gpu-term-meta">
+            <span>${series.dates?.[0] ?? "-"} - ${series.latestDate ?? series.dates?.at(-1) ?? "-"}</span>
+            <span>공개 벤치마크</span>
+            <span>EG proxy ${Number.isFinite(proxySeries?.latestValue) ? `$${Number(proxySeries.latestValue).toFixed(2)}` : "N/A"}</span>
+          </div>
+          <div class="memory-chart-wrap gpu-rental-neo-chart">
+            <canvas data-gpu-neo-benchmark="${series.key}"></canvas>
+          </div>
+        </section>`;
+    })
+    .join("");
   const egModelMarkup = egModelSeries
+    .filter((series) => !["h100_80", "a100_80"].includes(series.key))
     .map(
       (series) => `
         <section class="gpu-rental-neo-series">
           <div class="gpu-rental-neo-head">
             <div>
-              <span class="gpu-rental-neo-kicker">MARKET MODEL PRICE</span>
+              <span class="gpu-rental-neo-kicker">EG NEO-CLOUD PROXY</span>
               <h4>${series.label ?? "GPU"}</h4>
             </div>
             <strong>$${Number(series.latestValue).toFixed(2)}<small>/GPU-hour</small></strong>
@@ -15519,15 +15666,18 @@ function renderGpuCloudOverview() {
         <article class="memory-panel gpu-rental-index-panel">
           <div class="us-panel-head">
             <div>
-              <h3>EG GPU Rental Index</h3>
-              <p>공개 원천 카탈로그에서 매일 독립 산출하는 On-demand GPU 임대가격 지수입니다.</p>
+              <h3>Neo-Cloud GPU Rental Benchmark</h3>
+              <p>기존 공개 벤치마크를 복원하고, 같은 화면에서 EG가 독립 산출한 Neo-Cloud proxy와 비교합니다.</p>
             </div>
+          </div>
+          <div class="gpu-rental-neo-grid">
+            ${benchmarkMarkup || '<p class="memory-error">기존 Neo-Cloud 벤치마크 시계열을 불러오지 못했습니다.</p>'}
           </div>
           <div class="gpu-rental-composite-grid">
             <section class="gpu-rental-composite-chart">
               <div class="gpu-rental-neo-head">
                 <div>
-                  <span class="gpu-rental-neo-kicker">FIXED-PANEL COMPOSITE · BASE ${egIndex.baseDate ?? "-"} = 100</span>
+                  <span class="gpu-rental-neo-kicker">INDEPENDENT NEO-CLOUD PROXY · BASE ${egIndex.baseDate ?? "-"} = 100</span>
                   <h4>H100 80GB · A100 80GB · L40S</h4>
                 </div>
                 <strong>${Number(egIndex.latestValue).toFixed(2)}<small>${Number.isFinite(egIndex.weeklyChangePct) ? `${egIndex.weeklyChangePct > 0 ? "+" : ""}${egIndex.weeklyChangePct.toFixed(2)}% WoW` : "WoW N/A"}</small></strong>
@@ -15544,23 +15694,21 @@ function renderGpuCloudOverview() {
             </section>
             <aside class="gpu-rental-method">
               <span class="gpu-rental-neo-kicker">INDEX METHODOLOGY</span>
-              <h4>지수 산식</h4>
+              <h4>독립 proxy 산식</h4>
               <ol>
                 <li><strong>오퍼 정규화</strong><span>인스턴스 시간당 가격 ÷ GPU 개수</span></li>
                 <li><strong>공급자 가격</strong><span>각 공급자의 모델별 On-demand 오퍼 중앙값</span></li>
-                <li><strong>모델 시장가격</strong><span>공급자 중앙값들의 중앙값, 최소 4개 공급자</span></li>
+                <li><strong>Neo-Cloud 가격</strong><span>AWS·Azure·GCP·OCI를 제외한 공급자 중앙값의 중앙값</span></li>
                 <li><strong>모델 상대지수</strong><span>100 × 현재 모델가격 ÷ 기준일 모델가격</span></li>
-                <li><strong>EG 종합지수</strong><span>고정 3모델 상대지수의 중앙값</span></li>
+                <li><strong>EG proxy 지수</strong><span>고정 3모델 상대지수의 중앙값</span></li>
               </ol>
-              <p>옅은 영역은 세 모델 상대지수의 20~80백분위 범위입니다. Spot·예약가격은 제외합니다.</p>
+              <p>기존 공개 벤치마크의 비공개 보정식을 복제한 값은 아닙니다. 공개 오퍼만으로 독립 계산한 비교용 proxy이며 Spot·예약가격은 제외합니다.</p>
             </aside>
           </div>
-          <div class="gpu-rental-neo-grid">
-            ${egModelMarkup || '<p class="memory-error">GPU별 임대가격 시계열을 불러오지 못했습니다.</p>'}
-          </div>
+          ${egModelMarkup ? `<div class="gpu-rental-neo-grid">${egModelMarkup}</div>` : ""}
           <div class="gpu-rental-source-note">
-            <a href="${egIndex.source?.repositoryUrl ?? "https://github.com/dstackai/gpuhunt"}" target="_blank" rel="noreferrer">dstack gpuhunt</a>
-            <span>Source: dstack gpuhunt public catalog (${egIndex.source?.license ?? "MPL-2.0"}) · Calculation: EG Dashboard. 과거는 공개 카탈로그 주간 백필, 배포 이후는 매일 동일 산식으로 누적합니다.</span>
+            <a href="${publicBenchmark.benchmarkSource?.pageUrl ?? "https://www.silicondata.com/products/silicon-index"}" target="_blank" rel="noreferrer">Public Neo-Cloud benchmark</a>
+            <span>기존 시계열은 공개 차트 복원값, 최신값은 Silicon Data 공개 카드 기준입니다. EG proxy는 dstack gpuhunt 공개 카탈로그(${egIndex.source?.license ?? "MPL-2.0"})를 별도 산출하며 두 시계열을 혼합하지 않습니다.</span>
           </div>
         </article>
       </section>
@@ -15595,6 +15743,14 @@ function renderGpuCloudOverview() {
   if (egCompositeCanvas) {
     createEgGpuRentalIndexChart(egCompositeCanvas, egIndex);
   }
+
+  usOverviewRoot.querySelectorAll("[data-gpu-neo-benchmark]").forEach((canvas) => {
+    const series = publicBenchmarkSeries.find((item) => item.key === canvas.dataset.gpuNeoBenchmark);
+    const proxySeries = series ? egIndex.models?.[benchmarkProxyKeys[series.key]] : null;
+    if (series) {
+      createGpuBenchmarkComparisonChart(canvas, series, proxySeries);
+    }
+  });
 
   usOverviewRoot.querySelectorAll("[data-eg-gpu-model]").forEach((canvas) => {
     const series = egModelSeries.find((item) => item.key === canvas.dataset.egGpuModel);

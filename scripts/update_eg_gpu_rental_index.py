@@ -266,6 +266,8 @@ def parse_catalog(catalog_bytes: bytes, version: str) -> dict[str, object]:
             "label": definition["label"],
             "price": rounded(market_price),
             "providerCount": provider_count,
+            "neoCloudProviderCount": len(neo_cloud_values),
+            "hyperscalerProviderCount": len(hyperscaler_values),
             "offerCount": offer_count,
             "providerMedians": dict(sorted(provider_medians.items())),
             "hyperscalerMedian": rounded(hyperscaler_median),
@@ -340,7 +342,11 @@ def compact_snapshot(snapshot: dict[str, object]) -> dict[str, object]:
         "models": {
             key: {
                 "price": model.get("price"),
+                "neoCloudMedian": model.get("neoCloudMedian"),
+                "hyperscalerMedian": model.get("hyperscalerMedian"),
                 "providerCount": model.get("providerCount"),
+                "neoCloudProviderCount": model.get("neoCloudProviderCount"),
+                "hyperscalerProviderCount": model.get("hyperscalerProviderCount"),
                 "offerCount": model.get("offerCount"),
             }
             for key, model in models.items()
@@ -369,7 +375,7 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             item
             for item in ordered
             if all(
-                number(((item.get("models") or {}).get(key) or {}).get("price")) is not None
+                number(((item.get("models") or {}).get(key) or {}).get("neoCloudMedian")) is not None
                 for key in index_keys
             )
         ),
@@ -379,7 +385,7 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
         raise RuntimeError("No snapshot has complete coverage for the fixed index panel")
     base_date = str(base_snapshot["date"])
     base_prices = {
-        key: float(base_snapshot["models"][key]["price"])
+        key: float(base_snapshot["models"][key]["neoCloudMedian"])
         for key in index_keys
     }
 
@@ -397,6 +403,8 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             "display": definition["display"],
             "dates": [],
             "values": [],
+            "allMarketValues": [],
+            "hyperscalerValues": [],
             "providerCounts": [],
             "offerCounts": [],
         }
@@ -410,10 +418,12 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
         relatives: list[float] = []
         for key, series in model_series.items():
             model = models.get(key) if isinstance(models.get(key), dict) else {}
-            price = number(model.get("price"))
+            price = number(model.get("neoCloudMedian"))
             series["dates"].append(snapshot_date)
             series["values"].append(rounded(price))
-            series["providerCounts"].append(int(number(model.get("providerCount")) or 0))
+            series["allMarketValues"].append(rounded(number(model.get("price"))))
+            series["hyperscalerValues"].append(rounded(number(model.get("hyperscalerMedian"))))
+            series["providerCounts"].append(int(number(model.get("neoCloudProviderCount")) or 0))
             series["offerCounts"].append(int(number(model.get("offerCount")) or 0))
             if key in base_prices and price is not None:
                 relatives.append(100 * price / base_prices[key])
@@ -449,7 +459,7 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             "calculation": "EG Dashboard",
         },
         "methodology": {
-            "name": "EG GPU Rental Index",
+            "name": "EG Neo-Cloud GPU Rental Proxy",
             "baseDate": base_date,
             "baseValue": 100,
             "indexPanel": index_keys,
@@ -457,8 +467,8 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             "historyFrequency": "Weekly public-catalog backfill; daily snapshots from deployment onward",
             "unitFormula": "offer USD per GPU-hour = instance hourly price / GPU count",
             "providerFormula": "provider model price = median of eligible on-demand offers",
-            "modelFormula": "market model price = median of provider medians",
-            "indexFormula": "EG index = median of fixed-panel model price relatives, base date = 100",
+            "modelFormula": "neo-cloud model proxy = median of non-hyperscaler provider medians",
+            "indexFormula": "EG neo-cloud proxy = median of fixed-panel neo-cloud price relatives, base date = 100",
             "bandFormula": "dispersion band = 20th to 80th percentile of fixed-panel model price relatives",
         },
         "baseDate": base_date,

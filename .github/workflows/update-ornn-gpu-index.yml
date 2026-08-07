@@ -3,7 +3,7 @@ name: Update GPU Price Indexes
 on:
   workflow_dispatch:
   schedule:
-    # 01:37 UTC = 10:37 KST, after gpuhunt's hourly catalog publication.
+    # 01:37 UTC = 10:37 KST, after the public benchmark and gpuhunt catalog refreshes.
     - cron: "37 1 * * *"
 
 permissions:
@@ -28,16 +28,20 @@ jobs:
       - name: Refresh independent EG GPU Rental Index
         run: python scripts/update_eg_gpu_rental_index.py
 
+      - name: Refresh public Neo-Cloud benchmark
+        continue-on-error: true
+        run: python scripts/update_gpu_neo_cloud_benchmark.py
+
       - name: Commit updated GPU index histories
         run: |
-          if git diff --quiet -- data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js; then
+          if git diff --quiet -- data/ornn-gpu-index-data.js data/easyconomics-gpu-index-data.js data/eg-gpu-rental-index-data.js; then
             echo "No GPU index changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js
+          python scripts/bump_data_cache_versions.py data/ornn-gpu-index-data.js data/easyconomics-gpu-index-data.js data/eg-gpu-rental-index-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js index.html
+          git add data/ornn-gpu-index-data.js data/easyconomics-gpu-index-data.js data/eg-gpu-rental-index-data.js index.html
           git commit -m "Update GPU price index histories" || exit 0
           git pull --rebase origin main
           git push
