@@ -573,6 +573,17 @@
       "sharesOutstanding": 624818725
     },
     {
+      "ticker": "RSP",
+      "name": "Invesco S&P 500 Equal Weight ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 155552992
+    },
+    {
       "ticker": "SATS",
       "name": "EchoStar Corporation",
       "memberships": {
