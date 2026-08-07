@@ -15224,7 +15224,7 @@ function createGpuBenchmarkComparisonChart(canvas, benchmarkSeries, proxySeries)
 
   const datasets = [
     {
-      label: "Public Neo-Cloud Benchmark",
+      label: "Easyconomics captured series",
       data: benchmarkValues,
       borderColor: "#111827",
       backgroundColor: "#111827",
@@ -15516,14 +15516,14 @@ function renderGpuCloudOverview() {
         <section class="gpu-rental-neo-series">
           <div class="gpu-rental-neo-head">
             <div>
-              <span class="gpu-rental-neo-kicker">PUBLIC NEO-CLOUD BENCHMARK</span>
+              <span class="gpu-rental-neo-kicker">EASYCONOMICS CAPTURED SERIES</span>
               <h4>${series.label ?? `${series.market ?? "Neo-Cloud"} / ${series.gpu ?? "GPU"}`}</h4>
             </div>
             <strong>$${Number(series.latestValue).toFixed(2)}<small>/GPU-hour</small></strong>
           </div>
           <div class="memory-card-meta gpu-term-meta">
             <span>${series.dates?.[0] ?? "-"} - ${series.latestDate ?? series.dates?.at(-1) ?? "-"}</span>
-            <span>공개 벤치마크</span>
+            <span>공개 화면 복원값</span>
             <span>EG proxy ${Number.isFinite(proxySeries?.latestValue) ? `$${Number(proxySeries.latestValue).toFixed(2)}` : "N/A"}</span>
           </div>
           <div class="memory-chart-wrap gpu-rental-neo-chart">
@@ -15667,7 +15667,7 @@ function renderGpuCloudOverview() {
           <div class="us-panel-head">
             <div>
               <h3>Neo-Cloud GPU Rental Benchmark</h3>
-              <p>기존 공개 벤치마크를 복원하고, 같은 화면에서 EG가 독립 산출한 Neo-Cloud proxy와 비교합니다.</p>
+              <p>Easyconomics 공개 화면에서 복원한 기준선과 dstack gpuhunt 원자료로 독립 산출한 EG Neo-Cloud proxy를 비교합니다.</p>
             </div>
           </div>
           <div class="gpu-rental-neo-grid">
@@ -15707,8 +15707,8 @@ function renderGpuCloudOverview() {
           </div>
           ${egModelMarkup ? `<div class="gpu-rental-neo-grid">${egModelMarkup}</div>` : ""}
           <div class="gpu-rental-source-note">
-            <a href="${publicBenchmark.benchmarkSource?.pageUrl ?? "https://www.silicondata.com/products/silicon-index"}" target="_blank" rel="noreferrer">Public Neo-Cloud benchmark</a>
-            <span>기존 시계열은 공개 차트 복원값, 최신값은 Silicon Data 공개 카드 기준입니다. EG proxy는 dstack gpuhunt 공개 카탈로그(${egIndex.source?.license ?? "MPL-2.0"})를 별도 산출하며 두 시계열을 혼합하지 않습니다.</span>
+            <a href="${publicBenchmark.benchmarkSource?.pageUrl ?? "https://easyconomics.com/gpu-price-index"}" target="_blank" rel="noreferrer">Easyconomics GPU Price Index</a>
+            <span>검은 선은 Easyconomics 공개 화면을 복원한 2026-08-02까지의 참고 시계열이며 자동 연장하지 않습니다. Easyconomics의 현재 원천과 EG proxy는 모두 dstack gpuhunt 공개 카탈로그를 사용하지만, 원본 화면의 세부 필터가 공개되지 않아 두 값을 동일 시계열로 연결하지 않습니다.</span>
           </div>
         </article>
       </section>
