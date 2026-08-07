@@ -28,6 +28,7 @@ SOURCE_REPOSITORY_URL = "https://github.com/dstackai/gpuhunt"
 KNOWN_BASE_VERSION = "20250622-9376"
 DEFAULT_START_DATE = date(2025, 6, 22)
 MINIMUM_PROVIDERS = 4
+SMOOTHING_HALF_LIFE_DAYS = 105
 
 # Verified latest successful public catalog for each weekly backfill date. Keeping
 # this map local makes rebuilds deterministic and avoids consuming GitHub's API
@@ -207,6 +208,31 @@ def percentile(values: Iterable[float], quantile: float) -> float | None:
 
 def rounded(value: float | None, digits: int = 4) -> float | None:
     return round(value, digits) if value is not None else None
+
+
+def ewma_irregular(
+    labels: list[str],
+    values: list[float | None],
+    half_life_days: int,
+) -> list[float | None]:
+    smoothed_values: list[float | None] = []
+    previous_date: date | None = None
+    previous_value: float | None = None
+    for label, value in zip(labels, values):
+        current_date = date.fromisoformat(label)
+        if value is None:
+            smoothed_values.append(None)
+        elif previous_value is None or previous_date is None:
+            previous_value = float(value)
+            smoothed_values.append(rounded(previous_value))
+        else:
+            elapsed_days = max((current_date - previous_date).days, 1)
+            alpha = 1 - 0.5 ** (elapsed_days / half_life_days)
+            previous_value += alpha * (float(value) - previous_value)
+            smoothed_values.append(rounded(previous_value))
+        if value is not None:
+            previous_date = current_date
+    return smoothed_values
 
 
 def parse_catalog(catalog_bytes: bytes, version: str) -> dict[str, object]:
@@ -403,6 +429,7 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             "display": definition["display"],
             "dates": [],
             "values": [],
+            "rawValues": [],
             "allMarketValues": [],
             "hyperscalerValues": [],
             "providerCounts": [],
@@ -415,18 +442,29 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
         snapshot_date = str(snapshot.get("date") or "")
         models = snapshot.get("models") if isinstance(snapshot.get("models"), dict) else {}
         labels.append(snapshot_date)
-        relatives: list[float] = []
         for key, series in model_series.items():
             model = models.get(key) if isinstance(models.get(key), dict) else {}
             price = number(model.get("neoCloudMedian"))
             series["dates"].append(snapshot_date)
-            series["values"].append(rounded(price))
+            series["rawValues"].append(rounded(price))
             series["allMarketValues"].append(rounded(number(model.get("price"))))
             series["hyperscalerValues"].append(rounded(number(model.get("hyperscalerMedian"))))
             series["providerCounts"].append(int(number(model.get("neoCloudProviderCount")) or 0))
             series["offerCounts"].append(int(number(model.get("offerCount")) or 0))
-            if key in base_prices and price is not None:
-                relatives.append(100 * price / base_prices[key])
+
+    for series in model_series.values():
+        series["values"] = ewma_irregular(
+            labels,
+            series["rawValues"],
+            SMOOTHING_HALF_LIFE_DAYS,
+        )
+
+    for index in range(len(labels)):
+        relatives = [
+            100 * float(model_series[key]["values"][index]) / base_prices[key]
+            for key in index_keys
+            if model_series[key]["values"][index] is not None
+        ]
         if len(relatives) == len(index_keys):
             index_values.append(rounded(statistics.median(relatives)))
             band_low_values.append(rounded(percentile(relatives, 0.2)))
@@ -459,7 +497,7 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             "calculation": "EG Dashboard",
         },
         "methodology": {
-            "name": "EG Neo-Cloud GPU Rental Proxy",
+            "name": "EG Smoothed Neo-Cloud GPU Rental Index",
             "baseDate": base_date,
             "baseValue": 100,
             "indexPanel": index_keys,
@@ -467,8 +505,9 @@ def build_payload(snapshots: list[dict[str, object]], latest_full_snapshot: dict
             "historyFrequency": "Weekly public-catalog backfill; daily snapshots from deployment onward",
             "unitFormula": "offer USD per GPU-hour = instance hourly price / GPU count",
             "providerFormula": "provider model price = median of eligible on-demand offers",
-            "modelFormula": "neo-cloud model proxy = median of non-hyperscaler provider medians",
-            "indexFormula": "EG neo-cloud proxy = median of fixed-panel neo-cloud price relatives, base date = 100",
+            "modelFormula": "raw neo-cloud model price = median of non-hyperscaler provider medians",
+            "smoothingFormula": f"calendar-time EWMA of raw model price, half-life = {SMOOTHING_HALF_LIFE_DAYS} days",
+            "indexFormula": "EG smoothed neo-cloud index = median of fixed-panel smoothed model price relatives, base date = 100",
             "bandFormula": "dispersion band = 20th to 80th percentile of fixed-panel model price relatives",
         },
         "baseDate": base_date,
