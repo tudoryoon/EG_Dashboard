@@ -492,6 +492,179 @@ const state = {
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
   openrouterScale: "linear",
 };
+
+const DASHBOARD_ROUTE_META = {
+  DailyBriefing: { slug: "daily-briefing" },
+  Screening: {
+    slug: "screening",
+    viewStateKey: "screeningView",
+    defaultView: "RS",
+    views: {
+      VIX: "vix",
+      Breadth: "breadth",
+      RS: "rs",
+      TrendScore: "trend-score",
+      Canslim: "canslim",
+    },
+  },
+  Market: {
+    slug: "market",
+    viewStateKey: "marketView",
+    defaultView: "Index",
+    views: {
+      Index: "index",
+      Macro: "macro",
+      Liquidity: "liquidity",
+      Valuation: "valuation",
+      FxCommodities: "fx-commodities",
+    },
+    nestedViews: {
+      Index: {
+        viewStateKey: "marketIndexView",
+        defaultView: "Trend",
+        views: {
+          Trend: "trend",
+          Total: "total-dashboard",
+        },
+      },
+    },
+  },
+  Tech: {
+    slug: "tech",
+    viewStateKey: "techView",
+    defaultView: "LLM",
+    views: {
+      LLM: "llm",
+      Cloud: "cloud",
+      BigTech: "capex-fcf",
+      Semis: "semis",
+      PowerInfra: "power-infra",
+    },
+    nestedViews: {
+      Semis: {
+        viewStateKey: "semisView",
+        defaultView: "MemorySpot",
+        views: {
+          MemorySpot: "memory-data",
+          GPUCloud: "gpu-rental-price",
+        },
+      },
+    },
+  },
+  Flows: {
+    slug: "flows",
+    viewStateKey: "flowsView",
+    defaultView: "EtfStatus",
+    views: {
+      EtfStatus: "etf-status",
+      Cds: "cds",
+    },
+  },
+  Taiwan: { slug: "taiwan" },
+  Research: {
+    slug: "research",
+    viewStateKey: "researchView",
+    defaultView: "DataCenter",
+    views: {
+      DataCenter: "data-center",
+      MemoryCapa: "memory-capa",
+      ModelTrends: "openrouter",
+      Comparisons: "nvda-vs-memory",
+      M7: "m7",
+    },
+  },
+};
+
+let isApplyingDashboardRoute = false;
+
+function findDashboardRouteKey(values, slug) {
+  const normalizedSlug = String(slug ?? "").toLowerCase();
+  return Object.keys(values ?? {}).find((key) => values[key].toLowerCase() === normalizedSlug) ?? "";
+}
+
+function getDashboardRouteParts(hash = window.location.hash) {
+  return String(hash ?? "")
+    .replace(/^#\/?/, "")
+    .split("/")
+    .filter(Boolean)
+    .map((part) => {
+      try {
+        return decodeURIComponent(part).toLowerCase();
+      } catch {
+        return part.toLowerCase();
+      }
+    });
+}
+
+function buildDashboardRouteHash() {
+  const tabKey = DASHBOARD_ROUTE_META[state.tab] ? state.tab : "DailyBriefing";
+  const route = DASHBOARD_ROUTE_META[tabKey];
+  const parts = [route.slug];
+
+  if (route.viewStateKey) {
+    const viewKey = route.views[state[route.viewStateKey]] ? state[route.viewStateKey] : route.defaultView;
+    parts.push(route.views[viewKey]);
+    const nestedRoute = route.nestedViews?.[viewKey];
+    if (nestedRoute) {
+      const nestedViewKey = nestedRoute.views[state[nestedRoute.viewStateKey]]
+        ? state[nestedRoute.viewStateKey]
+        : nestedRoute.defaultView;
+      parts.push(nestedRoute.views[nestedViewKey]);
+    }
+  }
+
+  return `#/${parts.join("/")}`;
+}
+
+function applyDashboardRouteFromHash(hash = window.location.hash) {
+  const parts = getDashboardRouteParts(hash);
+  const requestedTab = Object.keys(DASHBOARD_ROUTE_META).find(
+    (tabKey) => DASHBOARD_ROUTE_META[tabKey].slug === parts[0],
+  );
+  const tabKey = requestedTab || "DailyBriefing";
+  const route = DASHBOARD_ROUTE_META[tabKey];
+
+  state.tab = tabKey;
+  state.currency = tabKey === "Taiwan" ? primaryTabMeta.Taiwan.defaultCurrency : "USD";
+
+  if (route.viewStateKey) {
+    const viewKey = findDashboardRouteKey(route.views, parts[1]) || route.defaultView;
+    state[route.viewStateKey] = viewKey;
+    const nestedRoute = route.nestedViews?.[viewKey];
+    if (nestedRoute) {
+      const nestedViewKey = findDashboardRouteKey(nestedRoute.views, parts[2]) || nestedRoute.defaultView;
+      state[nestedRoute.viewStateKey] = nestedViewKey;
+    }
+  }
+
+  return buildDashboardRouteHash();
+}
+
+function syncDashboardRoute({ replace = false } = {}) {
+  if (isApplyingDashboardRoute) {
+    return;
+  }
+  const nextHash = buildDashboardRouteHash();
+  if (window.location.hash === nextHash) {
+    return;
+  }
+  const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+  window.history[replace ? "replaceState" : "pushState"]({ dashboardRoute: nextHash }, "", nextUrl);
+}
+
+function handleDashboardRouteChange() {
+  if (window.location.hash === buildDashboardRouteHash()) {
+    return;
+  }
+  isApplyingDashboardRoute = true;
+  const canonicalHash = applyDashboardRouteFromHash();
+  render();
+  isApplyingDashboardRoute = false;
+  if (window.location.hash !== canonicalHash) {
+    syncDashboardRoute({ replace: true });
+  }
+}
+
 const marketCanslimAnalysisCache = new Map();
 let marketCanslimDirectionCache = null;
 const marketRsRowByTicker = new Map((marketRsData.rows ?? []).map((row) => [row.ticker, row]));
@@ -20879,6 +21052,7 @@ function renderOpenrouterOverview() {
 }
 
 function render() {
+  syncDashboardRoute();
   destroyCharts();
   ensureValidSelection();
   const showRsToolbar = state.tab === "Screening" && ["RS", "TrendScore", "Canslim"].includes(state.screeningView);
@@ -21039,6 +21213,15 @@ sortSelect.addEventListener("change", (event) => {
   state.sort = event.target.value;
   render();
 });
+
+isApplyingDashboardRoute = true;
+const initialDashboardRouteHash = applyDashboardRouteFromHash();
+isApplyingDashboardRoute = false;
+if (window.location.hash !== initialDashboardRouteHash) {
+  syncDashboardRoute({ replace: true });
+}
+window.addEventListener("popstate", handleDashboardRouteChange);
+window.addEventListener("hashchange", handleDashboardRouteChange);
 
 render();
 refreshBrandMeta();
