@@ -33,6 +33,10 @@ body {
 }
 
 .topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
   padding: 6px 0 18px;
   border-bottom: 1px solid #ddddD6;
 }
@@ -75,6 +79,30 @@ h1 {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.header-calendar-link {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 15px;
+  border: 1px solid #9bcfc8;
+  border-radius: 8px;
+  background: #effaf8;
+  color: #126a60;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.header-calendar-link:hover,
+.header-calendar-link.active {
+  border-color: #148c7e;
+  background: #148c7e;
+  color: #fff;
 }
 
 .toolbar {

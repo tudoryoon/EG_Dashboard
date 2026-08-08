@@ -115,9 +115,10 @@ def load_daily_briefing_universe() -> dict[str, dict[str, str]]:
 
 def week_bounds(today: date) -> list[tuple[str, date, date]]:
     monday = today - timedelta(days=today.weekday())
+    keys = ("this-week", "next-week", "week-3", "week-4")
     return [
-        ("this-week", monday, monday + timedelta(days=6)),
-        ("next-week", monday + timedelta(days=7), monday + timedelta(days=13)),
+        (key, monday + timedelta(days=index * 7), monday + timedelta(days=(index + 1) * 7 - 1))
+        for index, key in enumerate(keys)
     ]
 
 
@@ -202,7 +203,7 @@ def build_earnings_events(
                         "kind": "earnings",
                         "ticker": raw_symbol,
                         "session": session_code,
-                        "title": f"{company_name} 실적 발표",
+                        "title": f"{company_name} ({raw_symbol}) 실적 발표",
                         "note": " · ".join(details),
                         "sector": match["sector"],
                         "sourceLabel": "Nasdaq",
@@ -235,6 +236,12 @@ def main() -> None:
     earnings = build_earnings_events(universe, start, end)
 
     weeks = []
+    week_labels = {
+        "this-week": "이번 주",
+        "next-week": "다음 주",
+        "week-3": "3주차",
+        "week-4": "4주차",
+    }
     for key, week_start, week_end in bounds:
         events = [
             item
@@ -245,7 +252,7 @@ def main() -> None:
         weeks.append(
             {
                 "key": key,
-                "label": "이번 주" if key == "this-week" else "다음 주",
+                "label": week_labels[key],
                 "range": format_range(week_start, week_end),
                 "status": week_status(today, week_start, week_end),
                 "events": events,

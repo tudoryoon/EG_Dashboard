@@ -153,7 +153,6 @@ const researchSubtabMeta = {
   MemoryCapa: { label: "Memory CAPA" },
   Comparisons: { label: "NVDA vs Memory" },
   M7: { label: "M7" },
-  Calendar: { label: "Calendar" },
 };
 
 const marketIndexSubtabMeta = {
@@ -691,6 +690,7 @@ const cardTemplate = document.querySelector("#company-card-template");
 const usOverviewRoot = document.querySelector("#us-overview");
 const toolbarRow = document.querySelector(".toolbar .toolbar-row-filters");
 const brandMeta = document.querySelector(".brand-meta");
+const headerCalendarLink = document.querySelector("#header-calendar-link");
 let searchRenderTimer = null;
 
 function resetTrendScoreCardLimit() {
@@ -16828,7 +16828,7 @@ function renderStudyCalendarOverview() {
 
   const weeks = studyCalendarData.weeks ?? [];
   if (!weeks.length) {
-    renderPlaceholderOverview("Calendar", "이번 주와 다음 주 일정 데이터가 없습니다.");
+    renderPlaceholderOverview("Calendar", "향후 4주 일정 데이터가 없습니다.");
     return;
   }
 
@@ -16864,12 +16864,16 @@ function renderStudyCalendarOverview() {
                 ? `${event.ticker || "실적"}${event.session ? ` (${event.session})` : ""}`
                 : "MACRO";
               const eventTitle = [event.title, event.note].filter(Boolean).join(" · ");
+              const displayTitle =
+                isEarnings && event.ticker && !String(event.title || "").includes(`(${event.ticker})`)
+                  ? `${event.title || "-"} (${event.ticker})`
+                  : event.title || "-";
               return `
                 <a class="study-calendar-chip study-calendar-chip-${isEarnings ? "earnings" : "macro"}"
                   href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer"
                   title="${escapeHtml(eventTitle)}">
                   <span><b>${escapeHtml(event.time || "미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
-                  <strong>${escapeHtml(event.title || "-")}</strong>
+                  <strong>${escapeHtml(displayTitle)}</strong>
                 </a>`;
             })
             .join("")
@@ -16909,7 +16913,7 @@ function renderStudyCalendarOverview() {
         <div class="study-calendar-head">
           <div>
             <p>RESEARCH CALENDAR</p>
-            <h2>이번 주 · 다음 주 일정</h2>
+            <h2>향후 4주 일정</h2>
             <span>Daily Briefing 전체 종목의 실적 발표와 Macro 추적 지표를 정리했습니다.</span>
           </div>
           <time>Updated ${escapeHtml(studyCalendarData.updatedAt || "-")}</time>
@@ -20952,7 +20956,7 @@ function renderSummary(list) {
     } else if (state.researchView === "M7") {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
     } else if (state.researchView === "Calendar") {
-      summaryText.textContent = "이번 주와 다음 주의 주요 실적 발표 및 미국 매크로 일정 · KST";
+      summaryText.textContent = "향후 4주의 주요 실적 발표 및 미국 매크로 일정 · KST";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }
@@ -21461,6 +21465,7 @@ function render() {
       searchInput.placeholder = "Search company...";
     }
   }
+  headerCalendarLink?.classList.toggle("active", state.tab === "Research" && state.researchView === "Calendar");
   renderCountries();
   renderSubtabs();
   renderNestedSubtabs();
