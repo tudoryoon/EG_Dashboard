@@ -22,6 +22,7 @@ const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", 
 const studyDataCenterDeals = window.studyDataCenterDeals ?? { updatedAt: "", scope: "", companies: [], statusLegend: [], deals: [] };
 const studyEtfFlowData = window.studyEtfFlowData ?? { updatedAt: "", startDate: "", defaultRange: "ytd", ranges: [], methodology: {}, sources: [], items: {} };
 const studyCdsData = window.studyCdsData ?? { updatedAt: "", generatedAt: "", startDate: "", defaultRange: "1y", ranges: [], source: {}, methodology: {}, dates: [], items: {} };
+const studyCalendarData = window.studyCalendarData ?? { updatedAt: "", timezone: "Asia/Seoul", methodology: {}, weeks: [], fallbackSources: [] };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -152,6 +153,7 @@ const researchSubtabMeta = {
   ModelTrends: { label: "Model Trends" },
   Comparisons: { label: "NVDA vs Memory" },
   M7: { label: "M7" },
+  Calendar: { label: "Calendar" },
 };
 
 const marketIndexSubtabMeta = {
@@ -571,6 +573,7 @@ const DASHBOARD_ROUTE_META = {
       ModelTrends: "openrouter",
       Comparisons: "nvda-vs-memory",
       M7: "m7",
+      Calendar: "calendar",
     },
   },
 };
@@ -16787,6 +16790,93 @@ function renderStudyCdsOverview() {
   });
 }
 
+function formatStudyCalendarDate(value) {
+  const date = new Date(`${value}T12:00:00+09:00`);
+  if (Number.isNaN(date.getTime())) return value || "-";
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} ${weekday}`;
+}
+
+function renderStudyCalendarOverview() {
+  destroyCharts();
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const weeks = studyCalendarData.weeks ?? [];
+  if (!weeks.length) {
+    renderPlaceholderOverview("Calendar", "이번 주와 다음 주 일정 데이터가 없습니다.");
+    return;
+  }
+
+  const weekMarkup = weeks
+    .map((week) => {
+      const eventMarkup = (week.events ?? [])
+        .map((event) => {
+          const isEarnings = event.kind === "earnings";
+          const typeLabel = isEarnings ? `${event.ticker || "실적"} (${event.session || "-"})` : "MACRO";
+          const noteMarkup = event.note ? `<small>${escapeHtml(event.note)}</small>` : "";
+          return `
+            <article class="study-calendar-event study-calendar-event-${isEarnings ? "earnings" : "macro"}">
+              <time class="study-calendar-date" datetime="${escapeHtml(event.date)}">${escapeHtml(formatStudyCalendarDate(event.date))}</time>
+              <strong class="study-calendar-time">${escapeHtml(event.time || "미정")}</strong>
+              <span class="study-calendar-type${event.session ? ` is-${escapeHtml(event.session.toLowerCase())}` : ""}">${escapeHtml(typeLabel)}</span>
+              <div class="study-calendar-copy">
+                <strong>${escapeHtml(event.title || "-")}</strong>
+                ${noteMarkup}
+              </div>
+              <a href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(event.sourceLabel || "Source")}</a>
+            </article>`;
+        })
+        .join("");
+
+      return `
+        <section class="study-calendar-week">
+          <header>
+            <div>
+              <span>${escapeHtml(week.label || "")}</span>
+              <strong>${escapeHtml(week.range || "")}</strong>
+            </div>
+            <em class="study-calendar-status study-calendar-status-${week.status === "완료" ? "done" : "upcoming"}">${escapeHtml(week.status || "")}</em>
+          </header>
+          <div class="study-calendar-events">${eventMarkup}</div>
+        </section>`;
+    })
+    .join("");
+
+  const fallbackMarkup = (studyCalendarData.fallbackSources ?? [])
+    .map(
+      (source) =>
+        `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.label)}</a>`,
+    )
+    .join("");
+
+  usOverviewRoot.innerHTML = `
+    <section class="market-overview study-calendar-page">
+      <section class="us-panel study-calendar-panel">
+        <div class="study-calendar-head">
+          <div>
+            <p>RESEARCH CALENDAR</p>
+            <h2>이번 주 · 다음 주 일정</h2>
+            <span>주요 실적 발표와 Macro 추적 지표만 간단히 정리했습니다.</span>
+          </div>
+          <time>Updated ${escapeHtml(studyCalendarData.updatedAt || "-")}</time>
+        </div>
+        <div class="study-calendar-legend">
+          <span><b>(B)</b> 미국 장전</span>
+          <span><b>(A)</b> 미국 장후</span>
+          <span>날짜·시각은 모두 <b>KST</b></span>
+        </div>
+        <div class="study-calendar-grid">${weekMarkup}</div>
+        <footer class="study-calendar-notes">
+          <p><strong>기준</strong> ${escapeHtml(studyCalendarData.methodology?.macro || "")} · ${escapeHtml(studyCalendarData.methodology?.earnings || "")}</p>
+          <p>${escapeHtml(studyCalendarData.methodology?.warning || "")}</p>
+          <div>${fallbackMarkup}</div>
+        </footer>
+      </section>
+    </section>`;
+}
+
 function renderStudyOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -20793,6 +20883,8 @@ function renderSummary(list) {
       summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
     } else if (state.researchView === "M7") {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
+    } else if (state.researchView === "Calendar") {
+      summaryText.textContent = "이번 주와 다음 주의 주요 실적 발표 및 미국 매크로 일정 · KST";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }
@@ -21253,6 +21345,10 @@ function render() {
     }
     if (state.researchView === "M7") {
       renderUSOverview();
+      return;
+    }
+    if (state.researchView === "Calendar") {
+      renderStudyCalendarOverview();
       return;
     }
     renderStudyOverview();

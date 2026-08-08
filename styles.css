@@ -4250,6 +4250,250 @@ h1 {
   margin-top: 12px;
 }
 
+.study-calendar-page {
+  min-width: 0;
+}
+
+.study-calendar-panel {
+  min-width: 0;
+  padding: 24px;
+}
+
+.study-calendar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.study-calendar-head p {
+  margin: 0 0 7px;
+  color: #2f7a55;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.study-calendar-head h2 {
+  margin: 0;
+  color: #20201d;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  letter-spacing: 0;
+}
+
+.study-calendar-head span,
+.study-calendar-head > time {
+  color: #777770;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.study-calendar-head > div > span {
+  display: block;
+  margin-top: 7px;
+}
+
+.study-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 18px 0 12px;
+  padding: 10px 0;
+  border-top: 1px solid #e2e2dc;
+  border-bottom: 1px solid #e2e2dc;
+  color: #66665f;
+  font-size: 0.78rem;
+}
+
+.study-calendar-legend b {
+  color: #20201d;
+}
+
+.study-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.study-calendar-week {
+  min-width: 0;
+}
+
+.study-calendar-week > header {
+  display: flex;
+  min-height: 55px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 10px;
+}
+
+.study-calendar-week > header div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.study-calendar-week > header span {
+  color: #20201d;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.study-calendar-week > header strong {
+  color: #777770;
+  font-size: 0.76rem;
+}
+
+.study-calendar-status {
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.study-calendar-status-done {
+  color: #7b7b74;
+}
+
+.study-calendar-status-upcoming {
+  color: #13734a;
+}
+
+.study-calendar-events {
+  border-top: 2px solid #20201d;
+}
+
+.study-calendar-event {
+  display: grid;
+  grid-template-columns: 66px 72px 76px minmax(0, 1fr) auto;
+  min-height: 66px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 2px;
+  border-bottom: 1px solid #e7e7e2;
+}
+
+.study-calendar-event::before {
+  width: 3px;
+  height: 34px;
+  border-radius: 2px;
+  background: #d74a3a;
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+
+.study-calendar-event-macro::before {
+  background: #2f7a55;
+}
+
+.study-calendar-date {
+  grid-column: 1;
+  grid-row: 1;
+  padding-left: 9px;
+  color: #555550;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.study-calendar-time {
+  color: #20201d;
+  font-size: 0.78rem;
+}
+
+.study-calendar-type {
+  color: #2f7a55;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.study-calendar-type.is-a,
+.study-calendar-type.is-b {
+  color: #c4372b;
+}
+
+.study-calendar-copy {
+  min-width: 0;
+}
+
+.study-calendar-copy strong,
+.study-calendar-copy small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.study-calendar-copy strong {
+  color: #20201d;
+  font-size: 0.82rem;
+}
+
+.study-calendar-copy small {
+  margin-top: 3px;
+  color: #85857e;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.study-calendar-event > a {
+  color: #777770;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.study-calendar-notes {
+  display: grid;
+  gap: 4px;
+  margin-top: 18px;
+  padding-top: 13px;
+  border-top: 1px solid #d8d8d2;
+  color: #777770;
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.study-calendar-notes p {
+  margin: 0;
+}
+
+.study-calendar-notes div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.study-calendar-notes a {
+  color: #2f7a55;
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .study-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .study-calendar-panel {
+    padding: 18px 14px;
+  }
+
+  .study-calendar-head {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .study-calendar-event {
+    grid-template-columns: 58px 64px 68px minmax(0, 1fr);
+  }
+
+  .study-calendar-event > a {
+    grid-column: 4;
+  }
+}
+
 .study-cds-page {
   min-width: 0;
 }
