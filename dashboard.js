@@ -16798,6 +16798,28 @@ function formatStudyCalendarDate(value) {
   return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} ${weekday}`;
 }
 
+function createStudyCalendarDates(start, end) {
+  if (!start || !end) return [];
+  const cursor = new Date(`${start}T00:00:00Z`);
+  const last = new Date(`${end}T00:00:00Z`);
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(last.getTime())) return [];
+  const dates = [];
+  while (cursor <= last && dates.length < 42) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
+function formatStudyCalendarDayNumber(value) {
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value || "-";
+  return {
+    month: `${date.getUTCMonth() + 1}월`,
+    day: String(date.getUTCDate()),
+  };
+}
+
 function renderStudyCalendarOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -16810,39 +16832,68 @@ function renderStudyCalendarOverview() {
     return;
   }
 
-  const weekMarkup = weeks
-    .map((week) => {
-      const eventMarkup = (week.events ?? [])
-        .map((event) => {
-          const isEarnings = event.kind === "earnings";
-          const typeLabel = isEarnings ? `${event.ticker || "실적"} (${event.session || "-"})` : "MACRO";
-          const noteMarkup = event.note ? `<small>${escapeHtml(event.note)}</small>` : "";
-          return `
-            <article class="study-calendar-event study-calendar-event-${isEarnings ? "earnings" : "macro"}">
-              <time class="study-calendar-date" datetime="${escapeHtml(event.date)}">${escapeHtml(formatStudyCalendarDate(event.date))}</time>
-              <strong class="study-calendar-time">${escapeHtml(event.time || "미정")}</strong>
-              <span class="study-calendar-type${event.session ? ` is-${escapeHtml(event.session.toLowerCase())}` : ""}">${escapeHtml(typeLabel)}</span>
-              <div class="study-calendar-copy">
-                <strong>${escapeHtml(event.title || "-")}</strong>
-                ${noteMarkup}
-              </div>
-              <a href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer">${escapeHtml(event.sourceLabel || "Source")}</a>
-            </article>`;
-        })
-        .join("");
+  const allEvents = weeks.flatMap((week) => week.events ?? []);
+  const eventsByDate = new Map();
+  allEvents.forEach((event) => {
+    if (!event.date) return;
+    if (!eventsByDate.has(event.date)) eventsByDate.set(event.date, []);
+    eventsByDate.get(event.date).push(event);
+  });
 
+  const windowStart = studyCalendarData.coverage?.windowStart || weeks[0]?.events?.[0]?.date || "";
+  const windowEnd = studyCalendarData.coverage?.windowEnd || weeks.at(-1)?.events?.at(-1)?.date || "";
+  const calendarDates = createStudyCalendarDates(windowStart, windowEnd);
+  const referenceDate = studyCalendarData.updatedAt || new Date().toISOString().slice(0, 10);
+  const weekdayMarkup = ["월", "화", "수", "목", "금", "토", "일"]
+    .map((weekday, index) => `<div class="study-calendar-weekday${index >= 5 ? " is-weekend" : ""}">${weekday}</div>`)
+    .join("");
+  const dayMarkup = calendarDates
+    .map((dateValue, index) => {
+      const dayEvents = [...(eventsByDate.get(dateValue) ?? [])].sort((left, right) =>
+        `${left.time || ""}${left.ticker || ""}`.localeCompare(`${right.time || ""}${right.ticker || ""}`),
+      );
+      const dayNumber = formatStudyCalendarDayNumber(dateValue);
+      const isToday = dateValue === referenceDate;
+      const isPast = dateValue < referenceDate;
+      const isWeekend = index % 7 >= 5;
+      const eventMarkup = dayEvents.length
+        ? dayEvents
+            .map((event) => {
+              const isEarnings = event.kind === "earnings";
+              const eventLabel = isEarnings
+                ? `${event.ticker || "실적"}${event.session ? ` (${event.session})` : ""}`
+                : "MACRO";
+              const eventTitle = [event.title, event.note].filter(Boolean).join(" · ");
+              return `
+                <a class="study-calendar-chip study-calendar-chip-${isEarnings ? "earnings" : "macro"}"
+                  href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer"
+                  title="${escapeHtml(eventTitle)}">
+                  <span><b>${escapeHtml(event.time || "미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
+                  <strong>${escapeHtml(event.title || "-")}</strong>
+                </a>`;
+            })
+            .join("")
+        : `<span class="study-calendar-empty">일정 없음</span>`;
       return `
-        <section class="study-calendar-week">
+        <article class="study-calendar-day${isToday ? " is-today" : ""}${isPast ? " is-past" : ""}${isWeekend ? " is-weekend" : ""}">
           <header>
-            <div>
-              <span>${escapeHtml(week.label || "")}</span>
-              <strong>${escapeHtml(week.range || "")}</strong>
-            </div>
-            <em class="study-calendar-status study-calendar-status-${week.status === "완료" ? "done" : "upcoming"}">${escapeHtml(week.status || "")}</em>
+            <time datetime="${escapeHtml(dateValue)}"><span>${escapeHtml(dayNumber.month)}</span><strong>${escapeHtml(dayNumber.day)}</strong></time>
+            <em>${dayEvents.length ? `${dayEvents.length}건` : ""}</em>
           </header>
-          <div class="study-calendar-events">${eventMarkup}</div>
-        </section>`;
+          <div class="study-calendar-day-events">${eventMarkup}</div>
+        </article>`;
     })
+    .join("");
+
+  const rangeMarkup = weeks
+    .map(
+      (week) => `
+        <div class="study-calendar-range-item">
+          <span>${escapeHtml(week.label || "")}</span>
+          <strong>${escapeHtml(week.range || "")}</strong>
+          <em>${escapeHtml(week.status || "")}</em>
+        </div>`,
+    )
     .join("");
 
   const fallbackMarkup = (studyCalendarData.fallbackSources ?? [])
@@ -16869,7 +16920,13 @@ function renderStudyCalendarOverview() {
           <span>날짜·시각은 모두 <b>KST</b></span>
           <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 포착</span>
         </div>
-        <div class="study-calendar-grid">${weekMarkup}</div>
+        <div class="study-calendar-range-row">${rangeMarkup}</div>
+        <div class="study-calendar-board-wrap">
+          <div class="study-calendar-board">
+            <div class="study-calendar-weekdays">${weekdayMarkup}</div>
+            <div class="study-calendar-days">${dayMarkup}</div>
+          </div>
+        </div>
         <footer class="study-calendar-notes">
           <p><strong>기준</strong> ${escapeHtml(studyCalendarData.methodology?.macro || "")} · ${escapeHtml(studyCalendarData.methodology?.earnings || "")}</p>
           <p>${escapeHtml(studyCalendarData.methodology?.warning || "")}</p>

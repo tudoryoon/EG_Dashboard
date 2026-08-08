@@ -4328,6 +4328,208 @@ h1 {
   color: #20201d;
 }
 
+.study-calendar-range-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.study-calendar-range-item {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid #deded7;
+  border-radius: 6px;
+  background: #fafaf7;
+  font-size: 0.7rem;
+}
+
+.study-calendar-range-item span {
+  color: #20201d;
+  font-weight: 800;
+}
+
+.study-calendar-range-item strong {
+  color: #777770;
+}
+
+.study-calendar-range-item em {
+  color: #17704c;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.study-calendar-board-wrap {
+  overflow-x: auto;
+  border: 1px solid #d5d5ce;
+  border-radius: 7px;
+  background: #d5d5ce;
+  scrollbar-gutter: stable;
+}
+
+.study-calendar-board {
+  min-width: 1100px;
+}
+
+.study-calendar-weekdays,
+.study-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+}
+
+.study-calendar-weekday {
+  padding: 10px 12px;
+  background: #f1f1ec;
+  color: #4d4d48;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.study-calendar-weekday.is-weekend {
+  color: #a3443b;
+}
+
+.study-calendar-day {
+  min-width: 0;
+  min-height: 260px;
+  padding: 10px;
+  background: #fff;
+}
+
+.study-calendar-day.is-weekend {
+  background: #fbfaf7;
+}
+
+.study-calendar-day.is-past:not(.is-today) {
+  background: #f8f8f5;
+}
+
+.study-calendar-day.is-today {
+  position: relative;
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #168466;
+}
+
+.study-calendar-day > header {
+  display: flex;
+  min-height: 31px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #ecece6;
+}
+
+.study-calendar-day > header time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.study-calendar-day > header time span,
+.study-calendar-day > header em {
+  color: #8a8a83;
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.study-calendar-day > header time strong {
+  color: #20201d;
+  font-size: 1rem;
+}
+
+.study-calendar-day.is-today > header time strong,
+.study-calendar-day.is-today > header em {
+  color: #168466;
+}
+
+.study-calendar-day-events {
+  display: grid;
+  max-height: 210px;
+  gap: 5px;
+  margin-top: 7px;
+  overflow-y: auto;
+  padding-right: 3px;
+  scrollbar-gutter: stable;
+}
+
+.study-calendar-chip {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 7px 8px;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+  border-radius: 5px;
+  color: #30302d;
+  text-decoration: none;
+}
+
+.study-calendar-chip:hover {
+  filter: brightness(0.98);
+}
+
+.study-calendar-chip-earnings {
+  border-color: #f0cbc6;
+  border-left-color: #d34b3e;
+  background: #fff4f2;
+}
+
+.study-calendar-chip-macro {
+  border-color: #cce4d8;
+  border-left-color: #25825c;
+  background: #f1faf5;
+}
+
+.study-calendar-chip > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.study-calendar-chip b,
+.study-calendar-chip em {
+  font-size: 0.61rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.study-calendar-chip b {
+  color: #66665f;
+}
+
+.study-calendar-chip-earnings em {
+  color: #b33d33;
+}
+
+.study-calendar-chip-macro em {
+  color: #217451;
+}
+
+.study-calendar-chip > strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #30302d;
+  font-size: 0.67rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.study-calendar-empty {
+  padding: 11px 2px;
+  color: #a0a099;
+  font-size: 0.67rem;
+}
+
 .study-calendar-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
