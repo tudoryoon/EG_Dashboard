@@ -89,6 +89,7 @@ const openrouterRankingsData = window.openrouterRankingsData ?? {
   charts: {},
   leaderboards: {},
 };
+const tokenPriceIndexData = window.tokenPriceIndexData ?? { updatedAt: "", source: {}, methodology: {}, latest: {}, history: [], lwciHistory: [], tiers: [] };
 const memorySpotRuntime = {
   loading: false,
   loaded: false,
@@ -113,6 +114,7 @@ const primaryTabMeta = {
   Screening: { label: "Screening", className: "is-screening", defaultView: "RS" },
   Market: { label: "Market", className: "is-market", defaultView: "Index" },
   Tech: { label: "Tech", className: "is-tech", defaultView: "LLM" },
+  AIData: { label: "AI Data", className: "is-ai-data", defaultView: "TokenPrice" },
   Flows: { label: "Flows", className: "is-flows", defaultView: "EtfStatus" },
   Taiwan: { label: "Taiwan", className: "is-taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Research: { label: "Research", className: "is-research", defaultView: "DataCenter" },
@@ -138,7 +140,6 @@ const techSubtabMeta = {
   LLM: { label: "LLM" },
   Cloud: { label: "Cloud" },
   BigTech: { label: "Capex & FCF" },
-  Semis: { label: "Semis" },
   PowerInfra: { label: "Power Infra" },
 };
 
@@ -150,7 +151,6 @@ const flowsSubtabMeta = {
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
   MemoryCapa: { label: "Memory CAPA" },
-  ModelTrends: { label: "Model Trends" },
   Comparisons: { label: "NVDA vs Memory" },
   M7: { label: "M7" },
   Calendar: { label: "Calendar" },
@@ -161,7 +161,9 @@ const marketIndexSubtabMeta = {
   Total: { label: "Total Dashboard" },
 };
 
-const semisSubtabMeta = {
+const aiDataSubtabMeta = {
+  TokenPrice: { label: "Token Price" },
+  OpenRouter: { label: "OpenRouter" },
   MemorySpot: { label: "Memory Data" },
   GPUCloud: { label: "GPU Rental Price" },
 };
@@ -349,7 +351,7 @@ const state = {
   techView: "LLM",
   flowsView: "EtfStatus",
   researchView: "DataCenter",
-  semisView: "MemorySpot",
+  aiDataView: "TokenPrice",
   currency: "USD",
   sector: "All",
   query: "",
@@ -539,18 +541,18 @@ const DASHBOARD_ROUTE_META = {
       LLM: "llm",
       Cloud: "cloud",
       BigTech: "capex-fcf",
-      Semis: "semis",
       PowerInfra: "power-infra",
     },
-    nestedViews: {
-      Semis: {
-        viewStateKey: "semisView",
-        defaultView: "MemorySpot",
-        views: {
-          MemorySpot: "memory-data",
-          GPUCloud: "gpu-rental-price",
-        },
-      },
+  },
+  AIData: {
+    slug: "ai-data",
+    viewStateKey: "aiDataView",
+    defaultView: "TokenPrice",
+    views: {
+      TokenPrice: "token-price-index",
+      OpenRouter: "openrouter",
+      MemorySpot: "memory-data",
+      GPUCloud: "gpu-rental-price",
     },
   },
   Flows: {
@@ -570,7 +572,6 @@ const DASHBOARD_ROUTE_META = {
     views: {
       DataCenter: "data-center",
       MemoryCapa: "memory-capa",
-      ModelTrends: "openrouter",
       Comparisons: "nvda-vs-memory",
       M7: "m7",
       Calendar: "calendar",
@@ -20651,6 +20652,8 @@ function renderCountries() {
         state.marketIndexView = "Trend";
       } else if (tabKey === "Tech") {
         state.techView = meta.defaultView;
+      } else if (tabKey === "AIData") {
+        state.aiDataView = meta.defaultView;
       } else if (tabKey === "Flows") {
         state.flowsView = meta.defaultView;
       } else if (tabKey === "Research") {
@@ -20690,6 +20693,12 @@ function renderSubtabs() {
     activeKey = state.techView;
     setActive = (viewKey) => {
       state.techView = viewKey;
+    };
+  } else if (state.tab === "AIData") {
+    entries = Object.entries(aiDataSubtabMeta);
+    activeKey = state.aiDataView;
+    setActive = (viewKey) => {
+      state.aiDataView = viewKey;
     };
   } else if (state.tab === "Flows") {
     entries = Object.entries(flowsSubtabMeta);
@@ -20737,12 +20746,6 @@ function renderNestedSubtabs() {
     activeKey = state.marketIndexView;
     setActive = (viewKey) => {
       state.marketIndexView = viewKey;
-    };
-  } else if (state.tab === "Tech" && state.techView === "Semis") {
-    entries = Object.entries(semisSubtabMeta);
-    activeKey = state.semisView;
-    setActive = (viewKey) => {
-      state.semisView = viewKey;
     };
   }
 
@@ -20853,10 +20856,19 @@ function renderSummary(list) {
       summaryText.textContent = "OpenAI와 Anthropic 프론티어 모델의 매출 런레이트와 도입 추이";
     } else if (state.techView === "BigTech") {
       summaryText.textContent = "Big tech capex & cash flow dashboard";
-    } else if (state.techView === "Semis") {
-      summaryText.textContent = state.semisView === "MemorySpot" ? "Memory data dashboard workspace" : "GPU rental price dashboard workspace";
     } else {
       summaryText.textContent = "데이터센터 전력망 스트레스를 보는 일별 전력 허브 가격 대시보드";
+    }
+    return;
+  }
+
+  if (state.tab === "AIData") {
+    if (state.aiDataView === "TokenPrice") {
+      summaryText.textContent = "공개 API 정가 기반 LLM token price와 workload cost index";
+    } else if (state.aiDataView === "OpenRouter") {
+      summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
+    } else {
+      summaryText.textContent = state.aiDataView === "MemorySpot" ? "Memory data dashboard workspace" : "GPU rental price dashboard workspace";
     }
     return;
   }
@@ -20879,8 +20891,6 @@ function renderSummary(list) {
       summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
-    } else if (state.researchView === "ModelTrends") {
-      summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
     } else if (state.researchView === "M7") {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
     } else if (state.researchView === "Calendar") {
@@ -20961,6 +20971,158 @@ function renderCards(list) {
       console.error("Chart render failed:", company.name, error);
     }
   });
+}
+
+function createTokenPriceIndexChart(canvas) {
+  if (typeof Chart === "undefined" || !canvas) return;
+  const history = tokenPriceIndexData.history ?? [];
+  const lwciByDate = new Map((tokenPriceIndexData.lwciHistory ?? []).map((point) => [point.date, Number(point.value)]));
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: history.map((point) => point.date),
+      datasets: [
+        {
+          label: "LTPI",
+          data: history.map((point) => Number(point.value)),
+          borderColor: "#e23b2f",
+          backgroundColor: "rgba(226, 59, 47, 0.10)",
+          borderWidth: 2.6,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.18,
+        },
+        {
+          label: "LWCI",
+          data: history.map((point) => lwciByDate.get(point.date) ?? null),
+          borderColor: "#23845b",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [6, 5],
+          pointRadius: 3.5,
+          pointHoverRadius: 5,
+          spanGaps: true,
+          tension: 0.18,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          align: "start",
+          labels: { usePointStyle: true, pointStyle: "circle", color: "#52524c", boxWidth: 8 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#777770", maxRotation: 0, autoSkip: true, maxTicksLimit: 7 },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          suggestedMin: 92,
+          suggestedMax: 110,
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          ticks: { color: "#777770", callback: (value) => Number(value).toFixed(0) },
+          border: { display: false },
+          title: { display: true, text: `${tokenPriceIndexData.methodology?.basePeriod || "2026-06"} = 100`, color: "#777770" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function renderTokenPriceOverview() {
+  destroyCharts();
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+
+  const latest = tokenPriceIndexData.latest ?? {};
+  const lwciPoints = tokenPriceIndexData.lwciHistory ?? [];
+  const latestLwci = lwciPoints.length ? Number(lwciPoints[lwciPoints.length - 1]?.value) : null;
+  const tierLabels = { flagship: "Flagship", workhorse: "Workhorse", efficient: "Efficient" };
+  const tiers = tokenPriceIndexData.tiers ?? [];
+  const maxTierPrice = Math.max(...tiers.map((tier) => Number(tier.median_blended_usd_per_mtok) || 0), 1);
+  const tierMarkup = tiers
+    .map((tier) => {
+      const median = Number(tier.median_blended_usd_per_mtok);
+      const frontier = Number(tier.affordable_frontier_blended_usd_per_mtok);
+      const width = Math.max(5, (median / maxTierPrice) * 100);
+      return `
+        <div class="token-price-tier-row">
+          <div>
+            <strong>${escapeHtml(tierLabels[tier.tier] || tier.tier)}</strong>
+            <span>${Number(tier.weight || 0) * 100}% weight · ${escapeHtml(tier.member_count)} models</span>
+          </div>
+          <div class="token-price-tier-bar"><i style="width:${width.toFixed(1)}%"></i></div>
+          <strong>$${Number.isFinite(median) ? median.toFixed(2) : "-"}</strong>
+          <small>최저 $${Number.isFinite(frontier) ? frontier.toFixed(2) : "-"}<br>${escapeHtml(tier.affordable_frontier_model || "")}</small>
+        </div>`;
+    })
+    .join("");
+
+  const wow = Number(latest.wowPct);
+  const sinceBase = Number(latest.sinceBasePct);
+  usOverviewRoot.innerHTML = `
+    <section class="token-price-page">
+      <header class="token-price-hero">
+        <div>
+          <p>LLM TOKEN PRICE INDEX</p>
+          <h2>AI 추론 토큰 가격</h2>
+          <span>공개 API 정가로 측정한 frontier inference cost benchmark</span>
+        </div>
+        <div class="token-price-source">
+          <span>Updated ${escapeHtml(tokenPriceIndexData.updatedAt || "-")}</span>
+          <a href="${escapeHtml(tokenPriceIndexData.source?.url || "https://thebetaindex.com")}" target="_blank" rel="noopener noreferrer">The Beta Index</a>
+        </div>
+      </header>
+
+      <div class="token-price-kpis">
+        <div><span>LTPI</span><strong>${Number(latest.value).toFixed(1)}</strong><small>${escapeHtml(tokenPriceIndexData.methodology?.basePeriod || "2026-06")} = 100 · 높을수록 비쌈</small></div>
+        <div><span>혼합 토큰 가격</span><strong>$${Number(latest.dollarAnchor).toFixed(2)}</strong><small>USD / 1M tokens · input 80% + output 20%</small></div>
+        <div><span>주간 변화</span><strong class="${wow > 0 ? "is-cost-up" : wow < 0 ? "is-cost-down" : ""}">${wow > 0 ? "+" : ""}${wow.toFixed(1)}%</strong><small>검증된 직전 주 대비</small></div>
+        <div><span>Workload Cost</span><strong>${Number.isFinite(latestLwci) ? latestLwci.toFixed(1) : "-"}</strong><small>고정 업무 6종의 $/task 지수</small></div>
+      </div>
+
+      <article class="us-panel token-price-chart-panel">
+        <div class="token-price-section-head">
+          <div><h3>LTPI & Workload Cost Index</h3><p>Raw token price와 실제 고정 업무 비용을 함께 비교합니다.</p></div>
+          <strong class="${sinceBase > 0 ? "is-cost-up" : sinceBase < 0 ? "is-cost-down" : ""}">${sinceBase > 0 ? "+" : ""}${sinceBase.toFixed(1)}% since base</strong>
+        </div>
+        <div class="token-price-chart"><canvas id="token-price-index-chart"></canvas></div>
+      </article>
+
+      <div class="token-price-lower-grid">
+        <article class="us-panel token-price-tier-panel">
+          <div class="token-price-section-head"><div><h3>티어별 혼합 가격</h3><p>각 티어 중앙값과 가장 저렴한 qualifying model</p></div><span>$/1M tokens</span></div>
+          <div class="token-price-tier-list">${tierMarkup}</div>
+        </article>
+        <article class="us-panel token-price-method-panel">
+          <div class="token-price-section-head"><div><h3>산식과 해석</h3><p>단순 평균보다 구성 변화에 덜 흔들리는 고정 규칙</p></div></div>
+          <dl>
+            <div><dt>토큰 혼합</dt><dd>입력 ${Math.round(Number(tokenPriceIndexData.methodology?.inputWeight || 0.8) * 100)}% + 출력 ${Math.round(Number(tokenPriceIndexData.methodology?.outputWeight || 0.2) * 100)}%</dd></div>
+            <div><dt>티어 가중치</dt><dd>Flagship 40% · Workhorse 40% · Efficient 20%</dd></div>
+            <div><dt>집계</dt><dd>티어별 qualifying model 중앙값의 가중 기하평균</dd></div>
+            <div><dt>주의</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.note || "")}</dd></div>
+          </dl>
+          <a href="${escapeHtml(tokenPriceIndexData.source?.methodologyUrl || "https://thebetaindex.com/methodology/")}" target="_blank" rel="noopener noreferrer">공개 Methodology 보기</a>
+        </article>
+      </div>
+    </section>`;
+
+  createTokenPriceIndexChart(usOverviewRoot.querySelector("#token-price-index-chart"));
 }
 
 const OPENROUTER_COLORS = [
@@ -21313,12 +21475,16 @@ function render() {
       renderCapexOverview();
       return;
     }
-    if (state.techView === "Semis") {
-      if (state.semisView === "GPUCloud") renderGpuCloudOverview();
-      else renderMemorySpotOverview();
-      return;
-    }
     renderInfraOverview();
+    return;
+  }
+
+  if (state.tab === "AIData") {
+    renderSummary([]);
+    if (state.aiDataView === "TokenPrice") renderTokenPriceOverview();
+    else if (state.aiDataView === "OpenRouter") renderOpenrouterOverview();
+    else if (state.aiDataView === "GPUCloud") renderGpuCloudOverview();
+    else renderMemorySpotOverview();
     return;
   }
 
@@ -21337,10 +21503,6 @@ function render() {
     }
     if (state.researchView === "MemoryCapa") {
       renderStudyMemoryCapaOverview();
-      return;
-    }
-    if (state.researchView === "ModelTrends") {
-      renderOpenrouterOverview();
       return;
     }
     if (state.researchView === "M7") {
