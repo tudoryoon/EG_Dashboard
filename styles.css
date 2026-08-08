@@ -8447,6 +8447,23 @@ h1 {
   font-size: inherit;
 }
 
+.market-rs-ema-gap {
+  font-style: normal;
+  font-weight: 800;
+}
+
+.market-rs-ema-gap.positive {
+  color: #087f5b;
+}
+
+.market-rs-ema-gap.negative {
+  color: #c92a2a;
+}
+
+.market-rs-ema-gap.neutral {
+  color: #77786f;
+}
+
 .market-rs-screening-layout .market-rs-chart-wrap {
   height: 440px;
 }

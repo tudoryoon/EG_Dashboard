@@ -11816,7 +11816,7 @@ function syncMarketRsChartRangeButtons() {
   });
 }
 
-function updateMarketRsEmaReadout(labels, emaSeries, index) {
+function updateMarketRsEmaReadout(labels, emaSeries, priceSeries, index) {
   const readout = usOverviewRoot.querySelector("[data-rs-ema-readout]");
   if (!readout) {
     return;
@@ -11830,12 +11830,18 @@ function updateMarketRsEmaReadout(labels, emaSeries, index) {
   }
 
   const safeIndex = Math.max(0, Math.min(labels.length - 1, Number.isFinite(index) ? index : labels.length - 1));
+  const stockPrice = Number(priceSeries?.[safeIndex]);
   const items = selectedSeries.map((series) => {
     const value = Number(emaSeries[series.key]?.[safeIndex]);
+    const gap = Number.isFinite(stockPrice) && stockPrice > 0 && Number.isFinite(value) && value > 0
+      ? ((stockPrice / value) - 1) * 100
+      : null;
+    const gapClass = Number(gap) > 0 ? "positive" : Number(gap) < 0 ? "negative" : "neutral";
     return `
       <span class="market-rs-ema-readout-item" style="--ema-color:${series.color}">
         <i></i><b>${series.label}</b>
         <span>${Number.isFinite(value) ? formatUsStockPrice(value) : "-"}</span>
+        <em class="market-rs-ema-gap ${gapClass}">Gap ${Number.isFinite(gap) ? formatSignedPercent(gap) : "-"}</em>
       </span>
     `;
   }).join("");
@@ -12332,6 +12338,7 @@ function createMarketRsChart(canvas, row) {
   const paddedEmaSeries = Object.fromEntries(
     Object.entries(emaSeries).map(([key, values]) => [key, padSeries(values)]),
   );
+  const paddedPrice = padSeries(selectedPrice);
   const firstDataIndex = edgePaddingCount;
   const latestDataIndex = firstDataIndex + selectedLabels.length - 1;
   const ratingValues = selectedRatings.filter((value) => Number.isFinite(value));
@@ -12373,7 +12380,7 @@ function createMarketRsChart(canvas, row) {
     ? {
         type: "line",
         label: "Stock Price(R) · Candle",
-        data: padSeries(selectedPrice),
+        data: paddedPrice,
         borderColor: "#111827",
         backgroundColor: "#111827",
         showLine: false,
@@ -12388,7 +12395,7 @@ function createMarketRsChart(canvas, row) {
     : {
         type: "line",
         label: "Stock Price(R) · Line",
-        data: padSeries(selectedPrice),
+        data: paddedPrice,
         borderColor: "#111827",
         backgroundColor: "#111827",
         borderWidth: 2,
@@ -12402,7 +12409,7 @@ function createMarketRsChart(canvas, row) {
     ? {
         type: "line",
         label: "1D Return",
-        data: padSeries(selectedPrice),
+        data: paddedPrice,
         borderColor: "transparent",
         backgroundColor: "transparent",
         borderWidth: 0,
@@ -12481,8 +12488,13 @@ function createMarketRsChart(canvas, row) {
       },
       interaction: { mode: interactionMode, axis: "x", intersect: false },
       onHover: (_, activeElements) => {
-        const hoveredIndex = activeElements?.[0]?.index;
-        updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, hoveredIndex);
+        const activeElement = activeElements?.[0];
+        const activeDataset = chart.data.datasets[activeElement?.datasetIndex];
+        const earningsDate = activeDataset?.isEarningsSurprise
+          ? activeDataset.data?.[activeElement?.index]?.chartDate
+          : "";
+        const hoveredIndex = earningsDate ? chartLabels.indexOf(earningsDate) : activeElement?.index;
+        updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, paddedPrice, hoveredIndex);
       },
       plugins: {
         legend: {
@@ -12640,7 +12652,7 @@ function createMarketRsChart(canvas, row) {
   };
   marketRsDetailChart = chart;
   attachMarketRsYAxisDrag(chart);
-  updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, latestDataIndex);
+  updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, paddedPrice, latestDataIndex);
   charts.push(chart);
 }
 
@@ -20539,6 +20551,7 @@ function renderCountries() {
       }
       if (tabKey === "Screening") {
         state.screeningView = meta.defaultView;
+        state.rsHistoryRange = "1y";
         state.query = "";
         if (searchInput) {
           searchInput.value = "";
@@ -20571,6 +20584,7 @@ function renderSubtabs() {
     activeKey = state.screeningView;
     setActive = (viewKey) => {
       state.screeningView = viewKey;
+      if (viewKey === "RS") state.rsHistoryRange = "1y";
       state.query = "";
       if (searchInput) searchInput.value = "";
     };
