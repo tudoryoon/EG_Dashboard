@@ -16859,7 +16859,7 @@ function renderStudyCalendarOverview() {
           <div>
             <p>RESEARCH CALENDAR</p>
             <h2>이번 주 · 다음 주 일정</h2>
-            <span>주요 실적 발표와 Macro 추적 지표만 간단히 정리했습니다.</span>
+            <span>Daily Briefing 전체 종목의 실적 발표와 Macro 추적 지표를 정리했습니다.</span>
           </div>
           <time>Updated ${escapeHtml(studyCalendarData.updatedAt || "-")}</time>
         </div>
@@ -16867,6 +16867,7 @@ function renderStudyCalendarOverview() {
           <span><b>(B)</b> 미국 장전</span>
           <span><b>(A)</b> 미국 장후</span>
           <span>날짜·시각은 모두 <b>KST</b></span>
+          <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 포착</span>
         </div>
         <div class="study-calendar-grid">${weekMarkup}</div>
         <footer class="study-calendar-notes">

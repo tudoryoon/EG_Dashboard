@@ -4379,7 +4379,11 @@ h1 {
 }
 
 .study-calendar-events {
+  max-height: 760px;
+  overflow-y: auto;
+  padding-right: 6px;
   border-top: 2px solid #20201d;
+  scrollbar-gutter: stable;
 }
 
 .study-calendar-event {

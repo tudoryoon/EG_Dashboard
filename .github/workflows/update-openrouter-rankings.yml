@@ -1,4 +1,4 @@
-name: Update AI Data Rankings and Prices
+name: Update AI Data and Research Calendar
 
 on:
   workflow_dispatch:
@@ -31,16 +31,19 @@ jobs:
       - name: Refresh LLM token price index
         run: python scripts/update_token_price_index.py
 
-      - name: Commit updated AI data
+      - name: Refresh Daily Briefing earnings calendar
+        run: python scripts/update_study_calendar.py
+
+      - name: Commit updated AI data and calendar
         run: |
-          if git diff --quiet -- data/openrouter-rankings-data.js data/token-price-index-data.js; then
-            echo "No AI data changes detected."
+          if git diff --quiet -- data/openrouter-rankings-data.js data/token-price-index-data.js data/study-calendar-data.js; then
+            echo "No AI data or calendar changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/openrouter-rankings-data.js data/token-price-index-data.js
+          python scripts/bump_data_cache_versions.py data/openrouter-rankings-data.js data/token-price-index-data.js data/study-calendar-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/openrouter-rankings-data.js data/token-price-index-data.js index.html
-          git commit -m "Update AI rankings and token prices" || exit 0
+          git add data/openrouter-rankings-data.js data/token-price-index-data.js data/study-calendar-data.js index.html
+          git commit -m "Update AI data and research calendar" || exit 0
           git pull --rebase origin main
           git push
