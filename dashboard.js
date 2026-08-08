@@ -12145,12 +12145,34 @@ function ensureMarketRsInteractionMode() {
       if (earningsItems.length) {
         return earningsItems;
       }
-      return modes.index(
-        chart,
-        event,
-        { ...options, axis: "x", intersect: false },
-        useFinalPosition,
-      ).filter((item) => !chart.data.datasets[item.datasetIndex]?.isEarningsSurprise);
+
+      const xScale = chart.scales?.x;
+      const bounds = chart.$marketRsDataBounds;
+      const pointerX = Number(event?.x);
+      if (!xScale || !bounds || !Number.isFinite(pointerX)) {
+        return [];
+      }
+      const hoveredIndex = Math.round(Number(xScale.getValueForPixel(pointerX)));
+      if (
+        !Number.isFinite(hoveredIndex)
+        || hoveredIndex < bounds.firstIndex
+        || hoveredIndex > bounds.latestIndex
+      ) {
+        return [];
+      }
+
+      return chart.data.datasets.flatMap((dataset, datasetIndex) => {
+        if (dataset.isEarningsSurprise || dataset.hidden) {
+          return [];
+        }
+        const meta = chart.getDatasetMeta(datasetIndex);
+        const element = meta?.data?.[hoveredIndex];
+        const parsed = meta?.controller?.getParsed?.(hoveredIndex);
+        if (!element || meta.hidden || parsed?.y === null || parsed?.y === undefined) {
+          return [];
+        }
+        return [{ element, datasetIndex, index: hoveredIndex }];
+      });
     };
   }
   return MARKET_RS_INTERACTION_MODE;
