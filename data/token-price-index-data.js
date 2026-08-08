@@ -1,123 +1,123 @@
 window.tokenPriceIndexData = {
-  "updatedAt": "2026-08-03",
-  "generatedAt": "2026-08-03T15:48:02.620Z",
+  "updatedAt": "2026-08-06",
+  "generatedAt": "2026-08-08T04:26:19.593354Z",
   "source": {
-    "label": "The Beta Index",
-    "url": "https://thebetaindex.com",
-    "methodologyUrl": "https://thebetaindex.com/methodology/",
-    "dataUrl": "https://thebetaindex.com/data/",
-    "cadence": "Weekly · Monday 13:00 UTC after validation"
-  },
-  "methodology": {
-    "version": "1.2.1",
-    "basePeriod": "2026-06",
-    "baseValue": 100,
-    "aggregation": "weighted geometric mean of tier median price relatives; dollar anchor is a separate arithmetic basket level",
-    "inputWeight": 0.8,
-    "outputWeight": 0.2,
-    "note": "공개 PAYG 정가 기반이며 캐시·약정 할인·실제 기업 계약가는 반영하지 않습니다."
+    "provider": "Silicon Data",
+    "label": "Silicon Data LLM Token Expenditure Index",
+    "portalUrl": "https://portal.silicondata.com/token-index-chart",
+    "productUrl": "https://www.silicondata.com/products/silicon-index/llm-token-expenditure-index",
+    "methodologyUrl": "https://docs.silicondata.com/api-reference/token_index_api",
+    "cadence": "일간 · 공개 포털 관측값을 EG Dashboard에 매일 누적"
   },
   "latest": {
-    "value": 105.4,
-    "dollarAnchor": 1.974,
-    "wowPct": 0,
-    "sinceBasePct": 5.4,
-    "status": "ok"
+    "overall": {
+      "ticker": "SDLLMTK",
+      "label": "LLM Token Expenditure Index",
+      "value": 1.1771,
+      "date": "2026-08-06",
+      "quality": "official-public"
+    },
+    "closed": {
+      "ticker": "SDLLMCS",
+      "label": "Closed Model Token Index",
+      "value": 3.07,
+      "date": "2026-08-03",
+      "quality": "public-chart-reference"
+    },
+    "open": {
+      "ticker": "SDLLMOS",
+      "label": "Open Model Token Index",
+      "value": 0.66,
+      "date": "2026-08-03",
+      "quality": "public-chart-reference"
+    },
+    "dailyChangePct": -1.88,
+    "publicWindowChangePct": -13.27,
+    "closedOpenPremium": 4.65
   },
-  "history": [
-    {
-      "date": "2026-06-09",
-      "value": 100
-    },
-    {
-      "date": "2026-06-19",
-      "value": 100
-    },
-    {
-      "date": "2026-07-01",
-      "value": 97.9
-    },
-    {
-      "date": "2026-07-02",
-      "value": 97.9
-    },
-    {
-      "date": "2026-07-06",
-      "value": 97.9
-    },
-    {
-      "date": "2026-07-10",
-      "value": 97.9
-    },
-    {
-      "date": "2026-07-13",
-      "value": 97.9
-    },
-    {
-      "date": "2026-08-01",
-      "value": 105.4
-    },
-    {
-      "date": "2026-08-03",
-      "value": 105.4
-    }
-  ],
-  "lwciHistory": [
-    {
-      "date": "2026-06-19",
-      "value": 100
-    },
-    {
-      "date": "2026-07-01",
-      "value": 96.6
-    },
-    {
-      "date": "2026-07-10",
-      "value": 96.6
-    },
-    {
-      "date": "2026-07-13",
-      "value": 96.6
-    },
-    {
-      "date": "2026-08-01",
-      "value": 103.4
-    },
-    {
-      "date": "2026-08-03",
-      "value": 103.4
-    }
-  ],
-  "tiers": [
-    {
-      "tier": "flagship",
-      "weight": 0.4,
-      "member_count": 7,
-      "median_blended_usd_per_mtok": 3.5,
-      "base_median_blended_usd_per_mtok": 3.5,
-      "index": 100,
-      "affordable_frontier_blended_usd_per_mtok": 2,
-      "affordable_frontier_model": "Zhipu AI GLM-5.2"
-    },
-    {
-      "tier": "workhorse",
-      "weight": 0.4,
-      "member_count": 6,
-      "median_blended_usd_per_mtok": 1.13,
-      "base_median_blended_usd_per_mtok": 1,
-      "index": 113,
-      "affordable_frontier_blended_usd_per_mtok": 0.48,
-      "affordable_frontier_model": "MiniMax MiniMax-M3"
-    },
-    {
-      "tier": "efficient",
-      "weight": 0.2,
-      "member_count": 8,
-      "median_blended_usd_per_mtok": 0.61,
-      "base_median_blended_usd_per_mtok": 0.6,
-      "index": 101.7,
-      "affordable_frontier_blended_usd_per_mtok": 0.168,
-      "affordable_frontier_model": "DeepSeek DeepSeek V4 Flash"
-    }
-  ]
+  "series": {
+    "overall": [
+      {
+        "date": "2026-07-31",
+        "value": 1.3572,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-08-01",
+        "value": 1.3394,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-08-02",
+        "value": 1.3136,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-08-03",
+        "value": 1.2901,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-08-04",
+        "value": 1.2723,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-08-05",
+        "value": 1.1997,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-08-06",
+        "value": 1.1771,
+        "quality": "official-public"
+      }
+    ],
+    "closed": [
+      {
+        "date": "2026-08-03",
+        "value": 3.07,
+        "quality": "public-chart-reference"
+      }
+    ],
+    "open": [
+      {
+        "date": "2026-08-03",
+        "value": 0.66,
+        "quality": "public-chart-reference"
+      }
+    ]
+  },
+  "comparison": {
+    "date": "2026-08-03",
+    "values": [
+      {
+        "key": "overall",
+        "ticker": "SDLLMTK",
+        "label": "전체",
+        "value": 1.29
+      },
+      {
+        "key": "closed",
+        "ticker": "SDLLMCS",
+        "label": "Closed",
+        "value": 3.07
+      },
+      {
+        "key": "open",
+        "ticker": "SDLLMOS",
+        "label": "Open",
+        "value": 0.66
+      }
+    ]
+  },
+  "methodology": {
+    "unit": "USD per 1 million tokens",
+    "aggregation": "모델별 추론 사용량과 시장 지출 비중으로 가중한 혼합 가격",
+    "normalization": "입력·출력 토큰 구성, Context 길이, Batching 방식과 서비스 안정성을 정규화",
+    "coverage": "Frontier API, Open-weight 플랫폼, 전용 인스턴스와 Self-hosted 기준 배포",
+    "interpretation": "상승은 프리미엄 모델 사용 집중 또는 공급자의 가격 결정력 강화, 하락은 저가 모델 확산과 추론 효율 개선을 시사",
+    "publicDataLimit": "공개 포털은 SDLLMTK의 최근 관측치만 제공합니다. 전체 히스토리와 Closed/Open 일간 시계열은 Silicon Data 구독이 필요합니다.",
+    "subindexReference": "Closed/Open 최신값은 2026-08 공개 차트의 표기값이며, 기준일은 SDLLMTK $1.29와 공식 2026-08-03 값의 일치로 정렬한 추정입니다."
+  }
 };

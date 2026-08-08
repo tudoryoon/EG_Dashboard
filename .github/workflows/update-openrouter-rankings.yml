@@ -3,7 +3,7 @@ name: Update AI Data and Research Calendar
 on:
   workflow_dispatch:
   schedule:
-    # 02:00 UTC = 11:00 KST. OpenRouter updates daily; LTPI changes weekly after validation.
+    # 02:00 UTC = 11:00 KST. OpenRouter and Silicon Data public index update daily.
     - cron: "0 2 * * *"
 
 permissions:

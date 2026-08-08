@@ -89,7 +89,7 @@ const openrouterRankingsData = window.openrouterRankingsData ?? {
   charts: {},
   leaderboards: {},
 };
-const tokenPriceIndexData = window.tokenPriceIndexData ?? { updatedAt: "", source: {}, methodology: {}, latest: {}, history: [], lwciHistory: [], tiers: [] };
+const tokenPriceIndexData = window.tokenPriceIndexData ?? { updatedAt: "", source: {}, methodology: {}, latest: {}, series: {}, comparison: {} };
 const memorySpotRuntime = {
   loading: false,
   loaded: false,
@@ -20865,7 +20865,7 @@ function renderSummary(list) {
 
   if (state.tab === "AIData") {
     if (state.aiDataView === "TokenPrice") {
-      summaryText.textContent = "공개 API 정가 기반 LLM token price와 workload cost index";
+      summaryText.textContent = "Silicon Data의 시장 지출 가중 LLM token price index";
     } else if (state.aiDataView === "OpenRouter") {
       summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
     } else {
@@ -20976,35 +20976,22 @@ function renderCards(list) {
 
 function createTokenPriceIndexChart(canvas) {
   if (typeof Chart === "undefined" || !canvas) return;
-  const history = tokenPriceIndexData.history ?? [];
-  const lwciByDate = new Map((tokenPriceIndexData.lwciHistory ?? []).map((point) => [point.date, Number(point.value)]));
+  const history = tokenPriceIndexData.series?.overall ?? [];
   const chart = new Chart(canvas, {
     type: "line",
     data: {
       labels: history.map((point) => point.date),
       datasets: [
         {
-          label: "LTPI",
+          label: "SDLLMTK",
           data: history.map((point) => Number(point.value)),
-          borderColor: "#e23b2f",
-          backgroundColor: "rgba(226, 59, 47, 0.10)",
+          borderColor: "#176b87",
+          backgroundColor: "rgba(23, 107, 135, 0.12)",
           borderWidth: 2.6,
-          pointRadius: 4,
+          pointRadius: history.length <= 31 ? 3.5 : 0,
           pointHoverRadius: 6,
           fill: true,
-          tension: 0.18,
-        },
-        {
-          label: "LWCI",
-          data: history.map((point) => lwciByDate.get(point.date) ?? null),
-          borderColor: "#23845b",
-          backgroundColor: "transparent",
-          borderWidth: 2,
-          borderDash: [6, 5],
-          pointRadius: 3.5,
-          pointHoverRadius: 5,
-          spanGaps: true,
-          tension: 0.18,
+          tension: 0.22,
         },
       ],
     },
@@ -21020,7 +21007,7 @@ function createTokenPriceIndexChart(canvas) {
         tooltip: {
           callbacks: {
             title: (items) => items[0]?.label ?? "",
-            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}`,
+            label: (context) => `${context.dataset.label}: $${Number(context.parsed.y).toFixed(4)} / 1M tokens`,
           },
         },
       },
@@ -21031,12 +21018,10 @@ function createTokenPriceIndexChart(canvas) {
           border: { color: "#d8d8d2" },
         },
         y: {
-          suggestedMin: 92,
-          suggestedMax: 110,
           grid: { color: "rgba(70, 70, 66, 0.10)" },
-          ticks: { color: "#777770", callback: (value) => Number(value).toFixed(0) },
+          ticks: { color: "#777770", callback: (value) => `$${Number(value).toFixed(2)}` },
           border: { display: false },
-          title: { display: true, text: `${tokenPriceIndexData.methodology?.basePeriod || "2026-06"} = 100`, color: "#777770" },
+          title: { display: true, text: "USD / 1M tokens", color: "#777770" },
         },
       },
     },
@@ -21051,74 +21036,79 @@ function renderTokenPriceOverview() {
   companyGrid.innerHTML = "";
 
   const latest = tokenPriceIndexData.latest ?? {};
-  const lwciPoints = tokenPriceIndexData.lwciHistory ?? [];
-  const latestLwci = lwciPoints.length ? Number(lwciPoints[lwciPoints.length - 1]?.value) : null;
-  const tierLabels = { flagship: "Flagship", workhorse: "Workhorse", efficient: "Efficient" };
-  const tiers = tokenPriceIndexData.tiers ?? [];
-  const maxTierPrice = Math.max(...tiers.map((tier) => Number(tier.median_blended_usd_per_mtok) || 0), 1);
-  const tierMarkup = tiers
-    .map((tier) => {
-      const median = Number(tier.median_blended_usd_per_mtok);
-      const frontier = Number(tier.affordable_frontier_blended_usd_per_mtok);
-      const width = Math.max(5, (median / maxTierPrice) * 100);
+  const overall = latest.overall ?? {};
+  const comparison = tokenPriceIndexData.comparison?.values ?? [];
+  const comparisonMax = Math.max(...comparison.map((item) => Number(item.value) || 0), 1);
+  const comparisonMarkup = comparison
+    .map((item) => {
+      const value = Number(item.value);
+      const width = Math.max(6, (value / comparisonMax) * 100);
       return `
-        <div class="token-price-tier-row">
+        <div class="token-price-tier-row token-price-tier-${escapeHtml(item.key)}">
           <div>
-            <strong>${escapeHtml(tierLabels[tier.tier] || tier.tier)}</strong>
-            <span>${Number(tier.weight || 0) * 100}% weight · ${escapeHtml(tier.member_count)} models</span>
+            <strong>${escapeHtml(item.label)}</strong>
+            <span>${escapeHtml(item.ticker)}</span>
           </div>
           <div class="token-price-tier-bar"><i style="width:${width.toFixed(1)}%"></i></div>
-          <strong>$${Number.isFinite(median) ? median.toFixed(2) : "-"}</strong>
-          <small>최저 $${Number.isFinite(frontier) ? frontier.toFixed(2) : "-"}<br>${escapeHtml(tier.affordable_frontier_model || "")}</small>
+          <strong>$${Number.isFinite(value) ? value.toFixed(2) : "-"}</strong>
+          <small>${escapeHtml(tokenPriceIndexData.comparison?.date || "-")} 기준</small>
         </div>`;
     })
     .join("");
 
-  const wow = Number(latest.wowPct);
-  const sinceBase = Number(latest.sinceBasePct);
+  const formatPct = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return "-";
+    return `${numeric > 0 ? "+" : ""}${numeric.toFixed(2)}%`;
+  };
+  const dailyChange = Number(latest.dailyChangePct);
+  const publicWindowChange = Number(latest.publicWindowChangePct);
+  const premium = Number(latest.closedOpenPremium);
   usOverviewRoot.innerHTML = `
     <section class="token-price-page">
       <header class="token-price-hero">
         <div>
-          <p>LLM TOKEN PRICE INDEX</p>
-          <h2>AI 추론 토큰 가격</h2>
-          <span>공개 API 정가로 측정한 frontier inference cost benchmark</span>
+          <p>SILICON DATA · SDLLMTK</p>
+          <h2>LLM Token Expenditure Index</h2>
+          <span>실제 사용·지출 집중도를 반영한 AI 추론 토큰 시장가격</span>
         </div>
         <div class="token-price-source">
           <span>Updated ${escapeHtml(tokenPriceIndexData.updatedAt || "-")}</span>
-          <a href="${escapeHtml(tokenPriceIndexData.source?.url || "https://thebetaindex.com")}" target="_blank" rel="noopener noreferrer">The Beta Index</a>
+          <a href="${escapeHtml(tokenPriceIndexData.source?.portalUrl || "https://portal.silicondata.com/token-index-chart")}" target="_blank" rel="noopener noreferrer">Silicon Data 공식값</a>
         </div>
       </header>
 
       <div class="token-price-kpis">
-        <div><span>LTPI</span><strong>${Number(latest.value).toFixed(1)}</strong><small>${escapeHtml(tokenPriceIndexData.methodology?.basePeriod || "2026-06")} = 100 · 높을수록 비쌈</small></div>
-        <div><span>혼합 토큰 가격</span><strong>$${Number(latest.dollarAnchor).toFixed(2)}</strong><small>USD / 1M tokens · input 80% + output 20%</small></div>
-        <div><span>주간 변화</span><strong class="${wow > 0 ? "is-cost-up" : wow < 0 ? "is-cost-down" : ""}">${wow > 0 ? "+" : ""}${wow.toFixed(1)}%</strong><small>검증된 직전 주 대비</small></div>
-        <div><span>Workload Cost</span><strong>${Number.isFinite(latestLwci) ? latestLwci.toFixed(1) : "-"}</strong><small>고정 업무 6종의 $/task 지수</small></div>
+        <div><span>전체 시장 · SDLLMTK</span><strong>$${Number(overall.value).toFixed(2)}</strong><small>USD / 1M tokens · ${escapeHtml(overall.date || "-")}</small></div>
+        <div><span>일간 변화</span><strong class="${dailyChange > 0 ? "is-cost-up" : dailyChange < 0 ? "is-cost-down" : ""}">${formatPct(dailyChange)}</strong><small>공식 직전 관측치 대비</small></div>
+        <div><span>공개 구간 변화</span><strong class="${publicWindowChange > 0 ? "is-cost-up" : publicWindowChange < 0 ? "is-cost-down" : ""}">${formatPct(publicWindowChange)}</strong><small>공개 포털 누적 시작점 대비</small></div>
+        <div><span>Closed / Open Premium</span><strong>${Number.isFinite(premium) ? `${premium.toFixed(2)}x` : "-"}</strong><small>2026-08 공개 차트 기준</small></div>
       </div>
 
       <article class="us-panel token-price-chart-panel">
         <div class="token-price-section-head">
-          <div><h3>LTPI & Workload Cost Index</h3><p>Raw token price와 실제 고정 업무 비용을 함께 비교합니다.</p></div>
-          <strong class="${sinceBase > 0 ? "is-cost-up" : sinceBase < 0 ? "is-cost-down" : ""}">${sinceBase > 0 ? "+" : ""}${sinceBase.toFixed(1)}% since base</strong>
+          <div><h3>시장 전체 Token Expenditure</h3><p>Silicon Data 공개 포털의 SDLLMTK 공식 일간값을 매일 누적합니다.</p></div>
+          <strong>${escapeHtml(tokenPriceIndexData.source?.cadence || "Daily")}</strong>
         </div>
         <div class="token-price-chart"><canvas id="token-price-index-chart"></canvas></div>
       </article>
 
       <div class="token-price-lower-grid">
         <article class="us-panel token-price-tier-panel">
-          <div class="token-price-section-head"><div><h3>티어별 혼합 가격</h3><p>각 티어 중앙값과 가장 저렴한 qualifying model</p></div><span>$/1M tokens</span></div>
-          <div class="token-price-tier-list">${tierMarkup}</div>
+          <div class="token-price-section-head"><div><h3>시장 구성별 최신 레벨</h3><p>동일 기준일의 전체·Closed·Open 지수를 비교합니다.</p></div><span>$/1M tokens</span></div>
+          <div class="token-price-tier-list">${comparisonMarkup}</div>
+          <p class="token-price-data-limit">Closed/Open 일간 히스토리는 공개되지 않아 최신 공개 차트 값만 표시합니다.</p>
         </article>
         <article class="us-panel token-price-method-panel">
-          <div class="token-price-section-head"><div><h3>산식과 해석</h3><p>단순 평균보다 구성 변화에 덜 흔들리는 고정 규칙</p></div></div>
+          <div class="token-price-section-head"><div><h3>산식과 해석</h3><p>정가 평균이 아니라 시장 사용과 지출이 반영된 지수</p></div></div>
           <dl>
-            <div><dt>토큰 혼합</dt><dd>입력 ${Math.round(Number(tokenPriceIndexData.methodology?.inputWeight || 0.8) * 100)}% + 출력 ${Math.round(Number(tokenPriceIndexData.methodology?.outputWeight || 0.2) * 100)}%</dd></div>
-            <div><dt>티어 가중치</dt><dd>Flagship 40% · Workhorse 40% · Efficient 20%</dd></div>
-            <div><dt>집계</dt><dd>티어별 qualifying model 중앙값의 가중 기하평균</dd></div>
-            <div><dt>주의</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.note || "")}</dd></div>
+            <div><dt>가중 방식</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.aggregation || "")}</dd></div>
+            <div><dt>정규화</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.normalization || "")}</dd></div>
+            <div><dt>포함 범위</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.coverage || "")}</dd></div>
+            <div><dt>투자 해석</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.interpretation || "")}</dd></div>
+            <div><dt>공개 한계</dt><dd>${escapeHtml(tokenPriceIndexData.methodology?.publicDataLimit || "")}</dd></div>
           </dl>
-          <a href="${escapeHtml(tokenPriceIndexData.source?.methodologyUrl || "https://thebetaindex.com/methodology/")}" target="_blank" rel="noopener noreferrer">공개 Methodology 보기</a>
+          <a href="${escapeHtml(tokenPriceIndexData.source?.productUrl || "https://www.silicondata.com/products/silicon-index/llm-token-expenditure-index")}" target="_blank" rel="noopener noreferrer">Silicon Data Methodology 보기</a>
         </article>
       </div>
     </section>`;

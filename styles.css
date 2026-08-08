@@ -9097,7 +9097,7 @@ h1 {
 
 .token-price-hero p {
   margin: 0 0 7px;
-  color: #d23b30;
+  color: #176b87;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -9125,7 +9125,7 @@ h1 {
 
 .token-price-source a,
 .token-price-method-panel > a {
-  color: #d23b30;
+  color: #176b87;
   font-size: 0.78rem;
   font-weight: 800;
   text-decoration: underline;
@@ -9260,7 +9260,24 @@ h1 {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #e23b2f;
+  background: #176b87;
+}
+
+.token-price-tier-closed .token-price-tier-bar i {
+  background: #c93d32;
+}
+
+.token-price-tier-open .token-price-tier-bar i {
+  background: #2f8a57;
+}
+
+.token-price-data-limit {
+  margin: 12px 0 0;
+  padding-left: 11px;
+  border-left: 3px solid #c9a43d;
+  color: #777770;
+  font-size: 0.7rem;
+  line-height: 1.5;
 }
 
 .token-price-method-panel dl {
