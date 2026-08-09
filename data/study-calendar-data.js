@@ -1,5 +1,5 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-08-08",
+  "updatedAt": "2026-08-09",
   "timezone": "Asia/Seoul",
   "coverage": {
     "dailyBriefingUniverse": 200,
@@ -633,23 +633,23 @@ window.studyCalendarData = {
           "date": "2026-08-07",
           "time": "22:30 이전",
           "kind": "earnings",
-          "ticker": "OKLO",
-          "session": "B",
-          "title": "Oklo Inc. (OKLO) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.17) · Nasdaq/Zacks 예상 일정",
-          "sector": "원전, SMR",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-07"
-        },
-        {
-          "date": "2026-08-07",
-          "time": "22:30 이전",
-          "kind": "earnings",
           "ticker": "VST",
           "session": "B",
           "title": "Vistra Corp. (VST) 실적 발표",
           "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 $1.54 · Nasdaq/Zacks 예상 일정",
           "sector": "전력",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-07"
+        },
+        {
+          "date": "2026-08-07",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "OKLO",
+          "session": "",
+          "title": "Oklo Inc. (OKLO) 실적 발표",
+          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.17) · Nasdaq/Zacks 예상 일정",
+          "sector": "원전, SMR",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-07"
         }
