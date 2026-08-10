@@ -215,7 +215,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "software",
-        "label": "S/W",
+        "label": "S/W & 플랫폼",
         "items": [
             {"ticker": "PLTR", "label": "PLTR US", "name": "Palantir", "query": "Palantir stock"},
             {"ticker": "IBM", "label": "IBM US", "name": "IBM", "query": "IBM stock"},
@@ -230,6 +230,7 @@ SECTOR_GROUPS = [
             {"ticker": "SNOW", "label": "SNOW US", "name": "Snowflake", "query": "Snowflake stock"},
             {"ticker": "NTAP", "label": "NTAP US", "name": "NetApp", "query": "NetApp stock"},
             {"ticker": "P", "label": "P US", "name": "Everpure", "query": "Everpure stock"},
+            {"ticker": "TWLO", "label": "TWLO US", "name": "Twilio", "query": "Twilio stock"},
         ],
     },
     {
