@@ -241,6 +241,8 @@ SECTOR_GROUPS = [
             {"ticker": "PANW", "label": "PANW US", "name": "Palo Alto Networks", "query": "Palo Alto Networks stock"},
             {"ticker": "FTNT", "label": "FTNT US", "name": "Fortinet", "query": "Fortinet stock"},
             {"ticker": "ZS", "label": "ZS US", "name": "Zscaler", "query": "Zscaler stock"},
+            {"ticker": "AKAM", "label": "AKAM US", "name": "Akamai Technologies", "query": "Akamai Technologies stock"},
+            {"ticker": "RBRK", "label": "RBRK US", "name": "Rubrik", "query": "Rubrik stock"},
         ],
     },
     {

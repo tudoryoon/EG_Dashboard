@@ -540,6 +540,17 @@
       "sharesOutstanding": 715978745
     },
     {
+      "ticker": "RBRK",
+      "name": "Rubrik, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 205828566
+    },
+    {
       "ticker": "RDDT",
       "name": "Reddit, Inc.",
       "memberships": {
