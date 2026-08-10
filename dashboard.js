@@ -22,7 +22,14 @@ const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", 
 const studyDataCenterDeals = window.studyDataCenterDeals ?? { updatedAt: "", scope: "", companies: [], statusLegend: [], deals: [] };
 const studyEtfFlowData = window.studyEtfFlowData ?? { updatedAt: "", startDate: "", defaultRange: "ytd", ranges: [], methodology: {}, sources: [], items: {} };
 const studyCdsData = window.studyCdsData ?? { updatedAt: "", generatedAt: "", startDate: "", defaultRange: "1y", ranges: [], source: {}, methodology: {}, dates: [], items: {} };
-const studyCalendarData = window.studyCalendarData ?? { updatedAt: "", timezone: "Asia/Seoul", methodology: {}, weeks: [], fallbackSources: [] };
+const studyCalendarData = window.studyCalendarData ?? {
+  updatedAt: "",
+  timezone: "America/New_York",
+  displayTimezone: "Asia/Seoul",
+  methodology: {},
+  weeks: [],
+  fallbackSources: [],
+};
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -16835,23 +16842,27 @@ function renderStudyCalendarOverview() {
   const allEvents = weeks.flatMap((week) => week.events ?? []);
   const eventsByDate = new Map();
   allEvents.forEach((event) => {
-    if (!event.date) return;
-    if (!eventsByDate.has(event.date)) eventsByDate.set(event.date, []);
-    eventsByDate.get(event.date).push(event);
+    const calendarDate = event.kind === "earnings" ? event.usDate || event.date : event.date;
+    if (!calendarDate) return;
+    if (!eventsByDate.has(calendarDate)) eventsByDate.set(calendarDate, []);
+    eventsByDate.get(calendarDate).push(event);
   });
 
   const windowStart = studyCalendarData.coverage?.windowStart || weeks[0]?.events?.[0]?.date || "";
   const windowEnd = studyCalendarData.coverage?.windowEnd || weeks.at(-1)?.events?.at(-1)?.date || "";
   const calendarDates = createStudyCalendarDates(windowStart, windowEnd);
-  const referenceDate = studyCalendarData.updatedAt || new Date().toISOString().slice(0, 10);
+  const referenceDate = studyCalendarData.calendarToday || studyCalendarData.updatedAt || new Date().toISOString().slice(0, 10);
   const weekdayMarkup = ["월", "화", "수", "목", "금", "토", "일"]
     .map((weekday, index) => `<div class="study-calendar-weekday${index >= 5 ? " is-weekend" : ""}">${weekday}</div>`)
     .join("");
   const dayMarkup = calendarDates
     .map((dateValue, index) => {
-      const dayEvents = [...(eventsByDate.get(dateValue) ?? [])].sort((left, right) =>
-        `${left.time || ""}${left.ticker || ""}`.localeCompare(`${right.time || ""}${right.ticker || ""}`),
-      );
+      const dayEvents = [...(eventsByDate.get(dateValue) ?? [])].sort((left, right) => {
+        const sessionOrder = (event) => (event.session === "B" ? "0" : event.session === "A" ? "2" : "1");
+        return `${sessionOrder(left)}${left.time || ""}${left.ticker || ""}`.localeCompare(
+          `${sessionOrder(right)}${right.time || ""}${right.ticker || ""}`,
+        );
+      });
       const dayNumber = formatStudyCalendarDayNumber(dateValue);
       const isToday = dateValue === referenceDate;
       const isPast = dateValue < referenceDate;
@@ -16864,11 +16875,17 @@ function renderStudyCalendarOverview() {
                 ? `${event.ticker || "실적"}${event.session ? ` (${event.session})` : ""}`
                 : "MACRO";
               const usSessionLabel = event.session === "A" ? "장후" : event.session === "B" ? "장전" : "";
-              const usDateLabel = event.usDate ? event.usDate.slice(5).replace("-", "/") : "";
+              const kstDateValue = event.kstDate || event.date || "";
+              const kstDateLabel = kstDateValue ? kstDateValue.slice(5).replace("-", "/") : "";
+              const kstTimingLabel = event.callKst
+                ? `KST ${event.callKst} (컨콜)`
+                : event.session
+                  ? `KST ${kstDateLabel} ${event.time || "시간 미정"}`
+                  : "KST 시간 미정";
               const timingMarkup =
-                isEarnings && usDateLabel
+                isEarnings
                   ? `<small class="study-calendar-chip-timing${event.confirmed ? " is-confirmed" : ""}">
-                      <span>${event.confirmed ? "공식 확정" : "예상"}</span> 미국 ${escapeHtml(usDateLabel)} ${escapeHtml(usSessionLabel)}
+                      <span>${event.confirmed ? "공식 확정" : "예상"}</span> ${escapeHtml(kstTimingLabel)}
                     </small>`
                   : "";
               const eventTitle = [event.title, event.note].filter(Boolean).join(" · ");
@@ -16880,7 +16897,7 @@ function renderStudyCalendarOverview() {
                 <a class="study-calendar-chip study-calendar-chip-${isEarnings ? "earnings" : "macro"}"
                   href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer"
                   title="${escapeHtml(eventTitle)}">
-                  <span><b>${escapeHtml(event.time || "미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
+                  <span><b>${escapeHtml(isEarnings ? `미국 ${usSessionLabel || "시간 미정"}` : event.time || "미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
                   ${timingMarkup}
                   <strong>${escapeHtml(displayTitle)}</strong>
                 </a>`;
@@ -16923,14 +16940,14 @@ function renderStudyCalendarOverview() {
           <div>
             <p>RESEARCH CALENDAR</p>
             <h2>향후 4주 일정</h2>
-            <span>Daily Briefing 전체 종목의 실적 발표와 Macro 추적 지표를 정리했습니다.</span>
+            <span>실적은 미국 현지 발표일, Macro는 KST 발표일 기준으로 정리했습니다.</span>
           </div>
           <time>Updated ${escapeHtml(studyCalendarData.updatedAt || "-")}</time>
         </div>
         <div class="study-calendar-legend">
           <span><b>(B)</b> 미국 장전</span>
           <span><b>(A)</b> 미국 장후</span>
-          <span>캘린더는 <b>KST</b> · 카드에는 미국 발표일 병기</span>
+          <span>실적 날짜는 <b>미국 현지 기준</b> · 카드 하단은 <b>KST</b></span>
           <span><b>공식 확정</b> 기업 IR 확인</span>
           <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 포착</span>
         </div>
@@ -20966,7 +20983,7 @@ function renderSummary(list) {
     } else if (state.researchView === "M7") {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
     } else if (state.researchView === "Calendar") {
-      summaryText.textContent = "향후 4주의 주요 실적 발표 및 미국 매크로 일정 · KST";
+      summaryText.textContent = "향후 4주 일정 · 실적은 미국 현지일, Macro는 KST";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }

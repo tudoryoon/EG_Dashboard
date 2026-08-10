@@ -1,6 +1,8 @@
 window.studyCalendarData = {
   "updatedAt": "2026-08-10",
-  "timezone": "Asia/Seoul",
+  "timezone": "America/New_York",
+  "displayTimezone": "Asia/Seoul",
+  "calendarToday": "2026-08-10",
   "coverage": {
     "dailyBriefingUniverse": 203,
     "matchedEarnings": 41,
@@ -10,7 +12,7 @@ window.studyCalendarData = {
   "methodology": {
     "macro": "BLS·Census·ISM 등 공식 발표 일정을 우선 사용",
     "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
-    "timing": "(B)는 미국 장전, (A)는 미국 장후. 캘린더 날짜·시각은 KST이며 카드에 미국 현지 발표일을 병기",
+    "timing": "실적은 미국 현지 발표일에 배치하고 카드 하단에 KST 환산 날짜·시각을 병기. 매크로는 KST 발표일 기준",
     "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음"
   },
   "weeks": [
@@ -20,6 +22,51 @@ window.studyCalendarData = {
       "range": "2026.08.10 - 08.16",
       "status": "진행 중",
       "events": [
+        {
+          "date": "2026-08-10",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "ASTS",
+          "session": "A",
+          "title": "AST SpaceMobile, Inc. (ASTS) 실적 발표",
+          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.28) · Nasdaq/Zacks 예상 일정",
+          "sector": "우주",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
+          "usDate": "2026-08-10",
+          "kstDate": "2026-08-11",
+          "confirmed": false
+        },
+        {
+          "date": "2026-08-10",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "RKLB",
+          "session": "A",
+          "title": "Rocket Lab Corporation (RKLB) 실적 발표",
+          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.07) · Nasdaq/Zacks 예상 일정",
+          "sector": "우주",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
+          "usDate": "2026-08-10",
+          "kstDate": "2026-08-11",
+          "confirmed": false
+        },
+        {
+          "date": "2026-08-10",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "USAR",
+          "session": "A",
+          "title": "USA Rare Earth, Inc. (USAR) 실적 발표",
+          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.07) · Nasdaq/Zacks 예상 일정",
+          "sector": "원자재",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
+          "usDate": "2026-08-10",
+          "kstDate": "2026-08-11",
+          "confirmed": false
+        },
         {
           "date": "2026-08-10",
           "time": "22:30 이전",
@@ -32,6 +79,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
           "usDate": "2026-08-10",
+          "kstDate": "2026-08-10",
           "confirmed": false
         },
         {
@@ -46,52 +94,11 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
           "usDate": "2026-08-10",
+          "kstDate": "2026-08-10",
           "confirmed": false
         },
         {
           "date": "2026-08-11",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "ASTS",
-          "session": "A",
-          "title": "AST SpaceMobile, Inc. (ASTS) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.28) · Nasdaq/Zacks 예상 일정",
-          "sector": "우주",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
-          "usDate": "2026-08-10",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-11",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "RKLB",
-          "session": "A",
-          "title": "Rocket Lab Corporation (RKLB) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.07) · Nasdaq/Zacks 예상 일정",
-          "sector": "우주",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
-          "usDate": "2026-08-10",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-11",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "USAR",
-          "session": "A",
-          "title": "USA Rare Earth, Inc. (USAR) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.07) · Nasdaq/Zacks 예상 일정",
-          "sector": "원자재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-10",
-          "usDate": "2026-08-10",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-12",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "CRWV",
@@ -102,24 +109,27 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-11",
           "usDate": "2026-08-11",
+          "kstDate": "2026-08-12",
           "confirmed": false
         },
         {
-          "date": "2026-08-12",
+          "date": "2026-08-11",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "LITE",
           "session": "A",
           "title": "Lumentum (LITE) 실적 발표",
-          "note": "기업 IR 공식 확정 · 미국 08/11 장후 · 컨퍼런스콜 8/12 06:00 KST",
+          "note": "기업 IR 공식 확정 · 미국 08/11 장후 · 컨퍼런스콜 KST 08/12 06:00",
           "sector": "통신 인프라",
           "sourceLabel": "Lumentum IR",
           "sourceUrl": "https://investor.lumentum.com/financial-news-releases/news-details/2026/Lumentum-Announces-Reporting-Date-for-Fourth-Quarter-and-Fiscal-Year-2026-Results/default.aspx",
           "usDate": "2026-08-11",
+          "kstDate": "2026-08-12",
+          "callKst": "08/12 06:00",
           "confirmed": true
         },
         {
-          "date": "2026-08-12",
+          "date": "2026-08-11",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "SMCI",
@@ -130,7 +140,40 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-11",
           "usDate": "2026-08-11",
+          "kstDate": "2026-08-12",
           "confirmed": false
+        },
+        {
+          "date": "2026-08-12",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "COHR",
+          "session": "A",
+          "title": "Coherent (COHR) 실적 발표",
+          "note": "기업 IR 공식 확정 · 미국 08/12 장후 · 컨퍼런스콜 KST 08/13 05:30",
+          "sector": "통신 인프라",
+          "sourceLabel": "Coherent IR",
+          "sourceUrl": "https://www.coherent.com/news/press-releases/fy2026-fourth-quarter-fy2026-conference-call-announced",
+          "usDate": "2026-08-12",
+          "kstDate": "2026-08-13",
+          "callKst": "08/13 05:30",
+          "confirmed": true
+        },
+        {
+          "date": "2026-08-12",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "CSCO",
+          "session": "A",
+          "title": "Cisco (CSCO) 실적 발표",
+          "note": "기업 IR 공식 확정 · 미국 08/12 장후 · 컨퍼런스콜 KST 08/13 05:30",
+          "sector": "통신 인프라",
+          "sourceLabel": "Cisco IR",
+          "sourceUrl": "https://s21.q4cdn.com/812015656/files/doc_earnings/2026/q3/transcript/Q3FY26-Prepared-Remarks.pdf",
+          "usDate": "2026-08-12",
+          "kstDate": "2026-08-13",
+          "callKst": "08/13 05:30",
+          "confirmed": true
         },
         {
           "date": "2026-08-12",
@@ -153,35 +196,23 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-12",
           "usDate": "2026-08-12",
+          "kstDate": "2026-08-12",
           "confirmed": false
         },
         {
           "date": "2026-08-13",
           "time": "05:00 이후",
           "kind": "earnings",
-          "ticker": "COHR",
+          "ticker": "AMAT",
           "session": "A",
-          "title": "Coherent (COHR) 실적 발표",
-          "note": "기업 IR 공식 확정 · 미국 08/12 장후 · 컨퍼런스콜 8/13 05:30 KST",
-          "sector": "통신 인프라",
-          "sourceLabel": "Coherent IR",
-          "sourceUrl": "https://www.coherent.com/news/press-releases/fy2026-fourth-quarter-fy2026-conference-call-announced",
-          "usDate": "2026-08-12",
-          "confirmed": true
-        },
-        {
-          "date": "2026-08-13",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "CSCO",
-          "session": "A",
-          "title": "Cisco (CSCO) 실적 발표",
-          "note": "기업 IR 공식 확정 · 미국 08/12 장후 · 컨퍼런스콜 8/13 05:30 KST",
-          "sector": "통신 인프라",
-          "sourceLabel": "Cisco IR",
-          "sourceUrl": "https://s21.q4cdn.com/812015656/files/doc_earnings/2026/q3/transcript/Q3FY26-Prepared-Remarks.pdf",
-          "usDate": "2026-08-12",
-          "confirmed": true
+          "title": "Applied Materials, Inc. (AMAT) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $3.36 · Nasdaq/Zacks 예상 일정",
+          "sector": "반도체(대형주)",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-13",
+          "usDate": "2026-08-13",
+          "kstDate": "2026-08-14",
+          "confirmed": false
         },
         {
           "date": "2026-08-13",
@@ -204,6 +235,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-13",
           "usDate": "2026-08-13",
+          "kstDate": "2026-08-13",
           "confirmed": false
         },
         {
@@ -218,20 +250,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-13",
           "usDate": "2026-08-13",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-14",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "AMAT",
-          "session": "A",
-          "title": "Applied Materials, Inc. (AMAT) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $3.36 · Nasdaq/Zacks 예상 일정",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-13",
-          "usDate": "2026-08-13",
+          "kstDate": "2026-08-13",
           "confirmed": false
         },
         {
@@ -262,6 +281,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
           "usDate": "2026-08-18",
+          "kstDate": "2026-08-18",
           "confirmed": false
         },
         {
@@ -276,6 +296,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
           "usDate": "2026-08-18",
+          "kstDate": "2026-08-18",
           "confirmed": false
         },
         {
@@ -290,6 +311,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
           "usDate": "2026-08-18",
+          "kstDate": "2026-08-18",
           "confirmed": false
         },
         {
@@ -304,6 +326,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-19",
           "usDate": "2026-08-19",
+          "kstDate": "2026-08-19",
           "confirmed": false
         },
         {
@@ -318,6 +341,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-19",
           "usDate": "2026-08-19",
+          "kstDate": "2026-08-19",
           "confirmed": false
         },
         {
@@ -332,6 +356,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-20",
           "usDate": "2026-08-20",
+          "kstDate": "2026-08-20",
           "confirmed": false
         }
       ]
@@ -344,20 +369,6 @@ window.studyCalendarData = {
       "events": [
         {
           "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "NTAP",
-          "session": "",
-          "title": "NetApp, Inc. (NTAP) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.70 · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-27",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "CRM",
@@ -368,10 +379,11 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
           "usDate": "2026-08-26",
+          "kstDate": "2026-08-27",
           "confirmed": false
         },
         {
-          "date": "2026-08-27",
+          "date": "2026-08-26",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "CRWD",
@@ -382,10 +394,11 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
           "usDate": "2026-08-26",
+          "kstDate": "2026-08-27",
           "confirmed": false
         },
         {
-          "date": "2026-08-27",
+          "date": "2026-08-26",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "NVDA",
@@ -396,10 +409,11 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
           "usDate": "2026-08-26",
+          "kstDate": "2026-08-27",
           "confirmed": false
         },
         {
-          "date": "2026-08-27",
+          "date": "2026-08-26",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "P",
@@ -410,10 +424,11 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
           "usDate": "2026-08-26",
+          "kstDate": "2026-08-27",
           "confirmed": false
         },
         {
-          "date": "2026-08-27",
+          "date": "2026-08-26",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "SNPS",
@@ -424,6 +439,52 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
           "usDate": "2026-08-26",
+          "kstDate": "2026-08-27",
+          "confirmed": false
+        },
+        {
+          "date": "2026-08-26",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "NTAP",
+          "session": "",
+          "title": "NetApp, Inc. (NTAP) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.70 · Nasdaq/Zacks 예상 일정",
+          "sector": "S/W & 플랫폼",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
+          "usDate": "2026-08-26",
+          "kstDate": "2026-08-26",
+          "confirmed": false
+        },
+        {
+          "date": "2026-08-27",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "MRVL",
+          "session": "A",
+          "title": "Marvell Technology, Inc. (MRVL) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.65 · Nasdaq/Zacks 예상 일정",
+          "sector": "반도체(대형주)",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
+          "usDate": "2026-08-27",
+          "kstDate": "2026-08-28",
+          "confirmed": false
+        },
+        {
+          "date": "2026-08-27",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "RBRK",
+          "session": "A",
+          "title": "Rubrik, Inc. (RBRK) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.34) · Nasdaq/Zacks 예상 일정",
+          "sector": "사이버보안",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
+          "usDate": "2026-08-27",
+          "kstDate": "2026-08-28",
           "confirmed": false
         },
         {
@@ -438,6 +499,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
           "usDate": "2026-08-27",
+          "kstDate": "2026-08-27",
           "confirmed": false
         },
         {
@@ -452,6 +514,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
           "usDate": "2026-08-27",
+          "kstDate": "2026-08-27",
           "confirmed": false
         },
         {
@@ -466,34 +529,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
           "usDate": "2026-08-27",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-28",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "MRVL",
-          "session": "A",
-          "title": "Marvell Technology, Inc. (MRVL) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.65 · Nasdaq/Zacks 예상 일정",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-28",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "RBRK",
-          "session": "A",
-          "title": "Rubrik, Inc. (RBRK) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.34) · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
+          "kstDate": "2026-08-27",
           "confirmed": false
         }
       ]
@@ -505,7 +541,7 @@ window.studyCalendarData = {
       "status": "예정",
       "events": [
         {
-          "date": "2026-09-02",
+          "date": "2026-09-01",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "MDB",
@@ -516,10 +552,11 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
           "usDate": "2026-09-01",
+          "kstDate": "2026-09-02",
           "confirmed": false
         },
         {
-          "date": "2026-09-02",
+          "date": "2026-09-01",
           "time": "05:00 이후",
           "kind": "earnings",
           "ticker": "PANW",
@@ -530,6 +567,22 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
           "usDate": "2026-09-01",
+          "kstDate": "2026-09-02",
+          "confirmed": false
+        },
+        {
+          "date": "2026-09-02",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "SNOW",
+          "session": "A",
+          "title": "Snowflake Inc. (SNOW) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.51) · Nasdaq/Zacks 예상 일정",
+          "sector": "S/W & 플랫폼",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
+          "usDate": "2026-09-02",
+          "kstDate": "2026-09-03",
           "confirmed": false
         },
         {
@@ -544,6 +597,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
           "usDate": "2026-09-02",
+          "kstDate": "2026-09-02",
           "confirmed": false
         },
         {
@@ -558,20 +612,37 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
           "usDate": "2026-09-02",
+          "kstDate": "2026-09-02",
           "confirmed": false
         },
         {
           "date": "2026-09-03",
           "time": "05:00 이후",
           "kind": "earnings",
-          "ticker": "SNOW",
+          "ticker": "PL",
           "session": "A",
-          "title": "Snowflake Inc. (SNOW) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.51) · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
+          "title": "Planet Labs PBC (PL) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.18) · Nasdaq/Zacks 예상 일정",
+          "sector": "우주",
           "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
-          "usDate": "2026-09-02",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
+          "usDate": "2026-09-03",
+          "kstDate": "2026-09-04",
+          "confirmed": false
+        },
+        {
+          "date": "2026-09-03",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "ZS",
+          "session": "A",
+          "title": "Zscaler, Inc. (ZS) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.06 · Nasdaq/Zacks 예상 일정",
+          "sector": "사이버보안",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
+          "usDate": "2026-09-03",
+          "kstDate": "2026-09-04",
           "confirmed": false
         },
         {
@@ -586,6 +657,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
           "usDate": "2026-09-03",
+          "kstDate": "2026-09-03",
           "confirmed": false
         },
         {
@@ -600,34 +672,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
           "usDate": "2026-09-03",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-04",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "PL",
-          "session": "A",
-          "title": "Planet Labs PBC (PL) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.18) · Nasdaq/Zacks 예상 일정",
-          "sector": "우주",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
-          "usDate": "2026-09-03",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-04",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "ZS",
-          "session": "A",
-          "title": "Zscaler, Inc. (ZS) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.06 · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
-          "usDate": "2026-09-03",
+          "kstDate": "2026-09-03",
           "confirmed": false
         },
         {
@@ -642,6 +687,7 @@ window.studyCalendarData = {
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-04",
           "usDate": "2026-09-04",
+          "kstDate": "2026-09-04",
           "confirmed": false
         }
       ]

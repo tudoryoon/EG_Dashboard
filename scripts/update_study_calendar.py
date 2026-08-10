@@ -19,24 +19,24 @@ NEW_YORK = ZoneInfo("America/New_York")
 NASDAQ_API = "https://api.nasdaq.com/api/calendar/earnings"
 NASDAQ_PAGE = "https://www.nasdaq.com/market-activity/earnings"
 
-# Company IR confirmations override third-party estimated dates. The calendar
-# still uses KST dates, while usDate preserves the U.S. market session date.
+# Company IR confirmations override third-party estimated dates. Earnings are
+# placed on the U.S. market date, while kstDate/time preserve the local view.
 CONFIRMED_EARNINGS = {
     "LITE": {
         "usDate": "2026-08-11",
-        "callTimeKst": "8/12 06:00 KST",
+        "callKst": "08/12 06:00",
         "sourceLabel": "Lumentum IR",
         "sourceUrl": "https://investor.lumentum.com/financial-news-releases/news-details/2026/Lumentum-Announces-Reporting-Date-for-Fourth-Quarter-and-Fiscal-Year-2026-Results/default.aspx",
     },
     "COHR": {
         "usDate": "2026-08-12",
-        "callTimeKst": "8/13 05:30 KST",
+        "callKst": "08/13 05:30",
         "sourceLabel": "Coherent IR",
         "sourceUrl": "https://www.coherent.com/news/press-releases/fy2026-fourth-quarter-fy2026-conference-call-announced",
     },
     "CSCO": {
         "usDate": "2026-08-12",
-        "callTimeKst": "8/13 05:30 KST",
+        "callKst": "08/13 05:30",
         "sourceLabel": "Cisco IR",
         "sourceUrl": "https://s21.q4cdn.com/812015656/files/doc_earnings/2026/q3/transcript/Q3FY26-Prepared-Remarks.pdf",
     },
@@ -191,7 +191,7 @@ def apply_confirmed_earnings(
             continue
         us_date = date.fromisoformat(confirmation["usDate"])
         local_date, session_code, local_time = localize_event(us_date, "time-after-hours")
-        if not start <= local_date <= end:
+        if not start <= us_date <= end:
             continue
         active_confirmations.append(
             (ticker, confirmation, us_date, local_date, session_code, local_time)
@@ -204,7 +204,7 @@ def apply_confirmed_earnings(
         match = universe[ticker]
         retained.append(
             {
-                "date": local_date.isoformat(),
+                "date": us_date.isoformat(),
                 "time": local_time,
                 "kind": "earnings",
                 "ticker": ticker,
@@ -212,12 +212,14 @@ def apply_confirmed_earnings(
                 "title": f"{match['name']} ({ticker}) 실적 발표",
                 "note": (
                     f"기업 IR 공식 확정 · 미국 {us_date:%m/%d} 장후 · "
-                    f"컨퍼런스콜 {confirmation['callTimeKst']}"
+                    f"컨퍼런스콜 KST {confirmation['callKst']}"
                 ),
                 "sector": match["sector"],
                 "sourceLabel": confirmation["sourceLabel"],
                 "sourceUrl": confirmation["sourceUrl"],
                 "usDate": us_date.isoformat(),
+                "kstDate": local_date.isoformat(),
+                "callKst": confirmation["callKst"],
                 "confirmed": True,
             }
         )
@@ -252,7 +254,7 @@ def build_earnings_events(
                     continue
 
                 local_date, session_code, local_time = localize_event(current, str(row.get("time") or ""))
-                dedupe_key = (raw_symbol, local_date.isoformat())
+                dedupe_key = (raw_symbol, current.isoformat())
                 if dedupe_key in seen:
                     continue
                 seen.add(dedupe_key)
@@ -269,7 +271,7 @@ def build_earnings_events(
                 company_name = str(row.get("name") or match["name"]).strip()
                 events.append(
                     {
-                        "date": local_date.isoformat(),
+                        "date": current.isoformat(),
                         "time": local_time,
                         "kind": "earnings",
                         "ticker": raw_symbol,
@@ -280,6 +282,7 @@ def build_earnings_events(
                         "sourceLabel": "Nasdaq",
                         "sourceUrl": f"{NASDAQ_PAGE}?date={current:%Y-%m-%d}",
                         "usDate": current.isoformat(),
+                        "kstDate": local_date.isoformat(),
                         "confirmed": False,
                     }
                 )
@@ -302,9 +305,10 @@ def week_status(today: date, start: date, end: date) -> str:
 
 
 def main() -> None:
-    today = datetime.now(KST).date()
+    today_kst = datetime.now(KST).date()
+    today_us = datetime.now(NEW_YORK).date()
     universe = load_daily_briefing_universe()
-    bounds = week_bounds(today)
+    bounds = week_bounds(today_us)
     start = bounds[0][1]
     end = bounds[-1][2]
     earnings = build_earnings_events(universe, start, end)
@@ -328,14 +332,16 @@ def main() -> None:
                 "key": key,
                 "label": week_labels[key],
                 "range": format_range(week_start, week_end),
-                "status": week_status(today, week_start, week_end),
+                "status": week_status(today_us, week_start, week_end),
                 "events": events,
             }
         )
 
     payload = {
-        "updatedAt": today.isoformat(),
-        "timezone": "Asia/Seoul",
+        "updatedAt": today_kst.isoformat(),
+        "timezone": "America/New_York",
+        "displayTimezone": "Asia/Seoul",
+        "calendarToday": today_us.isoformat(),
         "coverage": {
             "dailyBriefingUniverse": len(universe),
             "matchedEarnings": len(earnings),
@@ -345,7 +351,7 @@ def main() -> None:
         "methodology": {
             "macro": "BLS·Census·ISM 등 공식 발표 일정을 우선 사용",
             "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
-            "timing": "(B)는 미국 장전, (A)는 미국 장후. 캘린더 날짜·시각은 KST이며 카드에 미국 현지 발표일을 병기",
+            "timing": "실적은 미국 현지 발표일에 배치하고 카드 하단에 KST 환산 날짜·시각을 병기. 매크로는 KST 발표일 기준",
             "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음",
         },
         "weeks": weeks,
