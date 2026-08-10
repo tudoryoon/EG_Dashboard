@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install briefing dependencies
-        run: python -m pip install pandas yfinance requests
+        run: python -m pip install pandas yfinance requests curl_cffi
 
       - name: Refresh market briefing
         run: python scripts/update_market_briefing.py

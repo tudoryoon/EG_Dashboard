@@ -16,6 +16,8 @@ import pandas as pd
 import requests
 import yfinance as yf
 
+from fedwatch_data import build_fedwatch_snapshot as build_official_fedwatch_snapshot
+
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-data.js"
 USER_AGENT = {"User-Agent": "Mozilla/5.0"}
@@ -1838,10 +1840,19 @@ def build_mirror_fedwatch_snapshot() -> dict[str, object]:
 
 def build_fedwatch_snapshot() -> dict[str, object]:
     try:
-        return build_mirror_fedwatch_snapshot()
+        return build_official_fedwatch_snapshot()
     except Exception as error:
-        print(f"FedWatch mirror update failed; using static fallback: {error}", flush=True)
-        return build_static_fedwatch_snapshot(str(error))
+        print(f"Official FedWatch EOD update failed; preserving previous snapshot: {error}", flush=True)
+        if OUTPUT_PATH.exists():
+            try:
+                text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+                text = re.sub(r"^window\.marketBriefingData\s*=\s*", "", text).rstrip(";")
+                previous = json.loads(text).get("fedWatch")
+                if isinstance(previous, dict) and previous.get("rows"):
+                    return previous
+            except Exception as previous_error:
+                print(f"Could not preserve previous FedWatch snapshot: {previous_error}", flush=True)
+        raise
 
 
 def build_payload() -> dict[str, object]:

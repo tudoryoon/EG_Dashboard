@@ -3,12 +3,10 @@ name: Update Market Briefing FedWatch
 on:
   workflow_dispatch:
   schedule:
-    # CME FedWatch End-of-Day forecasts are documented as updating at 01:45 UTC
-    # on business days. The public OANDA mirror can lag CME live, so refresh
-    # the FedWatch-only block at 10:55/11:20/13:05 KST.
-    - cron: "55 1 * * 1-5"
-    - cron: "20 2 * * 1-5"
-    - cron: "05 4 * * 1-5"
+    # CME's settlement window ends at 14:00 CT. These 04:15/05:15 KST
+    # Tuesday-Saturday runs cover both US daylight and standard time.
+    - cron: "15 19 * * 1-5"
+    - cron: "15 20 * * 1-5"
 
 permissions:
   contents: write
@@ -31,7 +29,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install requests
+        run: python -m pip install requests curl_cffi
 
       - name: Refresh FedWatch probabilities
         run: python scripts/update_market_briefing_fedwatch.py
