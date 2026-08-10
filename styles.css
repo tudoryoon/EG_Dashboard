@@ -4534,6 +4534,34 @@ h1 {
   color: #66665f;
 }
 
+.study-calendar-chip-timing {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  color: #777770;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.study-calendar-chip-timing span {
+  flex: 0 0 auto;
+  padding: 1px 4px;
+  border: 1px solid #ddd9d0;
+  border-radius: 3px;
+  background: #f7f5f0;
+  color: #777168;
+  font-size: 0.54rem;
+  font-weight: 900;
+}
+
+.study-calendar-chip-timing.is-confirmed span {
+  border-color: #9fcdb5;
+  background: #edf8f2;
+  color: #217451;
+}
+
 .study-calendar-chip-earnings em {
   color: #b33d33;
 }

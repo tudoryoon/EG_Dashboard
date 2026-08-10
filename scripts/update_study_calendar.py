@@ -19,6 +19,29 @@ NEW_YORK = ZoneInfo("America/New_York")
 NASDAQ_API = "https://api.nasdaq.com/api/calendar/earnings"
 NASDAQ_PAGE = "https://www.nasdaq.com/market-activity/earnings"
 
+# Company IR confirmations override third-party estimated dates. The calendar
+# still uses KST dates, while usDate preserves the U.S. market session date.
+CONFIRMED_EARNINGS = {
+    "LITE": {
+        "usDate": "2026-08-11",
+        "callTimeKst": "8/12 06:00 KST",
+        "sourceLabel": "Lumentum IR",
+        "sourceUrl": "https://investor.lumentum.com/financial-news-releases/news-details/2026/Lumentum-Announces-Reporting-Date-for-Fourth-Quarter-and-Fiscal-Year-2026-Results/default.aspx",
+    },
+    "COHR": {
+        "usDate": "2026-08-12",
+        "callTimeKst": "8/13 05:30 KST",
+        "sourceLabel": "Coherent IR",
+        "sourceUrl": "https://www.coherent.com/news/press-releases/fy2026-fourth-quarter-fy2026-conference-call-announced",
+    },
+    "CSCO": {
+        "usDate": "2026-08-12",
+        "callTimeKst": "8/13 05:30 KST",
+        "sourceLabel": "Cisco IR",
+        "sourceUrl": "https://s21.q4cdn.com/812015656/files/doc_earnings/2026/q3/transcript/Q3FY26-Prepared-Remarks.pdf",
+    },
+}
+
 # Macro events remain a deliberately small, manually verified list. The earnings
 # side is automated from the complete Daily Briefing universe below.
 KNOWN_MACRO_EVENTS = [
@@ -154,6 +177,54 @@ def localize_event(api_date: date, time_code: str) -> tuple[date, str, str]:
     return api_date, "", "시간 미정"
 
 
+def apply_confirmed_earnings(
+    events: list[dict],
+    universe: dict[str, dict[str, str]],
+    start: date,
+    end: date,
+) -> list[dict]:
+    active_confirmations: list[tuple[str, dict, date, date, str, str]] = []
+
+    for ticker, confirmation in CONFIRMED_EARNINGS.items():
+        match = universe.get(ticker)
+        if match is None:
+            continue
+        us_date = date.fromisoformat(confirmation["usDate"])
+        local_date, session_code, local_time = localize_event(us_date, "time-after-hours")
+        if not start <= local_date <= end:
+            continue
+        active_confirmations.append(
+            (ticker, confirmation, us_date, local_date, session_code, local_time)
+        )
+
+    active_tickers = {item[0] for item in active_confirmations}
+    retained = [event for event in events if event.get("ticker") not in active_tickers]
+
+    for ticker, confirmation, us_date, local_date, session_code, local_time in active_confirmations:
+        match = universe[ticker]
+        retained.append(
+            {
+                "date": local_date.isoformat(),
+                "time": local_time,
+                "kind": "earnings",
+                "ticker": ticker,
+                "session": session_code,
+                "title": f"{match['name']} ({ticker}) 실적 발표",
+                "note": (
+                    f"기업 IR 공식 확정 · 미국 {us_date:%m/%d} 장후 · "
+                    f"컨퍼런스콜 {confirmation['callTimeKst']}"
+                ),
+                "sector": match["sector"],
+                "sourceLabel": confirmation["sourceLabel"],
+                "sourceUrl": confirmation["sourceUrl"],
+                "usDate": us_date.isoformat(),
+                "confirmed": True,
+            }
+        )
+
+    return retained
+
+
 def build_earnings_events(
     universe: dict[str, dict[str, str]],
     start: date,
@@ -208,10 +279,13 @@ def build_earnings_events(
                         "sector": match["sector"],
                         "sourceLabel": "Nasdaq",
                         "sourceUrl": f"{NASDAQ_PAGE}?date={current:%Y-%m-%d}",
+                        "usDate": current.isoformat(),
+                        "confirmed": False,
                     }
                 )
         current += timedelta(days=1)
 
+    events = apply_confirmed_earnings(events, universe, start, end)
     return sorted(events, key=lambda item: (item["date"], item["time"], item["ticker"]))
 
 
@@ -270,9 +344,9 @@ def main() -> None:
         },
         "methodology": {
             "macro": "BLS·Census·ISM 등 공식 발표 일정을 우선 사용",
-            "earnings": "Daily Briefing 전체 미국 종목을 Nasdaq 공개 Earnings Calendar와 자동 대조",
-            "timing": "(B)는 미국 장전, (A)는 미국 장후. 날짜와 시각은 모두 KST 기준",
-            "warning": "Nasdaq 일정은 Zacks 데이터와 과거 발표 패턴에 기반한 예상일을 포함하므로 기업 IR 확정 공지에 따라 변경될 수 있음",
+            "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
+            "timing": "(B)는 미국 장전, (A)는 미국 장후. 캘린더 날짜·시각은 KST이며 카드에 미국 현지 발표일을 병기",
+            "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음",
         },
         "weeks": weeks,
         "fallbackSources": [

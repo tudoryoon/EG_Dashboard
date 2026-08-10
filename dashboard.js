@@ -16863,6 +16863,14 @@ function renderStudyCalendarOverview() {
               const eventLabel = isEarnings
                 ? `${event.ticker || "실적"}${event.session ? ` (${event.session})` : ""}`
                 : "MACRO";
+              const usSessionLabel = event.session === "A" ? "장후" : event.session === "B" ? "장전" : "";
+              const usDateLabel = event.usDate ? event.usDate.slice(5).replace("-", "/") : "";
+              const timingMarkup =
+                isEarnings && usDateLabel
+                  ? `<small class="study-calendar-chip-timing${event.confirmed ? " is-confirmed" : ""}">
+                      <span>${event.confirmed ? "공식 확정" : "예상"}</span> 미국 ${escapeHtml(usDateLabel)} ${escapeHtml(usSessionLabel)}
+                    </small>`
+                  : "";
               const eventTitle = [event.title, event.note].filter(Boolean).join(" · ");
               const displayTitle =
                 isEarnings && event.ticker && !String(event.title || "").includes(`(${event.ticker})`)
@@ -16873,6 +16881,7 @@ function renderStudyCalendarOverview() {
                   href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer"
                   title="${escapeHtml(eventTitle)}">
                   <span><b>${escapeHtml(event.time || "미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
+                  ${timingMarkup}
                   <strong>${escapeHtml(displayTitle)}</strong>
                 </a>`;
             })
@@ -16921,7 +16930,8 @@ function renderStudyCalendarOverview() {
         <div class="study-calendar-legend">
           <span><b>(B)</b> 미국 장전</span>
           <span><b>(A)</b> 미국 장후</span>
-          <span>날짜·시각은 모두 <b>KST</b></span>
+          <span>캘린더는 <b>KST</b> · 카드에는 미국 발표일 병기</span>
+          <span><b>공식 확정</b> 기업 IR 확인</span>
           <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 포착</span>
         </div>
         <div class="study-calendar-range-row">${rangeMarkup}</div>
