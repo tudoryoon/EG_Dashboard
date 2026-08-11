@@ -2,9 +2,9 @@ window.studyCalendarData = {
   "updatedAt": "2026-08-11",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-08-10",
+  "calendarToday": "2026-08-11",
   "coverage": {
-    "dailyBriefingUniverse": 203,
+    "dailyBriefingUniverse": 204,
     "matchedEarnings": 41,
     "windowStart": "2026-08-10",
     "windowEnd": "2026-09-06"
@@ -337,7 +337,7 @@ window.studyCalendarData = {
           "session": "B",
           "title": "Viking Holdings Ltd (VIK) 실적 발표",
           "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 $1.25 · Nasdaq/Zacks 예상 일정",
-          "sector": "레저",
+          "sector": "여행 & 레저",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-19",
           "usDate": "2026-08-19",
