@@ -1394,6 +1394,10 @@ h1 {
   padding: 12px;
 }
 
+.briefing-rotation-candidate-card {
+  align-content: start;
+}
+
 .briefing-rotation-quadrant p {
   margin: 0;
   color: #3f3f39;
@@ -1413,6 +1417,7 @@ h1 {
 
 .briefing-rotation-name-list {
   display: grid;
+  align-content: start;
   gap: 7px;
 }
 
