@@ -491,8 +491,9 @@ SECTOR_GROUPS = [
     },
     {
         "key": "leisure",
-        "label": "레저",
+        "label": "여행 & 레저",
         "items": [
+            {"ticker": "ABNB", "label": "ABNB US", "name": "Airbnb", "query": "Airbnb stock"},
             {"ticker": "CCL", "label": "CCL US", "name": "Carnival", "query": "Carnival stock"},
             {"ticker": "RCL", "label": "RCL US", "name": "Royal Caribbean", "query": "Royal Caribbean stock"},
             {"ticker": "VIK", "label": "VIK US", "name": "Viking Holdings", "query": "Viking Holdings stock"},
