@@ -16,6 +16,7 @@ import io
 import json
 import math
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -92,10 +93,20 @@ ETF_META = {
 }
 
 
-def request_bytes(url: str, timeout: int = 60) -> bytes:
-    response = requests.get(url, headers=HEADERS, timeout=timeout)
-    response.raise_for_status()
-    return response.content
+def request_bytes(url: str, timeout: int = 60, attempts: int = 3) -> bytes:
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=timeout)
+            response.raise_for_status()
+            if not response.content:
+                raise RuntimeError(f"Empty response from {url}")
+            return response.content
+        except (requests.RequestException, RuntimeError) as error:
+            last_error = error
+            if attempt + 1 < attempts:
+                time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(f"Failed to fetch {url} after {attempts} attempts: {last_error}")
 
 
 def request_text(url: str, timeout: int = 60) -> str:
@@ -154,24 +165,56 @@ def fetch_yahoo_prices(symbol: str, start: date) -> dict[str, float]:
     cache_dir = ROOT / "output" / "yfinance-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     yf.set_tz_cache_location(str(cache_dir))
-    frame = yf.download(
-        symbol,
-        start=start.isoformat(),
-        end=(date.today() + timedelta(days=2)).isoformat(),
-        auto_adjust=False,
-        progress=False,
-        threads=False,
-    )
-    if frame.empty:
-        raise RuntimeError(f"Yahoo Finance returned no price rows for {symbol}")
-    close = frame["Close"]
-    if isinstance(close, pd.DataFrame):
-        close = close.iloc[:, 0]
-    return {
-        index.date().isoformat(): float(value)
-        for index, value in close.items()
-        if pd.notna(value)
-    }
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            frame = yf.download(
+                symbol,
+                start=start.isoformat(),
+                end=(date.today() + timedelta(days=2)).isoformat(),
+                auto_adjust=False,
+                progress=False,
+                threads=False,
+            )
+            if frame.empty:
+                raise RuntimeError(f"Yahoo Finance returned no price rows for {symbol}")
+            close = frame["Close"]
+            if isinstance(close, pd.DataFrame):
+                close = close.iloc[:, 0]
+            return {
+                index.date().isoformat(): float(value)
+                for index, value in close.items()
+                if pd.notna(value)
+            }
+        except Exception as error:
+            last_error = error
+            if attempt + 1 < 3:
+                time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(f"Failed to fetch Yahoo Finance prices for {symbol}: {last_error}")
+
+
+def existing_item_history(existing: dict[str, Any], ticker: str) -> dict[str, dict[str, float]]:
+    item = existing.get("items", {}).get(ticker, {})
+    dates = item.get("dates", [])
+    prices = item.get("prices", [])
+    navs = item.get("navs", [])
+    shares = item.get("sharesOutstanding", [])
+    aums = item.get("aumM", [])
+    history: dict[str, dict[str, float]] = {}
+    for index, day_text in enumerate(dates):
+        nav = finite(navs[index] if index < len(navs) else None)
+        share_count = finite(shares[index] if index < len(shares) else None)
+        if nav is None or share_count is None:
+            continue
+        price = finite(prices[index] if index < len(prices) else None)
+        aum_m = finite(aums[index] if index < len(aums) else None)
+        history[str(day_text)] = {
+            "nav": nav,
+            "price": price if price is not None else nav,
+            "shares": share_count,
+            "aum": aum_m * 1_000_000 if aum_m is not None else share_count * nav,
+        }
+    return history
 
 
 def fetch_roundhill_nav_history(file_ticker: str) -> dict[str, dict[str, float]]:
@@ -349,23 +392,55 @@ def build_item(
 
 def build_payload() -> dict[str, Any]:
     existing = load_existing()
+    source_failures: list[str] = []
+    live_sources = 0
     ishares_histories: dict[str, dict[str, dict[str, float]]] = {}
     for ticker, meta in ETF_META.items():
         portfolio_id = meta.get("portfolioId")
         if not portfolio_id:
             continue
-        history = fetch_ishares_history(str(portfolio_id))
-        prices = fetch_yahoo_prices(ticker, START_DATE)
+        try:
+            history = fetch_ishares_history(str(portfolio_id))
+            live_sources += 1
+        except Exception as error:
+            history = existing_item_history(existing, ticker)
+            if not history:
+                raise
+            source_failures.append(f"{ticker} iShares: {error}")
+            print(f"Warning: preserving existing {ticker} issuer history: {error}")
+        try:
+            prices = fetch_yahoo_prices(ticker, START_DATE)
+        except Exception as error:
+            prices = {
+                day_text: values["price"]
+                for day_text, values in existing_item_history(existing, ticker).items()
+            }
+            source_failures.append(f"{ticker} Yahoo: {error}")
+            print(f"Warning: preserving existing {ticker} market prices: {error}")
         for day_text, values in history.items():
             values["price"] = prices.get(day_text, values["nav"])
         ishares_histories[ticker] = history
 
-    roundhill_histories = {
-        ticker: fetch_roundhill_nav_history(meta["fileTicker"])
-        for ticker, meta in ETF_META.items()
-        if ticker in {"DRAM", "MAGS"}
-    }
-    current = fetch_roundhill_current()
+    roundhill_histories: dict[str, dict[str, dict[str, float]]] = {}
+    for ticker in ("DRAM", "MAGS"):
+        try:
+            roundhill_histories[ticker] = fetch_roundhill_nav_history(ETF_META[ticker]["fileTicker"])
+            live_sources += 1
+        except Exception as error:
+            history = existing_item_history(existing, ticker)
+            if not history:
+                raise
+            roundhill_histories[ticker] = history
+            source_failures.append(f"{ticker} Roundhill history: {error}")
+            print(f"Warning: preserving existing {ticker} issuer history: {error}")
+    try:
+        current = fetch_roundhill_current()
+    except Exception as error:
+        current = {}
+        source_failures.append(f"Roundhill current: {error}")
+        print(f"Warning: preserving existing Roundhill current data: {error}")
+    if live_sources == 0:
+        raise RuntimeError("All ETF issuer sources failed; refusing to publish an unverified refresh")
     for ticker, values in current.items():
         day_text = str(values.get("date") or "")
         if not day_text:
@@ -400,6 +475,7 @@ def build_payload() -> dict[str, Any]:
         "updatedAt": updated_at,
         "comparisonDate": comparison_date,
         "sourceDates": {ticker: item["latest"]["date"] for ticker, item in items.items()},
+        "sourceWarnings": source_failures,
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "startDate": START_DATE.isoformat(),
         "defaultRange": "ytd",
