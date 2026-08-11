@@ -102,6 +102,15 @@ SECTOR_GROUPS = [
         ],
     },
     {
+        "key": "cloud_bigtech",
+        "label": "클라우드 빅테크",
+        "items": [
+            {"ticker": "GOOGL", "label": "GOOGL US", "name": "Alphabet", "query": "Alphabet stock"},
+            {"ticker": "AMZN", "label": "AMZN US", "name": "Amazon", "query": "Amazon stock"},
+            {"ticker": "MSFT", "label": "MSFT US", "name": "Microsoft", "query": "Microsoft stock"},
+        ],
+    },
+    {
         "key": "semi_large",
         "label": "반도체(대형주)",
         "scoreTickers": ["AVGO", "TSM", "MU", "SNDK", "WDC", "STX", "ASML", "AMAT", "LRCX", "KLAC", "TER", "INTC", "AMD", "MRVL"],
