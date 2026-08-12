@@ -429,6 +429,7 @@ const state = {
   rsUniverse: "all",
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
+  rsMonitorSelectedTicker: "",
   rsFilter: "all",
   rsBriefingSector: "briefingAll",
   rsMarketCapRange: "all",
@@ -12901,7 +12902,10 @@ function renderMarketRsOverview() {
   const rows = getVisibleMarketRsRows(briefingSectorData);
   const monitoringUniverse = "all";
   const monitoringBaseRows = marketRsData.rows ?? [];
-  const selected = getSelectedMarketRsRow(rows);
+  const selected =
+    state.rsMonitorSelectedTicker === state.rsSelectedTicker
+      ? monitoringBaseRows.find((row) => row.ticker === state.rsMonitorSelectedTicker) ?? getSelectedMarketRsRow(rows)
+      : getSelectedMarketRsRow(rows);
   if (selected) {
     state.rsSelectedTicker = selected.ticker;
   }
@@ -13669,17 +13673,7 @@ function renderMarketRsOverview() {
   usOverviewRoot.querySelectorAll("[data-rs-ticker]").forEach((element) => {
     element.addEventListener("click", () => {
       if (element.hasAttribute("data-rs-monitor-item")) {
-        state.query = "";
-        state.rsUniverse = "all";
-        state.rsFilter = "all";
-        state.rsBriefingSector = "all";
-        state.rsMarketCapRange = "all";
-        state.rsCustomMarketCapMin = "";
-        state.rsCustomMarketCapMax = "";
-        state.rsScoreRange = "all";
-        state.rsCustomScoreMin = "";
-        state.rsCustomScoreMax = "";
-        resetRsCardLimit();
+        state.rsMonitorSelectedTicker = element.dataset.rsTicker;
       }
       state.rsSelectedTicker = element.dataset.rsTicker;
       render();
