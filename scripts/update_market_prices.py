@@ -7,8 +7,12 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
+from curl_cffi import requests as curl_requests
+
 
 START_DATE = "1965-01-01"
+VKOSPI_START_DATE = "2009-04-13"
+VKOSPI_INSTRUMENT_ID = "956761"
 SYMBOLS = [
     {"key": "sp500", "symbol": "^GSPC", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
     {"key": "nasdaq", "symbol": "^IXIC", "label": "NASDAQ Composite", "color": "#2563eb", "isIndex": True},
@@ -48,6 +52,18 @@ def exclude_incomplete_session(
     return [row for row in rows if row[0] < current_day]
 
 
+def exclude_incomplete_korea_session(
+    rows: list[tuple[str, float, float, float, float]],
+) -> list[tuple[str, float, float, float, float]]:
+    if not rows:
+        return rows
+    now_seoul = datetime.now(ZoneInfo("Asia/Seoul"))
+    if now_seoul.weekday() >= 5 or now_seoul.time() >= datetime_time(15, 45):
+        return rows
+    current_day = now_seoul.date().isoformat()
+    return [row for row in rows if row[0] < current_day]
+
+
 def load_existing_updated_at(output_path: Path) -> str | None:
     if not output_path.exists():
         return None
@@ -58,6 +74,20 @@ def load_existing_updated_at(output_path: Path) -> str | None:
             text = text[len(prefix) :]
         value = json.loads(text.rstrip(";")).get("updatedAt")
         return str(value) if value else None
+    except Exception:
+        return None
+
+
+def load_existing_item(output_path: Path, key: str) -> dict[str, object] | None:
+    if not output_path.exists():
+        return None
+    try:
+        text = output_path.read_text(encoding="utf-8").strip()
+        prefix = "window.marketPriceData = "
+        if text.startswith(prefix):
+            text = text[len(prefix) :]
+        item = (json.loads(text.rstrip(";")).get("items") or {}).get(key)
+        return item if isinstance(item, dict) else None
     except Exception:
         return None
 
@@ -114,8 +144,80 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
     }
 
 
+def build_vkospi_item() -> dict[str, object]:
+    endpoint = f"https://api.investing.com/api/financialdata/historical/{VKOSPI_INSTRUMENT_ID}"
+    response = curl_requests.get(
+        endpoint,
+        params={
+            "start-date": VKOSPI_START_DATE,
+            "end-date": datetime.now(ZoneInfo("Asia/Seoul")).date().isoformat(),
+            "time-frame": "Daily",
+            "add-missing-rows": "false",
+        },
+        headers={
+            "domain-id": "www",
+            "accept": "application/json, text/plain, */*",
+            "referer": "https://www.investing.com/indices/kospi-volatility-historical-data",
+        },
+        impersonate="chrome",
+        timeout=45,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    rows_by_date: dict[str, tuple[str, float, float, float, float]] = {}
+    for entry in payload.get("data") or []:
+        day = str(entry.get("rowDateTimestamp") or "")[:10]
+        if not day or day < VKOSPI_START_DATE:
+            continue
+        try:
+            parsed_day = datetime.strptime(day, "%Y-%m-%d")
+        except ValueError:
+            continue
+        if parsed_day.weekday() >= 5:
+            continue
+        close = entry.get("last_closeRaw", entry.get("last_close"))
+        high = entry.get("last_maxRaw", entry.get("last_max"))
+        low = entry.get("last_minRaw", entry.get("last_min"))
+        if close in (None, "") or high in (None, "") or low in (None, ""):
+            continue
+        try:
+            close_value = round(float(str(close).replace(",", "")), 4)
+            high_value = round(float(str(high).replace(",", "")), 4)
+            low_value = round(float(str(low).replace(",", "")), 4)
+        except (TypeError, ValueError):
+            continue
+        rows_by_date[day] = (day, close_value, high_value, low_value, close_value)
+
+    filtered = exclude_incomplete_korea_session(sorted(rows_by_date.values(), key=lambda row: row[0]))
+    if len(filtered) < 500:
+        raise RuntimeError(f"VKOSPI history is unexpectedly short: {len(filtered)} rows")
+    return {
+        "label": "VKOSPI",
+        "symbol": "KSVKOSPI",
+        "color": "#7c3aed",
+        "isIndex": True,
+        "source": "Investing.com (KRX V-KOSPI 200)",
+        "sourceUrl": "https://www.investing.com/indices/kospi-volatility-historical-data",
+        "dates": [day for day, *_ in filtered],
+        "values": [value for _, value, *_ in filtered],
+        "highs": [high for _, _, high, _, _ in filtered],
+        "lows": [low for _, _, _, low, _ in filtered],
+        "closes": [close for _, _, _, _, close in filtered],
+    }
+
+
 def main() -> None:
+    output_path = Path(__file__).resolve().parents[1] / "data" / "market-price-data.js"
     items = {meta["key"]: build_item(meta) for meta in SYMBOLS}
+    try:
+        items["vkospi"] = build_vkospi_item()
+    except Exception as exc:
+        existing_vkospi = load_existing_item(output_path, "vkospi")
+        if existing_vkospi:
+            items["vkospi"] = existing_vkospi
+            print(f"Retained existing VKOSPI history after refresh failure: {exc}", flush=True)
+        else:
+            raise
     latest_dates = [item["dates"][-1] for item in items.values() if item["dates"]]
     payload = {
         "updatedAt": max(latest_dates) if latest_dates else "",
@@ -134,7 +236,6 @@ def main() -> None:
         "items": items,
     }
 
-    output_path = Path(__file__).resolve().parents[1] / "data" / "market-price-data.js"
     existing_updated_at = load_existing_updated_at(output_path)
     candidate_updated_at = str(payload.get("updatedAt") or "")
     if existing_updated_at and candidate_updated_at and candidate_updated_at < existing_updated_at:

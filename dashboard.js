@@ -248,6 +248,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "market:dowjones": "#6b7280",
   "market:russell2000": "#8b5cf6",
   "market:sox": "#dc2626",
+  "market:vkospi": "#7c3aed",
   "market:smh": "#dc2626",
   "macro:policy:fed_funds": "#e11d48",
   "macro:policy:inflation_5y": "#f97316",
@@ -287,6 +288,7 @@ const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "nasdaq100", label: "NASDAQ 100" },
   { key: "sox", label: "SOX" },
   { key: "russell2000", label: "Russell 2000" },
+  { key: "vkospi", label: "VKOSPI" },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS = [
   {
@@ -2031,7 +2033,10 @@ function calculateAtrDrawdownMultipleSeries(drawdowns, atrPercents) {
 
 function getMarketTrendBounds() {
   const trendStart = marketPriceData?.startDate ?? "1980-01-01";
-  const items = MARKET_PRICE_TREND_INDEX_OPTIONS.map((option) => marketPriceData?.items?.[option.key]).filter(Boolean);
+  const selectedItem = marketPriceData?.items?.[state.marketTrendIndex];
+  const items = selectedItem
+    ? [selectedItem]
+    : MARKET_PRICE_TREND_INDEX_OPTIONS.map((option) => marketPriceData?.items?.[option.key]).filter(Boolean);
   const dates = [...new Set(items.flatMap((item) => item.dates ?? []).filter((date) => date >= trendStart))].sort();
   return {
     min: dates[0] ?? trendStart,
@@ -18273,7 +18278,7 @@ function renderIndexTrendOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500, Dow Jones, NASDAQ 100, SOX, Russell 2000의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
+            <p>S&P 500, Dow Jones, NASDAQ 100, SOX, Russell 2000, VKOSPI의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
