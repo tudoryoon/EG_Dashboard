@@ -41,8 +41,8 @@ def fetch_json(url: str) -> dict:
 
 
 def exclude_incomplete_session(
-    rows: list[tuple[str, float, float, float, float]],
-) -> list[tuple[str, float, float, float, float]]:
+    rows: list[tuple[str, float, float, float, float, float]],
+) -> list[tuple[str, float, float, float, float, float]]:
     if not rows:
         return rows
     now_new_york = datetime.now(ZoneInfo("America/New_York"))
@@ -53,8 +53,8 @@ def exclude_incomplete_session(
 
 
 def exclude_incomplete_korea_session(
-    rows: list[tuple[str, float, float, float, float]],
-) -> list[tuple[str, float, float, float, float]]:
+    rows: list[tuple[str, float, float, float, float, float]],
+) -> list[tuple[str, float, float, float, float, float]]:
     if not rows:
         return rows
     now_seoul = datetime.now(ZoneInfo("Asia/Seoul"))
@@ -99,6 +99,7 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
     quote_data = (result.get("indicators") or {}).get("quote") or [{}]
     adjclose_data = (result.get("indicators") or {}).get("adjclose") or [{}]
     quote = quote_data[0] or {}
+    raw_opens = quote.get("open") or []
     raw_closes = quote.get("close") or []
     raw_highs = quote.get("high") or []
     raw_lows = quote.get("low") or []
@@ -106,10 +107,12 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
 
     dates: list[str] = []
     values: list[float] = []
+    opens: list[float] = []
     highs: list[float] = []
     lows: list[float] = []
     closes: list[float] = []
     for index, timestamp in enumerate(timestamps):
+        raw_open = raw_opens[index] if index < len(raw_opens) else None
         raw_close = raw_closes[index] if index < len(raw_closes) else None
         raw_high = raw_highs[index] if index < len(raw_highs) else None
         raw_low = raw_lows[index] if index < len(raw_lows) else None
@@ -122,13 +125,14 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
             adjustment = float(adj_close) / float(raw_close)
         dates.append((datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=timestamp)).strftime("%Y-%m-%d"))
         values.append(round(float(close), 4))
+        opens.append(round(float(raw_open if raw_open is not None else raw_close) * adjustment, 4))
         highs.append(round(float(raw_high) * adjustment, 4))
         lows.append(round(float(raw_low) * adjustment, 4))
         closes.append(round(float(close), 4))
 
     filtered = exclude_incomplete_session([
-        (day, value, high, low, close)
-        for day, value, high, low, close in zip(dates, values, highs, lows, closes)
+        (day, value, open_value, high, low, close)
+        for day, value, open_value, high, low, close in zip(dates, values, opens, highs, lows, closes)
         if day >= START_DATE
     ])
     return {
@@ -138,9 +142,10 @@ def build_item(meta: dict[str, object]) -> dict[str, object]:
         "isIndex": meta["isIndex"],
         "dates": [day for day, *_ in filtered],
         "values": [value for _, value, *_ in filtered],
-        "highs": [high for _, _, high, _, _ in filtered],
-        "lows": [low for _, _, _, low, _ in filtered],
-        "closes": [close for _, _, _, _, close in filtered],
+        "opens": [open_value for _, _, open_value, *_ in filtered],
+        "highs": [high for _, _, _, high, _, _ in filtered],
+        "lows": [low for _, _, _, _, low, _ in filtered],
+        "closes": [close for _, _, _, _, _, close in filtered],
     }
 
 
@@ -164,7 +169,7 @@ def build_vkospi_item() -> dict[str, object]:
     )
     response.raise_for_status()
     payload = response.json()
-    rows_by_date: dict[str, tuple[str, float, float, float, float]] = {}
+    rows_by_date: dict[str, tuple[str, float, float, float, float, float]] = {}
     for entry in payload.get("data") or []:
         day = str(entry.get("rowDateTimestamp") or "")[:10]
         if not day or day < VKOSPI_START_DATE:
@@ -176,17 +181,19 @@ def build_vkospi_item() -> dict[str, object]:
         if parsed_day.weekday() >= 5:
             continue
         close = entry.get("last_closeRaw", entry.get("last_close"))
+        open_value = entry.get("last_openRaw", entry.get("last_open", close))
         high = entry.get("last_maxRaw", entry.get("last_max"))
         low = entry.get("last_minRaw", entry.get("last_min"))
-        if close in (None, "") or high in (None, "") or low in (None, ""):
+        if close in (None, "") or open_value in (None, "") or high in (None, "") or low in (None, ""):
             continue
         try:
             close_value = round(float(str(close).replace(",", "")), 4)
+            open_price = round(float(str(open_value).replace(",", "")), 4)
             high_value = round(float(str(high).replace(",", "")), 4)
             low_value = round(float(str(low).replace(",", "")), 4)
         except (TypeError, ValueError):
             continue
-        rows_by_date[day] = (day, close_value, high_value, low_value, close_value)
+        rows_by_date[day] = (day, close_value, open_price, high_value, low_value, close_value)
 
     filtered = exclude_incomplete_korea_session(sorted(rows_by_date.values(), key=lambda row: row[0]))
     if len(filtered) < 500:
@@ -200,9 +207,10 @@ def build_vkospi_item() -> dict[str, object]:
         "sourceUrl": "https://www.investing.com/indices/kospi-volatility-historical-data",
         "dates": [day for day, *_ in filtered],
         "values": [value for _, value, *_ in filtered],
-        "highs": [high for _, _, high, _, _ in filtered],
-        "lows": [low for _, _, _, low, _ in filtered],
-        "closes": [close for _, _, _, _, close in filtered],
+        "opens": [open_value for _, _, open_value, *_ in filtered],
+        "highs": [high for _, _, _, high, _, _ in filtered],
+        "lows": [low for _, _, _, _, low, _ in filtered],
+        "closes": [close for _, _, _, _, _, close in filtered],
     }
 
 

@@ -282,6 +282,10 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "indicator:core_ppi_yoy": "#dc2626",
 };
 const MARKET_PRICE_EMA_OPTIONS = [20, 50, 100, 200];
+const MARKET_TREND_PRICE_CHART_TYPES = [
+  { key: "candle", label: "Candle" },
+  { key: "line", label: "Line" },
+];
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
   { key: "dowjones", label: "Dow Jones" },
@@ -377,6 +381,7 @@ const state = {
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
+  marketTrendChartType: "candle",
   marketTrendEmas: [20, 100],
   marketTrendCustomStart: "",
   marketTrendCustomEnd: "",
@@ -2057,6 +2062,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   );
   const fullLabels = (item.dates ?? []).slice(firstUsableIndex);
   const fullValues = (item.values ?? []).slice(firstUsableIndex);
+  const fullOpens = (item.opens ?? item.closes ?? item.values ?? []).slice(firstUsableIndex);
   const fullHighs = (item.highs ?? item.values ?? []).slice(firstUsableIndex);
   const fullLows = (item.lows ?? item.values ?? []).slice(firstUsableIndex);
   if (!fullLabels.length || !fullValues.length) {
@@ -2072,6 +2078,18 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   const sliceEnd = endIndex === -1 ? fullLabels.length : Math.max(startIndex + 1, endIndex);
   const labels = fullLabels.slice(startIndex, sliceEnd);
   const priceValues = fullValues.slice(startIndex, sliceEnd);
+  const priceOpens = fullOpens.slice(startIndex, sliceEnd);
+  const priceHighs = fullHighs.slice(startIndex, sliceEnd);
+  const priceLows = fullLows.slice(startIndex, sliceEnd);
+  const candlestickData = labels.map((label, index) => ({
+    x: label,
+    o: Number(priceOpens[index]),
+    h: Number(priceHighs[index]),
+    l: Number(priceLows[index]),
+    c: Number(priceValues[index]),
+  }));
+  const useCandlestick = state.marketTrendChartType !== "line"
+    && candlestickData.some((candle) => [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite));
   const atrPctFull = calculateAtrPercentSeries(fullValues, fullHighs, fullLows, 21);
   const drawdownPctFull = calculateDrawdownPercentSeries(fullValues);
   const rollingDrawdown60PctFull = calculateRollingDrawdownPercentSeries(fullValues, 60);
@@ -2117,20 +2135,37 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   return {
     labels,
     datasets: [
-      {
-        label: item.label,
-        data: priceValues,
-        borderColor: "#111827",
-        backgroundColor: "#111827",
-        borderWidth: 3,
-        tension: 0.08,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        spanGaps: false,
-      },
+      useCandlestick
+        ? {
+            type: "line",
+            label: `${item.label} · Candle`,
+            data: priceValues,
+            borderColor: "#111827",
+            backgroundColor: "#111827",
+            showLine: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHitRadius: 8,
+            pointStyle: "rect",
+            isCandlestick: true,
+            ohlc: candlestickData,
+          }
+        : {
+            label: `${item.label} · Line`,
+            data: priceValues,
+            borderColor: "#111827",
+            backgroundColor: "#111827",
+            borderWidth: 3,
+            tension: 0.08,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            spanGaps: false,
+          },
       ...emaDatasets,
     ],
     item,
+    candlestickData,
+    useCandlestick,
     emaReferenceSeries,
     riskSeries: {
       atrPct: atrPctFull.slice(startIndex, sliceEnd),
@@ -2229,7 +2264,10 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
   }
 
   const payload = buildMarketTrendChartPayload(rangeKey, indexKey, customStart, customEnd);
-  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const allValues = [
+    ...payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value))),
+    ...(payload.useCandlestick ? payload.candlestickData.flatMap((candle) => [candle.h, candle.l]) : []),
+  ].filter((value) => Number.isFinite(value));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const yMin = Math.floor(minValue * 0.97);
@@ -2331,7 +2369,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       labels: payload.labels,
       datasets: payload.datasets,
     },
-    plugins: [bearBackgroundPlugin],
+    plugins: [MARKET_RS_CANDLESTICK_PLUGIN, bearBackgroundPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -2353,6 +2391,15 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => {
+              if (context.dataset.isCandlestick) {
+                const candle = context.dataset.ohlc?.[context.dataIndex];
+                if (candle && [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite)) {
+                  return [
+                    `Open ${formatUsStockPrice(candle.o, 2)} · High ${formatUsStockPrice(candle.h, 2)}`,
+                    `Low ${formatUsStockPrice(candle.l, 2)} · Close ${formatUsStockPrice(candle.c, 2)}`,
+                  ];
+                }
+              }
               const value = Number(context.parsed.y);
               const baseText = `${context.dataset.label}: ${formatUsStockPrice(value, 2)}`;
               const emaMatch = String(context.dataset.label ?? "").match(/^EMA\s+(\d+)/);
@@ -2368,6 +2415,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       },
       scales: {
         x: {
+          offset: payload.useCandlestick,
           grid: { display: false },
           afterBuildTicks: (axis) => {
             axis.ticks = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0).map((index) => ({ value: index }));
@@ -18242,6 +18290,17 @@ function renderIndexTrendOverview() {
         ${item.label}
       </button>`,
   ).join("");
+  const marketTrendChartTypeMarkup = MARKET_TREND_PRICE_CHART_TYPES.map(
+    (chartType) => `
+      <button
+        type="button"
+        class="total-series-chip${state.marketTrendChartType === chartType.key ? " active" : ""}"
+        data-market-trend-chart-type="${chartType.key}"
+        aria-pressed="${state.marketTrendChartType === chartType.key}"
+      >
+        ${chartType.label}
+      </button>`,
+  ).join("");
   const marketTrendEmaMarkup = MARKET_PRICE_EMA_OPTIONS.map(
     (period) => `
       <button
@@ -18313,6 +18372,9 @@ function renderIndexTrendOverview() {
         </div>
         <div class="total-series-row total-series-row-left">
           ${marketTrendIndexMarkup}
+        </div>
+        <div class="total-series-row total-series-row-left">
+          ${marketTrendChartTypeMarkup}
         </div>
         <div class="total-series-row total-series-row-left">
           ${marketTrendEmaMarkup}
@@ -18401,6 +18463,17 @@ function renderIndexTrendOverview() {
   usOverviewRoot.querySelectorAll("[data-market-trend-index]").forEach((button) => {
     button.addEventListener("click", () => {
       state.marketTrendIndex = button.dataset.marketTrendIndex || "sp500";
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-chart-type]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const chartType = button.dataset.marketTrendChartType;
+      if (!MARKET_TREND_PRICE_CHART_TYPES.some((item) => item.key === chartType)) {
+        return;
+      }
+      state.marketTrendChartType = chartType;
       render();
     });
   });
