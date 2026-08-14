@@ -60,7 +60,12 @@ def main() -> None:
     require(trend.get("updatedAt") == rs.get("updatedAt"), "Trend Score and RS dates differ.")
     require(len(trend_rows.get("all") or []) == len(rs_rows), "Trend Score all-universe count differs from RS.")
     require(len(trend_rows.get("nasdaq100") or []) >= 90, "Trend Score NASDAQ 100 universe is too small.")
-    trend_all = {row.get("ticker") for row in trend_rows.get("all") or []}
+    trend_all_rows = {
+        row.get("ticker"): row
+        for row in trend_rows.get("all") or []
+        if row.get("ticker")
+    }
+    trend_all = set(trend_all_rows)
     for ticker in ("NVDA", "ASML", "QQQ", "QQQE", "SPY"):
         require(ticker in trend_all, f"Required Trend Score ticker is missing: {ticker}")
 
@@ -72,14 +77,22 @@ def main() -> None:
     require(financial_counts.get("dailyBriefingCovered", 0) >= 185, "CANSLIM Daily Briefing financial coverage is too small.")
     require(financial_counts.get("dailyBriefingPending", 99) <= 10, "Too many Daily Briefing CANSLIM profiles are pending.")
 
-    briefing_tickers = {
+    briefing_trend_tickers = {
         str(item.get("ticker") or "").upper()
         for sector in briefing.get("sectorPanels") or []
         for item in sector.get("items") or []
         if item.get("ticker")
-        and str(item.get("ticker")).upper() != "DRAM"
         and "." not in str(item.get("ticker"))
     }
+    for ticker in briefing_trend_tickers:
+        trend_row = trend_all_rows.get(ticker)
+        require(trend_row is not None, f"Daily Briefing Trend Score ticker is missing: {ticker}")
+        require(
+            trend_row.get("asOfDate") == trend.get("updatedAt"),
+            f"Daily Briefing Trend Score is stale for {ticker}: "
+            f"{trend_row.get('asOfDate')} != {trend.get('updatedAt')}",
+        )
+    briefing_tickers = briefing_trend_tickers - {"DRAM"}
     financial_profiles = financials.get("financials") or {}
     require(len(briefing_tickers) >= 190, "Daily Briefing ticker extraction is unexpectedly small.")
     adjusted_briefing_count = 0

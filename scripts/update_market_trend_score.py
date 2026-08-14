@@ -454,6 +454,13 @@ def build_benchmark_series(market_price_payload: dict, benchmark_key: str) -> pd
     ).replace([math.inf, -math.inf], pd.NA)
 
 
+def align_benchmark_series(benchmark: pd.Series, price_index: pd.Index) -> pd.Series:
+    aligned = benchmark.reindex(price_index)
+    # A short internal gap in an otherwise continuous benchmark must not invalidate
+    # the following 200 sessions of rolling relative-trend calculations.
+    return aligned.interpolate(method="time", limit=3, limit_area="inside")
+
+
 def build_universe_payload(
     universe_key: str,
     meta: dict,
@@ -491,7 +498,7 @@ def build_universe_payload(
         cached_frame = frame_cache.get(frame_cache_key)
         if cached_frame is None:
             price = as_tail_aligned_series(price_values, dates)
-            benchmark_window = benchmark.reindex(price.index)
+            benchmark_window = align_benchmark_series(benchmark, price.index)
             relative = price.div(benchmark_window)
             if relative.dropna().empty:
                 continue
@@ -560,6 +567,7 @@ def build_universe_payload(
             {
                 "ticker": ticker,
                 "name": row.get("name") or ticker,
+                "asOfDate": valid_at.date().isoformat(),
                 "marketCap": row.get("marketCap"),
                 "price": nullable_round(latest.get("price")),
                 "rank": rank_value,
