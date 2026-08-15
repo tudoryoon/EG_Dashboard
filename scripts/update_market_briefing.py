@@ -1007,16 +1007,19 @@ def compute_period_return_at(series: pd.Series, end_date: pd.Timestamp, periods:
 
 
 def compute_ytd_return(series: pd.Series) -> float | None:
-    if series.empty:
+    history = series.dropna()
+    if history.empty:
         return None
-    current = normalize_number(series.iloc[-1])
+    current = normalize_number(history.iloc[-1])
     if current is None:
         return None
-    current_year = int(series.index[-1].year)
-    ytd_series = series[series.index.year == current_year]
+    current_year = int(history.index[-1].year)
+    ytd_series = history[history.index.year == current_year]
     if ytd_series.empty:
         return None
-    base = normalize_number(ytd_series.iloc[0])
+    prior_year_series = history[history.index.year < current_year]
+    # Conventional YTD return measures from the final valid close of the prior calendar year.
+    base = normalize_number(prior_year_series.iloc[-1] if not prior_year_series.empty else ytd_series.iloc[0])
     if base is None or base == 0:
         return None
     return round((current / base - 1) * 100, 2)

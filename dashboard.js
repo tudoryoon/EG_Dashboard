@@ -1037,7 +1037,7 @@ function getMacroTickIndexes(labels, rangeKey, chartWidth = 0) {
   return capDateTickIndexes(labels, baseIndexes, rangeKey, maxCount);
 }
 
-function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
+function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01", availableDates = []) {
   if (!dateText || rangeKey === "max") {
     return minStartDate;
   }
@@ -1046,7 +1046,13 @@ function shiftDateByRange(dateText, rangeKey, minStartDate = "2017-01-01") {
     return minStartDate;
   }
   if (rangeKey === "ytd") {
-    return `${date.getUTCFullYear()}-01-01`;
+    const yearStart = `${date.getUTCFullYear()}-01-01`;
+    const priorYearClose = [...(availableDates ?? [])]
+      .map((value) => toDateKey(value))
+      .filter((value) => value && value >= minStartDate && value < yearStart)
+      .sort()
+      .at(-1);
+    return priorYearClose ?? `${date.getUTCFullYear() - 1}-12-31`;
   }
 
   const rangeMap = {
@@ -1079,7 +1085,7 @@ function buildRelativePriceChartPayload(priceData, rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, priceData?.startDate ?? "2017-01-01");
+  const startDate = shiftDateByRange(latestDate, rangeKey, priceData?.startDate ?? "2017-01-01", allDates);
   const selectedLabels = allDates.filter((label) => label >= startDate);
 
   const datasets = items.map(([key, item]) => {
@@ -1190,7 +1196,7 @@ function createRelativePriceChart(canvas, priceData, rangeKey) {
           },
           title: {
             display: true,
-            text: "Start = 100",
+            text: rangeKey === "ytd" ? "Prior-year close = 100" : "Start = 100",
             color: "#8d8d86",
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
@@ -1226,7 +1232,7 @@ function buildM7MarketCapChartPayload(rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, m7PriceData?.startDate ?? "2017-01-01");
+  const startDate = shiftDateByRange(latestDate, rangeKey, m7PriceData?.startDate ?? "2017-01-01", allDates);
   const labels = allDates.filter((label) => label >= startDate);
   const datasets = items.map(([key, item]) => {
     const dateIndex = new Map((item.dates ?? []).map((date, index) => [date, index]));
@@ -1341,7 +1347,7 @@ function buildStudyMemoryPayload(rangeKey) {
   }
 
   const latestDate = dates[dates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, studyData?.startDate ?? "2025-01-01");
+  const startDate = shiftDateByRange(latestDate, rangeKey, studyData?.startDate ?? "2025-01-01", dates);
   const startIndex = Math.max(
     0,
     dates.findIndex((label) => label >= startDate),
@@ -2070,7 +2076,7 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   }
 
   const latestDate = fullLabels[fullLabels.length - 1];
-  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, trendStart);
+  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, trendStart, fullLabels);
   const startDate = customStart || derivedStartDate;
   const endDate = customEnd || latestDate;
   const startIndex = Math.max(0, fullLabels.findIndex((label) => label >= startDate));
@@ -2638,7 +2644,7 @@ function getMarketVixSelectedWindow(rangeKey, labels, fallbackStartDate, customS
     return { labels: [], startDate: "", endDate: "" };
   }
   const latestDate = labels[labels.length - 1];
-  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, fallbackStartDate);
+  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, fallbackStartDate, labels);
   const startDate = customStart || derivedStartDate;
   const endDate = customEnd || latestDate;
   return {
@@ -3359,7 +3365,7 @@ function buildTotalDashboardPayload(rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? marketPriceData?.startDate ?? "2017-01-01");
+  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? marketPriceData?.startDate ?? "2017-01-01", allDates);
   const customStart = state.totalDashboardCustomStart || derivedStartDate;
   const customEnd = state.totalDashboardCustomEnd || latestDate;
   const selectedLabels = allDates.filter((label) => label >= customStart && label <= customEnd);
@@ -3598,7 +3604,7 @@ function buildFxCrossRateChartPayload(rangeKey, customRange = null) {
   const latestDate = allDates[allDates.length - 1];
   const customStart = customRange?.start || "";
   const customEnd = customRange?.end || "";
-  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "1971-01-01");
+  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "1971-01-01", allDates);
   const labels = allDates.filter((date) => date >= startDate && (!customEnd || date <= customEnd));
   const rawCrossRates = labels.map((date) => {
     const baseRaw = baseCurrency === "USD" ? 1 : baseMap.get(date);
@@ -3761,7 +3767,7 @@ function buildMarketMacroChartPayload(panel, rangeKey, selectedKeys = null, cust
   const latestDate = allDates[allDates.length - 1];
   const customStart = customRange?.start || "";
   const customEnd = customRange?.end || "";
-  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "2017-01-01");
+  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? "2017-01-01", allDates);
   const selectedLabels = allDates.filter((label) => label >= startDate && (!customEnd || label <= customEnd));
 
   const datasets = seriesEntries.map(([key, item]) => {
@@ -4005,7 +4011,7 @@ function buildMarketValuationChartPayload(rangeKey) {
   const latestDate = allDates[allDates.length - 1];
   const customStart = state.marketValuationCustomStart || "";
   const customEnd = state.marketValuationCustomEnd || "";
-  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketValuationData?.startDate ?? "1981-01-01");
+  const startDate = customStart || shiftDateByRange(latestDate, rangeKey, marketValuationData?.startDate ?? "1981-01-01", allDates);
   const endDate = customEnd || latestDate;
   const selectedLabels = allDates.filter((label) => label >= startDate && label <= endDate);
 
@@ -5117,6 +5123,7 @@ function buildMacroDashboardChartPayload(rangeKey) {
     latestDate,
     rangeKey,
     marketMacroData?.startDate ?? marketPriceData?.startDate ?? "1965-01-01",
+    allDates,
   );
   const customStart = state.macroDashboardCustomStart || startDate;
   const customEnd = state.macroDashboardCustomEnd || latestDate;
@@ -7143,7 +7150,7 @@ function buildInfraChartPayload(panel, rangeKey, selectedKeys) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, infraGridData?.startDate ?? "2001-01-01");
+  const startDate = shiftDateByRange(latestDate, rangeKey, infraGridData?.startDate ?? "2001-01-01", allDates);
   const selectedLabels = allDates.filter((label) => label >= startDate);
 
   const datasets = entries.map(([key, item]) => {
@@ -7613,7 +7620,7 @@ function buildMarketBreadthSpreadPayload(rangeKey, selectedKeys, selectedIndexKe
     return { labels: [], series: [], thresholds: [] };
   }
   const latestDate = allLabels[allLabels.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, allLabels[0]);
+  const startDate = shiftDateByRange(latestDate, rangeKey, allLabels[0], allLabels);
   const labels = allLabels.filter((label) => rangeKey === "max" || label >= startDate);
   const series = rawSeries.map(([key, item]) => {
     const itemDates = item?.dates ?? [];
@@ -8144,7 +8151,16 @@ function getBriefingIndexReturn(item, rangeKey) {
   if (rangeKey === "ytd") {
     const latestDate = dates.at(-1);
     const latestYear = latestDate ? String(latestDate).slice(0, 4) : "";
-    const baseIndex = dates.findIndex((date) => String(date).slice(0, 4) === latestYear);
+    const yearStart = latestYear ? `${latestYear}-01-01` : "";
+    let baseIndex = -1;
+    dates.forEach((date, index) => {
+      if (String(date) < yearStart && Number.isFinite(Number(values[index]))) {
+        baseIndex = index;
+      }
+    });
+    if (baseIndex < 0) {
+      baseIndex = dates.findIndex((date, index) => String(date).slice(0, 4) === latestYear && Number.isFinite(Number(values[index])));
+    }
     if (baseIndex < 0) {
       return null;
     }
@@ -12350,7 +12366,7 @@ function createMarketRsChart(canvas, row) {
 
   const minStart = labels[0];
   const latestDate = labels[labels.length - 1];
-  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart, labels);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
   const ratingSeries = getMarketRsHistoryRatingSeries(history, state.rsUniverse);
@@ -12733,7 +12749,7 @@ function createMarketRsMddChart(canvas, row) {
 
   const minStart = labels[0];
   const latestDate = labels[labels.length - 1];
-  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart, labels);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
   const selectedPrice = (history.price ?? []).slice(startIndex);
@@ -12831,7 +12847,7 @@ function createMarketRsAtrChart(canvas, row) {
 
   const minStart = labels[0];
   const latestDate = labels[labels.length - 1];
-  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart);
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart, labels);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
   const storedAtrSeries = Array.isArray(history.atr21Pct) && history.atr21Pct.length === labels.length
@@ -13925,7 +13941,7 @@ function createTrendScoreChart(canvas, row) {
   }
   const minStart = labels[0];
   const latestDate = labels[labels.length - 1];
-  const startDate = shiftDateByRange(latestDate, state.trendScoreRange, minStart);
+  const startDate = shiftDateByRange(latestDate, state.trendScoreRange, minStart, labels);
   const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
   const selectedLabels = labels.slice(startIndex);
   const selectedRanks = (history.rank ?? []).slice(startIndex);
@@ -14774,7 +14790,7 @@ function buildMemoryChartPayload(labels, datasets, rangeKey) {
   }
 
   const latestDate = labels[labels.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, labels[0]);
+  const startDate = shiftDateByRange(latestDate, rangeKey, labels[0], labels);
   const startIndex = Math.max(
     0,
     labels.findIndex((label) => label >= startDate),
@@ -15372,7 +15388,7 @@ function buildOrnnGpuChartPayload(series) {
   const dates = series?.dates ?? [];
   const values = series?.values ?? [];
   const range = getOrnnGpuRangeConfig();
-  const startDate = range.key === "ytd" && dates.length ? shiftDateByRange(dates[dates.length - 1], "ytd", dates[0]) : "";
+  const startDate = range.key === "ytd" && dates.length ? shiftDateByRange(dates[dates.length - 1], "ytd", dates[0], dates) : "";
   const rangeDays = Number(range.days) || 90;
   const startIndex = startDate
     ? Math.max(0, dates.findIndex((label) => label >= startDate))
@@ -17124,7 +17140,10 @@ function buildStudyEtfFlowPayload(item, rangeKey) {
     return { labels: [], prices: [], aums: [], dailyFlows: [], cumulativeFlows: [] };
   }
   const latestDate = comparableDates[comparableDates.length - 1];
-  const startDate = shiftDateByRange(latestDate, rangeKey, comparableDates[0]);
+  // Flow totals are calendar-year sums, so unlike normalized return charts they exclude the prior-year close.
+  const startDate = rangeKey === "ytd"
+    ? `${String(latestDate).slice(0, 4)}-01-01`
+    : shiftDateByRange(latestDate, rangeKey, comparableDates[0], comparableDates);
   const startIndex = Math.max(
     0,
     comparableDates.findIndex((dateText) => dateText >= startDate),
@@ -18600,7 +18619,7 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Total Dashboard</h2>
-            <p>Market series use Start = 100 normalized performance, while US and Japan yields stay on the right axis in raw percent terms.</p>
+            <p>Market series use Start = 100 normalized performance; YTD uses the final valid close of the prior calendar year. US and Japan yields stay on the right axis in raw percent terms.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${totalRangeMarkup}</div>
@@ -18644,7 +18663,7 @@ function renderMarketOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Market Relative Performance</h2>
-            <p>Daily close normalized to 100 at the selected start date. Max begins ${marketPriceData.startDate ?? "2017-01-01"}.</p>
+            <p>Daily close normalized to 100 at the selected start date. YTD uses the final valid close of the prior calendar year. Max begins ${marketPriceData.startDate ?? "2017-01-01"}.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${rangeMarkup}</div>
@@ -20481,7 +20500,7 @@ function renderUSOverview() {
           <p>${
             isMarketCapMode
               ? `Daily market capitalization based on close and historical shares outstanding. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.`
-              : `Daily close normalized to 100 at the selected start date. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.`
+              : `Daily close normalized to 100 at the selected start date. YTD uses the final valid close of the prior calendar year. Max begins ${m7PriceData.startDate ?? "2017-01-01"}.`
           }</p>
         </div>
         <div class="us-price-controls">
