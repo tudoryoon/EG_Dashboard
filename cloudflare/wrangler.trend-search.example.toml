@@ -1,0 +1,6 @@
+name = "eg-dashboard-trend-search"
+main = "trend-search-worker.js"
+compatibility_date = "2026-08-17"
+
+# After `wrangler deploy`, copy the returned workers.dev URL to
+# data/trend-search-config.js as apiUrl, ending in /api/trends.

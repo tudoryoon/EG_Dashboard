@@ -1,0 +1,20 @@
+{
+  "requests": [
+    {
+      "id": "web-us-ai",
+      "label": "AI 관심도 (미국 웹 검색)",
+      "keywords": ["NVIDIA", "OpenAI", "HBM"],
+      "geo": "US",
+      "mode": "web",
+      "range": "today 12-m"
+    },
+    {
+      "id": "youtube-us-ai",
+      "label": "AI 관심도 (미국 YouTube 검색)",
+      "keywords": ["NVIDIA", "OpenAI", "HBM"],
+      "geo": "US",
+      "mode": "youtube",
+      "range": "today 12-m"
+    }
+  ]
+}

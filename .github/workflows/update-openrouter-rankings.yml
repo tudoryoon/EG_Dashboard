@@ -1,4 +1,4 @@
-name: Update AI Data and Research Calendar
+name: Update AI Data, Trends, and Research Calendar
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install requests
+        run: python -m pip install requests pytrends
 
       - name: Refresh OpenRouter rankings
         run: python scripts/update_openrouter_rankings.py
@@ -31,19 +31,22 @@ jobs:
       - name: Refresh LLM token price index
         run: python scripts/update_token_price_index.py
 
+      - name: Refresh saved Google Trends searches
+        run: python scripts/update_trend_search.py
+
       - name: Refresh Daily Briefing earnings calendar
         run: python scripts/update_study_calendar.py
 
-      - name: Commit updated AI data and calendar
+      - name: Commit updated AI data, trends, and calendar
         run: |
-          if git diff --quiet -- data/openrouter-rankings-data.js data/token-price-index-data.js data/study-calendar-data.js; then
-            echo "No AI data or calendar changes detected."
+          if git diff --quiet -- data/openrouter-rankings-data.js data/token-price-index-data.js data/trend-search-data.js data/study-calendar-data.js; then
+            echo "No AI, trends, or calendar changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/openrouter-rankings-data.js data/token-price-index-data.js data/study-calendar-data.js
+          python scripts/bump_data_cache_versions.py data/openrouter-rankings-data.js data/token-price-index-data.js data/trend-search-data.js data/study-calendar-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/openrouter-rankings-data.js data/token-price-index-data.js data/study-calendar-data.js index.html
-          git commit -m "Update AI data and research calendar" || exit 0
+          git add data/openrouter-rankings-data.js data/token-price-index-data.js data/trend-search-data.js data/study-calendar-data.js index.html
+          git commit -m "Update AI data, trends, and research calendar" || exit 0
           git pull --rebase origin main
           git push

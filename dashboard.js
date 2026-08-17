@@ -30,6 +30,8 @@ const studyCalendarData = window.studyCalendarData ?? {
   weeks: [],
   fallbackSources: [],
 };
+const trendSearchData = window.trendSearchData ?? { updatedAt: "", generatedAt: "", source: {}, requests: [] };
+const trendSearchConfig = window.egTrendSearchConfig ?? { apiUrl: "" };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
@@ -160,6 +162,7 @@ const researchSubtabMeta = {
   MemoryCapa: { label: "Memory CAPA" },
   Comparisons: { label: "NVDA vs Memory" },
   M7: { label: "M7" },
+  TrendSearch: { label: "Trend 검색" },
 };
 
 const marketIndexSubtabMeta = {
@@ -378,6 +381,15 @@ const state = {
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
+  trendSearchRequestId: trendSearchData.requests?.[0]?.id ?? "",
+  trendSearchKeywords: (trendSearchData.requests?.[0]?.keywords ?? ["NVIDIA", "OpenAI", "HBM"]).join(", "),
+  trendSearchGeo: trendSearchData.requests?.[0]?.geo ?? "US",
+  trendSearchMode: trendSearchData.requests?.[0]?.mode ?? "web",
+  trendSearchRange: trendSearchData.requests?.[0]?.range ?? "today 12-m",
+  trendSearchLines: { raw: true, sma7: true, sma20: true },
+  trendSearchLiveRequest: null,
+  trendSearchStatus: "",
+  trendSearchLoading: false,
   marketPriceRange: "3y",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
@@ -588,6 +600,7 @@ const DASHBOARD_ROUTE_META = {
       MemoryCapa: "memory-capa",
       Comparisons: "nvda-vs-memory",
       M7: "m7",
+      TrendSearch: "trend-search",
       Calendar: "calendar",
     },
   },
@@ -1464,6 +1477,388 @@ function createStudyMemoryVsNvdaChart(canvas, rangeKey) {
   });
 
   charts.push(chart);
+}
+
+const TREND_SEARCH_COLORS = ["#0f766e", "#2563eb", "#d97706", "#7c3aed", "#dc2626"];
+
+function normalizeTrendSearchKeywords(value) {
+  return [...new Set(String(value ?? "").split(",").map((item) => item.trim()).filter(Boolean))].slice(0, 5);
+}
+
+function formatTrendSearchMode(mode) {
+  return mode === "youtube" ? "YouTube Search" : "Web Search";
+}
+
+function formatTrendSearchGeo(geo) {
+  if (!geo) return "Global";
+  if (geo === "KR") return "Korea";
+  if (geo === "US") return "United States";
+  return geo;
+}
+
+function formatTrendSearchRange(range) {
+  const labels = {
+    "today 3-m": "90D",
+    "today 12-m": "1Y",
+    "today 5-y": "5Y",
+  };
+  return labels[range] ?? range;
+}
+
+function calculateTrendSearchAverage(values, window) {
+  const output = [];
+  const validValues = [];
+  (values ?? []).forEach((value) => {
+    const numeric = Number(value);
+    validValues.push(Number.isFinite(numeric) ? numeric : null);
+    const observations = validValues.slice(Math.max(0, validValues.length - window)).filter(Number.isFinite);
+    output.push(observations.length ? observations.reduce((sum, item) => sum + item, 0) / observations.length : null);
+  });
+  return output;
+}
+
+function findSavedTrendSearchRequest(keywords, geo, mode, range) {
+  const targetKeywords = normalizeTrendSearchKeywords(keywords).map((value) => value.toLowerCase());
+  return (trendSearchData.requests ?? []).find((request) => {
+    const requestKeywords = normalizeTrendSearchKeywords(request.keywords ?? []).map((value) => value.toLowerCase());
+    return (
+      requestKeywords.length === targetKeywords.length &&
+      requestKeywords.every((value, index) => value === targetKeywords[index]) &&
+      (request.geo ?? "") === geo &&
+      (request.mode ?? "web") === mode &&
+      (request.range ?? "today 12-m") === range
+    );
+  });
+}
+
+function getActiveTrendSearchRequest() {
+  if (state.trendSearchLiveRequest?.labels?.length) {
+    return state.trendSearchLiveRequest;
+  }
+  const requestById = (trendSearchData.requests ?? []).find((request) => request.id === state.trendSearchRequestId);
+  if (requestById?.labels?.length) {
+    return requestById;
+  }
+  return findSavedTrendSearchRequest(
+    state.trendSearchKeywords,
+    state.trendSearchGeo,
+    state.trendSearchMode,
+    state.trendSearchRange,
+  );
+}
+
+function buildTrendSearchExploreUrl(keywords, geo, mode, range) {
+  const url = new URL("https://trends.google.com/trends/explore");
+  url.searchParams.set("date", range);
+  if (geo) url.searchParams.set("geo", geo);
+  if (mode === "youtube") url.searchParams.set("gprop", "youtube");
+  url.searchParams.set("q", keywords.join(","));
+  return url.toString();
+}
+
+function buildTrendSearchApiUrl(keywords, geo, mode, range) {
+  const endpoint = String(trendSearchConfig.apiUrl ?? "").trim();
+  if (!endpoint) return "";
+  const url = new URL(endpoint);
+  url.searchParams.set("q", keywords.join(","));
+  url.searchParams.set("geo", geo);
+  url.searchParams.set("mode", mode);
+  url.searchParams.set("range", range);
+  return url.toString();
+}
+
+function createTrendSearchChart(canvas, request) {
+  if (typeof Chart === "undefined" || !canvas || !request?.labels?.length) {
+    return;
+  }
+  const tickIndexes = buildMonthlyTickIndexes(request.labels, 10);
+  const tickSet = new Set(tickIndexes);
+  const chartLines = state.trendSearchLines ?? {};
+  const datasets = (request.series ?? []).flatMap((series, index) => {
+    const color = TREND_SEARCH_COLORS[index % TREND_SEARCH_COLORS.length];
+    const raw = (series.values ?? []).map((value) => (Number.isFinite(Number(value)) ? Number(value) : null));
+    const lines = [];
+    if (chartLines.raw !== false) {
+      lines.push({
+        label: series.label,
+        data: raw,
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: 2.4,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHitRadius: 12,
+        tension: 0.16,
+        spanGaps: true,
+      });
+    }
+    if (chartLines.sma7 !== false) {
+      lines.push({
+        label: `${series.label} 7MA`,
+        data: calculateTrendSearchAverage(raw, 7),
+        borderColor: color,
+        borderWidth: 1.6,
+        borderDash: [7, 5],
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.2,
+        spanGaps: true,
+      });
+    }
+    if (chartLines.sma20 !== false) {
+      lines.push({
+        label: `${series.label} 20MA`,
+        data: calculateTrendSearchAverage(raw, 20),
+        borderColor: color,
+        borderWidth: 1.5,
+        borderDash: [2, 5],
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.2,
+        spanGaps: true,
+      });
+    }
+    return lines;
+  });
+
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: request.labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          position: "top",
+          align: "start",
+          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14 },
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(context.dataset.label.includes("MA") ? 1 : 0)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => (tickSet.has(value) ? formatRangeAxisDate(request.labels[value], "1y") : ""),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { color: "#8d8d86", callback: (value) => `${value}`, maxTicksLimit: 6 },
+          grid: { color: "rgba(70, 70, 66, 0.10)" },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function buildTrendSearchSnapshotMarkup(request) {
+  return (request?.series ?? [])
+    .map((series, index) => {
+      const values = (series.values ?? []).map(Number).filter(Number.isFinite);
+      const latest = values.at(-1);
+      const average = calculateTrendSearchAverage(series.values ?? [], 7).filter(Number.isFinite).at(-1);
+      const tone = TREND_SEARCH_COLORS[index % TREND_SEARCH_COLORS.length];
+      return `
+        <article class="trend-search-snapshot" style="--trend-search-color: ${tone}">
+          <span>${escapeHtml(series.label)}</span>
+          <strong>${Number.isFinite(latest) ? latest.toFixed(0) : "-"}</strong>
+          <small>7MA ${Number.isFinite(average) ? average.toFixed(1) : "-"}</small>
+        </article>`;
+    })
+    .join("");
+}
+
+async function runTrendSearch() {
+  const keywords = normalizeTrendSearchKeywords(state.trendSearchKeywords);
+  if (!keywords.length) {
+    state.trendSearchStatus = "키워드를 하나 이상 입력해 주세요.";
+    renderTrendSearchOverview();
+    return;
+  }
+  state.trendSearchKeywords = keywords.join(", ");
+  const saved = findSavedTrendSearchRequest(keywords, state.trendSearchGeo, state.trendSearchMode, state.trendSearchRange);
+  if (saved?.labels?.length) {
+    state.trendSearchLiveRequest = null;
+    state.trendSearchRequestId = saved.id;
+    state.trendSearchStatus = "저장된 일별 스냅샷을 불러왔습니다.";
+    renderTrendSearchOverview();
+    return;
+  }
+
+  const apiUrl = buildTrendSearchApiUrl(keywords, state.trendSearchGeo, state.trendSearchMode, state.trendSearchRange);
+  if (!apiUrl) {
+    state.trendSearchStatus = "라이브 검색 프록시가 아직 연결되지 않았습니다. 아래 저장 검색을 사용하거나 Google Trends에서 직접 열 수 있습니다.";
+    renderTrendSearchOverview();
+    return;
+  }
+
+  state.trendSearchLoading = true;
+  state.trendSearchStatus = "Google Trends를 조회하고 있습니다.";
+  renderTrendSearchOverview();
+  try {
+    const response = await fetch(apiUrl);
+    const payload = await response.json();
+    if (!response.ok || payload?.error) {
+      throw new Error(payload?.error || `Search failed (${response.status})`);
+    }
+    state.trendSearchLiveRequest = payload;
+    state.trendSearchRequestId = "";
+    state.trendSearchStatus = "라이브 조회 완료";
+  } catch (error) {
+    state.trendSearchStatus = `라이브 조회 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`;
+  } finally {
+    state.trendSearchLoading = false;
+    renderTrendSearchOverview();
+  }
+}
+
+function renderTrendSearchOverview() {
+  destroyCharts();
+  const activeRequest = getActiveTrendSearchRequest();
+  const keywords = normalizeTrendSearchKeywords(state.trendSearchKeywords);
+  const exploreUrl = buildTrendSearchExploreUrl(keywords, state.trendSearchGeo, state.trendSearchMode, state.trendSearchRange);
+  const savedRequests = trendSearchData.requests ?? [];
+  const savedMarkup = savedRequests
+    .map((request) => `
+      <button type="button" class="trend-search-saved-chip${request.id === state.trendSearchRequestId && !state.trendSearchLiveRequest ? " active" : ""}" data-trend-search-saved="${escapeHtml(request.id)}">
+        ${escapeHtml(request.label || request.keywords?.join(" / ") || "Saved search")}
+      </button>`)
+    .join("");
+  const lineMarkup = [
+    ["raw", "Interest"],
+    ["sma7", "7MA"],
+    ["sma20", "20MA"],
+  ]
+    .map(([key, label]) => `
+      <button type="button" class="trend-search-line-toggle${state.trendSearchLines?.[key] !== false ? " active" : ""}" data-trend-search-line="${key}">
+        <span></span>${label}
+      </button>`)
+    .join("");
+  const chartMarkup = activeRequest?.labels?.length
+    ? `<div class="trend-search-chart-wrap"><canvas data-trend-search-chart aria-label="Google Trends interest and moving average chart"></canvas></div>`
+    : `<div class="trend-search-empty">저장된 Google Trends 데이터가 아직 없습니다. 다음 일별 업데이트 후 기본 검색이 채워집니다.</div>`;
+  const sourceLabel = state.trendSearchLiveRequest ? "Live proxy" : activeRequest ? "Daily cached snapshot" : "Waiting for first refresh";
+  const statusMarkup = state.trendSearchStatus
+    ? `<div class="trend-search-status${state.trendSearchStatus.includes("실패") || state.trendSearchStatus.includes("연결") ? " is-warning" : ""}">${escapeHtml(state.trendSearchStatus)}</div>`
+    : "";
+
+  companyGrid.classList.add("hidden");
+  usOverviewRoot.classList.remove("hidden");
+  usOverviewRoot.innerHTML = `
+    <section class="trend-search-page">
+      <section class="us-panel trend-search-panel">
+        <header class="trend-search-head">
+          <div>
+            <p>SEARCH DEMAND MONITOR</p>
+            <h2>Google Trends + Moving Average</h2>
+            <span>검색 관심도 0-100 상대지수입니다. 절대 검색량이 아니며, 5Y에서는 7/20 관측치 기준 이평선으로 표시됩니다.</span>
+          </div>
+          <a class="market-breadth-link" href="${escapeHtml(trendSearchData.source?.url || "https://trends.google.com/trends/")}" target="_blank" rel="noreferrer">Google Trends</a>
+        </header>
+        <form class="trend-search-form" id="trend-search-form">
+          <label class="trend-search-field is-keywords">
+            <span>키워드</span>
+            <input id="trend-search-keywords" type="text" maxlength="180" value="${escapeHtml(state.trendSearchKeywords)}" placeholder="NVIDIA, OpenAI, HBM" />
+          </label>
+          <label class="trend-search-field">
+            <span>지역</span>
+            <select id="trend-search-geo">
+              <option value=""${state.trendSearchGeo === "" ? " selected" : ""}>Global</option>
+              <option value="US"${state.trendSearchGeo === "US" ? " selected" : ""}>United States</option>
+              <option value="KR"${state.trendSearchGeo === "KR" ? " selected" : ""}>Korea</option>
+            </select>
+          </label>
+          <label class="trend-search-field">
+            <span>검색 유형</span>
+            <select id="trend-search-mode">
+              <option value="web"${state.trendSearchMode === "web" ? " selected" : ""}>Web Search</option>
+              <option value="youtube"${state.trendSearchMode === "youtube" ? " selected" : ""}>YouTube Search</option>
+            </select>
+          </label>
+          <label class="trend-search-field">
+            <span>기간</span>
+            <select id="trend-search-range">
+              <option value="today 3-m"${state.trendSearchRange === "today 3-m" ? " selected" : ""}>90D</option>
+              <option value="today 12-m"${state.trendSearchRange === "today 12-m" ? " selected" : ""}>1Y</option>
+              <option value="today 5-y"${state.trendSearchRange === "today 5-y" ? " selected" : ""}>5Y</option>
+            </select>
+          </label>
+          <button type="submit" class="trend-search-submit"${state.trendSearchLoading ? " disabled" : ""}>${state.trendSearchLoading ? "조회 중" : "검색"}</button>
+          <a class="trend-search-external" href="${escapeHtml(exploreUrl)}" target="_blank" rel="noreferrer">Google Trends 열기</a>
+        </form>
+        <div class="trend-search-underbar">
+          <div class="trend-search-saved-row">${savedMarkup || "<span>저장 검색 준비 중</span>"}</div>
+          <div class="trend-search-line-row">${lineMarkup}</div>
+        </div>
+        ${statusMarkup}
+        <div class="trend-search-context">
+          <span>${escapeHtml(formatTrendSearchMode(activeRequest?.mode ?? state.trendSearchMode))}</span>
+          <span>${escapeHtml(formatTrendSearchGeo(activeRequest?.geo ?? state.trendSearchGeo))}</span>
+          <span>${escapeHtml(formatTrendSearchRange(activeRequest?.range ?? state.trendSearchRange))}</span>
+          <span>${escapeHtml(sourceLabel)}</span>
+          ${activeRequest?.updatedAt ? `<span>Updated ${escapeHtml(formatKstDateTime(activeRequest.updatedAt) || activeRequest.updatedAt)}</span>` : ""}
+        </div>
+        ${chartMarkup}
+        ${activeRequest?.series?.length ? `<div class="trend-search-snapshot-grid">${buildTrendSearchSnapshotMarkup(activeRequest)}</div>` : ""}
+        <footer class="trend-search-note">
+          100은 현재 검색 조건 안에서 가장 높은 상대 관심도입니다. 동일 조건 안의 비교에는 유용하지만 서로 다른 요청의 수치를 절대 검색량처럼 비교하면 안 됩니다.
+        </footer>
+      </section>
+    </section>
+  `;
+
+  if (activeRequest?.labels?.length) {
+    createTrendSearchChart(usOverviewRoot.querySelector("[data-trend-search-chart]"), activeRequest);
+  }
+
+  usOverviewRoot.querySelector("#trend-search-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.trendSearchKeywords = usOverviewRoot.querySelector("#trend-search-keywords")?.value ?? "";
+    state.trendSearchGeo = usOverviewRoot.querySelector("#trend-search-geo")?.value ?? "US";
+    state.trendSearchMode = usOverviewRoot.querySelector("#trend-search-mode")?.value ?? "web";
+    state.trendSearchRange = usOverviewRoot.querySelector("#trend-search-range")?.value ?? "today 12-m";
+    state.trendSearchLiveRequest = null;
+    runTrendSearch();
+  });
+  usOverviewRoot.querySelectorAll("[data-trend-search-saved]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const request = savedRequests.find((item) => item.id === button.dataset.trendSearchSaved);
+      if (!request) return;
+      state.trendSearchRequestId = request.id;
+      state.trendSearchKeywords = (request.keywords ?? []).join(", ");
+      state.trendSearchGeo = request.geo ?? "";
+      state.trendSearchMode = request.mode ?? "web";
+      state.trendSearchRange = request.range ?? "today 12-m";
+      state.trendSearchLiveRequest = null;
+      state.trendSearchStatus = "저장된 일별 스냅샷을 불러왔습니다.";
+      renderTrendSearchOverview();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-trend-search-line]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.trendSearchLine;
+      state.trendSearchLines = { ...state.trendSearchLines, [key]: state.trendSearchLines?.[key] === false };
+      renderTrendSearchOverview();
+    });
+  });
 }
 
 function buildMemoryCapaYearHeaders(quarters) {
@@ -21073,6 +21468,8 @@ function renderSummary(list) {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
     } else if (state.researchView === "M7") {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
+    } else if (state.researchView === "TrendSearch") {
+      summaryText.textContent = "Google web and YouTube search-interest dashboard with moving averages";
     } else if (state.researchView === "Calendar") {
       summaryText.textContent = "향후 4주 일정 · 실적은 미국 현지일, Macro는 KST";
     } else {
@@ -21678,6 +22075,10 @@ function render() {
     }
     if (state.researchView === "M7") {
       renderUSOverview();
+      return;
+    }
+    if (state.researchView === "TrendSearch") {
+      renderTrendSearchOverview();
       return;
     }
     if (state.researchView === "Calendar") {
