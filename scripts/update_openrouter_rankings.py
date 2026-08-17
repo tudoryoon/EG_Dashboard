@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -60,10 +61,55 @@ CHART_ENDPOINTS = {
     },
 }
 LEADERBOARD_VIEWS = ["day", "week", "month"]
+DAILY_USAGE_ENDPOINT = "/api/v1/datasets/rankings-daily"
+
+# OpenRouter's model metadata does not expose a canonical open-weight flag.
+# Keep this list deliberately conservative and surface everything else as
+# "verification needed" rather than incorrectly labelling a proprietary model.
+OPEN_WEIGHT_PREFIXES = (
+    "deepseek/",
+    "qwen/",
+    "meta-llama/",
+    "microsoft/phi",
+    "nvidia/nemotron",
+    "google/gemma",
+    "allenai/olmo",
+    "openai/gpt-oss",
+    "moonshotai/kimi-k2",
+    "z-ai/glm-4.5",
+    "z-ai/glm-5",
+    "mistralai/mixtral",
+    "mistralai/mistral-nemo",
+    "mistralai/open-mistral",
+    "mistralai/devstral",
+)
+CLOSED_API_PREFIXES = (
+    "anthropic/",
+    "openai/",
+    "google/",
+    "x-ai/",
+    "cohere/",
+    "poolside/",
+    "upstage/",
+    "perplexity/",
+    "amazon/",
+    "ai21/",
+)
 
 
-def fetch_json(path: str, params: dict[str, str] | None = None) -> dict[str, Any]:
-    response = requests.get(BASE_URL + path, headers=HEADERS, params=params, timeout=60)
+def fetch_json(
+    path: str,
+    params: dict[str, str] | None = None,
+    *,
+    require_api_key: bool = False,
+) -> dict[str, Any]:
+    headers = dict(HEADERS)
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if require_api_key:
+        if not api_key:
+            raise RuntimeError("OPENROUTER_API_KEY is not configured")
+        headers["Authorization"] = f"Bearer {api_key}"
+    response = requests.get(BASE_URL + path, headers=headers, params=params, timeout=60)
     response.raise_for_status()
     return response.json()
 
@@ -82,6 +128,25 @@ def title_from_slug(slug: str) -> str:
 def model_author(slug: str) -> str:
     raw = normalize_model_id(slug)
     return raw.split("/", 1)[0] if "/" in raw else "openrouter"
+
+
+def classify_model_openness(model_id: str) -> str:
+    normalized = normalize_model_id(model_id).lower().split(":", 1)[0]
+    if normalized == "other":
+        return "unknown"
+    if normalized.startswith(OPEN_WEIGHT_PREFIXES):
+        return "open"
+    if normalized.startswith(CLOSED_API_PREFIXES):
+        return "closed"
+    return "unknown"
+
+
+def openness_label(value: str) -> str:
+    return {
+        "open": "Open weights",
+        "closed": "Closed API",
+        "unknown": "Verification needed",
+    }.get(value, "Verification needed")
 
 
 def build_model_name_map() -> dict[str, str]:
@@ -139,6 +204,7 @@ def normalize_chart_payload(raw: dict[str, Any], model_names: dict[str, str], co
                 "key": key,
                 "label": "Others" if key == "Others" else display_name(key, model_names),
                 "author": "" if key == "Others" else model_author(key),
+                "openness": "unknown" if key == "Others" else classify_model_openness(key),
                 "values": [row.get("ys", {}).get(key, 0) for row in rows],
             }
             for key in top_keys
@@ -161,6 +227,8 @@ def normalize_leaderboard_row(row: dict[str, Any], rank: int, model_names: dict[
         "variant": row.get("variant") or "",
         "name": display_name(model_id, model_names),
         "author": model_author(model_id),
+        "openness": classify_model_openness(model_id),
+        "opennessLabel": openness_label(classify_model_openness(model_id)),
         "tokens": total_tokens,
         "promptTokens": prompt_tokens,
         "completionTokens": completion_tokens,
@@ -171,7 +239,73 @@ def normalize_leaderboard_row(row: dict[str, Any], rank: int, model_names: dict[
     }
 
 
+def load_existing_payload() -> dict[str, Any]:
+    if not OUTPUT_PATH.exists():
+        return {}
+    prefix = "window.openrouterRankingsData = "
+    try:
+        raw = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+        if raw.startswith(prefix):
+            return json.loads(raw[len(prefix):].rstrip(";"))
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        print(f"Unable to load previous OpenRouter payload: {error}")
+    return {}
+
+
+def build_daily_usage_payload(existing_daily: dict[str, Any] | None = None) -> dict[str, Any]:
+    fallback = existing_daily if isinstance(existing_daily, dict) else None
+    try:
+        raw = fetch_json(DAILY_USAGE_ENDPOINT, require_api_key=True)
+    except Exception as error:
+        print(f"Unable to fetch OpenRouter daily usage dataset: {error}")
+        if fallback and fallback.get("dates"):
+            fallback["stale"] = True
+            fallback["status"] = "Using the latest stored daily dataset."
+            return fallback
+        return {
+            "available": False,
+            "title": "Daily Usage: Open vs Closed",
+            "subtitle": "OpenRouter daily token usage by model-weight availability",
+            "unit": "tokens",
+            "dates": [],
+            "series": [],
+            "coverage": "OpenRouter's official daily dataset requires an API key. Add OPENROUTER_API_KEY as a GitHub Actions secret to enable this chart.",
+            "status": "Awaiting OpenRouter API key",
+        }
+
+    grouped: dict[str, dict[str, int]] = {}
+    for row in raw.get("data", []):
+        date = str(row.get("date") or "")[:10]
+        if not date:
+            continue
+        try:
+            tokens = int(row.get("total_tokens") or 0)
+        except (TypeError, ValueError):
+            continue
+        bucket = grouped.setdefault(date, {"open": 0, "closed": 0, "unknown": 0})
+        bucket[classify_model_openness(str(row.get("model_permaslug") or ""))] += tokens
+
+    dates = sorted(grouped)
+    meta = raw.get("meta") or {}
+    return {
+        "available": bool(dates),
+        "title": "Daily Usage: Open vs Closed",
+        "subtitle": "Daily OpenRouter token usage, grouped by model-weight availability",
+        "unit": "tokens",
+        "dates": dates,
+        "asOf": meta.get("as_of") or "",
+        "coverage": "Official OpenRouter daily Top 50 model totals plus the aggregated Other row. Other and unclassified models remain in Verification needed.",
+        "status": "Official OpenRouter daily dataset",
+        "series": [
+            {"key": "open", "label": "Open weights", "values": [grouped[date]["open"] for date in dates]},
+            {"key": "closed", "label": "Closed API", "values": [grouped[date]["closed"] for date in dates]},
+            {"key": "unknown", "label": "Verification needed / Other", "values": [grouped[date]["unknown"] for date in dates]},
+        ],
+    }
+
+
 def build_payload() -> dict[str, Any]:
+    existing_payload = load_existing_payload()
     model_names = build_model_name_map()
     charts = {}
     for key, config in CHART_ENDPOINTS.items():
@@ -210,6 +344,7 @@ def build_payload() -> dict[str, Any]:
             {"key": "month", "label": "This Month"},
         ],
         "charts": charts,
+        "dailyUsage": build_daily_usage_payload(existing_payload.get("dailyUsage")),
         "leaderboards": leaderboards,
     }
 

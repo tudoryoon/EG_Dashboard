@@ -520,6 +520,7 @@ const state = {
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
   ornnGpuRange: "3y",
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
+  openrouterOpennessFilter: "all",
   openrouterScale: "linear",
 };
 
@@ -21708,6 +21709,13 @@ const OPENROUTER_COLORS = [
   "#c4c4c4",
 ];
 
+const OPENROUTER_OPENNESS = {
+  all: { label: "All models", color: "#475569" },
+  open: { label: "Open weights", color: "#0f9f6e" },
+  closed: { label: "Closed API", color: "#dc5b4d" },
+  unknown: { label: "Verification needed", color: "#a16207" },
+};
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -21747,6 +21755,10 @@ function formatOpenrouterChange(value) {
   return `${sign}${Math.round(numeric).toLocaleString("en-US")}%`;
 }
 
+function getOpenrouterOpenness(value) {
+  return OPENROUTER_OPENNESS[value] ?? OPENROUTER_OPENNESS.unknown;
+}
+
 function createOpenrouterStackedChart(canvas, chartData, { compact = false } = {}) {
   if (typeof Chart === "undefined" || !canvas || !chartData) {
     return;
@@ -21762,7 +21774,7 @@ function createOpenrouterStackedChart(canvas, chartData, { compact = false } = {
       }
       return isLog && numeric <= 0 ? null : numeric;
     }),
-    backgroundColor: series.key === "Others" ? "rgba(160, 160, 160, 0.42)" : OPENROUTER_COLORS[index % OPENROUTER_COLORS.length],
+    backgroundColor: series.color ?? (series.key === "Others" ? "rgba(160, 160, 160, 0.42)" : OPENROUTER_COLORS[index % OPENROUTER_COLORS.length]),
     borderColor: "#ffffff",
     borderWidth: compact ? 0 : 1,
     stack: "openrouter",
@@ -21823,13 +21835,16 @@ function renderOpenrouterLeaderboardRows(rows) {
   return rows.slice(0, 20).map((row) => {
     const changeText = formatOpenrouterChange(row.change);
     const changeClass = Number(row.change) >= 0 ? "is-positive" : "is-negative";
+    const openness = getOpenrouterOpenness(row.openness);
+    const displayRank = row.categoryRank ?? row.rank;
+    const rankCaption = row.categoryRank ? `overall #${row.rank}` : "overall";
     return `
       <div class="openrouter-rank-row">
-        <div class="openrouter-rank-index">${row.rank}.</div>
+        <div class="openrouter-rank-index">${displayRank}.<small>${rankCaption}</small></div>
         <div class="openrouter-model-dot">${escapeHtml((row.author ?? "?").slice(0, 2).toUpperCase())}</div>
         <div class="openrouter-rank-name">
           <strong>${escapeHtml(row.name)}</strong>
-          <span>by ${escapeHtml(row.author)}${row.variant ? ` / ${escapeHtml(row.variant)}` : ""}</span>
+          <span>by ${escapeHtml(row.author)}${row.variant ? ` / ${escapeHtml(row.variant)}` : ""} <b class="openrouter-openness-tag" style="--openness-color:${openness.color}">${escapeHtml(openness.label)}</b></span>
         </div>
         <div class="openrouter-rank-value">
           <strong>${formatOpenrouterCount(row.tokens)}</strong>
@@ -21850,7 +21865,19 @@ function renderOpenrouterOverview() {
     : "week";
   state.openrouterLeaderboardView = activeView;
   const rows = openrouterRankingsData.leaderboards?.[activeView] ?? [];
+  const availableOpenness = new Set(rows.map((row) => row.openness || "unknown"));
+  if (state.openrouterOpennessFilter !== "all" && !availableOpenness.has(state.openrouterOpennessFilter)) {
+    state.openrouterOpennessFilter = "all";
+  }
+  const filteredRows = (state.openrouterOpennessFilter === "all"
+    ? rows
+    : rows.filter((row) => (row.openness || "unknown") === state.openrouterOpennessFilter))
+    .map((row, index) => ({
+      ...row,
+      categoryRank: state.openrouterOpennessFilter === "all" ? undefined : index + 1,
+    }));
   const latestRows = rows.slice(0, 6);
+  const dailyUsage = openrouterRankingsData.dailyUsage;
   const secondaryKeys = ["marketShare", "tools", "images", "imageOutput", "naturalLanguage"];
   const latestDate = topChart?.dates?.length
     ? topChart.dates[topChart.dates.length - 1]
@@ -21866,9 +21893,16 @@ function renderOpenrouterOverview() {
       ${escapeHtml(view.label)}
     </button>
   `).join("");
+  const opennessButtons = ["all", "open", "closed", "unknown"]
+    .filter((key) => key === "all" || availableOpenness.has(key))
+    .map((key) => `
+      <button type="button" class="market-rs-chip${state.openrouterOpennessFilter === key ? " active" : ""}" data-openrouter-openness="${key}">
+        ${escapeHtml(getOpenrouterOpenness(key).label)}
+      </button>
+    `).join("");
   const statCards = latestRows.map((row) => `
     <article class="openrouter-stat-card">
-      <span>#${row.rank}</span>
+      <span>#${row.categoryRank ?? row.rank}${row.categoryRank ? ` / overall #${row.rank}` : ""}</span>
       <strong>${escapeHtml(row.name)}</strong>
       <small>by ${escapeHtml(row.author)}</small>
       <b>${formatOpenrouterCount(row.tokens)}</b>
@@ -21922,12 +21956,28 @@ function renderOpenrouterOverview() {
       <article class="us-panel openrouter-leaderboard-panel">
         <div class="openrouter-section-head">
           <div>
-            <h3>LLM Leaderboard</h3>
-            <p>Compare the most popular models on OpenRouter.</p>
+            <h3>LLM Leaderboard by Model Type</h3>
+            <p>가중치 공개 여부 기준 랭킹입니다. Overall은 OpenRouter 전체 순위이며, 애매한 모델은 별도로 남깁니다.</p>
           </div>
-          <div class="market-rs-chip-row">${viewButtons}</div>
+          <div class="openrouter-leaderboard-controls">
+            <div class="market-rs-chip-row">${viewButtons}</div>
+            <div class="market-rs-chip-row">${opennessButtons}</div>
+          </div>
         </div>
-        <div class="openrouter-leaderboard-grid">${renderOpenrouterLeaderboardRows(rows) || "<p>No OpenRouter ranking data.</p>"}</div>
+        <div class="openrouter-leaderboard-grid">${renderOpenrouterLeaderboardRows(filteredRows) || "<p>No models match this classification.</p>"}</div>
+      </article>
+
+      <article class="us-panel openrouter-daily-usage-panel">
+        <div class="openrouter-section-head">
+          <div>
+            <h3>${escapeHtml(dailyUsage?.title || "Daily Usage: Open vs Closed")}</h3>
+            <p>${escapeHtml(dailyUsage?.subtitle || "OpenRouter daily token usage by model-weight availability")}</p>
+          </div>
+        </div>
+        ${dailyUsage?.dates?.length
+          ? `<div class="openrouter-daily-chart-wrap"><canvas id="openrouter-daily-usage-chart"></canvas></div>
+             <p class="openrouter-caption">${escapeHtml(dailyUsage.coverage || "")}</p>`
+          : `<div class="openrouter-data-unavailable"><strong>Daily usage data is ready to connect.</strong><span>${escapeHtml(dailyUsage?.coverage || "OpenRouter daily dataset is not available yet.")}</span></div>`}
       </article>
 
       <section class="openrouter-secondary-grid">
@@ -21937,6 +21987,16 @@ function renderOpenrouterOverview() {
   `;
 
   createOpenrouterStackedChart(document.querySelector("#openrouter-top-models-chart"), topChart);
+  if (dailyUsage?.dates?.length) {
+    const coloredDailyUsage = {
+      ...dailyUsage,
+      series: (dailyUsage.series ?? []).map((series) => ({
+        ...series,
+        color: getOpenrouterOpenness(series.key).color,
+      })),
+    };
+    createOpenrouterStackedChart(document.querySelector("#openrouter-daily-usage-chart"), coloredDailyUsage);
+  }
   secondaryKeys.forEach((key) => {
     createOpenrouterStackedChart(usOverviewRoot.querySelector(`[data-openrouter-chart="${key}"]`), openrouterRankingsData.charts?.[key], { compact: true });
   });
@@ -21949,6 +22009,12 @@ function renderOpenrouterOverview() {
   usOverviewRoot.querySelectorAll("[data-openrouter-view]").forEach((button) => {
     button.addEventListener("click", () => {
       state.openrouterLeaderboardView = button.dataset.openrouterView || "week";
+      renderOpenrouterOverview();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-openrouter-openness]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.openrouterOpennessFilter = button.dataset.openrouterOpenness || "all";
       renderOpenrouterOverview();
     });
   });

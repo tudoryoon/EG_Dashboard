@@ -9999,6 +9999,31 @@ h1 {
   row-gap: 14px;
 }
 
+.openrouter-leaderboard-controls {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.openrouter-daily-chart-wrap {
+  height: 320px;
+}
+
+.openrouter-data-unavailable {
+  min-height: 170px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 20px;
+  border: 1px dashed rgba(17, 24, 39, 0.18);
+  color: #5d6470;
+  text-align: center;
+}
+
+.openrouter-data-unavailable strong {
+  color: #1f2937;
+}
+
 .openrouter-rank-row {
   display: grid;
   grid-template-columns: 36px 42px minmax(0, 1fr) auto;
@@ -10010,6 +10035,14 @@ h1 {
 .openrouter-rank-index {
   color: #6b7280;
   font-size: 18px;
+}
+
+.openrouter-rank-index small {
+  display: block;
+  margin-top: 2px;
+  color: #9ca3af;
+  font-size: 9px;
+  text-transform: uppercase;
 }
 
 .openrouter-model-dot {
@@ -10043,6 +10076,13 @@ h1 {
 .openrouter-rank-value span {
   color: #6b7280;
   font-size: 13px;
+}
+
+.openrouter-openness-tag {
+  display: inline-block;
+  margin-left: 5px;
+  color: var(--openness-color, #6b7280);
+  font-weight: 700;
 }
 
 .openrouter-rank-value {
@@ -10086,6 +10126,10 @@ h1 {
 
   .openrouter-stat-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .openrouter-leaderboard-controls {
+    justify-items: start;
   }
 
   .openrouter-rank-row {
