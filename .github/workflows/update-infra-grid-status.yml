@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: update-infra-grid-status
+  cancel-in-progress: false
+
 jobs:
   update-infra-grid-status:
     runs-on: ubuntu-latest
@@ -34,6 +38,11 @@ jobs:
             echo "No infra power price changes detected."
             exit 0
           fi
+          # Other scheduled jobs also update index.html. Rebase before touching
+          # its cache key, then restore this job's generated data unchanged.
+          git stash push -- data/infra-grid-status-data.js
+          git pull --rebase origin main
+          git stash pop
           python scripts/bump_data_cache_versions.py data/infra-grid-status-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -72,6 +72,24 @@ UNIVERSES = {
         "source": "csv",
     },
 }
+MIN_UNIVERSE_MEMBERS = {
+    "sp500": 450,
+    "nasdaq100": 90,
+    "dowjones": 25,
+    "russell2000": 1_500,
+}
+# Wikipedia removed the constituent table from the Dow page in August 2026. Keep a
+# compact fallback so a temporary source-layout change cannot zero out the universe.
+DOW_JONES_FALLBACK = [
+    ("AMGN", "Amgen"), ("AMZN", "Amazon"), ("AAPL", "Apple"), ("AXP", "American Express"),
+    ("BA", "Boeing"), ("CAT", "Caterpillar"), ("CSCO", "Cisco"), ("CVX", "Chevron"),
+    ("DIS", "Walt Disney"), ("GS", "Goldman Sachs"), ("HD", "Home Depot"), ("HON", "Honeywell"),
+    ("IBM", "IBM"), ("JNJ", "Johnson & Johnson"), ("JPM", "JPMorgan Chase"), ("KO", "Coca-Cola"),
+    ("MCD", "McDonald's"), ("MMM", "3M"), ("MRK", "Merck"), ("MSFT", "Microsoft"),
+    ("NKE", "Nike"), ("NVDA", "NVIDIA"), ("PG", "Procter & Gamble"), ("CRM", "Salesforce"),
+    ("SHW", "Sherwin-Williams"), ("TRV", "Travelers"), ("UNH", "UnitedHealth"),
+    ("V", "Visa"), ("WMT", "Walmart"), ("GOOGL", "Alphabet"),
+]
 COLOR_BY_UNIVERSE = {
     "all": "#111827",
     "sp500": "#4b5563",
@@ -339,6 +357,27 @@ def read_existing_universe(universe_key: str) -> pd.DataFrame:
     return pd.DataFrame(rows).drop_duplicates(subset=["Ticker"])
 
 
+def usable_universe_member_count(frame: pd.DataFrame, ticker_col: str) -> int:
+    if ticker_col not in frame.columns:
+        return 0
+    return len(
+        {
+            normalize_ticker(value)
+            for value in frame[ticker_col].tolist()
+            if normalize_ticker(value) and not is_terminal_symbol(normalize_ticker(value))
+        }
+    )
+
+
+def read_universe_fallback(universe_key: str, ticker_col: str, name_col: str) -> pd.DataFrame:
+    fallback = read_existing_universe(universe_key)
+    if len(fallback) < MIN_UNIVERSE_MEMBERS[universe_key] and universe_key == "dowjones":
+        fallback = pd.DataFrame(DOW_JONES_FALLBACK, columns=["Ticker", "Name"])
+    if len(fallback) < MIN_UNIVERSE_MEMBERS[universe_key]:
+        return pd.DataFrame(columns=[ticker_col, name_col])
+    return fallback.rename(columns={"Ticker": ticker_col, "Name": name_col})[[ticker_col, name_col]]
+
+
 def read_nasdaq100_snapshot() -> pd.DataFrame:
     if not NASDAQ100_SNAPSHOT_PATH.exists():
         return pd.DataFrame(columns=["Ticker", "Name"])
@@ -403,14 +442,27 @@ def read_nasdaq100_constituents(url: str) -> pd.DataFrame:
 def fetch_universe_frame() -> pd.DataFrame:
     merged: dict[str, dict[str, object]] = {}
     for key, meta in UNIVERSES.items():
-        if meta.get("source") == "nasdaq_api":
-            table = read_nasdaq100_constituents(str(meta["url"]))
-        elif meta.get("source") == "csv":
-            table = read_ishares_holdings_csv(str(meta["url"]))
-        else:
-            table = read_wiki_table(str(meta["url"]), int(meta["table_index"]))
         ticker_col = str(meta["ticker_col"])
         name_col = str(meta["name_col"])
+        source_error: Exception | None = None
+        try:
+            if meta.get("source") == "nasdaq_api":
+                table = read_nasdaq100_constituents(str(meta["url"]))
+            elif meta.get("source") == "csv":
+                table = read_ishares_holdings_csv(str(meta["url"]))
+            else:
+                table = read_wiki_table(str(meta["url"]), int(meta["table_index"]))
+        except Exception as error:
+            source_error = error
+            table = pd.DataFrame(columns=[ticker_col, name_col])
+
+        if usable_universe_member_count(table, ticker_col) < MIN_UNIVERSE_MEMBERS[key]:
+            fallback = read_universe_fallback(key, ticker_col, name_col)
+            if fallback.empty:
+                detail = f": {source_error}" if source_error else ""
+                raise RuntimeError(f"Unable to load a usable {meta['label']} membership source{detail}")
+            print(f"Using stored {meta['label']} membership fallback ({len(fallback)} names).")
+            table = fallback
         for _, row in table.iterrows():
             ticker = normalize_ticker(row.get(ticker_col, ""))
             if ticker in SOURCE_PLACEHOLDER_TICKERS or is_terminal_symbol(ticker):

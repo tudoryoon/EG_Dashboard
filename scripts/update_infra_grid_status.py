@@ -423,7 +423,6 @@ def build_payload() -> dict[str, object]:
 
     return {
         "updatedAt": latest_date,
-        "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "startDate": min(
             [hub_series[key]["dates"][0] for key in included_keys]
             + [series["dates"][0] for series in fred_series.values() if series["dates"]]
@@ -451,8 +450,29 @@ def build_payload() -> dict[str, object]:
     }
 
 
+def load_existing_payload() -> dict[str, object]:
+    if not OUTPUT_PATH.exists():
+        return {}
+    text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+    prefix = "window.infraGridData = "
+    if not text.startswith(prefix):
+        return {}
+    try:
+        return json.loads(text[len(prefix) :].rstrip(";"))
+    except json.JSONDecodeError:
+        return {}
+
+
 def main() -> None:
     payload = build_payload()
+    existing = load_existing_payload()
+    existing_without_generated_at = dict(existing)
+    existing_without_generated_at.pop("generatedAt", None)
+    if existing_without_generated_at == payload:
+        print("No EIA/FRED source changes detected.")
+        return
+
+    payload["generatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     OUTPUT_PATH.write_text(
         "window.infraGridData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
