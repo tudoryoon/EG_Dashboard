@@ -3979,6 +3979,35 @@ h1 {
   justify-content: flex-start;
 }
 
+.total-spread-panel {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e4e4de;
+}
+
+.total-spread-head h3 {
+  margin: 0;
+  color: #252522;
+  font-size: 1rem;
+}
+
+.total-spread-head p {
+  margin: 5px 0 0;
+  color: #77776f;
+  font-size: 0.82rem;
+}
+
+.total-spread-chart-wrap {
+  height: 190px;
+  margin-top: 8px;
+}
+
+.total-spread-chart-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 190px;
+}
+
 .market-trend-meta {
   display: flex;
   flex-wrap: wrap;

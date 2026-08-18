@@ -261,6 +261,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:rates:us5y": "#22c55e",
   "macro:rates:us10y": "#14b8a6",
   "macro:rates:us30y": "#06b6d4",
+  "macro:rates:us10y_minus_us30y": "#475569",
   "macro:rates:jp2y": "#f59e0b",
   "macro:rates:jp10y": "#f97316",
   "macro:rates:jp30y": "#ef4444",
@@ -429,14 +430,10 @@ const state = {
   marketValuationSelection: ["cape", "dailyCapeProxy", "sp500"],
   totalDashboardRange: "3y",
   totalDashboardSelection: [
-    "market:sp500",
-    "market:smh",
-    "macro:gdp:real_gdp_annualized",
+    "market:nasdaq100",
     "macro:rates:us10y",
-    "macro:rates:jp10y",
-    "macro:dxy:dxy",
-    "macro:energy:wti",
-    "macro:metals:gold",
+    "macro:rates:us30y",
+    "macro:rates:us10y_minus_us30y",
   ],
   totalDashboardCustomStart: "",
   totalDashboardCustomEnd: "",
@@ -3632,6 +3629,7 @@ function createMarketVixCurveChart(canvas) {
 
 function getTotalDashboardSeriesItems() {
   const items = [];
+  const rateSeries = marketMacroData?.panels?.rates?.series ?? {};
 
   Object.entries(marketPriceData?.items ?? {}).forEach(([key, item]) => {
     if (key === "dxy") {
@@ -3673,6 +3671,30 @@ function getTotalDashboardSeriesItems() {
       });
     });
   });
+
+  const us10yByDate = new Map(
+    (rateSeries.us10y?.dates ?? []).map((date, index) => [date, Number(rateSeries.us10y?.values?.[index])]),
+  );
+  const us30yByDate = new Map(
+    (rateSeries.us30y?.dates ?? []).map((date, index) => [date, Number(rateSeries.us30y?.values?.[index])]),
+  );
+  const us10y30yDates = [...us10yByDate.keys()]
+    .filter((date) => Number.isFinite(us10yByDate.get(date)) && Number.isFinite(us30yByDate.get(date)))
+    .sort();
+  if (us10y30yDates.length) {
+    items.push({
+      key: "macro:rates:us10y_minus_us30y",
+      group: "Rates",
+      label: "US 10Y - 30Y",
+      color: "#475569",
+      dates: us10y30yDates,
+      values: us10y30yDates.map((date) => Number((us10yByDate.get(date) - us30yByDate.get(date)).toFixed(3))),
+      formatter: "percent2",
+      rawLabel: "US 10Y - 30Y",
+      isRate: true,
+      chartType: "bar",
+    });
+  }
 
   [
     buildMacroIndicatorDashboardItem({
@@ -3766,7 +3788,7 @@ function buildTotalDashboardPayload(rangeKey) {
   const customEnd = state.totalDashboardCustomEnd || latestDate;
   const selectedLabels = allDates.filter((label) => label >= customStart && label <= customEnd);
 
-  const datasets = items.map((item) => {
+  const datasets = items.filter((item) => item.chartType !== "bar").map((item) => {
     const dateIndex = new Map();
     item.dates.forEach((date, index) => {
       dateIndex.set(date, index);
@@ -3838,6 +3860,27 @@ function buildTotalDashboardPayload(rangeKey) {
   });
 
   return { labels: selectedLabels, datasets };
+}
+
+function buildTotalDashboardBarPayload(rangeKey) {
+  const totalPayload = buildTotalDashboardPayload(rangeKey);
+  const barItems = getTotalDashboardSelectedItems().filter((item) => item.chartType === "bar");
+  const datasets = barItems.map((item) => {
+    const valuesByDate = new Map(
+      item.dates.map((date, index) => [date, Number(item.values[index])]),
+    );
+    const data = totalPayload.labels.map((date) => {
+      const value = valuesByDate.get(date);
+      return Number.isFinite(value) ? value : null;
+    });
+    return {
+      label: item.label,
+      data,
+      color: item.color,
+      formatter: item.formatter,
+    };
+  });
+  return { labels: totalPayload.labels, datasets };
 }
 
 function createTotalDashboardChart(canvas, rangeKey) {
@@ -3944,6 +3987,96 @@ function createTotalDashboardChart(canvas, rangeKey) {
             color: "#8d8d86",
           },
           grid: { drawOnChartArea: false },
+          border: { color: "#d8d8d2" },
+        },
+      },
+    },
+  });
+
+  charts.push(chart);
+}
+
+function createTotalDashboardSpreadChart(canvas, rangeKey) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  const payload = buildTotalDashboardBarPayload(rangeKey);
+  const values = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  if (!payload.labels.length || !values.length) {
+    return;
+  }
+
+  const maxAbsoluteValue = Math.max(...values.map((value) => Math.abs(value)), 0.05);
+  const axisLimit = Math.ceil(maxAbsoluteValue * 1.18 * 100) / 100;
+  const tickIndexes = buildRegularDateTickIndexes(payload.labels, rangeKey);
+  const positiveFill = "rgba(22, 163, 74, 0.78)";
+  const negativeFill = "rgba(220, 38, 38, 0.78)";
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: payload.labels,
+      datasets: payload.datasets.map((dataset) => ({
+        label: dataset.label,
+        data: dataset.data,
+        backgroundColor: dataset.data.map((value) =>
+          Number(value) >= 0 ? positiveFill : negativeFill,
+        ),
+        borderColor: dataset.data.map((value) => (Number(value) >= 0 ? "#15803d" : "#b91c1c")),
+        borderWidth: 0.4,
+        borderSkipped: false,
+        categoryPercentage: 1,
+        barPercentage: 0.9,
+        maxBarThickness: 10,
+      })),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(2)}%p`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+          },
+          ticks: {
+            color: "#8d8d86",
+            autoSkip: false,
+            maxRotation: 0,
+            callback: (value) => formatRangeAxisDate(payload.labels[value], rangeKey),
+          },
+          border: { color: "#d8d8d2" },
+        },
+        y: {
+          min: -axisLimit,
+          max: axisLimit,
+          ticks: {
+            color: "#8d8d86",
+            maxTicksLimit: 5,
+            callback: (value) => `${Number(value).toFixed(2)}%p`,
+          },
+          title: {
+            display: true,
+            text: "10Y - 30Y (%p)",
+            color: "#8d8d86",
+          },
+          grid: {
+            color: (context) =>
+              context.tick.value === 0 ? "rgba(72, 72, 66, 0.58)" : "rgba(70, 70, 66, 0.10)",
+            lineWidth: (context) => (context.tick.value === 0 ? 1.3 : 1),
+          },
           border: { color: "#d8d8d2" },
         },
       },
@@ -18984,6 +19117,9 @@ function renderMarketOverview() {
   const totalStartValue = state.totalDashboardCustomStart || "";
   const totalEndValue = state.totalDashboardCustomEnd || "";
   const totalSeriesItems = getTotalDashboardSeriesItems();
+  const selectedTotalBarItems = totalSeriesItems.filter(
+    (item) => item.chartType === "bar" && (state.totalDashboardSelection ?? []).includes(item.key),
+  );
   const totalSeriesMarkup = totalSeriesItems
     .map(
       (item) => `
@@ -19054,6 +19190,22 @@ function renderMarketOverview() {
         <div class="us-price-chart-wrap">
           <canvas data-market-total="overview"></canvas>
         </div>
+        ${
+          selectedTotalBarItems.length
+            ? `
+              <section class="total-spread-panel">
+                <div class="total-spread-head">
+                  <div>
+                    <h3>US 10Y - 30Y Spread</h3>
+                    <p>10년물 금리에서 30년물 금리를 뺀 값입니다. 0%p 아래의 빨간 막대는 30년물 금리가 더 높은 상태를 뜻합니다.</p>
+                  </div>
+                </div>
+                <div class="total-spread-chart-wrap">
+                  <canvas data-market-total-spread="overview"></canvas>
+                </div>
+              </section>`
+            : ""
+        }
       </section>
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
@@ -19138,6 +19290,11 @@ function renderMarketOverview() {
   const totalCanvas = usOverviewRoot.querySelector('[data-market-total="overview"]');
   if (totalCanvas) {
     createTotalDashboardChart(totalCanvas, state.totalDashboardRange);
+  }
+
+  const totalSpreadCanvas = usOverviewRoot.querySelector('[data-market-total-spread="overview"]');
+  if (totalSpreadCanvas) {
+    createTotalDashboardSpreadChart(totalSpreadCanvas, state.totalDashboardRange);
   }
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
