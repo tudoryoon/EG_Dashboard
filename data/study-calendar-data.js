@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-08-18",
+  "updatedAt": "2026-08-19",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-08-17",
+  "calendarToday": "2026-08-18",
   "coverage": {
     "dailyBriefingUniverse": 204,
     "matchedEarnings": 29,
@@ -22,21 +22,6 @@ window.studyCalendarData = {
       "range": "2026.08.17 - 08.23",
       "status": "진행 중",
       "events": [
-        {
-          "date": "2026-08-17",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "RR",
-          "session": "",
-          "title": "Richtech Robotics Inc. (RR) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · Nasdaq/Zacks 예상 일정",
-          "sector": "로봇",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-17",
-          "usDate": "2026-08-17",
-          "kstDate": "2026-08-17",
-          "confirmed": false
-        },
         {
           "date": "2026-08-18",
           "time": "22:30 이전",
@@ -150,6 +135,21 @@ window.studyCalendarData = {
       "range": "2026.08.24 - 08.30",
       "status": "예정",
       "events": [
+        {
+          "date": "2026-08-24",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "RR",
+          "session": "",
+          "title": "Richtech Robotics Inc. (RR) 실적 발표",
+          "note": "회계분기 종료 Jun/2026 · Nasdaq/Zacks 예상 일정",
+          "sector": "로봇",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-24",
+          "usDate": "2026-08-24",
+          "kstDate": "2026-08-24",
+          "confirmed": false
+        },
         {
           "date": "2026-08-26",
           "time": "05:00 이후",
@@ -473,7 +473,7 @@ window.studyCalendarData = {
           "ticker": "ORCL",
           "session": "",
           "title": "Oracle Corporation (ORCL) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.39 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.40 · Nasdaq/Zacks 예상 일정",
           "sector": "네오클라우드",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-08",
