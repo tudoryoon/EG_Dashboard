@@ -36,15 +36,19 @@ jobs:
       - name: Install dependencies
         run: python -m pip install pandas yfinance requests lxml html5lib beautifulsoup4
 
-      - name: Refresh Daily Briefing priority RS
+      # Keep every RS universe current each trading day. The script fetches only
+      # the latest five sessions and merges them into the saved three-year history.
+      - name: Refresh full daily market RS universe
         env:
-          MARKET_RS_MAX_SHARES_FETCH: "1600"
+          # Price/RS needs every ticker daily; shares only change materially
+          # around splits and are fully revalidated by the Sunday 5Y job.
+          MARKET_RS_MAX_SHARES_FETCH: "50"
           MARKET_RS_BATCH_SIZE: "30"
           MARKET_RS_BATCH_WORKERS: "3"
-        run: python scripts/update_market_rs.py --daily-briefing-priority
+        run: python scripts/update_market_rs.py
 
-      - name: Refresh Daily Briefing priority trend score
-        run: python scripts/update_market_trend_score.py --daily-briefing-priority
+      - name: Refresh full daily market trend score universe
+        run: python scripts/update_market_trend_score.py
 
       - name: Refresh market RS financials
         env:
@@ -52,9 +56,9 @@ jobs:
           MARKET_RS_FINANCIALS_STALE_DAYS: "14"
         run: python scripts/update_market_rs_financials.py
 
-      - name: Refresh CANSLIM EPS surprise history
+      - name: Refresh full CANSLIM EPS surprise history
         if: github.event_name == 'workflow_dispatch' || github.event.schedule == '03 20 * * *'
-        run: python scripts/update_market_canslim_earnings.py
+        run: python scripts/update_market_canslim_earnings.py --scope all
 
       - name: Validate market RS pipeline outputs
         run: python scripts/validate_market_rs_pipeline.py
