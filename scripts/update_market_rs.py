@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import os
@@ -17,7 +18,10 @@ import yfinance as yf
 
 
 WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
-PRICE_PERIOD = "5y"
+# The checked-in snapshot retains the three-year chart and price lookback.
+# Daily refreshes only need a few new sessions to calculate the new cross-
+# sectional rank, so do not re-download a multi-year OHLCV history each day.
+PRICE_PERIOD = os.getenv("MARKET_RS_PRICE_PERIOD", "5d")
 BENCHMARK_SYMBOL = "^GSPC"
 # Five years of source prices preserve a full three-year RS window after the 12-month ranking warmup.
 HISTORY_POINTS = 252 * 3
@@ -26,6 +30,7 @@ MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
 SHARES_REFRESH_RATIO_LOW = 0.70
 SHARES_REFRESH_RATIO_HIGH = 1.45
 BATCH_SIZE = int(os.getenv("MARKET_RS_BATCH_SIZE", "15"))
+BATCH_WORKERS = max(1, int(os.getenv("MARKET_RS_BATCH_WORKERS", "4")))
 BATCH_SLEEP = float(os.getenv("MARKET_RS_BATCH_SLEEP", "0.6"))
 RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
 RETRY_ATTEMPTS = int(os.getenv("MARKET_RS_RETRY_ATTEMPTS", "4"))
@@ -117,6 +122,7 @@ EXTENSION_ANCHORS = {
     },
 }
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
+BRIEFING_DATA_PATH = OUTPUT_PATH.parent / "market-briefing-data.js"
 MANUAL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-manual-tickers.json"
 NASDAQ100_SNAPSHOT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-nasdaq100-snapshot.json"
 SYMBOL_ALIASES = {
@@ -504,6 +510,8 @@ def fetch_universe_frame() -> pd.DataFrame:
 
 def download_batch(
     symbols: list[str],
+    period: str = PRICE_PERIOD,
+    retry_missing: bool = True,
 ) -> tuple[
     dict[str, pd.Series],
     dict[str, pd.Series],
@@ -517,7 +525,7 @@ def download_batch(
         return {}, {}, {}, {}, {}, {}
     history = yf.download(
         tickers=symbols,
-        period=PRICE_PERIOD,
+        period=period,
         auto_adjust=False,
         progress=False,
         threads=False,
@@ -572,6 +580,8 @@ def download_batch(
             or symbol not in volume_map
         )
     ]
+    if not retry_missing:
+        return raw_close_map, adjusted_close_map, open_map, high_map, low_map, volume_map
     for symbol in missing:
         if is_terminal_symbol(symbol):
             continue
@@ -579,7 +589,7 @@ def download_batch(
             try:
                 single = yf.download(
                     tickers=symbol,
-                    period=PRICE_PERIOD,
+                    period=period,
                     auto_adjust=False,
                     progress=False,
                     threads=False,
@@ -619,6 +629,8 @@ def fetch_price_frames(
     symbols: list[str],
     batch_size: int = BATCH_SIZE,
     allow_empty: bool = False,
+    period: str = PRICE_PERIOD,
+    retry_missing: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     raw_close_map: dict[str, pd.Series] = {}
     adjusted_close_map: dict[str, pd.Series] = {}
@@ -626,23 +638,43 @@ def fetch_price_frames(
     high_map: dict[str, pd.Series] = {}
     low_map: dict[str, pd.Series] = {}
     volume_map: dict[str, pd.Series] = {}
-    for start in range(0, len(symbols), batch_size):
-        batch = symbols[start : start + batch_size]
-        (
+    batches = [symbols[start : start + batch_size] for start in range(0, len(symbols), batch_size)]
+    if BATCH_WORKERS == 1 or len(batches) == 1:
+        batch_results = (download_batch(batch, period, retry_missing) for batch in batches)
+        for (
             batch_raw_close_map,
             batch_adjusted_close_map,
             batch_open_map,
             batch_high_map,
             batch_low_map,
             batch_volume_map,
-        ) = download_batch(batch)
-        raw_close_map.update(batch_raw_close_map)
-        adjusted_close_map.update(batch_adjusted_close_map)
-        open_map.update(batch_open_map)
-        high_map.update(batch_high_map)
-        low_map.update(batch_low_map)
-        volume_map.update(batch_volume_map)
-        time.sleep(BATCH_SLEEP)
+        ) in batch_results:
+            raw_close_map.update(batch_raw_close_map)
+            adjusted_close_map.update(batch_adjusted_close_map)
+            open_map.update(batch_open_map)
+            high_map.update(batch_high_map)
+            low_map.update(batch_low_map)
+            volume_map.update(batch_volume_map)
+            time.sleep(BATCH_SLEEP)
+    else:
+        # Parallel batches avoid turning a full RS refresh into hundreds of serial Yahoo requests.
+        with ThreadPoolExecutor(max_workers=min(BATCH_WORKERS, len(batches))) as executor:
+            futures = [executor.submit(download_batch, batch, period, retry_missing) for batch in batches]
+            for future in as_completed(futures):
+                (
+                    batch_raw_close_map,
+                    batch_adjusted_close_map,
+                    batch_open_map,
+                    batch_high_map,
+                    batch_low_map,
+                    batch_volume_map,
+                ) = future.result()
+                raw_close_map.update(batch_raw_close_map)
+                adjusted_close_map.update(batch_adjusted_close_map)
+                open_map.update(batch_open_map)
+                high_map.update(batch_high_map)
+                low_map.update(batch_low_map)
+                volume_map.update(batch_volume_map)
     if not raw_close_map or not adjusted_close_map or not open_map or not high_map or not low_map or not volume_map:
         if allow_empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -842,6 +874,54 @@ def restore_existing_history_gaps(
                 restored += 1
     if restored:
         print(f"Restored {restored} missing OHLCV points from existing market RS history.")
+    return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+
+def merge_existing_history_window(
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+    volume_frame: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Keep the three-year chart history while refreshing only the RS lookback window."""
+    existing = load_existing_payload()
+    history_dates = existing.get("historyDates") or []
+    histories = existing.get("histories") or {}
+    if not history_dates or not histories:
+        return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+    date_index = pd.Index(pd.to_datetime(history_dates), name="Date")
+
+    def stored_frame(key: str) -> pd.DataFrame:
+        series_map: dict[str, pd.Series] = {}
+        for ticker, history in histories.items():
+            values = history.get(key) or []
+            if not values:
+                continue
+            tail_values = values[-len(date_index) :]
+            tail_index = date_index[-len(tail_values) :]
+            series_map[normalize_ticker(ticker)] = pd.Series(tail_values, index=tail_index, dtype="float64")
+        return pd.concat(series_map, axis=1) if series_map else pd.DataFrame()
+
+    def merge(fresh: pd.DataFrame, key: str) -> pd.DataFrame:
+        stored = stored_frame(key)
+        if stored.empty:
+            return fresh.sort_index()
+        # Fresh Yahoo values supersede the cached range.  Older dates remain
+        # available solely for the 3Y chart, not for daily re-downloads.
+        return fresh.combine_first(stored).sort_index()
+
+    raw_close_frame = merge(raw_close_frame, "price")
+    # The serialized chart line is raw close.  The current two-year Yahoo pull
+    # supplies adjusted close for every RS return lookback; pre-window values
+    # only preserve the visual history.
+    adjusted_close_frame = merge(adjusted_close_frame, "price")
+    open_frame = merge(open_frame, "open")
+    high_frame = merge(high_frame, "high")
+    low_frame = merge(low_frame, "low")
+    volume_frame = merge(volume_frame, "volume")
     return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
 
 
@@ -1551,10 +1631,148 @@ def nullable_int(value: object) -> int | None:
     return int(value)
 
 
+def load_js_payload(path: Path, variable_name: str) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    text = path.read_text(encoding="utf-8").strip()
+    prefix = f"window.{variable_name} = "
+    if text.startswith(prefix):
+        text = text[len(prefix) :]
+    if text.endswith(";"):
+        text = text[:-1]
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def load_daily_briefing_tickers() -> set[str]:
+    payload = load_js_payload(BRIEFING_DATA_PATH, "marketBriefingData")
+    tickers: set[str] = set()
+    for sector in payload.get("sectorPanels", []):
+        if not isinstance(sector, dict):
+            continue
+        for item in sector.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            ticker = normalize_ticker(item.get("ticker"))
+            if ticker:
+                tickers.add(ticker)
+    return tickers
+
+
+def read_cached_universe(existing: dict) -> pd.DataFrame:
+    rows = []
+    for row in existing.get("rows", []):
+        if not isinstance(row, dict):
+            continue
+        ticker = normalize_ticker(row.get("ticker"))
+        if not ticker or is_terminal_symbol(ticker):
+            continue
+        memberships = row.get("memberships") or {}
+        rows.append(
+            {
+                "ticker": ticker,
+                "name": str(row.get("name") or ticker),
+                "member_sp500": bool(memberships.get("sp500")),
+                "member_nasdaq100": bool(memberships.get("nasdaq100")),
+                "member_dowjones": bool(memberships.get("dowjones")),
+                "member_russell2000": bool(memberships.get("russell2000")),
+            }
+        )
+    return pd.DataFrame(rows).drop_duplicates(subset=["ticker"]).reset_index(drop=True)
+
+
+def refresh_daily_briefing_priority() -> dict[str, object]:
+    """Refresh Daily Briefing names without re-downloading the full RS universe."""
+    existing = load_existing_payload()
+    universe = read_cached_universe(existing)
+    if universe.empty:
+        raise RuntimeError("No cached market RS universe is available for the priority refresh.")
+
+    requested = load_daily_briefing_tickers()
+    available = set(universe["ticker"].tolist())
+    symbols = sorted(requested & available)
+    missing = sorted(requested - available)
+    if not symbols:
+        raise RuntimeError("No Daily Briefing symbols matched the cached market RS universe.")
+    if missing:
+        print("Daily Briefing names missing from cached RS universe: " + ", ".join(missing), flush=True)
+
+    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = fetch_price_frames(
+        symbols + [BENCHMARK_SYMBOL],
+        period=PRICE_PERIOD,
+        retry_missing=False,
+    )
+    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = merge_existing_history_window(
+        raw_close_frame,
+        adjusted_close_frame,
+        open_frame,
+        high_frame,
+        low_frame,
+        volume_frame,
+    )
+    rows_by_ticker = {
+        normalize_ticker(row.get("ticker")): row
+        for row in existing.get("rows", [])
+        if isinstance(row, dict) and normalize_ticker(row.get("ticker"))
+    }
+    shares_cache = {
+        ticker: normalize_positive_int(row.get("sharesOutstanding"))
+        for ticker, row in rows_by_ticker.items()
+    }
+    payload = build_payload(
+        universe,
+        raw_close_frame,
+        adjusted_close_frame,
+        open_frame,
+        high_frame,
+        low_frame,
+        volume_frame,
+        shares_cache,
+    )
+    payload["refreshScope"] = {
+        "mode": "daily-briefing-priority",
+        "freshTickerCount": len(symbols),
+        "label": "Daily Briefing priority OHLCV refresh; remaining symbols retain the prior close until the weekly full refresh.",
+    }
+    return payload
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Refresh market RS data.")
+    parser.add_argument(
+        "--daily-briefing-priority",
+        action="store_true",
+        help="Refresh only Daily Briefing OHLCV and reuse the cached RS universe for the remaining names.",
+    )
+    args = parser.parse_args()
+
+    if args.daily_briefing_priority:
+        payload = refresh_daily_briefing_priority()
+        OUTPUT_PATH.write_text(
+            "window.marketRsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        print(f"Wrote {OUTPUT_PATH}")
+        print(f"Rows: {len(payload['rows'])}")
+        print(f"As of: {payload['updatedAt']}")
+        print(f"Priority fresh tickers: {payload['refreshScope']['freshTickerCount']}")
+        return
+
     universe = fetch_universe_frame()
     symbols = sorted(symbol for symbol in universe["ticker"].tolist() if not is_terminal_symbol(str(symbol)))
     raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = fetch_price_frames(symbols + [BENCHMARK_SYMBOL])
+    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = merge_existing_history_window(
+        raw_close_frame,
+        adjusted_close_frame,
+        open_frame,
+        high_frame,
+        low_frame,
+        volume_frame,
+    )
     manual_symbols = [normalize_ticker(member["ticker"]) for member in get_manual_universe_members()]
     raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = ensure_symbol_price_frames(
         manual_symbols,

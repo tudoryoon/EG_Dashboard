@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import re
@@ -12,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 MARKET_PRICE_DATA_PATH = ROOT / "data" / "market-price-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-trend-score-data.js"
+BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
 HISTORY_POINTS = 252
 ATR_MIN_PERIODS = 2
 PROVISIONAL_LONG_TREND_MIN_PERIODS = 50
@@ -80,6 +82,38 @@ def load_market_price_payload() -> dict:
     text = re.sub(r"^window\.marketPriceData\s*=\s*", "", text)
     text = re.sub(r";\s*$", "", text)
     return json.loads(text)
+
+
+def load_existing_payload() -> dict:
+    if not OUTPUT_PATH.exists():
+        return {}
+    text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+    text = re.sub(r"^window\.marketTrendScoreData\s*=\s*", "", text)
+    text = re.sub(r";\s*$", "", text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+
+
+def load_daily_briefing_tickers() -> set[str]:
+    if not BRIEFING_DATA_PATH.exists():
+        return set()
+    text = BRIEFING_DATA_PATH.read_text(encoding="utf-8").strip()
+    text = re.sub(r"^window\.marketBriefingData\s*=\s*", "", text)
+    text = re.sub(r";\s*$", "", text)
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return set()
+    tickers: set[str] = set()
+    for sector in payload.get("sectorPanels", []):
+        if not isinstance(sector, dict):
+            continue
+        for item in sector.get("items", []):
+            if isinstance(item, dict) and item.get("ticker"):
+                tickers.add(str(item["ticker"]).strip())
+    return tickers
 
 
 def number_or_none(value: object) -> float | None:
@@ -468,6 +502,7 @@ def build_universe_payload(
     market_price_payload: dict,
     frame_cache: dict[tuple[str, str], pd.DataFrame],
     climax_cache: dict[str, tuple[pd.Series, dict[str, object]]],
+    ticker_filter: set[str] | None = None,
 ) -> tuple[list[dict], dict[str, dict]]:
     rows_by_ticker = {row.get("ticker"): row for row in source.get("rows", []) if row.get("ticker")}
     dates = source.get("historyDates", [])[-HISTORY_POINTS:]
@@ -476,6 +511,8 @@ def build_universe_payload(
     members: list[tuple[str, dict, dict, pd.DataFrame]] = []
 
     for ticker, row in rows_by_ticker.items():
+        if ticker_filter is not None and ticker not in ticker_filter:
+            continue
         memberships = row.get("memberships", {})
         if meta.get("include_all"):
             pass
@@ -699,8 +736,103 @@ def build_payload() -> dict:
     }
 
 
+def build_daily_briefing_priority_payload() -> dict:
+    source = load_market_rs_payload()
+    market_price_payload = load_market_price_payload()
+    existing = load_existing_payload()
+    tickers = load_daily_briefing_tickers()
+    if not tickers:
+        raise RuntimeError("No Daily Briefing tickers are available for the priority trend refresh.")
+
+    source_tickers = {
+        str(row.get("ticker"))
+        for row in source.get("rows", [])
+        if isinstance(row, dict) and row.get("ticker")
+    }
+    fresh_tickers = tickers & source_tickers
+    dates = source.get("historyDates", [])[-HISTORY_POINTS:]
+    rows_by_universe: dict[str, list[dict]] = {}
+    histories_by_universe: dict[str, dict[str, dict]] = {}
+    frame_cache: dict[tuple[str, str], pd.DataFrame] = {}
+    climax_cache: dict[str, tuple[pd.Series, dict[str, object]]] = {}
+    existing_rows = existing.get("rows", {}) if isinstance(existing.get("rows"), dict) else {}
+    existing_histories = existing.get("histories", {}) if isinstance(existing.get("histories"), dict) else {}
+
+    for universe_key, meta in UNIVERSES.items():
+        priority_rows, priority_histories = build_universe_payload(
+            universe_key,
+            meta,
+            source,
+            market_price_payload,
+            frame_cache,
+            climax_cache,
+            ticker_filter=tickers,
+        )
+        previous_rows = {
+            row.get("ticker"): row
+            for row in existing_rows.get(universe_key, [])
+            if isinstance(row, dict) and row.get("ticker")
+        }
+        merged_rows = list(previous_rows.values())
+        for row in priority_rows:
+            previous = previous_rows.get(row["ticker"])
+            # A global rank requires every universe member's fresh close.  Keep
+            # the prior rank during the lightweight pass; the daily score,
+            # Climax and history are recomputed from the fresh OHLCV instead.
+            if previous:
+                row["rank"] = previous.get("rank")
+                row["rankChange"] = previous.get("rankChange")
+            previous_rows[row["ticker"]] = row
+        merged_rows = list(previous_rows.values())
+        merged_rows.sort(key=lambda item: (item.get("rank") is None, item.get("rank") or 9999, item.get("ticker") or ""))
+        rows_by_universe[universe_key] = merged_rows
+        merged_histories = dict(existing_histories.get(universe_key, {}))
+        merged_histories.update(priority_histories)
+        histories_by_universe[universe_key] = merged_histories
+
+    return {
+        "updatedAt": source.get("updatedAt", ""),
+        "source": {
+            "label": "Market RS price and universe RS rating history",
+            "input": "data/market-rs-data.js",
+            "benchmarkInput": "data/market-price-data.js",
+        },
+        "historyDates": dates,
+        "ranges": [
+            {"key": "1m", "label": "1M"},
+            {"key": "3m", "label": "3M"},
+            {"key": "6m", "label": "6M"},
+            {"key": "ytd", "label": "YTD"},
+            {"key": "1y", "label": "1Y"},
+        ],
+        "universes": UNIVERSES,
+        "scoring": {
+            "label": "Trend Score",
+            "description": "Price trend 4 points, benchmark-relative RS line trend 4 points, and short-term momentum 2 points. NASDAQ100, S&P500, and Russell 2000 use their own index benchmarks; ALL uses the S&P500 benchmark.",
+            "provisionalNote": "DRAM has fewer than 200 sessions, so its long-term conditions use the available-history average after 50 sessions until a full 200-session history is available.",
+            "absolute": ["Price > 200DMA", "50DMA > 200DMA", "Price > 50DMA", "50DMA rising versus 5 sessions ago"],
+            "relative": ["Universe RS rating > RS 200DMA", "RS 50DMA > RS 200DMA", "Universe RS rating > RS 50DMA", "RS 50DMA rising versus 5 sessions ago"],
+            "momentum": ["Price > 20DMA", "Universe RS rating > RS 20DMA"],
+            "climax": [
+                "15-session return >= +25% adds 2", "10-session return >= +20% adds 1", "21EMA >= +20% or MA10 ATR Ext > +3sigma with MA200 ATR Ext > +2sigma adds 3", "21D ATR >= 30-session average ATR x1.5 adds 2", "5D average volume >= previous 20D average volume x1.5 adds 1", "Gap-up while extended above 21EMA adds 1", "10D high with close in lower 30% of intraday range adds 3", "2+ stalling days in the last 5 sessions adds 2", "Shellac day adds 3",
+            ],
+            "positionByScore": POSITION_BY_SCORE,
+        },
+        "refreshScope": {
+            "mode": "daily-briefing-priority",
+            "freshTickerCount": len(fresh_tickers),
+            "label": "Daily Briefing score and Climax refresh; global ranks refresh during the weekly full run.",
+        },
+        "rows": rows_by_universe,
+        "histories": histories_by_universe,
+    }
+
+
 def main() -> None:
-    payload = build_payload()
+    parser = argparse.ArgumentParser(description="Refresh market trend score data.")
+    parser.add_argument("--daily-briefing-priority", action="store_true")
+    args = parser.parse_args()
+    payload = build_daily_briefing_priority_payload() if args.daily_briefing_priority else build_payload()
     OUTPUT_PATH.write_text(
         "window.marketTrendScoreData = "
         + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
