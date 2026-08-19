@@ -700,6 +700,7 @@ const marketRsRowByTicker = new Map((marketRsData.rows ?? []).map((row) => [row.
 
 const charts = [];
 let marketRsDetailChart = null;
+let marketTrendDetailChart = null;
 
 const searchInput = document.querySelector("#search-input");
 const sortSelect = document.querySelector("#sort-select");
@@ -2657,6 +2658,227 @@ function buildMarketTrendRiskSummary() {
   }));
 }
 
+function getMarketTrendVisibleIndexRange(chart = marketTrendDetailChart) {
+  const labelCount = chart?.data?.labels?.length ?? 0;
+  if (!labelCount) {
+    return { min: 0, max: -1 };
+  }
+  const xScale = chart?.scales?.x;
+  const dataBounds = chart?.$marketTrendDataBounds;
+  const firstIndex = Number.isFinite(dataBounds?.firstIndex) ? dataBounds.firstIndex : 0;
+  const latestIndex = Number.isFinite(dataBounds?.latestIndex) ? dataBounds.latestIndex : labelCount - 1;
+  return {
+    min: Number.isFinite(xScale?.min) ? Math.max(firstIndex, Math.ceil(xScale.min)) : firstIndex,
+    max: Number.isFinite(xScale?.max) ? Math.min(latestIndex, Math.floor(xScale.max)) : latestIndex,
+  };
+}
+
+function fitMarketTrendChartYToVisible(chart = marketTrendDetailChart) {
+  if (!chart?.data?.datasets?.length || !chart.scales?.x || !chart.options?.scales?.y) {
+    return;
+  }
+  const visibleRange = getMarketTrendVisibleIndexRange(chart);
+  if (visibleRange.max < visibleRange.min) {
+    return;
+  }
+
+  const values = [];
+  chart.data.datasets.forEach((dataset, datasetIndex) => {
+    if (!chart.isDatasetVisible(datasetIndex)) {
+      return;
+    }
+    for (let index = visibleRange.min; index <= visibleRange.max; index += 1) {
+      if (dataset.isCandlestick) {
+        const candle = dataset.ohlc?.[index];
+        [candle?.o, candle?.h, candle?.l, candle?.c].forEach((value) => {
+          const numeric = Number(value);
+          if (Number.isFinite(numeric)) {
+            values.push(numeric);
+          }
+        });
+        continue;
+      }
+      const rawValue = dataset.data?.[index];
+      const chartValue = rawValue && typeof rawValue === "object" ? rawValue.y : rawValue;
+      const numeric = Number(chartValue);
+      if (Number.isFinite(numeric)) {
+        values.push(numeric);
+      }
+    }
+  });
+
+  if (!values.length) {
+    return;
+  }
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) {
+    const padding = Math.max(1, Math.abs(max) * 0.05);
+    min -= padding;
+    max += padding;
+  } else {
+    const padding = (max - min) * 0.07;
+    min -= padding;
+    max += padding;
+  }
+  chart.options.scales.y.min = Math.max(0, min);
+  chart.options.scales.y.max = max;
+  chart.update("none");
+}
+
+function attachMarketTrendYAxisDrag(chart) {
+  const canvas = chart?.canvas;
+  if (!canvas) {
+    return;
+  }
+  canvas.__marketTrendYAxisDragCleanup?.();
+
+  let dragState = null;
+  const getPosition = (event) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left) * (chart.width / Math.max(1, rect.width)),
+      y: (event.clientY - rect.top) * (chart.height / Math.max(1, rect.height)),
+    };
+  };
+  const getAxisAtPosition = (position) => {
+    const scale = chart.scales?.y;
+    return scale
+      && scale.options?.display !== false
+      && position.x >= scale.left
+      && position.x <= scale.right
+      && position.y >= scale.top
+      && position.y <= scale.bottom
+      ? scale
+      : null;
+  };
+  const updateCursor = (event) => {
+    if (dragState) {
+      canvas.style.cursor = "ns-resize";
+      return;
+    }
+    canvas.style.cursor = getAxisAtPosition(getPosition(event)) ? "ns-resize" : "";
+  };
+  const endDrag = (event) => {
+    if (!dragState) {
+      return;
+    }
+    if (event && canvas.hasPointerCapture?.(event.pointerId)) {
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already be released by the browser.
+      }
+    }
+    dragState = null;
+    canvas.style.cursor = "";
+  };
+  const handlePointerDown = (event) => {
+    const position = getPosition(event);
+    const scale = getAxisAtPosition(position);
+    if (!scale || !Number.isFinite(scale.min) || !Number.isFinite(scale.max) || scale.max <= scale.min) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const span = scale.max - scale.min;
+    const anchor = scale.getValueForPixel(position.y);
+    dragState = {
+      startY: position.y,
+      initialSpan: span,
+      anchor,
+      anchorRatio: Math.max(0, Math.min(1, (anchor - scale.min) / span)),
+    };
+    try {
+      canvas.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Synthetic or interrupted pointers can be scaled without capture.
+    }
+    canvas.style.cursor = "ns-resize";
+  };
+  const handlePointerMove = (event) => {
+    if (!dragState) {
+      updateCursor(event);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const position = getPosition(event);
+    const minimumSpan = Math.max(0.01, dragState.initialSpan * 0.08);
+    const maximumSpan = dragState.initialSpan * 12;
+    const scaleFactor = Math.exp((position.y - dragState.startY) / 180);
+    const nextSpan = Math.max(minimumSpan, Math.min(maximumSpan, dragState.initialSpan * scaleFactor));
+    let nextMin = dragState.anchor - (dragState.anchorRatio * nextSpan);
+    let nextMax = nextMin + nextSpan;
+    if (nextMin < 0) {
+      nextMax -= nextMin;
+      nextMin = 0;
+    }
+    chart.options.scales.y.min = nextMin;
+    chart.options.scales.y.max = nextMax;
+    chart.update("none");
+  };
+  const handleDoubleClick = (event) => {
+    if (!getAxisAtPosition(getPosition(event))) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    fitMarketTrendChartYToVisible(chart);
+  };
+  const handlePointerLeave = () => {
+    if (!dragState) {
+      canvas.style.cursor = "";
+    }
+  };
+
+  canvas.addEventListener("pointerdown", handlePointerDown, true);
+  canvas.addEventListener("pointermove", handlePointerMove, true);
+  canvas.addEventListener("pointerup", endDrag, true);
+  canvas.addEventListener("pointercancel", endDrag, true);
+  canvas.addEventListener("pointerleave", handlePointerLeave, true);
+  canvas.addEventListener("dblclick", handleDoubleClick, true);
+  canvas.__marketTrendYAxisDragCleanup = () => {
+    canvas.removeEventListener("pointerdown", handlePointerDown, true);
+    canvas.removeEventListener("pointermove", handlePointerMove, true);
+    canvas.removeEventListener("pointerup", endDrag, true);
+    canvas.removeEventListener("pointercancel", endDrag, true);
+    canvas.removeEventListener("pointerleave", handlePointerLeave, true);
+    canvas.removeEventListener("dblclick", handleDoubleClick, true);
+    canvas.style.cursor = "";
+  };
+}
+
+function zoomMarketTrendChartToLatest(direction) {
+  const chart = marketTrendDetailChart;
+  const xScale = chart?.scales?.x;
+  const labelCount = chart?.data?.labels?.length ?? 0;
+  if (!chart || !xScale || labelCount < 2) {
+    return;
+  }
+  const firstIndex = chart.$marketTrendDataBounds?.firstIndex ?? 0;
+  const latestIndex = chart.$marketTrendDataBounds?.latestIndex ?? labelCount - 1;
+  const currentMin = Number.isFinite(xScale.min) ? Math.max(firstIndex, Math.ceil(xScale.min)) : firstIndex;
+  const currentMax = Number.isFinite(xScale.max) ? Math.min(latestIndex, Math.floor(xScale.max)) : latestIndex;
+  const currentSpan = Math.max(20, currentMax - currentMin + 1);
+  const nextSpan = Math.max(
+    20,
+    Math.min(latestIndex - firstIndex + 1, Math.round(currentSpan * (direction === "in" ? 0.5 : 1.75))),
+  );
+  const nextRange = {
+    min: Math.max(firstIndex, latestIndex - nextSpan + 1),
+    max: latestIndex,
+  };
+  if (typeof chart.zoomScale === "function") {
+    chart.zoomScale("x", nextRange, "none");
+  } else {
+    chart.options.scales.x.min = nextRange.min;
+    chart.options.scales.x.max = nextRange.max;
+    chart.update("none");
+  }
+  fitMarketTrendChartYToVisible(chart);
+}
+
 function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", customEnd = "") {
   if (typeof Chart === "undefined" || !canvas) {
     return;
@@ -2811,13 +3033,42 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
             },
           },
         },
+        zoom: {
+          limits: {
+            x: { min: "original", max: "original", minRange: 20 },
+          },
+          pan: {
+            enabled: true,
+            mode: "x",
+            threshold: 5,
+            onPanComplete: ({ chart: activeChart }) => fitMarketTrendChartYToVisible(activeChart),
+          },
+          zoom: {
+            wheel: {
+              enabled: true,
+              speed: 0.08,
+            },
+            pinch: {
+              enabled: true,
+            },
+            mode: "x",
+            onZoomComplete: ({ chart: activeChart }) => fitMarketTrendChartYToVisible(activeChart),
+          },
+        },
       },
       scales: {
         x: {
           offset: payload.useCandlestick,
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            axis.ticks = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0).map((index) => ({ value: index }));
+            const minimumIndex = Number.isFinite(axis.min) ? Math.ceil(axis.min) : 0;
+            const maximumIndex = Number.isFinite(axis.max) ? Math.floor(axis.max) : payload.labels.length - 1;
+            let indexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0)
+              .filter((index) => index >= minimumIndex && index <= maximumIndex);
+            if (indexes.length < 2 && maximumIndex > minimumIndex) {
+              indexes = [...new Set([minimumIndex, Math.round((minimumIndex + maximumIndex) / 2), maximumIndex])];
+            }
+            axis.ticks = indexes.map((index) => ({ value: index }));
           },
           ticks: {
             color: "#8d8d86",
@@ -2842,6 +3093,13 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
     },
   });
 
+  chart.$marketTrendDataBounds = {
+    firstIndex: 0,
+    latestIndex: Math.max(0, payload.labels.length - 1),
+  };
+  marketTrendDetailChart = chart;
+  attachMarketTrendYAxisDrag(chart);
+  fitMarketTrendChartYToVisible(chart);
   charts.push(chart);
 }
 
@@ -5816,8 +6074,11 @@ function createMacroDashboardChart(canvas, rangeKey) {
 }
 
 function destroyCharts() {
+  marketRsDetailChart?.canvas?.__marketRsYAxisDragCleanup?.();
+  marketTrendDetailChart?.canvas?.__marketTrendYAxisDragCleanup?.();
   charts.splice(0).forEach((chart) => chart.destroy());
   marketRsDetailChart = null;
+  marketTrendDetailChart = null;
 }
 
 function parseQuarterLabel(label) {
@@ -18849,6 +19110,13 @@ function renderIndexTrendOverview() {
         ${chartType.label}
       </button>`,
   ).join("");
+  const marketTrendChartZoomButtons = `
+    <div class="market-rs-chart-zoom-controls" role="group" aria-label="Index Trend chart zoom controls">
+      <button type="button" data-market-trend-chart-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+      <button type="button" data-market-trend-chart-zoom="out" aria-label="Zoom out" title="Zoom out">-</button>
+      <button type="button" class="market-rs-chart-zoom-reset" data-market-trend-chart-zoom="reset">Reset</button>
+    </div>
+  `;
   const marketTrendEmaMarkup = MARKET_PRICE_EMA_OPTIONS.map(
     (period) => `
       <button
@@ -18923,6 +19191,7 @@ function renderIndexTrendOverview() {
         </div>
         <div class="total-series-row total-series-row-left">
           ${marketTrendChartTypeMarkup}
+          ${marketTrendChartZoomButtons}
         </div>
         <div class="total-series-row total-series-row-left">
           ${marketTrendEmaMarkup}
@@ -19023,6 +19292,23 @@ function renderIndexTrendOverview() {
       }
       state.marketTrendChartType = chartType;
       render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-market-trend-chart-zoom]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!marketTrendDetailChart) {
+        return;
+      }
+      const action = button.dataset.marketTrendChartZoom;
+      if (action === "reset" && typeof marketTrendDetailChart.resetZoom === "function") {
+        marketTrendDetailChart.resetZoom();
+        fitMarketTrendChartYToVisible(marketTrendDetailChart);
+      } else if (action === "in") {
+        zoomMarketTrendChartToLatest("in");
+      } else if (action === "out") {
+        zoomMarketTrendChartToLatest("out");
+      }
     });
   });
 
