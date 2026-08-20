@@ -3,7 +3,7 @@ name: Refresh Market RS Full History
 on:
   workflow_dispatch:
   schedule:
-    # Sunday 05:30 UTC = Sunday 14:30 KST. Full 5Y source validation.
+    # Sunday 05:30 UTC = Sunday 14:30 KST. Source-window validation.
     - cron: "30 5 * * 0"
 
 permissions:
@@ -31,7 +31,8 @@ jobs:
 
       - name: Refresh full market RS source history
         env:
-          MARKET_RS_PRICE_PERIOD: "5y"
+          # Three years covers the 2025 chart start plus its 12-month RS warmup.
+          MARKET_RS_PRICE_PERIOD: "3y"
           MARKET_RS_MAX_SHARES_FETCH: "1600"
           MARKET_RS_BATCH_SIZE: "30"
           MARKET_RS_BATCH_WORKERS: "3"

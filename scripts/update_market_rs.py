@@ -18,13 +18,12 @@ import yfinance as yf
 
 
 WIKI_HEADERS = {"User-Agent": "Mozilla/5.0"}
-# The checked-in snapshot retains the three-year chart and price lookback.
-# Daily refreshes only need a few new sessions to calculate the new cross-
-# sectional rank, so do not re-download a multi-year OHLCV history each day.
+# Persist the dashboard chart from this date onward. Daily refreshes only need
+# a few new sessions because the saved window already covers the 12-month RS
+# lookback used for current rankings.
 PRICE_PERIOD = os.getenv("MARKET_RS_PRICE_PERIOD", "5d")
 BENCHMARK_SYMBOL = "^GSPC"
-# Five years of source prices preserve a full three-year RS window after the 12-month ranking warmup.
-HISTORY_POINTS = 252 * 3
+HISTORY_START_DATE = pd.Timestamp(os.getenv("MARKET_RS_HISTORY_START_DATE", "2025-01-01"))
 MIN_MARKET_CAP_USD = 200_000_000
 MAX_SHARES_FETCH = int(os.getenv("MARKET_RS_MAX_SHARES_FETCH", "25"))
 SHARES_REFRESH_RATIO_LOW = 0.70
@@ -885,7 +884,7 @@ def merge_existing_history_window(
     low_frame: pd.DataFrame,
     volume_frame: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Keep the three-year chart history while refreshing only the RS lookback window."""
+    """Keep the saved 2025+ chart history while refreshing only recent sessions."""
     existing = load_existing_payload()
     history_dates = existing.get("historyDates") or []
     histories = existing.get("histories") or {}
@@ -909,8 +908,8 @@ def merge_existing_history_window(
         stored = stored_frame(key)
         if stored.empty:
             return fresh.sort_index()
-        # Fresh Yahoo values supersede the cached range.  Older dates remain
-        # available solely for the 3Y chart, not for daily re-downloads.
+        # Fresh Yahoo values supersede the cached range; the saved 2025+
+        # history supplies the rolling lookback without a large daily download.
         return fresh.combine_first(stored).sort_index()
 
     raw_close_frame = merge(raw_close_frame, "price")
@@ -1264,10 +1263,12 @@ def build_payload(
     if pd.isna(latest_date):
         raise RuntimeError("Unable to compute an RS rating date for the active universe.")
 
-    latest_loc = rs_rating_all.index.get_loc(latest_date)
-    history_start_loc = max(0, latest_loc - HISTORY_POINTS + 1)
-    history_dates = [date.strftime("%Y-%m-%d") for date in rs_rating_all.index[history_start_loc : latest_loc + 1]]
-    history_rating_all = rs_rating_all.iloc[history_start_loc : latest_loc + 1]
+    history_rating_all = rs_rating_all.loc[
+        (rs_rating_all.index >= HISTORY_START_DATE) & (rs_rating_all.index <= latest_date)
+    ]
+    if history_rating_all.empty:
+        raise RuntimeError(f"RS history is empty after {HISTORY_START_DATE.date().isoformat()}.")
+    history_dates = [date.strftime("%Y-%m-%d") for date in history_rating_all.index]
 
     rows = []
     histories: dict[str, dict[str, object]] = {}
@@ -1438,8 +1439,7 @@ def build_payload(
             {"key": "6m", "label": "6M"},
             {"key": "ytd", "label": "YTD"},
             {"key": "1y", "label": "1Y"},
-            {"key": "3y", "label": "3Y"},
-            {"key": "max", "label": "Max"},
+            {"key": "max", "label": "Since 2025"},
         ],
         "universes": {
             "all": {"label": "All", "color": COLOR_BY_UNIVERSE["all"]},

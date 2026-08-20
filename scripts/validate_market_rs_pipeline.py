@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+HISTORY_START_DATE = "2025-01-01"
 
 
 def load_payload(relative_path: str, variable_name: str) -> dict:
@@ -34,7 +35,9 @@ def main() -> None:
     history_dates = rs.get("historyDates") or []
     require(len(rs_rows) >= 2_000, f"RS universe is unexpectedly small: {len(rs_rows)}")
     require(bool(history_dates), "RS history dates are empty.")
-    require(len(history_dates) >= 740, f"RS history is shorter than the intended 3Y window: {len(history_dates)}")
+    require(history_dates[0] >= HISTORY_START_DATE, f"RS history starts before {HISTORY_START_DATE}: {history_dates[0]}")
+    require(history_dates[0] <= "2025-01-10", f"RS history starts too late: {history_dates[0]}")
+    require(len(history_dates) >= 300, f"RS history is unexpectedly short after {HISTORY_START_DATE}: {len(history_dates)}")
     require(rs.get("updatedAt") == history_dates[-1], "RS updatedAt and latest history date differ.")
     rs_histories = rs.get("histories") or {}
     require(len(rs_histories) == len(rs_rows), "RS history count differs from the RS row count.")
