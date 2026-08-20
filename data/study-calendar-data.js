@@ -1,11 +1,11 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-08-19",
+  "updatedAt": "2026-08-20",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-08-18",
+  "calendarToday": "2026-08-19",
   "coverage": {
     "dailyBriefingUniverse": 204,
-    "matchedEarnings": 29,
+    "matchedEarnings": 28,
     "windowStart": "2026-08-17",
     "windowEnd": "2026-09-13"
   },
@@ -24,10 +24,10 @@ window.studyCalendarData = {
       "events": [
         {
           "date": "2026-08-18",
-          "time": "22:30 이전",
+          "time": "시간 미정",
           "kind": "earnings",
           "ticker": "BIDU",
-          "session": "B",
+          "session": "",
           "title": "Baidu, Inc. (BIDU) 실적 발표",
           "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 $1.19 · Nasdaq/Zacks 예상 일정",
           "sector": "중국 ADR",
@@ -39,28 +39,13 @@ window.studyCalendarData = {
         },
         {
           "date": "2026-08-18",
-          "time": "22:30 이전",
+          "time": "시간 미정",
           "kind": "earnings",
           "ticker": "HD",
-          "session": "B",
+          "session": "",
           "title": "Home Depot, Inc. (The) (HD) 실적 발표",
           "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $4.71 · Nasdaq/Zacks 예상 일정",
           "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
-          "usDate": "2026-08-18",
-          "kstDate": "2026-08-18",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-18",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "BHP",
-          "session": "",
-          "title": "BHP Group Limited (BHP) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · Nasdaq/Zacks 예상 일정",
-          "sector": "원자재",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
           "usDate": "2026-08-18",
