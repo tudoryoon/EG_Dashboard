@@ -31,19 +31,18 @@ jobs:
         run: |
           python scripts/update_market_prices.py
           python scripts/update_market_vix.py
-          python scripts/update_market_breadth.py
           python scripts/update_market_valuation.py
 
       - name: Commit updated market price history
         run: |
-          if git diff --quiet -- data/market-price-data.js data/market-vix-data.js data/market-breadth-data.js data/market-valuation-data.js; then
-            echo "No market price, VIX, breadth, or valuation changes detected."
+          if git diff --quiet -- data/market-price-data.js data/market-vix-data.js data/market-valuation-data.js; then
+            echo "No market price, VIX, or valuation changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/market-price-data.js data/market-vix-data.js data/market-breadth-data.js data/market-valuation-data.js
+          python scripts/bump_data_cache_versions.py data/market-price-data.js data/market-vix-data.js data/market-valuation-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-price-data.js data/market-vix-data.js data/market-breadth-data.js data/market-valuation-data.js index.html
-          git commit -m "Update market price, VIX, breadth, and valuation history" || exit 0
+          git add data/market-price-data.js data/market-vix-data.js data/market-valuation-data.js index.html
+          git commit -m "Update market price, VIX, and valuation history" || exit 0
           git pull --rebase origin main
           git push
