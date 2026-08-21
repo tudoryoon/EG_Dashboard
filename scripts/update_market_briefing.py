@@ -220,6 +220,7 @@ SECTOR_GROUPS = [
             {"ticker": "CRCL", "label": "CRCL US", "name": "Circle", "query": "Circle stock"},
             {"ticker": "MSTR", "label": "MSTR US", "name": "MicroStrategy", "query": "MicroStrategy stock"},
             {"ticker": "BMNR", "label": "BMNR US", "name": "BitMine", "query": "BitMine stock"},
+            {"ticker": "PURR", "label": "PURR US", "name": "Hyperliquid Strategies", "query": "Hyperliquid Strategies stock"},
         ],
     },
     {
