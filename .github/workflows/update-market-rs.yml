@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - "scripts/update_market_rs.py"
+      - "data/market-rs-manual-tickers.json"
   schedule:
     # 19:27 UTC = 04:27 KST. Main RS / Trend Score run.
     - cron: "27 19 * * *"

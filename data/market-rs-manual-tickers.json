@@ -56,6 +56,17 @@
       "sharesOutstanding": 285769539
     },
     {
+      "ticker": "ARKG",
+      "name": "ARK Genomic Revolution ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 36041883
+    },
+    {
       "ticker": "ARM",
       "name": "Arm Holdings plc",
       "memberships": {
@@ -298,6 +309,17 @@
       "sharesOutstanding": 102582972
     },
     {
+      "ticker": "GDX",
+      "name": "VanEck Gold Miners ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 253861602
+    },
+    {
       "ticker": "GH",
       "name": "Guardant Health, Inc.",
       "memberships": {
@@ -318,6 +340,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 191491823
+    },
+    {
+      "ticker": "IBB",
+      "name": "iShares Biotechnology ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 69700000
     },
     {
       "ticker": "ILMN",
