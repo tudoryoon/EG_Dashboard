@@ -1783,14 +1783,9 @@ def main() -> None:
         low_frame,
         volume_frame,
     )
-    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = restore_existing_history_gaps(
-        raw_close_frame,
-        adjusted_close_frame,
-        open_frame,
-        high_frame,
-        low_frame,
-        volume_frame,
-    )
+    # merge_existing_history_window already fills missing fresh sessions from the
+    # saved chart history. A second cell-by-cell historical pass here was
+    # redundant and made the daily 2,400-symbol refresh take tens of minutes.
     raw_close_frame, adjusted_close_frame = fill_closed_session_close_gaps_from_spark(
         symbols + [BENCHMARK_SYMBOL],
         raw_close_frame,
