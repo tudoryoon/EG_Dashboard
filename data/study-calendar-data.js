@@ -1,13 +1,13 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-08-24",
+  "updatedAt": "2026-08-25",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-08-23",
+  "calendarToday": "2026-08-24",
   "coverage": {
     "dailyBriefingUniverse": 206,
-    "matchedEarnings": 29,
-    "windowStart": "2026-08-17",
-    "windowEnd": "2026-09-13"
+    "matchedEarnings": 22,
+    "windowStart": "2026-08-24",
+    "windowEnd": "2026-09-20"
   },
   "methodology": {
     "macro": "BLS·Census·ISM 등 공식 발표 일정을 우선 사용",
@@ -19,121 +19,8 @@ window.studyCalendarData = {
     {
       "key": "this-week",
       "label": "이번 주",
-      "range": "2026.08.17 - 08.23",
-      "status": "진행 중",
-      "events": [
-        {
-          "date": "2026-08-18",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "BIDU",
-          "session": "",
-          "title": "Baidu, Inc. (BIDU) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 $1.19 · Nasdaq/Zacks 예상 일정",
-          "sector": "중국 ADR",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
-          "usDate": "2026-08-18",
-          "kstDate": "2026-08-18",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-18",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "HD",
-          "session": "",
-          "title": "Home Depot, Inc. (The) (HD) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $4.71 · Nasdaq/Zacks 예상 일정",
-          "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-18",
-          "usDate": "2026-08-18",
-          "kstDate": "2026-08-18",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-19",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "ADI",
-          "session": "",
-          "title": "Analog Devices, Inc. (ADI) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $3.33 · Nasdaq/Zacks 예상 일정",
-          "sector": "전력 반도체",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-19",
-          "usDate": "2026-08-19",
-          "kstDate": "2026-08-19",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-19",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "RR",
-          "session": "",
-          "title": "Richtech Robotics Inc. (RR) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · Nasdaq/Zacks 예상 일정",
-          "sector": "로봇",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-19",
-          "usDate": "2026-08-19",
-          "kstDate": "2026-08-19",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-19",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "VIK",
-          "session": "",
-          "title": "Viking Holdings Ltd (VIK) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 $1.25 · Nasdaq/Zacks 예상 일정",
-          "sector": "여행 & 레저",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-19",
-          "usDate": "2026-08-19",
-          "kstDate": "2026-08-19",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-20",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "BABA",
-          "session": "",
-          "title": "Alibaba Group Holding Limited (BABA) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 $1.78 · Nasdaq/Zacks 예상 일정",
-          "sector": "중국 ADR",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-20",
-          "usDate": "2026-08-20",
-          "kstDate": "2026-08-20",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-20",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "WMT",
-          "session": "",
-          "title": "Walmart Inc. (WMT) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.73 · Nasdaq/Zacks 예상 일정",
-          "sector": "필수 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-20",
-          "usDate": "2026-08-20",
-          "kstDate": "2026-08-20",
-          "confirmed": false
-        }
-      ]
-    },
-    {
-      "key": "next-week",
-      "label": "다음 주",
       "range": "2026.08.24 - 08.30",
-      "status": "예정",
+      "status": "진행 중",
       "events": [
         {
           "date": "2026-08-26",
@@ -172,7 +59,7 @@ window.studyCalendarData = {
           "ticker": "NVDA",
           "session": "A",
           "title": "NVIDIA Corporation (NVDA) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.01 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.09 · Nasdaq/Zacks 예상 일정",
           "sector": "M7 빅테크",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
@@ -202,7 +89,7 @@ window.studyCalendarData = {
           "ticker": "SNPS",
           "session": "A",
           "title": "Synopsys, Inc. (SNPS) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.67 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.66 · Nasdaq/Zacks 예상 일정",
           "sector": "반도체 설계/IP",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
@@ -288,8 +175,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-3",
-      "label": "3주차",
+      "key": "next-week",
+      "label": "다음 주",
       "range": "2026.08.31 - 09.06",
       "status": "예정",
       "events": [
@@ -390,7 +277,7 @@ window.studyCalendarData = {
           "ticker": "NTAP",
           "session": "A",
           "title": "NetApp, Inc. (NTAP) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.70 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.71 · Nasdaq/Zacks 예상 일정",
           "sector": "S/W & 플랫폼",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
@@ -461,8 +348,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-4",
-      "label": "4주차",
+      "key": "week-3",
+      "label": "3주차",
       "range": "2026.09.07 - 09.13",
       "status": "예정",
       "events": [
@@ -482,6 +369,13 @@ window.studyCalendarData = {
           "confirmed": false
         }
       ]
+    },
+    {
+      "key": "week-4",
+      "label": "4주차",
+      "range": "2026.09.14 - 09.20",
+      "status": "예정",
+      "events": []
     }
   ],
   "fallbackSources": [
