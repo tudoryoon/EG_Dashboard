@@ -232,6 +232,17 @@
       "sharesOutstanding": 114973107
     },
     {
+      "ticker": "COPX",
+      "name": "Global X Copper Miners ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 78116045
+    },
+    {
       "ticker": "CRCL",
       "name": "Circle Internet Group",
       "memberships": {
