@@ -321,6 +321,7 @@ SECTOR_GROUPS = [
         "key": "discretionary",
         "label": "경기 소비재",
         "items": [
+            {"ticker": "TGT", "label": "TGT US", "name": "Target", "query": "Target stock"},
             {"ticker": "HD", "label": "HD US", "name": "Home Depot", "query": "Home Depot stock"},
             {"ticker": "SBUX", "label": "SBUX US", "name": "Starbucks", "query": "Starbucks stock"},
             {"ticker": "MCD", "label": "MCD US", "name": "McDonald's", "query": "McDonald's stock"},
@@ -452,6 +453,7 @@ SECTOR_GROUPS = [
         "key": "healthcare",
         "label": "헬스케어",
         "items": [
+            {"ticker": "AMGN", "label": "AMGN US", "name": "Amgen", "query": "Amgen stock"},
             {"ticker": "LLY", "label": "LLY US", "name": "Eli Lilly", "query": "Eli Lilly stock"},
             {"ticker": "NVO", "label": "NVO US", "name": "Novo Nordisk", "query": "Novo Nordisk stock"},
             {"ticker": "JNJ", "label": "JNJ US", "name": "Johnson & Johnson", "query": "Johnson & Johnson stock"},
