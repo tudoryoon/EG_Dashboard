@@ -8813,6 +8813,287 @@ h1 {
   grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
 }
 
+.trend-signal-monitor {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fffefa;
+  box-shadow: var(--shadow);
+}
+
+.trend-signal-head,
+.trend-signal-panel-head,
+.trend-signal-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.trend-signal-head > div:first-child > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #74746d;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.trend-signal-head h2,
+.trend-signal-head p,
+.trend-signal-panel-head h3,
+.trend-signal-panel-head p {
+  margin: 0;
+}
+
+.trend-signal-head h2 {
+  color: var(--ink);
+  font-size: 1.55rem;
+}
+
+.trend-signal-head p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.trend-signal-summary {
+  display: flex;
+  max-width: 390px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trend-signal-summary > span {
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.trend-signal-summary .is-risk {
+  border-color: #f4c9c4;
+  background: #fff1ef;
+  color: #c43223;
+}
+
+.trend-signal-summary .is-extension {
+  border-color: #f3dcaa;
+  background: #fff8e9;
+  color: #a86408;
+}
+
+.trend-signal-summary .is-new {
+  border-color: #c8e6d4;
+  background: #effaf2;
+  color: #147044;
+}
+
+.trend-signal-summary small {
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-align: right;
+}
+
+.trend-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.trend-signal-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e8e8e3;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.trend-signal-panel.is-risk {
+  border-color: #f1ccc7;
+}
+
+.trend-signal-panel.is-extension {
+  border-color: #f2dfbb;
+}
+
+.trend-signal-panel.is-new {
+  border-color: #d1eadb;
+}
+
+.trend-signal-panel-head {
+  min-height: 82px;
+  padding: 16px;
+  border-bottom: 1px solid #e8e8e3;
+}
+
+.trend-signal-panel.is-risk .trend-signal-panel-head {
+  background: #fff4f2;
+}
+
+.trend-signal-panel.is-extension .trend-signal-panel-head {
+  background: #fff9ec;
+}
+
+.trend-signal-panel.is-new .trend-signal-panel-head {
+  background: #f1fbf4;
+}
+
+.trend-signal-panel-head h3 {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.trend-signal-panel-head p {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.trend-signal-panel-head > b {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.45rem;
+}
+
+.trend-signal-panel.is-risk .trend-signal-panel-head > b {
+  color: #d13a2b;
+}
+
+.trend-signal-panel.is-extension .trend-signal-panel-head > b {
+  color: #b86c08;
+}
+
+.trend-signal-panel.is-new .trend-signal-panel-head > b {
+  color: #14804a;
+}
+
+.trend-signal-list {
+  min-height: 190px;
+  max-height: 390px;
+  overflow-y: auto;
+}
+
+.trend-signal-item {
+  width: 100%;
+  min-height: 72px;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid #eeeeea;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.trend-signal-item:hover {
+  background: #f7f7f2;
+}
+
+.trend-signal-rank {
+  width: 24px;
+  padding-top: 2px;
+  color: #8c8c85;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.trend-signal-identity {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.trend-signal-identity b {
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.88rem;
+}
+
+.trend-signal-identity small,
+.trend-signal-identity em {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-signal-identity em {
+  color: #a96a16;
+}
+
+.trend-signal-item > strong {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff0d4;
+  color: #aa6508;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.86rem;
+}
+
+.trend-signal-panel.is-risk .trend-signal-item > strong {
+  background: #ffebe8;
+  color: #cb3426;
+}
+
+.trend-signal-panel.is-new .trend-signal-item > strong {
+  background: #e7f7ec;
+  color: #147444;
+}
+
+.trend-signal-empty {
+  margin: 0;
+  padding: 22px 14px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1040px) {
+  .trend-signal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trend-signal-list {
+    min-height: 0;
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .trend-signal-monitor {
+    padding: 16px;
+  }
+
+  .trend-signal-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trend-signal-summary {
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .trend-signal-summary small {
+    text-align: left;
+  }
+}
+
 .market-rs-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

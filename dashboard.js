@@ -14380,6 +14380,78 @@ function createTrendScoreChart(canvas, row) {
   charts.push(chart);
 }
 
+function getTrendScoreClimaxSnapshot(row) {
+  const history = marketTrendScoreData.histories?.[state.trendScoreUniverse]?.[row?.ticker];
+  const values = Array.isArray(history?.climaxScore) ? history.climaxScore : [];
+  const toFiniteNumber = (value) => {
+    if (value === null || value === undefined || value === "") return null;
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+  let latestIndex = -1;
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (toFiniteNumber(values[index]) !== null) {
+      latestIndex = index;
+      break;
+    }
+  }
+  if (latestIndex < 0) {
+    return { current: toFiniteNumber(row?.climaxScore), previous: null };
+  }
+  let previous = null;
+  for (let index = latestIndex - 1; index >= 0; index -= 1) {
+    const value = toFiniteNumber(values[index]);
+    if (value !== null) {
+      previous = value;
+      break;
+    }
+  }
+  return { current: toFiniteNumber(values[latestIndex]), previous };
+}
+
+function getTrendScoreClimaxSignals(rows) {
+  const snapshots = rows
+    .map((row) => ({ row, ...getTrendScoreClimaxSnapshot(row) }))
+    .filter((item) => Number.isFinite(item.current));
+  const sortByRisk = (left, right) => (
+    right.current - left.current
+    || (right.row.score ?? Number.NEGATIVE_INFINITY) - (left.row.score ?? Number.NEGATIVE_INFINITY)
+    || (left.row.rank ?? Number.POSITIVE_INFINITY) - (right.row.rank ?? Number.POSITIVE_INFINITY)
+  );
+  return {
+    highRisk: snapshots.filter((item) => item.current >= 8).sort(sortByRisk),
+    extension: snapshots.filter((item) => item.current >= 4 && item.current < 8).sort(sortByRisk),
+    newToday: snapshots
+      .filter((item) => item.current >= 4 && Number.isFinite(item.previous) && item.previous < 4)
+      .sort(sortByRisk),
+  };
+}
+
+function renderTrendScoreSignalList(items, briefingSectorData, emptyText) {
+  if (!items.length) {
+    return `<p class="trend-signal-empty">${emptyText}</p>`;
+  }
+  return items
+    .map(({ row, current }) => {
+      const sector = formatMarketRsBriefingSectorLabels(row, briefingSectorData, 1);
+      const flags = Array.isArray(row.climaxFlags) && row.climaxFlags.length
+        ? escapeHtml(row.climaxFlags.join(" · "))
+        : "과열 플래그 없음";
+      return `
+        <button type="button" class="trend-signal-item" data-trend-score-ticker="${row.ticker}">
+          <span class="trend-signal-rank">${formatTrendRank(row.rank)}</span>
+          <span class="trend-signal-identity">
+            <b>${row.ticker}</b>
+            <small>${escapeHtml(row.name)} · ${escapeHtml(sector)} · Trend ${formatRsNumber(row.score)}/10</small>
+            <em>${flags}</em>
+          </span>
+          <strong>${formatRsNumber(current)}</strong>
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function renderMarketTrendScoreOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -14394,6 +14466,7 @@ function renderMarketTrendScoreOverview() {
     state.trendScoreBriefingSector = "briefingAll";
   }
   const rows = getVisibleTrendScoreRows(briefingSectorData);
+  const climaxSignals = getTrendScoreClimaxSignals(rows);
   const selected = getSelectedTrendScoreRow(rows);
   if (selected) {
     state.trendScoreSelectedTicker = selected.ticker;
@@ -14532,6 +14605,46 @@ function renderMarketTrendScoreOverview() {
       `,
     )
     .join("");
+  const signalMonitorMarkup = `
+    <section class="trend-signal-monitor" aria-label="Climax Signals">
+      <div class="trend-signal-head">
+        <div>
+          <span>EG TREND SCORE · SIGNAL MONITOR</span>
+          <h2>Climax Signals</h2>
+          <p>Daily Briefing 종목 안에서 과열과 확장 위험, 오늘 새롭게 발생한 신호를 구분합니다.</p>
+        </div>
+        <div class="trend-signal-summary">
+          <span class="is-risk">${climaxSignals.highRisk.length} High Risk</span>
+          <span class="is-extension">${climaxSignals.extension.length} Extension</span>
+          <span class="is-new">${climaxSignals.newToday.length} New Today</span>
+          <small>As of ${marketTrendScoreData.updatedAt ?? "-"}</small>
+        </div>
+      </div>
+      <div class="trend-signal-grid">
+        <article class="trend-signal-panel is-risk">
+          <div class="trend-signal-panel-head">
+            <div><h3>Climax Risk</h3><p>점수 8+ · 급등/과열 신호가 복합 발생</p></div>
+            <b>${climaxSignals.highRisk.length}</b>
+          </div>
+          <div class="trend-signal-list">${renderTrendScoreSignalList(climaxSignals.highRisk, briefingSectorData, "해당 종목이 없습니다.")}</div>
+        </article>
+        <article class="trend-signal-panel is-extension">
+          <div class="trend-signal-panel-head">
+            <div><h3>Extension Watch</h3><p>점수 4-7 · 추세는 유지되나 과열 경계</p></div>
+            <b>${climaxSignals.extension.length}</b>
+          </div>
+          <div class="trend-signal-list">${renderTrendScoreSignalList(climaxSignals.extension, briefingSectorData, "현재 확장 경계 종목이 없습니다.")}</div>
+        </article>
+        <article class="trend-signal-panel is-new">
+          <div class="trend-signal-panel-head">
+            <div><h3>New Signal Today</h3><p>전일 4점 미만에서 오늘 처음 4점 이상</p></div>
+            <b>${climaxSignals.newToday.length}</b>
+          </div>
+          <div class="trend-signal-list">${renderTrendScoreSignalList(climaxSignals.newToday, briefingSectorData, "오늘 새로 발생한 신호가 없습니다.")}</div>
+        </article>
+      </div>
+    </section>
+  `;
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview trend-score-overview">
@@ -14607,6 +14720,8 @@ function renderMarketTrendScoreOverview() {
           </div>
         </div>
       </article>
+
+      ${signalMonitorMarkup}
 
       <section class="market-rs-layout trend-score-layout">
         <article class="us-panel market-rs-leaders">
