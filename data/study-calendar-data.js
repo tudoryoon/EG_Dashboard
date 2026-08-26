@@ -1,19 +1,21 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-08-25",
+  "updatedAt": "2026-08-26",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-08-24",
+  "calendarToday": "2026-08-25",
   "coverage": {
-    "dailyBriefingUniverse": 206,
+    "dailyBriefingUniverse": 208,
     "matchedEarnings": 22,
+    "matchedMacro": 11,
     "windowStart": "2026-08-24",
     "windowEnd": "2026-09-20"
   },
   "methodology": {
-    "macro": "BLS·Census·ISM 등 공식 발표 일정을 우선 사용",
+    "macro": "미국 Macro는 BLS·BEA·U.S. Census Bureau·ISM의 공식 발표 일정에서 매일 갱신",
     "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
-    "timing": "실적은 미국 현지 발표일에 배치하고 카드 하단에 KST 환산 날짜·시각을 병기. 매크로는 KST 발표일 기준",
-    "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음"
+    "timing": "일정은 모두 미국 현지 발표일에 배치. 실적과 Macro 모두 KST 시각을 함께 표시",
+    "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음",
+    "macroWarning": "공식 기관 일정에 일시적 접속 문제가 생기면 직전 저장 일정만 유지하며, 다음 실행에서 재확인"
   },
   "weeks": [
     {
@@ -96,6 +98,39 @@ window.studyCalendarData = {
           "usDate": "2026-08-26",
           "kstDate": "2026-08-27",
           "confirmed": false
+        },
+        {
+          "date": "2026-08-26",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "PCE 물가 · 개인소득/지출",
+          "note": "Headline·Core PCE · Personal Income and Outlays, July 2026 · 미국 08:30 ET",
+          "sourceLabel": "BEA",
+          "sourceUrl": "https://www.bea.gov/news/schedule",
+          "usDate": "2026-08-26",
+          "kstDate": "2026-08-26"
+        },
+        {
+          "date": "2026-08-26",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "내구재 주문",
+          "note": "Durable Goods Orders · July 2026 · 미국 08:30 ET",
+          "sourceLabel": "U.S. Census Bureau",
+          "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
+          "usDate": "2026-08-26",
+          "kstDate": "2026-08-26"
+        },
+        {
+          "date": "2026-08-26",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "미국 GDP",
+          "note": "GDP (Second Estimate) and Corporate Profits, 2nd Quarter 2026 · 미국 08:30 ET",
+          "sourceLabel": "BEA",
+          "sourceUrl": "https://www.bea.gov/news/schedule",
+          "usDate": "2026-08-26",
+          "kstDate": "2026-08-26"
         },
         {
           "date": "2026-08-27",
@@ -241,6 +276,28 @@ window.studyCalendarData = {
           "confirmed": false
         },
         {
+          "date": "2026-09-01",
+          "time": "23:00",
+          "kind": "macro",
+          "title": "ISM 제조업 PMI",
+          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "ISM",
+          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+          "usDate": "2026-09-01",
+          "kstDate": "2026-09-01"
+        },
+        {
+          "date": "2026-09-01",
+          "time": "23:00",
+          "kind": "macro",
+          "title": "JOLTS 구인·이직 보고서",
+          "note": "구인·채용·퇴직 · July 2026 · BLS 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-09-01",
+          "kstDate": "2026-09-01"
+        },
+        {
           "date": "2026-09-02",
           "time": "05:00 이후",
           "kind": "earnings",
@@ -344,6 +401,28 @@ window.studyCalendarData = {
           "usDate": "2026-09-03",
           "kstDate": "2026-09-03",
           "confirmed": false
+        },
+        {
+          "date": "2026-09-03",
+          "time": "23:00",
+          "kind": "macro",
+          "title": "ISM 서비스업 PMI",
+          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "ISM",
+          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+          "usDate": "2026-09-03",
+          "kstDate": "2026-09-03"
+        },
+        {
+          "date": "2026-09-04",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "미국 고용보고서",
+          "note": "비농업고용·실업률·시간당 평균임금 · August 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-09-04",
+          "kstDate": "2026-09-04"
         }
       ]
     },
@@ -367,6 +446,28 @@ window.studyCalendarData = {
           "usDate": "2026-09-08",
           "kstDate": "2026-09-08",
           "confirmed": false
+        },
+        {
+          "date": "2026-09-10",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "생산자물가 PPI",
+          "note": "Headline·Core PPI · August 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-09-10",
+          "kstDate": "2026-09-10"
+        },
+        {
+          "date": "2026-09-11",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "소비자물가 CPI",
+          "note": "Headline·Core CPI · August 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-09-11",
+          "kstDate": "2026-09-11"
         }
       ]
     },
@@ -375,7 +476,30 @@ window.studyCalendarData = {
       "label": "4주차",
       "range": "2026.09.14 - 09.20",
       "status": "예정",
-      "events": []
+      "events": [
+        {
+          "date": "2026-09-16",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "미국 소매판매",
+          "note": "Retail Sales · August 2026 · 미국 08:30 ET",
+          "sourceLabel": "U.S. Census Bureau",
+          "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
+          "usDate": "2026-09-16",
+          "kstDate": "2026-09-16"
+        },
+        {
+          "date": "2026-09-17",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "주택착공·건축허가",
+          "note": "Housing Starts · Building Permits · August 2026 · 미국 08:30 ET",
+          "sourceLabel": "U.S. Census Bureau",
+          "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
+          "usDate": "2026-09-17",
+          "kstDate": "2026-09-17"
+        }
+      ]
     }
   ],
   "fallbackSources": [

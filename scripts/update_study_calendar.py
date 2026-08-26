@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import ast
+import html
 import json
+import re
 import time
 from datetime import date, datetime, time as datetime_time, timedelta
+from html.parser import HTMLParser
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -18,6 +21,42 @@ KST = ZoneInfo("Asia/Seoul")
 NEW_YORK = ZoneInfo("America/New_York")
 NASDAQ_API = "https://api.nasdaq.com/api/calendar/earnings"
 NASDAQ_PAGE = "https://www.nasdaq.com/market-activity/earnings"
+BLS_ICAL_URL = "https://www.bls.gov/schedule/news_release/bls.ics"
+BEA_SCHEDULE_URL = "https://www.bea.gov/news/schedule"
+CENSUS_SCHEDULE_URL = "https://www.census.gov/economic-indicators/calendar-listview.html"
+ISM_SCHEDULE_URL = "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/"
+
+# BLS and ISM occasionally block non-browser requests. These dates are copied
+# from their official 2026 release calendars so the daily job never drops the
+# principal U.S. macro releases while the source endpoint is unavailable.
+BLS_2026_FALLBACKS = (
+    ("2026-09-01", "10:00", "JOLTS 구인·이직 보고서", "구인·채용·퇴직 · July 2026"),
+    ("2026-09-04", "08:30", "미국 고용보고서", "비농업고용·실업률·시간당 평균임금 · August 2026"),
+    ("2026-09-10", "08:30", "생산자물가 PPI", "Headline·Core PPI · August 2026"),
+    ("2026-09-11", "08:30", "소비자물가 CPI", "Headline·Core CPI · August 2026"),
+    ("2026-09-29", "10:00", "JOLTS 구인·이직 보고서", "구인·채용·퇴직 · August 2026"),
+    ("2026-10-02", "08:30", "미국 고용보고서", "비농업고용·실업률·시간당 평균임금 · September 2026"),
+    ("2026-10-14", "08:30", "소비자물가 CPI", "Headline·Core CPI · September 2026"),
+    ("2026-10-15", "08:30", "생산자물가 PPI", "Headline·Core PPI · September 2026"),
+    ("2026-11-03", "10:00", "JOLTS 구인·이직 보고서", "구인·채용·퇴직 · September 2026"),
+    ("2026-11-06", "08:30", "미국 고용보고서", "비농업고용·실업률·시간당 평균임금 · October 2026"),
+    ("2026-11-10", "08:30", "소비자물가 CPI", "Headline·Core CPI · October 2026"),
+    ("2026-11-13", "08:30", "생산자물가 PPI", "Headline·Core PPI · October 2026"),
+    ("2026-12-01", "10:00", "JOLTS 구인·이직 보고서", "구인·채용·퇴직 · October 2026"),
+    ("2026-12-04", "08:30", "미국 고용보고서", "비농업고용·실업률·시간당 평균임금 · November 2026"),
+    ("2026-12-10", "08:30", "소비자물가 CPI", "Headline·Core CPI · November 2026"),
+    ("2026-12-15", "08:30", "생산자물가 PPI", "Headline·Core PPI · November 2026"),
+)
+ISM_2026_FALLBACKS = (
+    ("2026-09-01", "ISM 제조업 PMI"),
+    ("2026-09-03", "ISM 서비스업 PMI"),
+    ("2026-10-01", "ISM 제조업 PMI"),
+    ("2026-10-05", "ISM 서비스업 PMI"),
+    ("2026-11-02", "ISM 제조업 PMI"),
+    ("2026-11-04", "ISM 서비스업 PMI"),
+    ("2026-12-01", "ISM 제조업 PMI"),
+    ("2026-12-03", "ISM 서비스업 PMI"),
+)
 
 # Company IR confirmations override third-party estimated dates. Earnings are
 # placed on the U.S. market date, while kstDate/time preserve the local view.
@@ -42,69 +81,383 @@ CONFIRMED_EARNINGS = {
     },
 }
 
-# Macro events remain a deliberately small, manually verified list. The earnings
-# side is automated from the complete Daily Briefing universe below.
-KNOWN_MACRO_EVENTS = [
-    {
-        "date": "2026-08-03",
-        "time": "23:00",
+
+class ReleaseTableParser(HTMLParser):
+    """Extract plain-text rows from the public agency schedule tables."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.rows: list[list[str]] = []
+        self._row: list[str] | None = None
+        self._cell: list[str] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "tr":
+            self._row = []
+        elif tag in {"td", "th"} and self._row is not None:
+            self._cell = []
+
+    def handle_data(self, data: str) -> None:
+        if self._cell is not None:
+            self._cell.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"td", "th"} and self._row is not None and self._cell is not None:
+            value = " ".join("".join(self._cell).split())
+            self._row.append(value)
+            self._cell = None
+        elif tag == "tr" and self._row:
+            if any(self._row):
+                self.rows.append(self._row)
+            self._row = None
+
+
+def fetch_schedule_text(url: str) -> str:
+    response = requests.get(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; EG-Dashboard/1.0)"},
+        timeout=25,
+    )
+    response.raise_for_status()
+    return response.text
+
+
+def parse_schedule_rows(markup: str) -> list[list[str]]:
+    parser = ReleaseTableParser()
+    parser.feed(markup)
+    return parser.rows
+
+
+def parse_us_date(value: str, default_year: int | None = None) -> date | None:
+    normalized = " ".join(html.unescape(value).replace(",", "").split())
+    for pattern in ("%B %d %Y", "%b %d %Y"):
+        try:
+            return datetime.strptime(normalized, pattern).date()
+        except ValueError:
+            pass
+    if default_year:
+        for pattern in ("%B %d", "%b %d"):
+            try:
+                parsed = datetime.strptime(normalized, pattern)
+                return date(default_year, parsed.month, parsed.day)
+            except ValueError:
+                pass
+    return None
+
+
+def parse_us_time(value: str) -> datetime_time | None:
+    normalized = " ".join(value.upper().replace(".", "").split())
+    for pattern in ("%I:%M %p", "%I %p"):
+        try:
+            return datetime.strptime(normalized, pattern).time()
+        except ValueError:
+            pass
+    return None
+
+
+def convert_to_kst(release_date: date, eastern_time: datetime_time) -> tuple[str, str]:
+    eastern = datetime.combine(release_date, eastern_time, tzinfo=NEW_YORK)
+    local = eastern.astimezone(KST)
+    return local.date().isoformat(), f"{local:%H:%M}"
+
+
+def build_macro_event(
+    *,
+    release_date: date,
+    eastern_time: datetime_time,
+    title: str,
+    note: str,
+    source_label: str,
+    source_url: str,
+) -> dict:
+    kst_date, kst_time = convert_to_kst(release_date, eastern_time)
+    eastern_label = f"미국 {eastern_time:%H:%M} ET"
+    return {
+        "date": release_date.isoformat(),
+        "time": kst_time,
         "kind": "macro",
-        "title": "ISM 제조업 PMI (7월)",
-        "sourceLabel": "ISM",
-        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-    },
-    {
-        "date": "2026-08-04",
-        "time": "23:00",
-        "kind": "macro",
-        "title": "JOLTS 구인·이직 보고서 (6월)",
-        "sourceLabel": "BLS",
-        "sourceUrl": "https://www.bls.gov/schedule/2026/08_sched_list.htm",
-    },
-    {
-        "date": "2026-08-05",
-        "time": "23:00",
-        "kind": "macro",
-        "title": "ISM 서비스업 PMI (7월)",
-        "sourceLabel": "ISM",
-        "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-    },
-    {
-        "date": "2026-08-07",
-        "time": "21:30",
-        "kind": "macro",
-        "title": "미국 고용보고서 (7월)",
-        "note": "비농업고용·실업률·시간당 평균임금",
-        "sourceLabel": "BLS",
-        "sourceUrl": "https://www.bls.gov/schedule/2026/08_sched_list.htm",
-    },
-    {
-        "date": "2026-08-12",
-        "time": "21:30",
-        "kind": "macro",
-        "title": "소비자물가 CPI (7월)",
-        "note": "Headline·Core CPI",
-        "sourceLabel": "BLS",
-        "sourceUrl": "https://www.bls.gov/schedule/2026/08_sched_list.htm",
-    },
-    {
-        "date": "2026-08-13",
-        "time": "21:30",
-        "kind": "macro",
-        "title": "생산자물가 PPI (7월)",
-        "note": "Headline·Core PPI",
-        "sourceLabel": "BLS",
-        "sourceUrl": "https://www.bls.gov/schedule/2026/08_sched_list.htm",
-    },
-    {
-        "date": "2026-08-14",
-        "time": "21:30",
-        "kind": "macro",
-        "title": "미국 소매판매 (7월)",
-        "sourceLabel": "US Census",
-        "sourceUrl": "https://www.census.gov/retail/release_schedule.html",
-    },
-]
+        "title": title,
+        "note": " · ".join(item for item in [note, eastern_label] if item),
+        "sourceLabel": source_label,
+        "sourceUrl": source_url,
+        "usDate": release_date.isoformat(),
+        "kstDate": kst_date,
+    }
+
+
+def parse_ical_events(raw_text: str) -> list[dict[str, str]]:
+    lines: list[str] = []
+    for line in raw_text.replace("\r\n", "\n").split("\n"):
+        if line.startswith((" ", "\t")) and lines:
+            lines[-1] += line[1:]
+        else:
+            lines.append(line)
+
+    events: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+    for line in lines:
+        if line == "BEGIN:VEVENT":
+            current = {}
+            continue
+        if line == "END:VEVENT":
+            if current:
+                events.append(current)
+            current = None
+            continue
+        if current is None or ":" not in line:
+            continue
+        raw_key, raw_value = line.split(":", 1)
+        key = raw_key.split(";", 1)[0]
+        current[key] = raw_value.replace("\\,", ",").replace("\\n", " ")
+    return events
+
+
+def parse_ical_datetime(value: str) -> tuple[date, datetime_time] | None:
+    normalized = value.strip().rstrip("Z")
+    for pattern in ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M", "%Y%m%d"):
+        try:
+            parsed = datetime.strptime(normalized, pattern)
+            return parsed.date(), parsed.time()
+        except ValueError:
+            pass
+    return None
+
+
+def build_bls_macro_events(start: date, end: date) -> list[dict]:
+    title_config = (
+        ("Employment Situation", "미국 고용보고서", "비농업고용·실업률·시간당 평균임금"),
+        ("Consumer Price Index", "소비자물가 CPI", "Headline·Core CPI"),
+        ("Producer Price Index", "생산자물가 PPI", "Headline·Core PPI"),
+        ("Job Openings and Labor Turnover", "JOLTS 구인·이직 보고서", "구인·채용·퇴직"),
+    )
+    events: list[dict] = []
+    for item in parse_ical_events(fetch_schedule_text(BLS_ICAL_URL)):
+        parsed = parse_ical_datetime(item.get("DTSTART", ""))
+        summary = item.get("SUMMARY", "")
+        if parsed is None or not start <= parsed[0] <= end:
+            continue
+        matched = next((config for config in title_config if config[0] in summary), None)
+        if matched is None:
+            continue
+        release_date, eastern_time = parsed
+        source_url = f"https://www.bls.gov/schedule/{release_date:%Y/%m}_sched_list.htm"
+        events.append(
+            build_macro_event(
+                release_date=release_date,
+                eastern_time=eastern_time,
+                title=matched[1],
+                note=f"{matched[2]} · {summary}",
+                source_label="BLS",
+                source_url=source_url,
+            )
+        )
+    return events
+
+
+def build_bea_macro_events(start: date, end: date) -> list[dict]:
+    events: list[dict] = []
+    for row in parse_schedule_rows(fetch_schedule_text(BEA_SCHEDULE_URL)):
+        if len(row) < 3:
+            continue
+        date_time_match = re.fullmatch(r"(.+?)\s+(\d{1,2}:\d{2}\s+[AP]M)", row[0].strip(), re.I)
+        if date_time_match is None:
+            continue
+        release_date = parse_us_date(date_time_match.group(1), start.year)
+        eastern_time = parse_us_time(date_time_match.group(2))
+        description = " ".join(row[2:])
+        if release_date is None or eastern_time is None or not start <= release_date <= end:
+            continue
+        if "Personal Income and Outlays" in description:
+            events.append(
+                build_macro_event(
+                    release_date=release_date,
+                    eastern_time=eastern_time,
+                    title="PCE 물가 · 개인소득/지출",
+                    note=f"Headline·Core PCE · {description}",
+                    source_label="BEA",
+                    source_url=BEA_SCHEDULE_URL,
+                )
+            )
+        elif description.startswith("GDP ("):
+            events.append(
+                build_macro_event(
+                    release_date=release_date,
+                    eastern_time=eastern_time,
+                    title="미국 GDP",
+                    note=description,
+                    source_label="BEA",
+                    source_url=BEA_SCHEDULE_URL,
+                )
+            )
+    return events
+
+
+def build_bls_fallback_events(start: date, end: date) -> list[dict]:
+    events: list[dict] = []
+    for date_value, time_value, title, note in BLS_2026_FALLBACKS:
+        release_date = date.fromisoformat(date_value)
+        eastern_time = datetime.strptime(time_value, "%H:%M").time()
+        if not start <= release_date <= end:
+            continue
+        events.append(
+            build_macro_event(
+                release_date=release_date,
+                eastern_time=eastern_time,
+                title=title,
+                note=f"{note} · BLS 2026 공식 발표 일정",
+                source_label="BLS",
+                source_url="https://www.bls.gov/schedule/2026/",
+            )
+        )
+    return events
+
+
+def build_ism_fallback_events(start: date, end: date) -> list[dict]:
+    events: list[dict] = []
+    for date_value, title in ISM_2026_FALLBACKS:
+        release_date = date.fromisoformat(date_value)
+        if not start <= release_date <= end:
+            continue
+        events.append(
+            build_macro_event(
+                release_date=release_date,
+                eastern_time=datetime_time(10, 0),
+                title=title,
+                note="ISM 2026 공식 발표 일정",
+                source_label="ISM",
+                source_url=ISM_SCHEDULE_URL,
+            )
+        )
+    return events
+
+
+def build_census_macro_events(start: date, end: date) -> list[dict]:
+    title_config = (
+        ("Advance Monthly Sales for Retail and Food Services", "미국 소매판매", "Retail Sales"),
+        ("Advance Report on Durable Goods", "내구재 주문", "Durable Goods Orders"),
+        ("New Residential Construction", "주택착공·건축허가", "Housing Starts · Building Permits"),
+    )
+    events: list[dict] = []
+    for row in parse_schedule_rows(fetch_schedule_text(CENSUS_SCHEDULE_URL)):
+        if len(row) < 4:
+            continue
+        description, date_text, time_text, reference = row[:4]
+        release_date = parse_us_date(date_text, start.year)
+        eastern_time = parse_us_time(time_text)
+        if release_date is None or eastern_time is None or not start <= release_date <= end:
+            continue
+        matched = next((config for config in title_config if config[0] in description), None)
+        if matched is None:
+            continue
+        events.append(
+            build_macro_event(
+                release_date=release_date,
+                eastern_time=eastern_time,
+                title=matched[1],
+                note=f"{matched[2]} · {reference}",
+                source_label="U.S. Census Bureau",
+                source_url=CENSUS_SCHEDULE_URL,
+            )
+        )
+    return events
+
+
+def build_ism_macro_events(start: date, end: date) -> list[dict]:
+    events: list[dict] = []
+    for row in parse_schedule_rows(fetch_schedule_text(ISM_SCHEDULE_URL)):
+        if len(row) < 3:
+            continue
+        match = re.fullmatch(r"([A-Za-z]+)\s+(\d{4})", row[0].strip())
+        if match is None:
+            continue
+        try:
+            month_number = datetime.strptime(match.group(1), "%B").month
+            year = int(match.group(2))
+            manufacturing_day = int(row[1])
+            services_day = int(row[2])
+        except ValueError:
+            continue
+        for day_number, title in (
+            (manufacturing_day, "ISM 제조업 PMI"),
+            (services_day, "ISM 서비스업 PMI"),
+        ):
+            try:
+                release_date = date(year, month_number, day_number)
+            except ValueError:
+                continue
+            if not start <= release_date <= end:
+                continue
+            events.append(
+                build_macro_event(
+                    release_date=release_date,
+                    eastern_time=datetime_time(10, 0),
+                    title=title,
+                    note=f"ISM 공식 발표 · {match.group(1)} {year}",
+                    source_label="ISM",
+                    source_url=ISM_SCHEDULE_URL,
+                )
+            )
+    return events
+
+
+def load_existing_macro_events(start: date, end: date) -> list[dict]:
+    if not OUTPUT_PATH.exists():
+        return []
+    raw_text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+    prefix = "window.studyCalendarData = "
+    if raw_text.startswith(prefix):
+        raw_text = raw_text[len(prefix):]
+    if raw_text.endswith(";"):
+        raw_text = raw_text[:-1]
+    try:
+        payload = json.loads(raw_text)
+    except json.JSONDecodeError:
+        return []
+    return [
+        event
+        for week in payload.get("weeks", [])
+        for event in week.get("events", [])
+        if event.get("kind") == "macro"
+        and event.get("date")
+        and start <= date.fromisoformat(event["date"]) <= end
+    ]
+
+
+def build_macro_events(start: date, end: date) -> tuple[list[dict], list[str]]:
+    official_builders = (
+        ("BLS", build_bls_macro_events),
+        ("BEA", build_bea_macro_events),
+        ("U.S. Census Bureau", build_census_macro_events),
+        ("ISM", build_ism_macro_events),
+    )
+    events: list[dict] = []
+    failures: list[str] = []
+    for source_name, builder in official_builders:
+        try:
+            events.extend(builder(start, end))
+        except (requests.RequestException, ValueError, OSError) as error:
+            failures.append(f"{source_name}: {error.__class__.__name__}")
+
+    # Keep the calendar complete when BLS or ISM serves a bot challenge. The
+    # fallback is intentionally only the official 2026 schedule, not estimates.
+    events.extend(build_bls_fallback_events(start, end))
+    events.extend(build_ism_fallback_events(start, end))
+
+    deduped_events: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for event in events:
+        key = (event["date"], event["title"])
+        if key in seen:
+            continue
+        deduped_events.append(event)
+        seen.add(key)
+    for event in load_existing_macro_events(start, end):
+        key = (event["date"], event["title"])
+        if key not in seen:
+            deduped_events.append(event)
+            seen.add(key)
+
+    return sorted(deduped_events, key=lambda item: (item["date"], item["time"], item["title"])), failures
 
 
 def load_daily_briefing_universe() -> dict[str, dict[str, str]]:
@@ -312,6 +665,7 @@ def main() -> None:
     start = bounds[0][1]
     end = bounds[-1][2]
     earnings = build_earnings_events(universe, start, end)
+    macro_events, macro_failures = build_macro_events(start, end)
 
     weeks = []
     week_labels = {
@@ -323,7 +677,7 @@ def main() -> None:
     for key, week_start, week_end in bounds:
         events = [
             item
-            for item in [*KNOWN_MACRO_EVENTS, *earnings]
+            for item in [*macro_events, *earnings]
             if week_start <= date.fromisoformat(item["date"]) <= week_end
         ]
         events.sort(key=lambda item: (item["date"], item["time"], item.get("ticker", "")))
@@ -345,14 +699,16 @@ def main() -> None:
         "coverage": {
             "dailyBriefingUniverse": len(universe),
             "matchedEarnings": len(earnings),
+            "matchedMacro": len(macro_events),
             "windowStart": start.isoformat(),
             "windowEnd": end.isoformat(),
         },
         "methodology": {
-            "macro": "BLS·Census·ISM 등 공식 발표 일정을 우선 사용",
+            "macro": "미국 Macro는 BLS·BEA·U.S. Census Bureau·ISM의 공식 발표 일정에서 매일 갱신",
             "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
-            "timing": "실적은 미국 현지 발표일에 배치하고 카드 하단에 KST 환산 날짜·시각을 병기. 매크로는 KST 발표일 기준",
+            "timing": "일정은 모두 미국 현지 발표일에 배치. 실적과 Macro 모두 KST 시각을 함께 표시",
             "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음",
+            "macroWarning": "공식 기관 일정에 일시적 접속 문제가 생기면 직전 저장 일정만 유지하며, 다음 실행에서 재확인",
         },
         "weeks": weeks,
         "fallbackSources": [
@@ -365,8 +721,11 @@ def main() -> None:
     OUTPUT_PATH.write_text(f"window.studyCalendarData = {serialized};\n", encoding="utf-8")
     print(
         f"Updated {OUTPUT_PATH.relative_to(ROOT)}: "
-        f"{len(universe)} Daily Briefing tickers, {len(earnings)} earnings events"
+        f"{len(universe)} Daily Briefing tickers, {len(earnings)} earnings events, "
+        f"{len(macro_events)} U.S. macro events"
     )
+    if macro_failures:
+        print(f"Macro source warnings: {', '.join(macro_failures)}")
 
 
 if __name__ == "__main__":

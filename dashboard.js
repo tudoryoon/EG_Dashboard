@@ -17400,7 +17400,7 @@ function renderStudyCalendarOverview() {
                 <a class="study-calendar-chip study-calendar-chip-${isEarnings ? "earnings" : "macro"}"
                   href="${escapeHtml(event.sourceUrl || "#")}" target="_blank" rel="noopener noreferrer"
                   title="${escapeHtml(eventTitle)}">
-                  <span><b>${escapeHtml(isEarnings ? `미국 ${usSessionLabel || "시간 미정"}` : event.time || "미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
+                  <span><b>${escapeHtml(isEarnings ? `미국 ${usSessionLabel || "시간 미정"}` : event.time ? `KST ${event.time}` : "KST 미정")}</b><em>${escapeHtml(eventLabel)}</em></span>
                   ${timingMarkup}
                   <strong>${escapeHtml(displayTitle)}</strong>
                 </a>`;
@@ -17443,7 +17443,7 @@ function renderStudyCalendarOverview() {
           <div>
             <p>RESEARCH CALENDAR</p>
             <h2>향후 4주 일정</h2>
-            <span>실적은 미국 현지 발표일, Macro는 KST 발표일 기준으로 정리했습니다.</span>
+            <span>실적과 미국 Macro 모두 미국 현지 발표일에 배치하고 KST 시각을 함께 표시합니다.</span>
           </div>
           <time>Updated ${escapeHtml(studyCalendarData.updatedAt || "-")}</time>
         </div>
@@ -17451,8 +17451,9 @@ function renderStudyCalendarOverview() {
           <span><b>(B)</b> 미국 장전</span>
           <span><b>(A)</b> 미국 장후</span>
           <span>실적 날짜는 <b>미국 현지 기준</b> · 카드 하단은 <b>KST</b></span>
+          <span><b>MACRO</b> 미국 공식 일정 · 카드 상단은 <b>KST 발표 시각</b></span>
           <span><b>공식 확정</b> 기업 IR 확인</span>
-          <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 포착</span>
+          <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · 실적 <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 · 미국 Macro <b>${escapeHtml(studyCalendarData.coverage?.matchedMacro ?? "-")}</b>건</span>
         </div>
         <div class="study-calendar-range-row">${rangeMarkup}</div>
         <div class="study-calendar-board-wrap">
@@ -21565,7 +21566,7 @@ function renderSummary(list) {
     } else if (state.researchView === "TrendSearch") {
       summaryText.textContent = "Google web and YouTube search-interest dashboard with moving averages";
     } else if (state.researchView === "Calendar") {
-      summaryText.textContent = "향후 4주 일정 · 실적은 미국 현지일, Macro는 KST";
+      summaryText.textContent = "향후 4주 일정 · 미국 현지 발표일 · KST 시각 병기";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }

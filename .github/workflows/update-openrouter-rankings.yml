@@ -36,7 +36,7 @@ jobs:
       - name: Refresh saved Google Trends searches
         run: python scripts/update_trend_search.py
 
-      - name: Refresh Daily Briefing earnings calendar
+      - name: Refresh Daily Briefing earnings and U.S. macro calendar
         run: python scripts/update_study_calendar.py
 
       - name: Commit updated AI data, trends, and calendar
