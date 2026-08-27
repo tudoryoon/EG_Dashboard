@@ -123,6 +123,8 @@ EXTENSION_ANCHORS = {
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-data.js"
 BRIEFING_DATA_PATH = OUTPUT_PATH.parent / "market-briefing-data.js"
 MANUAL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-manual-tickers.json"
+# Isolate yfinance's SQLite cache from any concurrently running local updater.
+yf.set_tz_cache_location(str(OUTPUT_PATH.parent.parent / ".yfinance-cache"))
 NASDAQ100_SNAPSHOT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-nasdaq100-snapshot.json"
 SYMBOL_ALIASES = {
     "CRDA": "CRD-A",

@@ -16,6 +16,7 @@ import update_market_rs as rs
 
 
 ROOT = Path(__file__).resolve().parents[1]
+yf.set_tz_cache_location(str(ROOT / ".yfinance-cache"))
 RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 TREND_SCRIPT_PATH = ROOT / "scripts" / "update_market_trend_score.py"
 INDEX_PATH = ROOT / "index.html"
@@ -117,9 +118,11 @@ def fetch_ticker_meta(ticker: str) -> tuple[str, int | None]:
 
 
 def download_ohlcv(ticker: str) -> pd.DataFrame:
+    # The daily RS updater only needs the last few sessions, but a newly added
+    # symbol needs the persisted lookback window to calculate RS and Trend.
     frame = yf.download(
         tickers=ticker,
-        period=rs.PRICE_PERIOD,
+        start=rs.HISTORY_START_DATE.strftime("%Y-%m-%d"),
         auto_adjust=False,
         progress=False,
         threads=False,

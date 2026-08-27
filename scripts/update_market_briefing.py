@@ -20,6 +20,9 @@ from fedwatch_data import build_fedwatch_snapshot as build_official_fedwatch_sna
 
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-data.js"
+# Keep yfinance's SQLite cache out of the shared AppData location, which can be
+# held open by another local update while this dashboard runs from OneDrive.
+yf.set_tz_cache_location(str(OUTPUT_PATH.parent.parent / ".yfinance-cache"))
 USER_AGENT = {"User-Agent": "Mozilla/5.0"}
 PRICE_PERIOD = "2y"
 ROTATION_HISTORY_POINTS = 252
@@ -254,6 +257,7 @@ SECTOR_GROUPS = [
             {"ticker": "ZS", "label": "ZS US", "name": "Zscaler", "query": "Zscaler stock"},
             {"ticker": "AKAM", "label": "AKAM US", "name": "Akamai Technologies", "query": "Akamai Technologies stock"},
             {"ticker": "RBRK", "label": "RBRK US", "name": "Rubrik", "query": "Rubrik stock"},
+            {"ticker": "OKTA", "label": "OKTA US", "name": "Okta", "query": "Okta stock"},
         ],
     },
     {

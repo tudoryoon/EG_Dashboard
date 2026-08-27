@@ -518,6 +518,17 @@
       "sharesOutstanding": 173990987
     },
     {
+      "ticker": "OKTA",
+      "name": "Okta, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 175346441
+    },
+    {
       "ticker": "OWL",
       "name": "Blue Owl Capital Inc.",
       "memberships": {

@@ -12,6 +12,7 @@ import yfinance as yf
 
 
 ROOT = Path(__file__).resolve().parents[1]
+yf.set_tz_cache_location(str(ROOT / ".yfinance-cache"))
 OUTPUT_PATH = ROOT / "data" / "market-canslim-earnings-data.js"
 BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
 MARKET_RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
