@@ -325,6 +325,8 @@ SECTOR_GROUPS = [
         "key": "discretionary",
         "label": "경기 소비재",
         "items": [
+            {"ticker": "ANF", "label": "ANF US", "name": "Abercrombie & Fitch", "query": "Abercrombie Fitch stock"},
+            {"ticker": "EL", "label": "EL US", "name": "Estee Lauder", "query": "Estee Lauder stock"},
             {"ticker": "TGT", "label": "TGT US", "name": "Target", "query": "Target stock"},
             {"ticker": "HD", "label": "HD US", "name": "Home Depot", "query": "Home Depot stock"},
             {"ticker": "SBUX", "label": "SBUX US", "name": "Starbucks", "query": "Starbucks stock"},
