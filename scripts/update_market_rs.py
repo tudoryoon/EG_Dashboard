@@ -35,6 +35,7 @@ RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
 RETRY_ATTEMPTS = int(os.getenv("MARKET_RS_RETRY_ATTEMPTS", "4"))
 # Yahoo Spark currently accepts up to 20 symbols per request.
 SPARK_BATCH_SIZE = int(os.getenv("MARKET_RS_SPARK_BATCH_SIZE", "20"))
+OHLC_FALLBACK_WORKERS = max(1, int(os.getenv("MARKET_RS_OHLC_FALLBACK_WORKERS", "8")))
 LOOKBACKS = {
     "1w": 5,
     "2w": 10,
@@ -774,6 +775,136 @@ def fill_closed_session_close_gaps_from_spark(
             flush=True,
         )
     return raw_close_frame, adjusted_close_frame
+
+
+def fetch_finalized_daily_ohlcv(
+    symbol: str,
+    target_date: pd.Timestamp,
+) -> tuple[str, dict[str, float]] | None:
+    encoded_symbol = requests.utils.quote(symbol, safe="")
+    target_date = pd.Timestamp(target_date).normalize()
+    for attempt in range(2):
+        try:
+            response = requests.get(
+                f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded_symbol}",
+                params={"range": "5d", "interval": "1d", "events": "div,splits"},
+                headers=WIKI_HEADERS,
+                timeout=30,
+            )
+            response.raise_for_status()
+            result = (response.json().get("chart", {}).get("result") or [None])[0]
+            if not result:
+                return None
+            meta = result.get("meta") or {}
+            timezone_name = str(meta.get("exchangeTimezoneName") or "America/New_York")
+            market_time = safe_float(meta.get("regularMarketTime"))
+            if market_time is not None:
+                local_market_time = pd.to_datetime(int(market_time), unit="s", utc=True).tz_convert(timezone_name)
+                local_market_date = local_market_time.tz_localize(None).normalize()
+                if local_market_date < target_date or (
+                    local_market_date == target_date
+                    and (local_market_time.hour, local_market_time.minute) < (15, 59)
+                ):
+                    return None
+
+            timestamps = result.get("timestamp") or []
+            quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
+            adjusted = ((result.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose") or []
+            for index, timestamp in enumerate(timestamps):
+                local_date = (
+                    pd.to_datetime(int(timestamp), unit="s", utc=True)
+                    .tz_convert(timezone_name)
+                    .tz_localize(None)
+                    .normalize()
+                )
+                if local_date != target_date:
+                    continue
+                values = {
+                    "open": safe_float((quote.get("open") or [])[index]),
+                    "high": safe_float((quote.get("high") or [])[index]),
+                    "low": safe_float((quote.get("low") or [])[index]),
+                    "close": safe_float((quote.get("close") or [])[index]),
+                    "volume": safe_float((quote.get("volume") or [])[index]),
+                }
+                if not all(values[key] is not None and values[key] > 0 for key in ("open", "high", "low", "close")):
+                    return None
+                values["adjusted_close"] = (
+                    safe_float(adjusted[index]) if index < len(adjusted) else values["close"]
+                ) or values["close"]
+                return symbol, values
+            return None
+        except Exception:
+            if attempt == 0:
+                time.sleep(0.35)
+    return None
+
+
+def fill_closed_session_ohlcv_gaps_from_chart(
+    symbols: list[str],
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+    volume_frame: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    available_dates = [
+        frame.dropna(how="all").index.max()
+        for frame in (raw_close_frame, open_frame, high_frame, low_frame)
+        if not frame.empty and not frame.dropna(how="all").empty
+    ]
+    if not available_dates:
+        return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+    target_date = max(available_dates)
+
+    def missing(frame: pd.DataFrame, symbol: str) -> bool:
+        return (
+            target_date not in frame.index
+            or symbol not in frame.columns
+            or pd.isna(frame.at[target_date, symbol])
+        )
+
+    candidates = [
+        symbol
+        for symbol in symbols
+        if not is_terminal_symbol(symbol)
+        and any(missing(frame, symbol) for frame in (raw_close_frame, open_frame, high_frame, low_frame, volume_frame))
+    ]
+    if not candidates:
+        return raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame
+
+    results: list[tuple[str, dict[str, float]]] = []
+    with ThreadPoolExecutor(max_workers=min(OHLC_FALLBACK_WORKERS, len(candidates))) as executor:
+        futures = [executor.submit(fetch_finalized_daily_ohlcv, symbol, target_date) for symbol in candidates]
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                results.append(result)
+
+    frame_values = (
+        (raw_close_frame, "close"),
+        (adjusted_close_frame, "adjusted_close"),
+        (open_frame, "open"),
+        (high_frame, "high"),
+        (low_frame, "low"),
+        (volume_frame, "volume"),
+    )
+    for symbol, values in results:
+        for frame, key in frame_values:
+            frame.at[target_date, symbol] = values[key]
+
+    print(
+        f"Filled finalized {target_date:%Y-%m-%d} OHLCV for {len(results)} / {len(candidates)} gap symbols from Yahoo Chart.",
+        flush=True,
+    )
+    return (
+        raw_close_frame.sort_index(),
+        adjusted_close_frame.sort_index(),
+        open_frame.sort_index(),
+        high_frame.sort_index(),
+        low_frame.sort_index(),
+        volume_frame.sort_index(),
+    )
 
 
 def ensure_symbol_price_frames(
@@ -1788,6 +1919,17 @@ def main() -> None:
     # merge_existing_history_window already fills missing fresh sessions from the
     # saved chart history. A second cell-by-cell historical pass here was
     # redundant and made the daily 2,400-symbol refresh take tens of minutes.
+    raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame = (
+        fill_closed_session_ohlcv_gaps_from_chart(
+            symbols + [BENCHMARK_SYMBOL],
+            raw_close_frame,
+            adjusted_close_frame,
+            open_frame,
+            high_frame,
+            low_frame,
+            volume_frame,
+        )
+    )
     raw_close_frame, adjusted_close_frame = fill_closed_session_close_gaps_from_spark(
         symbols + [BENCHMARK_SYMBOL],
         raw_close_frame,

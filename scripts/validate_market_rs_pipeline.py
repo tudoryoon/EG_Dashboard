@@ -47,6 +47,18 @@ def main() -> None:
                 len(history.get(history_key) or []) == len(history_dates),
                 f"RS {history_key} length differs from historyDates for {ticker}.",
             )
+    latest_ohlc_count = sum(
+        1
+        for history in rs_histories.values()
+        if all(
+            isinstance((history.get(key) or [None])[-1], (int, float))
+            for key in ("price", "open", "high", "low")
+        )
+    )
+    require(
+        latest_ohlc_count >= len(rs_histories) - 10,
+        f"Latest RS candle coverage is too small: {latest_ohlc_count} / {len(rs_histories)}",
+    )
 
     membership_counts = {
         key: sum(1 for row in rs_rows if (row.get("memberships") or {}).get(key))
@@ -195,7 +207,8 @@ def main() -> None:
     print(
         "Validated market RS pipeline: "
         f"date={rs.get('updatedAt')} rows={len(rs_rows)} memberships={membership_counts} "
-        f"financialCovered={financial_counts.get('covered')} epsCovered={earnings_scope.get('coveredCount')}"
+        f"latestOhlc={latest_ohlc_count} financialCovered={financial_counts.get('covered')} "
+        f"epsCovered={earnings_scope.get('coveredCount')}"
     )
 
 

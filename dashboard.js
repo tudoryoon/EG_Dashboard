@@ -12133,8 +12133,8 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
         : chart.chartArea.width;
       const pixelRatio = Number(chart.currentDevicePixelRatio) || 1;
       const snapToPixel = (value) => Math.round(value * pixelRatio) / pixelRatio;
-      const bodyWidth = snapToPixel(Math.max(1.25, Math.min(12, spacing * 0.72)));
-      const wickWidth = spacing >= 5 ? 1.3 : 1;
+      const bodyWidth = snapToPixel(Math.max(2, Math.min(14, spacing * 0.88)));
+      const wickWidth = spacing >= 4 ? 1.5 : 1.15;
 
       chart.ctx.save();
       chart.ctx.beginPath();
@@ -12164,7 +12164,7 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
         const yClose = yScale.getPixelForValue(close);
         const centerX = snapToPixel(point.x);
         const bodyTop = snapToPixel(Math.min(yOpen, yClose));
-        const bodyHeight = snapToPixel(Math.max(1.6, Math.abs(yClose - yOpen)));
+        const bodyHeight = snapToPixel(Math.max(2.2, Math.abs(yClose - yOpen)));
 
         chart.ctx.strokeStyle = color;
         chart.ctx.fillStyle = color;
