@@ -11,6 +11,19 @@ on:
         options:
           - "false"
           - "true"
+      refresh_if_stale:
+        description: "Exit without refreshing when Daily Briefing already has the latest completed session"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      dispatch_source:
+        description: "Optional dispatcher label for audit visibility"
+        required: false
+        default: "manual"
+        type: string
   schedule:
     # Daily Briefing primary run and retry runs.
     # 18:58/19:18 UTC = 03:58/04:18 KST early runs.
@@ -49,7 +62,8 @@ jobs:
           should_run = True
           reason = "manual run always refreshes data"
 
-          if event_name == "schedule":
+          refresh_if_stale = "${{ inputs.refresh_if_stale }}" == "true"
+          if event_name == "schedule" or refresh_if_stale:
               text = Path("data/market-briefing-data.js").read_text(encoding="utf-8")
               match = re.search(r"window\.marketBriefingData\s*=\s*(\{.*\});\s*$", text, re.S)
               payload = json.loads(match.group(1)) if match else {}

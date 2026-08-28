@@ -1,0 +1,10 @@
+name = "eg-market-refresh-dispatcher"
+main = "src/index.js"
+compatibility_date = "2026-08-28"
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+GITHUB_OWNER = "tudoryoon"
+GITHUB_REPO = "EG_Dashboard"

@@ -1,0 +1,8 @@
+{
+  "name": "eg-market-refresh-dispatcher",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
