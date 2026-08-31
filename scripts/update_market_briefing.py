@@ -4,6 +4,7 @@ import json
 import math
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, time as datetime_time, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
@@ -28,6 +29,15 @@ PRICE_PERIOD = "2y"
 ROTATION_HISTORY_POINTS = 252
 MAX_DAILY_RETURN_PCT = 300.0
 BENCHMARK_SYMBOLS = ["^GSPC", "^IXIC", "^DJI", "^RUT", "QQQ"]
+INDEX_PROXY_SYMBOLS = {
+    "^DJI": "DIA",
+    "^GSPC": "SPY",
+    "^IXIC": "QQQ",
+    "^NDX": "QQQ",
+    "^SOX": "SOXX",
+    "^RUT": "IWM",
+}
+NASDAQ_ETF_SYMBOLS = frozenset({"DIA", "DRAM", "GDX", "IBB", "IWM", "QQQ", "QQQE", "RSP", "SOXX", "SPY", "XBI"})
 INDEX_CARD_CONFIGS = [
     {"key": "dowjones", "label": "Dow Jones (DIA)", "symbol": "^DJI"},
     {"key": "sp500", "label": "S&P 500 (SPY)", "symbol": "^GSPC"},
@@ -743,6 +753,125 @@ def load_previous_market_meta() -> dict[str, dict[str, float | None]]:
     return previous
 
 
+def load_previous_market_prices() -> tuple[pd.Timestamp | None, dict[str, float], dict[str, float]]:
+    """Read the last validated Daily Briefing close as a short-gap fallback."""
+    if not OUTPUT_PATH.exists():
+        return None, {}, {}
+    try:
+        text = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+        payload = json.loads(re.sub(r"^window\.marketBriefingData\s*=\s*", "", text).rstrip(";"))
+        snapshot_date = pd.Timestamp(str(payload.get("updatedAt") or "")).normalize()
+    except Exception:
+        return None, {}, {}
+
+    prices: dict[str, float] = {}
+    for sector in payload.get("sectorPanels", []):
+        for item in sector.get("items", []):
+            ticker = str(item.get("ticker") or "")
+            price = normalize_number(item.get("price"))
+            if ticker and price is not None:
+                prices.setdefault(ticker, price)
+    benchmark = payload.get("rotationSignal", {}).get("benchmark", {})
+    benchmark_price = normalize_number(benchmark.get("price")) if isinstance(benchmark, dict) else None
+    if benchmark_price is not None:
+        prices[ROTATION_BENCHMARK_SYMBOL] = benchmark_price
+
+    index_prices: dict[str, float] = {}
+    for card in payload.get("indexCards", []):
+        symbol = str(card.get("symbol") or "")
+        price = normalize_number(card.get("price"))
+        if symbol and price is not None:
+            index_prices[symbol] = price
+    return snapshot_date, prices, index_prices
+
+
+def fetch_nasdaq_daily_closes(symbol: str, start_date: pd.Timestamp, end_date: pd.Timestamp) -> dict[pd.Timestamp, float]:
+    """Fetch a short historical window when Yahoo omits a completed session."""
+    if not re.fullmatch(r"[A-Z0-9.-]+", symbol) or symbol.endswith(".KS") or symbol.startswith("^"):
+        return {}
+
+    asset_classes = ("etf", "stocks") if symbol in NASDAQ_ETF_SYMBOLS else ("stocks", "etf")
+    for asset_class in asset_classes:
+        try:
+            response = requests.get(
+                f"https://api.nasdaq.com/api/quote/{quote_plus(symbol.lower())}/historical",
+                params={
+                    "assetclass": asset_class,
+                    "fromdate": pd.Timestamp(start_date).strftime("%Y-%m-%d"),
+                    "todate": pd.Timestamp(end_date).strftime("%Y-%m-%d"),
+                    "limit": "20",
+                },
+                headers={**USER_AGENT, "Accept": "application/json"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            rows = ((response.json().get("data") or {}).get("tradesTable") or {}).get("rows") or []
+        except Exception:
+            continue
+
+        closes: dict[pd.Timestamp, float] = {}
+        for row in rows:
+            try:
+                date = pd.Timestamp(str(row.get("date") or ""))
+                close = normalize_number(re.sub(r"[$,]", "", str(row.get("close") or "")))
+            except Exception:
+                continue
+            if close is not None:
+                closes[date.normalize()] = close
+        if closes:
+            return closes
+    return {}
+
+
+def fill_missing_recent_session_gaps(close_map: dict[str, pd.Series]) -> None:
+    """Backfill a recent Yahoo gap with Nasdaq's official end-of-day quote feed."""
+    benchmark = close_map.get(ROTATION_BENCHMARK_SYMBOL)
+    if benchmark is None or len(benchmark) < 2:
+        return
+
+    benchmark = benchmark.sort_index().dropna()
+    previous_date = pd.Timestamp(benchmark.index[-2]).normalize()
+    latest_date = pd.Timestamp(benchmark.index[-1]).normalize()
+    if (latest_date - previous_date).days <= 1:
+        return
+
+    snapshot_date, snapshot_prices, _ = load_previous_market_prices()
+    use_snapshot = snapshot_date is not None and previous_date < snapshot_date < latest_date and ROTATION_BENCHMARK_SYMBOL in snapshot_prices
+    benchmark_closes = {snapshot_date: snapshot_prices[ROTATION_BENCHMARK_SYMBOL]} if use_snapshot else fetch_nasdaq_daily_closes(
+        ROTATION_BENCHMARK_SYMBOL, previous_date, latest_date
+    )
+    missing_dates = sorted(date for date in benchmark_closes if previous_date < date < latest_date)
+    if not missing_dates:
+        return
+
+    symbols = [symbol for symbol, series in close_map.items() if not series.empty]
+    fetched: dict[str, dict[pd.Timestamp, float]] = {ROTATION_BENCHMARK_SYMBOL: benchmark_closes}
+    if use_snapshot:
+        fetched.update({symbol: {snapshot_date: price} for symbol, price in snapshot_prices.items()})
+    with ThreadPoolExecutor(max_workers=12) as executor:
+        futures = {
+            executor.submit(fetch_nasdaq_daily_closes, symbol, previous_date, latest_date): symbol
+            for symbol in symbols
+            if symbol != ROTATION_BENCHMARK_SYMBOL and not use_snapshot
+        }
+        for future in as_completed(futures):
+            symbol = futures[future]
+            try:
+                fetched[symbol] = future.result()
+            except Exception:
+                fetched[symbol] = {}
+
+    for symbol, series in list(close_map.items()):
+        additions = fetched.get(symbol, {})
+        for date in missing_dates:
+            close = additions.get(date)
+            if close is None or date in series.index:
+                continue
+            series = pd.concat([series, pd.Series([close], index=[date], name=symbol)]).sort_index().dropna()
+            series = series[~series.index.duplicated(keep="last")]
+        close_map[symbol] = series.rename(symbol)
+
+
 def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
     history = yf.download(
         tickers=symbols,
@@ -771,6 +900,7 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
         close = close[~close.index.duplicated(keep="last")]
         if len(close) >= 2:
             close_map[symbol] = close.rename(symbol)
+    fill_missing_recent_session_gaps(close_map)
     fill_latest_chart_close_gaps(close_map)
     return pd.concat(close_map.values(), axis=1).sort_index() if close_map else pd.DataFrame()
 
@@ -1070,7 +1200,12 @@ def load_existing_updated_at() -> str | None:
 
 def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[str, object]], str, dict[str, object], pd.DataFrame]:
     companies = [item | {"sectorKey": sector["key"], "sectorLabel": sector["label"]} for sector in SECTOR_GROUPS for item in sector["items"]]
-    symbols = sorted({company["ticker"] for company in companies} | set(BENCHMARK_SYMBOLS) | {USD_PER_KRW_SYMBOL})
+    symbols = sorted(
+        {company["ticker"] for company in companies}
+        | set(BENCHMARK_SYMBOLS)
+        | set(INDEX_PROXY_SYMBOLS.values())
+        | {USD_PER_KRW_SYMBOL}
+    )
     close_frame = fetch_price_frame(symbols)
     benchmark_series = (
         close_frame[ROTATION_BENCHMARK_SYMBOL].dropna()
@@ -1221,7 +1356,43 @@ def compute_atr_percent_from_ohlc(frame: pd.DataFrame, period: int = 21) -> floa
     return round(float(atr_pct), 2)
 
 
-def build_index_cards() -> list[dict[str, object]]:
+def close_with_recent_proxy_gap_fill(symbol: str, close: pd.Series, close_frame: pd.DataFrame) -> pd.Series:
+    snapshot_date, _, index_prices = load_previous_market_prices()
+    if snapshot_date is not None and symbol in index_prices and len(close) >= 2:
+        prior_date = pd.Timestamp(close.index[-2]).normalize()
+        latest_date = pd.Timestamp(close.index[-1]).normalize()
+        if prior_date < snapshot_date < latest_date and snapshot_date not in close.index:
+            close = pd.concat([close, pd.Series([index_prices[symbol]], index=[snapshot_date])]).sort_index()
+
+    proxy_symbol = INDEX_PROXY_SYMBOLS.get(symbol)
+    if not proxy_symbol or proxy_symbol not in close_frame.columns or close.empty:
+        return close
+
+    proxy = close_frame[proxy_symbol].dropna().sort_index()
+    output = close.sort_index().copy()
+    if proxy.empty or len(output) < 2:
+        return output
+
+    recent_start = pd.Timestamp(output.index[-6]).normalize()
+    for date, proxy_close in proxy.items():
+        date = pd.Timestamp(date).normalize()
+        if date <= recent_start or date in output.index or date >= pd.Timestamp(output.index[-1]).normalize():
+            continue
+        prior_index = output[output.index < date]
+        prior_proxy = proxy[proxy.index < date]
+        if prior_index.empty or prior_proxy.empty:
+            continue
+        prior_close = normalize_number(prior_index.iloc[-1])
+        prior_proxy_close = normalize_number(prior_proxy.iloc[-1])
+        current_proxy_close = normalize_number(proxy_close)
+        if not prior_close or not prior_proxy_close or not current_proxy_close:
+            continue
+        output.loc[date] = prior_close * current_proxy_close / prior_proxy_close
+        output = output.sort_index()
+    return output
+
+
+def build_index_cards(close_frame: pd.DataFrame) -> list[dict[str, object]]:
     symbols = [str(item["symbol"]) for item in INDEX_CARD_CONFIGS]
     frames = fetch_ohlc_frames(symbols)
     cards: list[dict[str, object]] = []
@@ -1229,6 +1400,7 @@ def build_index_cards() -> list[dict[str, object]]:
         symbol = str(config["symbol"])
         frame = frames.get(symbol, pd.DataFrame())
         close = pd.Series(frame.get("close", pd.Series(dtype=float)), dtype=float).dropna()
+        close = close_with_recent_proxy_gap_fill(symbol, close, close_frame)
         returns = {key: None for key in MAP_RANGE_LABELS}
         price = previous_close = day_change_pct = None
         if len(close) >= 2:
@@ -1883,7 +2055,7 @@ def build_fedwatch_snapshot() -> dict[str, object]:
 
 def build_payload() -> dict[str, object]:
     snapshots, _, latest_date, rotation_benchmark, close_frame = build_company_snapshots()
-    index_cards = build_index_cards()
+    index_cards = build_index_cards(close_frame)
     major_news = build_major_news()
     movers = build_movers(snapshots)
     sector_panels = build_sector_panels(snapshots)
