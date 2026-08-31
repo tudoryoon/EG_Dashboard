@@ -457,7 +457,7 @@ SECTOR_GROUPS = [
     },
     {
         "key": "healthcare",
-        "label": "헬스케어",
+        "label": "바이오",
         "items": [
             {"ticker": "AMGN", "label": "AMGN US", "name": "Amgen", "query": "Amgen stock"},
             {"ticker": "LLY", "label": "LLY US", "name": "Eli Lilly", "query": "Eli Lilly stock"},
