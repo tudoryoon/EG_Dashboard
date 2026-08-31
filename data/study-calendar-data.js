@@ -1,14 +1,14 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-08-30",
+  "updatedAt": "2026-08-31",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-08-30",
+  "calendarToday": "2026-08-31",
   "coverage": {
     "dailyBriefingUniverse": 211,
-    "matchedEarnings": 24,
-    "matchedMacro": 11,
-    "windowStart": "2026-08-24",
-    "windowEnd": "2026-09-20"
+    "matchedEarnings": 14,
+    "matchedMacro": 9,
+    "windowStart": "2026-08-31",
+    "windowEnd": "2026-09-27"
   },
   "methodology": {
     "macro": "미국 Macro는 BLS·BEA·U.S. Census Bureau·ISM의 공식 발표 일정에서 매일 갱신",
@@ -21,229 +21,8 @@ window.studyCalendarData = {
     {
       "key": "this-week",
       "label": "이번 주",
-      "range": "2026.08.24 - 08.30",
-      "status": "진행 중",
-      "events": [
-        {
-          "date": "2026-08-26",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "PCE 물가 · 개인소득/지출",
-          "note": "Headline·Core PCE · Personal Income and Outlays, July 2026 · 미국 08:30 ET",
-          "sourceLabel": "BEA",
-          "sourceUrl": "https://www.bea.gov/news/schedule",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26"
-        },
-        {
-          "date": "2026-08-26",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "내구재 주문",
-          "note": "Durable Goods Orders · July 2026 · 미국 08:30 ET",
-          "sourceLabel": "U.S. Census Bureau",
-          "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26"
-        },
-        {
-          "date": "2026-08-26",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "미국 GDP",
-          "note": "GDP (Second Estimate) and Corporate Profits, 2nd Quarter 2026 · 미국 08:30 ET",
-          "sourceLabel": "BEA",
-          "sourceUrl": "https://www.bea.gov/news/schedule",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26"
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "ANF",
-          "session": "",
-          "title": "Abercrombie & Fitch Company (ANF) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.95 · Nasdaq/Zacks 예상 일정",
-          "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "CRM",
-          "session": "",
-          "title": "Salesforce, Inc. (CRM) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.35 · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "CRWD",
-          "session": "",
-          "title": "CrowdStrike Holdings, Inc. (CRWD) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.05 · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "NVDA",
-          "session": "",
-          "title": "NVIDIA Corporation (NVDA) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.09 · Nasdaq/Zacks 예상 일정",
-          "sector": "M7 빅테크",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "OKTA",
-          "session": "",
-          "title": "Okta, Inc. (OKTA) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.44 · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "P",
-          "session": "",
-          "title": "Everpure, Inc. (P) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.19 · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-26",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "SNPS",
-          "session": "",
-          "title": "Synopsys, Inc. (SNPS) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.66 · Nasdaq/Zacks 예상 일정",
-          "sector": "반도체 설계/IP",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-26",
-          "usDate": "2026-08-26",
-          "kstDate": "2026-08-26",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-27",
-          "time": "22:30 이전",
-          "kind": "earnings",
-          "ticker": "PURR",
-          "session": "B",
-          "title": "Hyperliquid Strategies Inc (PURR) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · Nasdaq/Zacks 예상 일정",
-          "sector": "크립토",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
-          "kstDate": "2026-08-27",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-27",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "IREN",
-          "session": "",
-          "title": "IREN Limited (IREN) 실적 발표",
-          "note": "회계분기 종료 Jun/2026 · EPS 컨센서스 ($0.50) · Nasdaq/Zacks 예상 일정",
-          "sector": "네오클라우드",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
-          "kstDate": "2026-08-27",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-27",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "MRVL",
-          "session": "",
-          "title": "Marvell Technology, Inc. (MRVL) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.65 · Nasdaq/Zacks 예상 일정",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
-          "kstDate": "2026-08-27",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-27",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "RBRK",
-          "session": "",
-          "title": "Rubrik, Inc. (RBRK) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.34) · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
-          "kstDate": "2026-08-27",
-          "confirmed": false
-        },
-        {
-          "date": "2026-08-27",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "ULTA",
-          "session": "",
-          "title": "Ulta Beauty, Inc. (ULTA) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $6.21 · Nasdaq/Zacks 예상 일정",
-          "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-08-27",
-          "usDate": "2026-08-27",
-          "kstDate": "2026-08-27",
-          "confirmed": false
-        }
-      ]
-    },
-    {
-      "key": "next-week",
-      "label": "다음 주",
       "range": "2026.08.31 - 09.06",
-      "status": "예정",
+      "status": "진행 중",
       "events": [
         {
           "date": "2026-09-01",
@@ -457,8 +236,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-3",
-      "label": "3주차",
+      "key": "next-week",
+      "label": "다음 주",
       "range": "2026.09.07 - 09.13",
       "status": "예정",
       "events": [
@@ -502,8 +281,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-4",
-      "label": "4주차",
+      "key": "week-3",
+      "label": "3주차",
       "range": "2026.09.14 - 09.20",
       "status": "예정",
       "events": [
@@ -528,6 +307,55 @@ window.studyCalendarData = {
           "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
           "usDate": "2026-09-17",
           "kstDate": "2026-09-17"
+        }
+      ]
+    },
+    {
+      "key": "week-4",
+      "label": "4주차",
+      "range": "2026.09.21 - 09.27",
+      "status": "예정",
+      "events": [
+        {
+          "date": "2026-09-23",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "UEC",
+          "session": "",
+          "title": "Uranium Energy Corp. (UEC) 실적 발표",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.04) · Nasdaq/Zacks 예상 일정",
+          "sector": "원자재",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-23",
+          "usDate": "2026-09-23",
+          "kstDate": "2026-09-23",
+          "confirmed": false
+        },
+        {
+          "date": "2026-09-24",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "COST",
+          "session": "A",
+          "title": "Costco Wholesale Corporation (COST) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $6.51 · Nasdaq/Zacks 예상 일정",
+          "sector": "필수 소비재",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-24",
+          "usDate": "2026-09-24",
+          "kstDate": "2026-09-25",
+          "confirmed": false
+        },
+        {
+          "date": "2026-09-25",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "내구재 주문",
+          "note": "Durable Goods Orders · August 2026 · 미국 08:30 ET",
+          "sourceLabel": "U.S. Census Bureau",
+          "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
+          "usDate": "2026-09-25",
+          "kstDate": "2026-09-25"
         }
       ]
     }
