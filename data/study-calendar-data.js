@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-01",
+  "updatedAt": "2026-09-02",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-01",
+  "calendarToday": "2026-09-02",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 14,
@@ -31,7 +31,7 @@ window.studyCalendarData = {
           "ticker": "CRDO",
           "session": "A",
           "title": "Credo Technology Group Holding Ltd (CRDO) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.91 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.93 · Nasdaq/Zacks 예상 일정",
           "sector": "통신 인프라",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
@@ -203,7 +203,7 @@ window.studyCalendarData = {
           "ticker": "CIEN",
           "session": "B",
           "title": "Ciena Corporation (CIEN) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.45 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.46 · Nasdaq/Zacks 예상 일정",
           "sector": "통신 인프라",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
