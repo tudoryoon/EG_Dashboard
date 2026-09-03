@@ -452,6 +452,7 @@ const state = {
   rsTableSortDirection: "desc",
   rsVisibleCardCount: RS_CARD_BATCH_SIZE,
   rsPriceChartType: "candle",
+  rsVolumeVisible: true,
   rsChartSeries: {
     rs: true,
     ema10: false,
@@ -689,6 +690,7 @@ const marketRsRowByTicker = new Map((marketRsData.rows ?? []).map((row) => [row.
 
 const charts = [];
 let marketRsDetailChart = null;
+let marketRsVolumeChart = null;
 let marketTrendDetailChart = null;
 
 const searchInput = document.querySelector("#search-input");
@@ -6067,6 +6069,7 @@ function destroyCharts() {
   marketTrendDetailChart?.canvas?.__marketTrendYAxisDragCleanup?.();
   charts.splice(0).forEach((chart) => chart.destroy());
   marketRsDetailChart = null;
+  marketRsVolumeChart = null;
   marketTrendDetailChart = null;
 }
 
@@ -12184,8 +12187,13 @@ function isMarketRsChartSeriesVisible(key) {
   return state.rsChartSeries?.[key] !== false;
 }
 
+function isMarketRsVolumeVisible() {
+  return state.rsVolumeVisible !== false;
+}
+
 function refreshMarketRsChartOnly() {
   const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
+  const volumeCanvas = usOverviewRoot.querySelector('[data-rs-chart="volume"]');
   const mddCanvas = usOverviewRoot.querySelector('[data-rs-chart="mdd"]');
   const atrCanvas = usOverviewRoot.querySelector('[data-rs-chart="atr"]');
   const selected = marketRsRowByTicker.get(state.rsSelectedTicker) ?? marketRsData.rows?.[0] ?? null;
@@ -12194,6 +12202,7 @@ function refreshMarketRsChartOnly() {
   }
   destroyCharts();
   createMarketRsChart(detailCanvas, selected);
+  createMarketRsVolumeChart(volumeCanvas, selected);
   createMarketRsMddChart(mddCanvas, selected);
   createMarketRsAtrChart(atrCanvas, selected);
 }
@@ -12512,6 +12521,7 @@ function zoomMarketRsChartToLatest(direction) {
     chart.update("none");
   }
   fitMarketRsChartYToVisible(chart);
+  syncMarketRsVolumeChartX(chart);
 }
 
 const MARKET_RS_INTERACTION_MODE = "marketRsEarningsAware";
@@ -12980,7 +12990,10 @@ function createMarketRsChart(canvas, row) {
             enabled: true,
             mode: "x",
             threshold: 5,
-            onPanComplete: ({ chart: activeChart }) => fitMarketRsChartYToVisible(activeChart),
+            onPanComplete: ({ chart: activeChart }) => {
+              fitMarketRsChartYToVisible(activeChart);
+              syncMarketRsVolumeChartX(activeChart);
+            },
           },
           zoom: {
             wheel: {
@@ -12991,7 +13004,10 @@ function createMarketRsChart(canvas, row) {
               enabled: true,
             },
             mode: "x",
-            onZoomComplete: ({ chart: activeChart }) => fitMarketRsChartYToVisible(activeChart),
+            onZoomComplete: ({ chart: activeChart }) => {
+              fitMarketRsChartYToVisible(activeChart);
+              syncMarketRsVolumeChartX(activeChart);
+            },
           },
         },
       },
@@ -13060,6 +13076,148 @@ function createMarketRsChart(canvas, row) {
   attachMarketRsYAxisDrag(chart);
   updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, paddedPrice, latestDataIndex);
   charts.push(chart);
+}
+
+function formatMarketRsVolume(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  if (Math.abs(numeric) >= 1_000_000_000) {
+    return `${(numeric / 1_000_000_000).toFixed(2)}B`;
+  }
+  if (Math.abs(numeric) >= 1_000_000) {
+    return `${(numeric / 1_000_000).toFixed(1)}M`;
+  }
+  if (Math.abs(numeric) >= 1_000) {
+    return `${(numeric / 1_000).toFixed(0)}K`;
+  }
+  return numeric.toFixed(0);
+}
+
+function syncMarketRsVolumeChartX(priceChart = marketRsDetailChart) {
+  const sourceX = priceChart?.scales?.x;
+  const targetX = marketRsVolumeChart?.options?.scales?.x;
+  if (!sourceX || !targetX) {
+    return;
+  }
+  const nextMin = Number.isFinite(sourceX.min) ? sourceX.min : undefined;
+  const nextMax = Number.isFinite(sourceX.max) ? sourceX.max : undefined;
+  if (targetX.min === nextMin && targetX.max === nextMax) {
+    return;
+  }
+  if (nextMin === undefined) {
+    delete targetX.min;
+  } else {
+    targetX.min = nextMin;
+  }
+  if (nextMax === undefined) {
+    delete targetX.max;
+  } else {
+    targetX.max = nextMax;
+  }
+  marketRsVolumeChart.update("none");
+}
+
+function createMarketRsVolumeChart(canvas, row) {
+  if (typeof Chart === "undefined" || !canvas || !row || !isMarketRsVolumeVisible()) {
+    return;
+  }
+  const history = marketRsData.histories?.[row.ticker];
+  const labels = marketRsData.historyDates ?? [];
+  if (!history || !labels.length) {
+    return;
+  }
+
+  const minStart = labels[0];
+  const latestDate = labels[labels.length - 1];
+  const startDate = shiftDateByRange(latestDate, state.rsHistoryRange, minStart, labels);
+  const startIndex = Math.max(0, labels.findIndex((label) => label >= startDate));
+  const selectedLabels = labels.slice(startIndex);
+  const fullPrice = history.price ?? [];
+  const selectedVolume = (history.volume ?? []).slice(startIndex).map((value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+  });
+  if (!selectedVolume.some((value) => Number.isFinite(value))) {
+    return;
+  }
+
+  const edgePaddingCount = Math.max(1, Math.min(10, Math.round(selectedLabels.length * 0.012)));
+  const padSeries = (values, paddingValue = null) => [
+    ...Array(edgePaddingCount).fill(paddingValue),
+    ...values,
+    ...Array(edgePaddingCount).fill(paddingValue),
+  ];
+  const chartLabels = [
+    ...Array.from({ length: edgePaddingCount }, (_, index) => `__rs_left_${index}`),
+    ...selectedLabels,
+    ...Array.from({ length: edgePaddingCount }, (_, index) => `__rs_right_${index}`),
+  ];
+  const barColors = selectedLabels.map((_, index) => {
+    const close = Number(fullPrice[startIndex + index]);
+    const previousClose = Number(fullPrice[startIndex + index - 1]);
+    if (!Number.isFinite(close) || !Number.isFinite(previousClose)) {
+      return "rgba(100, 116, 139, 0.58)";
+    }
+    return close >= previousClose ? "rgba(8, 153, 129, 0.72)" : "rgba(242, 54, 69, 0.72)";
+  });
+
+  const chart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: chartLabels,
+      datasets: [
+        {
+          label: "Volume",
+          data: padSeries(selectedVolume),
+          backgroundColor: padSeries(barColors, "transparent"),
+          borderWidth: 0,
+          borderRadius: 1,
+          maxBarThickness: 16,
+          categoryPercentage: 0.9,
+          barPercentage: 0.92,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: { padding: { left: 16, right: 16 } },
+      interaction: { mode: "index", axis: "x", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          displayColors: false,
+          callbacks: {
+            title: (items) => items?.[0]?.label ?? "",
+            label: (context) => `Volume ${formatMarketRsVolume(context.parsed.y)} shares`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          offset: true,
+          display: false,
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          position: "right",
+          grid: { color: "rgba(28, 28, 26, 0.07)" },
+          ticks: {
+            color: "#69706a",
+            maxTicksLimit: 3,
+            callback: (value) => formatMarketRsVolume(value),
+          },
+        },
+      },
+    },
+  });
+  marketRsVolumeChart = chart;
+  charts.push(chart);
+  syncMarketRsVolumeChartX();
 }
 
 function createMarketRsMddChart(canvas, row) {
@@ -13813,6 +13971,13 @@ function renderMarketRsOverview() {
               <div class="market-rs-price-style-toggle" role="group" aria-label="Price chart style">${rsPriceChartTypeButtons}</div>
             </div>
             <div class="market-rs-chart-control-row">
+              <span>Volume</span>
+              <label class="market-rs-volume-toggle">
+                <input type="checkbox" data-rs-volume-toggle ${isMarketRsVolumeVisible() ? "checked" : ""} />
+                <span>Show volume</span>
+              </label>
+            </div>
+            <div class="market-rs-chart-control-row">
               <span>Chart Lines</span>
               <div class="market-rs-chip-row">${rsChartSeriesChips}</div>
             </div>
@@ -13822,6 +13987,12 @@ function renderMarketRsOverview() {
             <div class="market-rs-ema-readout" data-rs-ema-readout aria-label="Selected EMA values"></div>
             <canvas data-rs-chart="detail"></canvas>
           </div>
+          ${isMarketRsVolumeVisible() ? `
+            <div class="chart-wrap market-rs-volume-chart-wrap">
+              <div class="market-rs-volume-head"><strong>Volume</strong><span>Daily shares</span></div>
+              <canvas data-rs-chart="volume"></canvas>
+            </div>
+          ` : ""}
           <div class="market-rs-risk-chart-grid">
             <div>
               <div class="chart-wrap market-rs-mdd-chart-wrap">
@@ -14026,6 +14197,13 @@ function renderMarketRsOverview() {
       refreshMarketRsChartOnly();
     });
   });
+  const rsVolumeToggle = usOverviewRoot.querySelector("[data-rs-volume-toggle]");
+  if (rsVolumeToggle) {
+    rsVolumeToggle.addEventListener("change", () => {
+      state.rsVolumeVisible = rsVolumeToggle.checked;
+      render();
+    });
+  }
   usOverviewRoot.querySelectorAll("[data-rs-chart-zoom]").forEach((button) => {
     button.addEventListener("click", () => {
       if (!marketRsDetailChart) {
@@ -14035,6 +14213,7 @@ function renderMarketRsOverview() {
       if (action === "reset" && typeof marketRsDetailChart.resetZoom === "function") {
         marketRsDetailChart.resetZoom();
         fitMarketRsChartYToVisible(marketRsDetailChart);
+        syncMarketRsVolumeChartX(marketRsDetailChart);
       } else if (action === "in") {
         zoomMarketRsChartToLatest("in");
       } else if (action === "out") {
@@ -14077,6 +14256,7 @@ function renderMarketRsOverview() {
   const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
   if (detailCanvas && selected) {
     createMarketRsChart(detailCanvas, selected);
+    createMarketRsVolumeChart(usOverviewRoot.querySelector('[data-rs-chart="volume"]'), selected);
     createMarketRsMddChart(usOverviewRoot.querySelector('[data-rs-chart="mdd"]'), selected);
     createMarketRsAtrChart(usOverviewRoot.querySelector('[data-rs-chart="atr"]'), selected);
   }
