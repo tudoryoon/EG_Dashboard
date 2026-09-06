@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-05",
+  "updatedAt": "2026-09-06",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-05",
+  "calendarToday": "2026-09-06",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 14,
