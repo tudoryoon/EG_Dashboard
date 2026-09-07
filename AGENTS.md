@@ -1,5 +1,11 @@
 # Dashboard Contribution Rules
 
+## Authorized delivery workflow
+
+- The user authorizes implementation requests for this dashboard to include validation, a scoped commit, and a normal push to `origin/main` without asking again for push approval.
+- Honor explicit requests for review only, no changes, or no push. Keep unrelated changes out of the commit and do not force-push.
+- This preference does not override tool-enforced permissions. If automatic approval review blocks a push, provide the existing authorization as evidence; if it remains blocked, report the actual reason without bypassing the restriction.
+
 ## Daily Briefing ticker additions
 
 - Whenever a ticker is added to a Daily Briefing sector, it must also be available in the RS, Trend Score, and CANSLIM tabs.
