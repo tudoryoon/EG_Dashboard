@@ -1,14 +1,14 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-06",
+  "updatedAt": "2026-09-07",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-06",
+  "calendarToday": "2026-09-07",
   "coverage": {
     "dailyBriefingUniverse": 211,
-    "matchedEarnings": 14,
-    "matchedMacro": 9,
-    "windowStart": "2026-08-31",
-    "windowEnd": "2026-09-27"
+    "matchedEarnings": 5,
+    "matchedMacro": 10,
+    "windowStart": "2026-09-07",
+    "windowEnd": "2026-10-04"
   },
   "methodology": {
     "macro": "미국 Macro는 BLS·BEA·U.S. Census Bureau·ISM의 공식 발표 일정에서 매일 갱신",
@@ -21,225 +21,8 @@ window.studyCalendarData = {
     {
       "key": "this-week",
       "label": "이번 주",
-      "range": "2026.08.31 - 09.06",
-      "status": "진행 중",
-      "events": [
-        {
-          "date": "2026-09-01",
-          "time": "23:00",
-          "kind": "macro",
-          "title": "ISM 제조업 PMI",
-          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
-          "sourceLabel": "ISM",
-          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-          "usDate": "2026-09-01",
-          "kstDate": "2026-09-01"
-        },
-        {
-          "date": "2026-09-01",
-          "time": "23:00",
-          "kind": "macro",
-          "title": "JOLTS 구인·이직 보고서",
-          "note": "구인·채용·퇴직 · July 2026 · BLS 2026 공식 발표 일정 · 미국 10:00 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-09-01",
-          "kstDate": "2026-09-01"
-        },
-        {
-          "date": "2026-09-01",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "CRDO",
-          "session": "",
-          "title": "Credo Technology Group Holding Ltd (CRDO) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.93 · Nasdaq/Zacks 예상 일정",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
-          "usDate": "2026-09-01",
-          "kstDate": "2026-09-01",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-01",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "DELL",
-          "session": "",
-          "title": "Dell Technologies Inc. (DELL) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $4.72 · Nasdaq/Zacks 예상 일정",
-          "sector": "PC/서버 OEM",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
-          "usDate": "2026-09-01",
-          "kstDate": "2026-09-01",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-01",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "MDB",
-          "session": "",
-          "title": "MongoDB, Inc. (MDB) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.08 · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
-          "usDate": "2026-09-01",
-          "kstDate": "2026-09-01",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-01",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "PANW",
-          "session": "",
-          "title": "Palo Alto Networks, Inc. (PANW) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.51 · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-01",
-          "usDate": "2026-09-01",
-          "kstDate": "2026-09-01",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-02",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "AVGO",
-          "session": "",
-          "title": "Broadcom Inc. (AVGO) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $2.83 · Nasdaq/Zacks 예상 일정",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
-          "usDate": "2026-09-02",
-          "kstDate": "2026-09-02",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-02",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "HPE",
-          "session": "",
-          "title": "Hewlett Packard Enterprise Company (HPE) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.82 · Nasdaq/Zacks 예상 일정",
-          "sector": "PC/서버 OEM",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
-          "usDate": "2026-09-02",
-          "kstDate": "2026-09-02",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-02",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "NTAP",
-          "session": "",
-          "title": "NetApp, Inc. (NTAP) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.72 · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
-          "usDate": "2026-09-02",
-          "kstDate": "2026-09-02",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-02",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "SNOW",
-          "session": "",
-          "title": "Snowflake Inc. (SNOW) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.51) · Nasdaq/Zacks 예상 일정",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-02",
-          "usDate": "2026-09-02",
-          "kstDate": "2026-09-02",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-03",
-          "time": "23:00",
-          "kind": "macro",
-          "title": "ISM 서비스업 PMI",
-          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
-          "sourceLabel": "ISM",
-          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-          "usDate": "2026-09-03",
-          "kstDate": "2026-09-03"
-        },
-        {
-          "date": "2026-09-03",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "CIEN",
-          "session": "",
-          "title": "Ciena Corporation (CIEN) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $1.46 · Nasdaq/Zacks 예상 일정",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
-          "usDate": "2026-09-03",
-          "kstDate": "2026-09-03",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-03",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "PL",
-          "session": "",
-          "title": "Planet Labs PBC (PL) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 ($0.18) · Nasdaq/Zacks 예상 일정",
-          "sector": "우주",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
-          "usDate": "2026-09-03",
-          "kstDate": "2026-09-03",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-03",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "ZS",
-          "session": "",
-          "title": "Zscaler, Inc. (ZS) 실적 발표",
-          "note": "회계분기 종료 Jul/2026 · EPS 컨센서스 $0.06 · Nasdaq/Zacks 예상 일정",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-03",
-          "usDate": "2026-09-03",
-          "kstDate": "2026-09-03",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-04",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "미국 고용보고서",
-          "note": "비농업고용·실업률·시간당 평균임금 · August 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-09-04",
-          "kstDate": "2026-09-04"
-        }
-      ]
-    },
-    {
-      "key": "next-week",
-      "label": "다음 주",
       "range": "2026.09.07 - 09.13",
-      "status": "예정",
+      "status": "진행 중",
       "events": [
         {
           "date": "2026-09-10",
@@ -281,8 +64,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-3",
-      "label": "3주차",
+      "key": "next-week",
+      "label": "다음 주",
       "range": "2026.09.14 - 09.20",
       "status": "예정",
       "events": [
@@ -311,8 +94,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-4",
-      "label": "4주차",
+      "key": "week-3",
+      "label": "3주차",
       "range": "2026.09.21 - 09.27",
       "status": "예정",
       "events": [
@@ -356,6 +139,99 @@ window.studyCalendarData = {
           "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
           "usDate": "2026-09-25",
           "kstDate": "2026-09-25"
+        }
+      ]
+    },
+    {
+      "key": "week-4",
+      "label": "4주차",
+      "range": "2026.09.28 - 10.04",
+      "status": "예정",
+      "events": [
+        {
+          "date": "2026-09-29",
+          "time": "23:00",
+          "kind": "macro",
+          "title": "JOLTS 구인·이직 보고서",
+          "note": "구인·채용·퇴직 · August 2026 · BLS 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-09-29",
+          "kstDate": "2026-09-29"
+        },
+        {
+          "date": "2026-09-30",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "MU",
+          "session": "A",
+          "title": "Micron Technology, Inc. (MU) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $31.17 · Nasdaq/Zacks 예상 일정",
+          "sector": "반도체(대형주)",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-30",
+          "usDate": "2026-09-30",
+          "kstDate": "2026-10-01",
+          "confirmed": false
+        },
+        {
+          "date": "2026-09-30",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "PCE 물가 · 개인소득/지출",
+          "note": "Headline·Core PCE · Personal Income and Outlays, August 2026 · 미국 08:30 ET",
+          "sourceLabel": "BEA",
+          "sourceUrl": "https://www.bea.gov/news/schedule",
+          "usDate": "2026-09-30",
+          "kstDate": "2026-09-30"
+        },
+        {
+          "date": "2026-09-30",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "미국 GDP",
+          "note": "GDP (Third Estimate), Industries, Corporate Profits, State GDP, and State Personal Income, 2nd Quarter 2026; State PCE, 2025 · 미국 08:30 ET",
+          "sourceLabel": "BEA",
+          "sourceUrl": "https://www.bea.gov/news/schedule",
+          "usDate": "2026-09-30",
+          "kstDate": "2026-09-30"
+        },
+        {
+          "date": "2026-10-01",
+          "time": "05:00 이후",
+          "kind": "earnings",
+          "ticker": "NKE",
+          "session": "A",
+          "title": "Nike, Inc. (NKE) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $0.45 · Nasdaq/Zacks 예상 일정",
+          "sector": "경기 소비재",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-01",
+          "usDate": "2026-10-01",
+          "kstDate": "2026-10-02",
+          "confirmed": false
+        },
+        {
+          "date": "2026-10-01",
+          "time": "23:00",
+          "kind": "macro",
+          "title": "ISM 제조업 PMI",
+          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "ISM",
+          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+          "usDate": "2026-10-01",
+          "kstDate": "2026-10-01"
+        },
+        {
+          "date": "2026-10-02",
+          "time": "21:30",
+          "kind": "macro",
+          "title": "미국 고용보고서",
+          "note": "비농업고용·실업률·시간당 평균임금 · September 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-10-02",
+          "kstDate": "2026-10-02"
         }
       ]
     }
