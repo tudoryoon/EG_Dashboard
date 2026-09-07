@@ -46,7 +46,7 @@ const marketVixData = window.marketVixData ?? {
   snapshots: [],
 };
 const macroIndicatorsData = window.macroIndicatorsData ?? { updatedAt: "", commonStartMonth: "2016-01", indicators: [], categories: [] };
-const marketRsData = window.marketRsData ?? {
+let marketRsData = window.marketRsData ?? {
   updatedAt: "",
   benchmark: { symbol: "^GSPC", label: "S&P 500" },
   historyDates: [],
@@ -58,7 +58,7 @@ const marketRsData = window.marketRsData ?? {
 };
 const marketCanslimData = window.marketCanslimData ?? { updatedAt: "", scope: {}, profiles: {} };
 const marketCanslimEarningsData = window.marketCanslimEarningsData ?? { updatedAt: "", scope: {}, profiles: {} };
-const marketTrendScoreData = window.marketTrendScoreData ?? {
+let marketTrendScoreData = window.marketTrendScoreData ?? {
   updatedAt: "",
   historyDates: [],
   ranges: [],
@@ -117,7 +117,7 @@ const primaryTabMeta = {
   Tech: { label: "Tech", className: "is-tech", defaultView: "LLM" },
   AIData: { label: "AI Data", className: "is-ai-data", defaultView: "TokenPrice" },
   Flows: { label: "Flows", className: "is-flows", defaultView: "EtfStatus" },
-  Taiwan: { label: "Taiwan", className: "is-taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
+  Taiwan: { label: "China & HK & Taiwan", className: "is-taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Research: { label: "Research", className: "is-research", defaultView: "DataCenter" },
 };
 
@@ -354,6 +354,7 @@ const FX_CURRENCY_OPTIONS = [
 const state = {
   tab: "DailyBriefing",
   screeningView: "RS",
+  asiaView: "Taiwan",
   marketView: "Index",
   marketIndexView: "Trend",
   techView: "LLM",
@@ -578,7 +579,10 @@ const DASHBOARD_ROUTE_META = {
       Cds: "cds",
     },
   },
-  Taiwan: { slug: "taiwan" },
+  Taiwan: {
+    slug: "taiwan", viewStateKey: "asiaView", defaultView: "Taiwan",
+    views: { Taiwan: "overview", HongKongRS: "hong-kong-rs", HongKongTrend: "hong-kong-trend", ChinaRS: "china-rs", ChinaTrend: "china-trend" },
+  },
   Research: {
     slug: "research",
     viewStateKey: "researchView",
@@ -687,6 +691,80 @@ function handleDashboardRouteChange() {
 const marketCanslimAnalysisCache = new Map();
 let marketCanslimDirectionCache = null;
 const marketRsRowByTicker = new Map((marketRsData.rows ?? []).map((row) => [row.ticker, row]));
+
+const usScreeningData = { rs: marketRsData, trend: marketTrendScoreData };
+const asiaScreeningData = {};
+const asiaScreeningLoads = {};
+const asiaScreeningErrors = {};
+const screeningContextStates = {};
+let screeningContext = "us";
+const screeningStateKeys = Object.keys(state).filter((key) => key.startsWith("rs") || key.startsWith("trendScore") || key === "query");
+const defaultScreeningState = structuredClone(Object.fromEntries(screeningStateKeys.map((key) => [key, state[key]])));
+
+function getAsiaScreeningRegion() {
+  if (state.tab !== "Taiwan") return "";
+  if (state.asiaView.startsWith("HongKong")) return "hk";
+  if (state.asiaView.startsWith("China")) return "cn";
+  return "";
+}
+
+function setScreeningContext(region = "us") {
+  if (screeningContext === region) return;
+  screeningContextStates[screeningContext] = structuredClone(Object.fromEntries(screeningStateKeys.map((key) => [key, state[key]])));
+  const next = screeningContextStates[region] ?? {
+    ...structuredClone(defaultScreeningState), rsBriefingSector: "all", trendScoreBriefingSector: "all",
+    rsNewHighBriefingOnly: false, rsPeriodLeadersBriefingOnly: false,
+    rsNewHighLargeCapOnly: false, rsPeriodLeadersLargeCapOnly: false,
+  };
+  Object.assign(state, next);
+  const data = region === "us" ? usScreeningData : asiaScreeningData[region];
+  marketRsData = data.rs;
+  marketTrendScoreData = data.trend;
+  marketRsRowByTicker.clear();
+  marketRsData.rows.forEach((row) => marketRsRowByTicker.set(row.ticker, row));
+  screeningContext = region;
+  if (searchInput) searchInput.value = state.query;
+}
+
+function ensureAsiaScreeningLoaded(region) {
+  if (asiaScreeningData[region]) return true;
+  if (!asiaScreeningLoads[region] && !asiaScreeningErrors[region]) {
+    asiaScreeningLoads[region] = fetch(`./data/asia-${region}-screening.json`, { cache: "no-cache" })
+      .then((response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
+      .then((data) => {
+        if (!data.rs?.rows?.length || !data.trend?.rows?.all?.length) throw new Error("Empty screening data");
+        asiaScreeningData[region] = data;
+      })
+      .catch((error) => { asiaScreeningErrors[region] = error.message; })
+      .finally(() => { delete asiaScreeningLoads[region]; if (getAsiaScreeningRegion() === region) render(); });
+  }
+  return false;
+}
+
+function renderAsiaScreening(region) {
+  const data = asiaScreeningData[region];
+  if (!data) {
+    companyGrid.classList.add("hidden");
+    usOverviewRoot.classList.remove("hidden");
+    usOverviewRoot.innerHTML = `<p>${asiaScreeningErrors[region] ? "데이터를 불러오지 못했습니다." : "종목 데이터를 불러오는 중..."}</p>${asiaScreeningErrors[region] ? '<button type="button" data-asia-retry>다시 시도</button>' : ""}`;
+    usOverviewRoot.querySelector("[data-asia-retry]")?.addEventListener("click", () => { delete asiaScreeningErrors[region]; render(); });
+    return;
+  }
+  if (state.asiaView.endsWith("Trend")) renderMarketTrendScoreOverview();
+  else renderMarketRsOverview();
+  const labels = document.createTreeWalker(usOverviewRoot, NodeFilter.SHOW_TEXT);
+  while (labels.nextNode()) {
+    labels.currentNode.textContent = labels.currentNode.textContent.replaceAll("Daily Briefing 종목", "관심종목").replaceAll("Daily Briefing", "관심종목").replaceAll("Briefing Sector", "분류").replaceAll("Briefing", "분류");
+  }
+  const meta = data.meta;
+  summaryText.textContent = `${meta.label} · ${meta.covered}/${meta.requested} 종목 · 주가 ${meta.currency} / 시총 USD · 상대추세 기준 ${meta.benchmarkLabel}`;
+  const note = document.createElement("details");
+  note.className = "asia-screening-sources";
+  const provisional = data.rs.rows.filter((row) => row.provisional).length;
+  const missing = Object.keys(meta.missing ?? {});
+  note.innerHTML = `<summary>구성종목 출처 · 데이터 기준</summary><p>${escapeHtml(meta.benchmarkNote)}. RS는 각 시장의 현재 개별주 유니버스에서 계산하며 ETF는 순위 산출에서 제외합니다. 1년 미만 이력 ${provisional}개는 가용 기간 RS이며, 200거래일 미만 추세스코어는 미산출입니다. 과거 RS도 현재 구성종목 기준입니다.</p><p>${meta.sources.map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.label)} (${source.count})</a>`).join(" · ")}</p>${missing.length ? `<p>수집 누락: ${escapeHtml(missing.join(", "))}</p>` : ""}`;
+  usOverviewRoot.prepend(note);
+}
 
 const charts = [];
 let marketRsDetailChart = null;
@@ -10349,7 +10427,7 @@ function formatDollarPrice(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
   }
-  return `$${Number(value).toFixed(2)}`;
+  return getAsiaScreeningRegion() ? formatUsStockPrice(value) : `$${Number(value).toFixed(2)}`;
 }
 
 function getExtensionZoneLabel(zone) {
@@ -10432,7 +10510,7 @@ function renderMarketRsExtensionGauge(metric) {
 }
 
 function formatMarketCapCompact(value) {
-  if (!Number.isFinite(Number(value))) {
+  if (value == null || !Number.isFinite(Number(value))) {
     return "-";
   }
   const numeric = Number(value);
@@ -11566,12 +11644,12 @@ function renderMarketCanslimOverview() {
 }
 
 function formatUsStockPrice(value, maximumFractionDigits = 2) {
-  if (!Number.isFinite(Number(value))) {
+  if (value == null || !Number.isFinite(Number(value))) {
     return "-";
   }
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: getAsiaScreeningRegion() === "hk" ? "HKD" : getAsiaScreeningRegion() === "cn" ? "CNY" : "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits,
   }).format(Number(value));
@@ -11673,6 +11751,17 @@ function matchesMarketRsNewHighFilter(row, universeKey, filterKey = state.rsFilt
 }
 
 function getMarketRsBriefingSectorData() {
+  const region = getAsiaScreeningRegion();
+  if (region && asiaScreeningData[region]) {
+    const data = asiaScreeningData[region];
+    const groups = [
+      ...data.meta.sources.map((source) => ({ key: source.label, label: source.label, tickers: data.rs.rows.filter((row) => row.groups?.includes(source.label === "Hang Seng Composite" ? "HSCI" : source.label)).map((row) => row.ticker) })),
+      { key: "etf", label: "ETF", tickers: data.rs.rows.filter((row) => row.assetType === "ETF").map((row) => row.ticker) },
+      ...[".HK", ".SS", ".SZ"].map((suffix) => ({ key: suffix, label: { ".HK": "Hong Kong", ".SS": "Shanghai", ".SZ": "Shenzhen" }[suffix], tickers: data.rs.rows.filter((row) => row.ticker.endsWith(suffix)).map((row) => row.ticker) })),
+    ].filter((group) => group.tickers.length);
+    const tickerToSectors = new Map(data.rs.rows.map((row) => [row.ticker, [{ key: row.assetType, label: row.provisional ? `${row.assetType} · 이력 ${row.historySessions}일` : row.assetType }]]));
+    return { groups, tickerToSectors, allTickers: data.meta.watchlist };
+  }
   const groups = (window.marketBriefingData?.sectorPanels ?? [])
     .map((sector) => {
       const tickers = [
@@ -12244,10 +12333,13 @@ function updateMarketRsEmaReadout(labels, emaSeries, priceSeries, index) {
     return;
   }
 
-  const safeIndex = Math.max(0, Math.min(labels.length - 1, Number.isFinite(index) ? index : labels.length - 1));
-  const stockPrice = Number(priceSeries?.[safeIndex]);
+  const firstPriceIndex = priceSeries.findIndex((value) => value != null && Number.isFinite(Number(value)));
+  const lastPriceIndex = priceSeries.findLastIndex((value) => value != null && Number.isFinite(Number(value)));
+  const safeIndex = Math.max(Math.max(0, firstPriceIndex), Math.min(Math.max(0, lastPriceIndex), Number.isFinite(index) ? index : lastPriceIndex));
+  const stockPrice = priceSeries?.[safeIndex] == null ? NaN : Number(priceSeries[safeIndex]);
   const items = selectedSeries.map((series) => {
-    const value = Number(emaSeries[series.key]?.[safeIndex]);
+    const rawValue = emaSeries[series.key]?.[safeIndex];
+    const value = rawValue == null ? NaN : Number(rawValue);
     const gap = Number.isFinite(stockPrice) && stockPrice > 0 && Number.isFinite(value) && value > 0
       ? ((stockPrice / value) - 1) * 100
       : null;
@@ -21484,6 +21576,7 @@ function renderCountries() {
     button.className = `country-button${state.tab === tabKey ? " active" : ""}${meta.className ? ` ${meta.className}` : ""}`;
     button.textContent = meta.label;
     button.addEventListener("click", () => {
+      if (tabKey !== "Taiwan") setScreeningContext("us");
       state.tab = tabKey;
       if (tabKey === "Taiwan") {
         state.currency = meta.defaultCurrency;
@@ -21522,7 +21615,11 @@ function renderSubtabs() {
   let activeKey = "";
   let setActive = null;
 
-  if (state.tab === "Screening") {
+  if (state.tab === "Taiwan") {
+    entries = Object.entries({ Taiwan: { label: "Taiwan" }, HongKongRS: { label: "Hong Kong · RS" }, HongKongTrend: { label: "Hong Kong · 추세스코어" }, ChinaRS: { label: "China · RS" }, ChinaTrend: { label: "China · 추세스코어" } });
+    activeKey = state.asiaView;
+    setActive = (viewKey) => { state.asiaView = viewKey; };
+  } else if (state.tab === "Screening") {
     entries = Object.entries(screeningSubtabMeta);
     activeKey = state.screeningView;
     setActive = (viewKey) => {
@@ -21620,7 +21717,7 @@ function renderNestedSubtabs() {
 
 function renderCurrencies() {
   currencySwitch.innerHTML = "";
-  if (state.tab !== "Taiwan") {
+  if (state.tab !== "Taiwan" || getAsiaScreeningRegion()) {
     return;
   }
   primaryTabMeta.Taiwan.currencies.forEach((currency) => {
@@ -21638,7 +21735,7 @@ function renderCurrencies() {
 
 function renderSectors() {
   sectorChips.innerHTML = "";
-  if (state.tab !== "Taiwan") {
+  if (state.tab !== "Taiwan" || getAsiaScreeningRegion()) {
     sectorChips.classList.add("hidden");
     return;
   }
@@ -22297,13 +22394,17 @@ function renderOpenrouterOverview() {
 function render() {
   syncDashboardRoute();
   destroyCharts();
+  const asiaRegion = getAsiaScreeningRegion();
+  const asiaReady = !asiaRegion || ensureAsiaScreeningLoaded(asiaRegion);
+  if (!asiaRegion) setScreeningContext("us");
+  else if (asiaReady) setScreeningContext(asiaRegion);
   ensureValidSelection();
-  const showRsToolbar = state.tab === "Screening" && ["RS", "TrendScore", "Canslim"].includes(state.screeningView);
+  const showRsToolbar = Boolean(asiaRegion) || (state.tab === "Screening" && ["RS", "TrendScore", "Canslim"].includes(state.screeningView));
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
   }
   if (sortBox) {
-    sortBox.classList.toggle("hidden", state.tab !== "Taiwan");
+    sortBox.classList.toggle("hidden", state.tab !== "Taiwan" || Boolean(asiaRegion));
   }
   if (searchInput) {
     if (showRsToolbar) {
@@ -22326,6 +22427,11 @@ function render() {
   renderNestedSubtabs();
   renderCurrencies();
   renderSectors();
+
+  if (asiaRegion) {
+    renderAsiaScreening(asiaRegion);
+    return;
+  }
 
   if (state.tab === "DailyBriefing") {
     renderSummary([]);
@@ -22443,12 +22549,12 @@ searchInput.addEventListener("input", (event) => {
     window.clearTimeout(searchRenderTimer);
     searchRenderTimer = null;
   }
-  if (state.tab === "Screening") {
+  if (state.tab === "Screening" || getAsiaScreeningRegion()) {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
-      if (state.screeningView === "RS") {
+      if (getAsiaScreeningRegion() ? state.asiaView.endsWith("RS") : state.screeningView === "RS") {
         resetRsCardLimit();
-      } else if (state.screeningView === "TrendScore") {
+      } else if (getAsiaScreeningRegion() || state.screeningView === "TrendScore") {
         resetTrendScoreCardLimit();
       }
       if (state.screeningView === "Canslim") {

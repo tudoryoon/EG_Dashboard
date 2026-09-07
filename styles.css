@@ -9637,6 +9637,10 @@ h1 {
   gap: 14px;
 }
 
+.market-rs-risk-chart-grid > div {
+  min-width: 0;
+}
+
 .trend-score-overview .market-rs-chart-wrap {
   height: 300px;
 }
@@ -11054,3 +11058,12 @@ h1 {
     grid-column: auto;
   }
 }
+.asia-screening-sources {
+  margin: 12px 0;
+  padding: 10px 0;
+  border-bottom: 1px solid #dfe3e0;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.asia-screening-sources summary { cursor: pointer; }
