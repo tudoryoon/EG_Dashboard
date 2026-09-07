@@ -23,6 +23,17 @@
       "sharesOutstanding": 80242767
     },
     {
+      "ticker": "ACWI",
+      "name": "iShares MSCI ACWI ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 205370944
+    },
+    {
       "ticker": "AIRR",
       "name": "First Trust RBA American Industrial RenaissanceTM ETF",
       "memberships": {
@@ -87,6 +98,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 1064053821
+    },
+    {
+      "ticker": "ASHR",
+      "name": "Xtrackers Harvest CSI 300 China A-Shares ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 46237571
     },
     {
       "ticker": "ASML",
@@ -320,6 +342,17 @@
       "sharesOutstanding": 50059303
     },
     {
+      "ticker": "DIVO",
+      "name": "Amplify CWP Enhanced Dividend Income ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 163521576
+    },
+    {
       "ticker": "DRAM",
       "name": "Roundhill Memory ETF",
       "memberships": {
@@ -483,6 +516,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 281049984
+    },
+    {
+      "ticker": "JQUA",
+      "name": "JPMorgan U.S. Quality Factor ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 117372805
     },
     {
       "ticker": "KRMN",
@@ -815,6 +859,17 @@
       "sharesOutstanding": 346600000
     },
     {
+      "ticker": "SOXX",
+      "name": "iShares Semiconductor ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 7650000
+    },
+    {
       "ticker": "SPCE",
       "name": "Virgin Galactic Holdings, Inc.",
       "memberships": {
@@ -925,6 +980,17 @@
       "sharesOutstanding": 41751700
     },
     {
+      "ticker": "VEU",
+      "name": "Vanguard FTSE All-World ex-US Index Fund ETF Shares",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 462657984
+    },
+    {
       "ticker": "VGT",
       "name": "Vanguard Information Technology Index Fund ETF Shares",
       "memberships": {
@@ -1000,6 +1066,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 272056000
+    },
+    {
+      "ticker": "XME",
+      "name": "State Street SPDR S&P Metals & Mining ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 17500200
     },
     {
       "ticker": "XOP",
