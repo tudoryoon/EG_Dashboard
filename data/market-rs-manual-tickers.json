@@ -23,6 +23,17 @@
       "sharesOutstanding": 80242767
     },
     {
+      "ticker": "AIRR",
+      "name": "First Trust RBA American Industrial RenaissanceTM ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 86914921
+    },
+    {
       "ticker": "ALAB",
       "name": "Astera Labs, Inc.",
       "memberships": {
@@ -188,6 +199,17 @@
       "sharesOutstanding": 340252659
     },
     {
+      "ticker": "BLOK",
+      "name": "Amplify Blockchain Technology ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 16906211
+    },
+    {
       "ticker": "BMNR",
       "name": "Bitmine Immersion Technologies, Inc.",
       "memberships": {
@@ -287,6 +309,17 @@
       "sharesOutstanding": 545570346
     },
     {
+      "ticker": "DFEV",
+      "name": "Dimensional Emerging Markets Value ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 50059303
+    },
+    {
       "ticker": "DRAM",
       "name": "Roundhill Memory ETF",
       "memberships": {
@@ -309,6 +342,28 @@
       "sharesOutstanding": 59440526
     },
     {
+      "ticker": "EWT",
+      "name": "iShares MSCI Taiwan ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 85000000
+    },
+    {
+      "ticker": "EWY",
+      "name": "iShares MSCI South Korea ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 75600000
+    },
+    {
       "ticker": "FTAI",
       "name": "FTAI Aviation Ltd.",
       "memberships": {
@@ -318,6 +373,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 102582972
+    },
+    {
+      "ticker": "FTEC",
+      "name": "Fidelity MSCI Information Technology Index ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 73432664
     },
     {
       "ticker": "GDX",
@@ -364,6 +430,17 @@
       "sharesOutstanding": 69700000
     },
     {
+      "ticker": "IGM",
+      "name": "iShares Expanded Tech Sector ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 7700000
+    },
+    {
       "ticker": "ILMN",
       "name": "Illumina, Inc.",
       "memberships": {
@@ -397,6 +474,17 @@
       "sharesOutstanding": 357378674
     },
     {
+      "ticker": "IWM",
+      "name": "iShares Russell 2000 ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 281049984
+    },
+    {
       "ticker": "KRMN",
       "name": "Karman Holdings Inc.",
       "memberships": {
@@ -417,6 +505,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 187519984
+    },
+    {
+      "ticker": "MAGS",
+      "name": "Roundhill Magnificent Seven ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 61555570
     },
     {
       "ticker": "MDB",
@@ -584,6 +683,17 @@
       "sharesOutstanding": 12054599
     },
     {
+      "ticker": "QTEC",
+      "name": "First Trust NASDAQ-100-Technology Sector Index Fund",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 15155475
+    },
+    {
       "ticker": "RBLX",
       "name": "Roblox Corporation",
       "memberships": {
@@ -648,6 +758,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 155552992
+    },
+    {
+      "ticker": "RSPT",
+      "name": "Invesco S&P 500 Equal Weight Technology ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 91896494
     },
     {
       "ticker": "SATS",
@@ -793,6 +914,28 @@
       "sharesOutstanding": 436534997
     },
     {
+      "ticker": "VDE",
+      "name": "Vanguard Energy Index Fund ETF Shares",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 41751700
+    },
+    {
+      "ticker": "VGT",
+      "name": "Vanguard Information Technology Index Fund ETF Shares",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 1396820716
+    },
+    {
       "ticker": "VICR",
       "name": "Vicor Corporation",
       "memberships": {
@@ -815,6 +958,28 @@
       "sharesOutstanding": 446157124
     },
     {
+      "ticker": "VLUE",
+      "name": "iShares MSCI USA Value Factor ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 47185754
+    },
+    {
+      "ticker": "XBI",
+      "name": "State Street SPDR S&P Biotech ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 69592372
+    },
+    {
       "ticker": "XE",
       "name": "X-Energy, Inc.",
       "memberships": {
@@ -824,6 +989,28 @@
         "russell2000": false
       },
       "sharesOutstanding": 287458734
+    },
+    {
+      "ticker": "XLK",
+      "name": "State Street Technology Select Sector SPDR ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 272056000
+    },
+    {
+      "ticker": "XOP",
+      "name": "State Street SPDR S&P Oil & Gas Exploration & Production ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 70500000
     },
     {
       "ticker": "ZS",
