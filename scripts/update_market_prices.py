@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import argparse
+import csv
+import io
 import json
+import math
 from datetime import datetime, time as datetime_time, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
@@ -13,6 +17,7 @@ from curl_cffi import requests as curl_requests
 START_DATE = "1965-01-01"
 VKOSPI_START_DATE = "2009-04-13"
 VKOSPI_INSTRUMENT_ID = "956761"
+VIXEQ_HISTORY_URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIXEQ_History.csv"
 SYMBOLS = [
     {"key": "sp500", "symbol": "^GSPC", "label": "S&P 500", "color": "#6b7280", "isIndex": True},
     {"key": "nasdaq", "symbol": "^IXIC", "label": "NASDAQ Composite", "color": "#2563eb", "isIndex": True},
@@ -214,9 +219,66 @@ def build_vkospi_item() -> dict[str, object]:
     }
 
 
+def parse_vixeq_history(text: str) -> dict[str, object]:
+    reader = csv.DictReader(io.StringIO(text.lstrip("\ufeff")))
+    if not {"DATE", "VIXEQ"}.issubset(reader.fieldnames or []):
+        raise ValueError("Unexpected Cboe VIXEQ CSV columns")
+    rows = {}
+    today = datetime.now(ZoneInfo("America/New_York")).date()
+    for entry in reader:
+        day = datetime.strptime(entry["DATE"].strip(), "%m/%d/%Y").date()
+        value = float(entry["VIXEQ"])
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError(f"Invalid VIXEQ close on {day}")
+        if day.weekday() >= 5 or day > today:
+            continue
+        rows[day.isoformat()] = round(value, 4)
+    filtered = exclude_incomplete_session([(day, value) for day, value in sorted(rows.items())])
+    if not filtered:
+        raise ValueError("Empty completed-session VIXEQ history")
+    return {
+        "label": "VIXEQ", "symbol": "VIXEQ", "color": "#0891b2", "isIndex": True,
+        "source": "Cboe S&P 500 Constituent Volatility Index",
+        "sourceUrl": VIXEQ_HISTORY_URL,
+        "closeOnly": True,
+        "dates": [day for day, _ in filtered],
+        "values": [value for _, value in filtered],
+        "closes": [value for _, value in filtered],
+    }
+
+
+def refresh_vixeq_item(output_path: Path) -> dict[str, object]:
+    existing = load_existing_item(output_path, "vixeq")
+    try:
+        response = curl_requests.get(VIXEQ_HISTORY_URL, impersonate="chrome", timeout=30)
+        response.raise_for_status()
+        item = parse_vixeq_history(response.text)
+        if len(item["dates"]) < 2000:
+            raise ValueError("VIXEQ history is unexpectedly short")
+        if existing and existing.get("dates"):
+            if item["dates"][-1] < existing["dates"][-1] or item["dates"][0] > existing["dates"][0]:
+                raise ValueError("Cboe VIXEQ history regressed")
+        return item
+    except Exception as exc:
+        if not existing:
+            raise
+        print(f"Retained existing VIXEQ history after refresh failure: {exc}", flush=True)
+        return existing
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--vixeq-only", action="store_true", help="Refresh VIXEQ without changing other indices")
+    args = parser.parse_args()
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-price-data.js"
+    if args.vixeq_only:
+        text = output_path.read_text(encoding="utf-8").strip()
+        payload = json.loads(text.removeprefix("window.marketPriceData = ").rstrip(";"))
+        payload["items"]["vixeq"] = refresh_vixeq_item(output_path)
+        output_path.write_text("window.marketPriceData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8", newline="\n")
+        return
     items = {meta["key"]: build_item(meta) for meta in SYMBOLS}
+    items["vixeq"] = refresh_vixeq_item(output_path)
     try:
         items["vkospi"] = build_vkospi_item()
     except Exception as exc:

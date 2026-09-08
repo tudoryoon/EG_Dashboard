@@ -289,6 +289,7 @@ const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sox", label: "SOX" },
   { key: "russell2000", label: "Russell 2000" },
   { key: "vkospi", label: "VKOSPI" },
+  { key: "vixeq", label: "VIXEQ" },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS = [
   {
@@ -2557,9 +2558,11 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
     l: Number(priceLows[index]),
     c: Number(priceValues[index]),
   }));
-  const useCandlestick = state.marketTrendChartType !== "line"
+  const useCandlestick = !item.closeOnly && state.marketTrendChartType !== "line"
     && candlestickData.some((candle) => [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite));
-  const atrPctFull = calculateAtrPercentSeries(fullValues, fullHighs, fullLows, 21);
+  const atrPctFull = item.closeOnly
+    ? fullValues.map(() => null)
+    : calculateAtrPercentSeries(fullValues, fullHighs, fullLows, 21);
   const drawdownPctFull = calculateDrawdownPercentSeries(fullValues);
   const rollingDrawdown60PctFull = calculateRollingDrawdownPercentSeries(fullValues, 60);
   const rollingDrawdownAtrFull = calculateAtrDrawdownMultipleSeries(rollingDrawdown60PctFull, atrPctFull);
@@ -2723,7 +2726,7 @@ function buildMarketTrendRiskSummary() {
   return items.map((item) => ({
     ...item,
     date: payload.labels?.[latestIndex] ?? "",
-    text: Number.isFinite(Number(item.value)) ? item.formatter(Number(item.value)) : "-",
+    text: item.value != null && Number.isFinite(Number(item.value)) ? item.formatter(Number(item.value)) : "-",
   }));
 }
 
@@ -3091,7 +3094,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
                 }
               }
               const value = Number(context.parsed.y);
-              const baseText = `${context.dataset.label}: ${formatUsStockPrice(value, 2)}`;
+              const baseText = `${context.dataset.label}: ${payload.item?.closeOnly ? `${value.toFixed(2)} pt` : formatUsStockPrice(value, 2)}`;
               const emaMatch = String(context.dataset.label ?? "").match(/^EMA\s+(\d+)/);
               if (!emaMatch) {
                 return baseText;
@@ -3152,7 +3155,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
           max: yMax,
           ticks: {
             color: "#8d8d86",
-            callback: (value) => formatUsStockPrice(Number(value), Number(value) >= 1000 ? 0 : 2),
+            callback: (value) => payload.item?.closeOnly ? `${Number(value).toFixed(2)} pt` : formatUsStockPrice(Number(value), Number(value) >= 1000 ? 0 : 2),
             maxTicksLimit: 6,
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
@@ -19022,13 +19025,16 @@ function renderIndexTrendOverview() {
         ${item.label}
       </button>`,
   ).join("");
+  const marketTrendItem = marketPriceData.items?.[state.marketTrendIndex];
+  const marketTrendCloseOnly = Boolean(marketTrendItem?.closeOnly);
   const marketTrendChartTypeMarkup = MARKET_TREND_PRICE_CHART_TYPES.map(
     (chartType) => `
       <button
         type="button"
-        class="total-series-chip${state.marketTrendChartType === chartType.key ? " active" : ""}"
+        class="total-series-chip${(marketTrendCloseOnly ? "line" : state.marketTrendChartType) === chartType.key ? " active" : ""}"
         data-market-trend-chart-type="${chartType.key}"
-        aria-pressed="${state.marketTrendChartType === chartType.key}"
+        aria-pressed="${(marketTrendCloseOnly ? "line" : state.marketTrendChartType) === chartType.key}"
+        ${marketTrendCloseOnly && chartType.key === "candle" ? 'disabled title="Cboe 종가만 제공"' : ""}
       >
         ${chartType.label}
       </button>`,
@@ -19054,7 +19060,7 @@ function renderIndexTrendOverview() {
     .map((item) => {
       const gapClass = item.gap === null ? "neutral" : Number(item.gap) >= 0 ? "positive" : "negative";
       return `
-        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${formatUsStockPrice(item.indexValue, 2)} / EMA ${item.period} ${formatUsStockPrice(item.emaValue, 2)}">
+        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${marketTrendCloseOnly ? `${item.indexValue?.toFixed(2)} pt` : formatUsStockPrice(item.indexValue, 2)} / EMA ${item.period} ${marketTrendCloseOnly ? `${item.emaValue?.toFixed(2)} pt` : formatUsStockPrice(item.emaValue, 2)}">
           <span>EMA ${item.period}</span>
           <strong>${formatMarketTrendGap(item.gap)}</strong>
         </span>`;
@@ -19071,12 +19077,12 @@ function renderIndexTrendOverview() {
     .join("");
 
   usOverviewRoot.innerHTML = `
-    <section class="market-overview">
+    <section class="market-overview market-index-trend-overview">
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500, Dow Jones, NASDAQ 100, SOX, Russell 2000, VKOSPI의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
+            <p>S&P 500, Dow Jones, NASDAQ 100, SOX, Russell 2000, VKOSPI, VIXEQ의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>
@@ -19122,6 +19128,7 @@ function renderIndexTrendOverview() {
         <div class="market-trend-meta">
           <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
           <span>Gap = Index / EMA - 1</span>
+          ${marketTrendCloseOnly ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">Cboe 공식 종가</a> · ${marketTrendItem.dates.at(-1)} · OHLC 미제공: Candle·ATR 미산출</span>` : ""}
         </div>
         <div class="market-trend-gap-row">
           ${marketTrendGapMarkup}
@@ -19152,7 +19159,7 @@ function renderIndexTrendOverview() {
             <div class="market-trend-risk-card market-trend-risk-card-atr">
               <div class="market-trend-risk-card-head">
                 <strong>21D ATR (%)</strong>
-                <span>일중 변동성</span>
+                <span>${marketTrendCloseOnly ? "OHLC 미제공" : "일중 변동성"}</span>
               </div>
               <div class="market-trend-risk-chart-wrap">
                 <canvas data-market-trend="risk" data-market-trend-risk="atr"></canvas>
@@ -19161,7 +19168,7 @@ function renderIndexTrendOverview() {
             <div class="market-trend-risk-card market-trend-risk-card-multiple">
               <div class="market-trend-risk-card-head">
                 <strong>60D MDD / ATR</strong>
-                <span>최근 60거래일 고점 하락폭의 ATR 배수</span>
+                <span>${marketTrendCloseOnly ? "ATR 미산출" : "최근 60거래일 고점 하락폭의 ATR 배수"}</span>
               </div>
               <div class="market-trend-risk-chart-wrap">
                 <canvas data-market-trend="risk" data-market-trend-risk="multiple"></canvas>

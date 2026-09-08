@@ -7791,6 +7791,10 @@ h1 {
   margin-bottom: 14px;
 }
 
+.market-index-trend-overview {
+  min-width: 0;
+}
+
 .us-price-head {
   align-items: center;
 }
