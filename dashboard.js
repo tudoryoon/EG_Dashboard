@@ -117,7 +117,6 @@ const primaryTabMeta = {
   Tech: { label: "Tech", className: "is-tech", defaultView: "LLM" },
   AIData: { label: "AI Data", className: "is-ai-data", defaultView: "TokenPrice" },
   Flows: { label: "Flows", className: "is-flows", defaultView: "EtfStatus" },
-  Taiwan: { label: "China & HK & Taiwan", className: "is-taiwan", currencies: ["NTD", "USD"], defaultCurrency: "NTD" },
   Research: { label: "Research", className: "is-research", defaultView: "DataCenter" },
 };
 
@@ -579,10 +578,6 @@ const DASHBOARD_ROUTE_META = {
       EtfStatus: "etf-status",
       Cds: "cds",
     },
-  },
-  Taiwan: {
-    slug: "taiwan", viewStateKey: "asiaView", defaultView: "Taiwan",
-    views: { Taiwan: "overview", HongKongRS: "hong-kong-rs", HongKongTrend: "hong-kong-trend", ChinaRS: "china-rs", ChinaTrend: "china-trend" },
   },
   Research: {
     slug: "research",

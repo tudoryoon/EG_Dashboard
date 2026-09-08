@@ -16,8 +16,8 @@
 
 ## China and Hong Kong screening
 
-- Regional screening lives under the `Taiwan` route family, labeled `China & HK & Taiwan`. The existing Taiwan dashboard remains its own subtab.
+- The China/HK/Taiwan tab and `Taiwan` routes are retired from this dashboard as of 2026-09-08 for migration to a separate site. Retain regional data and collection code for reuse; do not restore navigation or scheduled updates without a user request.
 - `scripts/update_asia_screening.py` collects official HSCI and CSI300/500 constituents, then calls the existing RS and Trend Score calculation functions. Regional files are `data/asia-*.json`; do not mix these members into the US manual universe or Daily Briefing.
 - Each market ranks equities independently in local currency. ETF rows are tracked but excluded from equity RS ranks. Market-cap fields used for shared filters are converted to USD; chart prices stay in HKD/CNY.
 - The HSI benchmark is an explicitly labeled fallback for unavailable HSCI history. China uses CSI800 from Eastmoney. Do not silently replace missing benchmark values with stale dates or fabricate holiday returns.
-- Use `python scripts/validate_asia_screening.py` before publication. The dedicated Asia workflow updates after local-market close and preserves raw history through its own cache.
+- Use `python scripts/validate_asia_screening.py` before publication. The dedicated Asia workflow is manual-only here and preserves raw history through its own cache.

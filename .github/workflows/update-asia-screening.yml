@@ -1,11 +1,8 @@
 name: Update China and Hong Kong Screening
 
 on:
+  # Retained for migration to a separate site; no scheduled runs here.
   workflow_dispatch:
-  schedule:
-    # KST 18:35 primary and 19:20 backup, after both local markets close.
-    - cron: "35 9 * * 1-5"
-    - cron: "20 10 * * 1-5"
 
 permissions:
   contents: write
