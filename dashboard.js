@@ -3982,17 +3982,20 @@ function getTotalDashboardSeriesItems() {
         return;
       }
       const isPercentSeries = panelKey === "rates" || panelKey === "policy" || panelKey === "gdp";
+      const published = panelKey === "gdp" ? alignPublishedMacroSeries(item, "gdp") : item;
       items.push({
         key: `macro:${panelKey}:${seriesKey}`,
         group: panel.title,
         label: item.name,
         color: item.color,
-        dates: item.dates ?? [],
-        values: item.values ?? [],
+        dates: published.dates ?? [],
+        values: published.values ?? [],
+        releasePoints: published.releasePoints,
+        releaseAligned: published.releaseAligned,
         formatter: panel.formatter ?? "number1",
         rawLabel: item.name,
         isRate: isPercentSeries,
-        fillForward: item.fillForward === true || panel.fillMissing === "forward",
+        fillForward: panelKey === "gdp" || item.fillForward === true || panel.fillMissing === "forward",
       });
     });
   });
@@ -4076,6 +4079,8 @@ function getTotalDashboardSeriesItems() {
       rawLabel: item.label,
       isRate: true,
       fillForward: item.fillForward === true,
+      releaseAligned: item.releaseAligned,
+      releasePoints: item.releasePoints,
     });
   });
 
@@ -4122,7 +4127,8 @@ function buildTotalDashboardPayload(rangeKey) {
     const baseDate = selectedLabels.find((label) => dateIndex.has(label));
     const baseIndex = baseDate ? dateIndex.get(baseDate) : null;
     const baseValue = baseIndex !== null && baseIndex !== undefined ? item.values[baseIndex] : null;
-    let carriedRawValue = null;
+    const priorValue = item.fillForward ? macroValueBefore(item, selectedLabels[0]) : null;
+    let carriedRawValue = priorValue;
 
     const data = selectedLabels.map((label) => {
       const pointIndex = dateIndex.get(label);
@@ -4149,7 +4155,7 @@ function buildTotalDashboardPayload(rangeKey) {
       }
       return Number(((pointValue / baseValue) * 100).toFixed(2));
     });
-    carriedRawValue = null;
+    carriedRawValue = priorValue;
     const rawDisplayValues = selectedLabels.map((label) => {
       const pointIndex = dateIndex.get(label);
       const pointValue = pointIndex === undefined ? null : item.values[pointIndex];
@@ -4169,11 +4175,13 @@ function buildTotalDashboardPayload(rangeKey) {
       rawDates: item.dates,
       rawValues: item.values,
       rawDisplayValues,
+      releasePoints: item.releasePoints,
       rawFormatter: item.formatter,
       borderColor: item.color,
       backgroundColor: item.color,
       borderWidth: item.group === "Market" ? 2.6 : 2.2,
       borderDash: item.isRate ? [7, 5] : [],
+      stepped: item.releaseAligned ? "before" : false,
       tension: 0.18,
       pointRadius: 0,
       pointHoverRadius: 4,
@@ -4258,7 +4266,7 @@ function createTotalDashboardChart(canvas, rangeKey) {
               const rawValue = dataset.rawDisplayValues?.[chartIndex] ?? null;
               const rawText = Number.isFinite(rawValue) ? formatMacroValue(rawValue, dataset.rawFormatter) : "-";
               if (dataset.isRate) {
-                return `${dataset.label}: ${rawText}`;
+                return `${dataset.label}: ${rawText}${macroReleaseTooltip(dataset, context.label)}`;
               }
               const normalized = context.parsed.y;
               return Number.isFinite(normalized)
@@ -5457,12 +5465,13 @@ function getMacroDerivedValues(series, kind) {
     ? new Map((series?.dates ?? []).map((dateText, index) => [dateText, Number(values[index])]))
     : null;
   return values.map((value, index) => {
+    if (value === null || value === undefined) return null;
     const current = Number(value);
     if (!Number.isFinite(current)) {
       return null;
     }
     if (kind === "yoy") {
-      const officialYoy = Number(series?.yoyValues?.[index]);
+      const officialYoy = series?.yoyValues?.[index] == null ? NaN : Number(series.yoyValues[index]);
       if (Number.isFinite(officialYoy)) {
         return Number(officialYoy.toFixed(2));
       }
@@ -5697,27 +5706,54 @@ function getMacroDashboardSeriesByKey(seriesKey) {
   return null;
 }
 
+function alignPublishedMacroSeries(series, group) {
+  const calendar = macroIndicatorsData.releaseCalendar?.groups?.[group] ?? {};
+  const points = [];
+  (series.dates ?? []).forEach((reference, index) => {
+    const value = series.values?.[index];
+    const release = calendar[reference.slice(0, 7)];
+    if (!release?.releaseDate || value === null || value === undefined || !Number.isFinite(Number(value))) return;
+    points.push({ reference: reference.slice(0, 7), date: release.releaseDate, value: Number(value) });
+  });
+  points.sort((a, b) => a.date.localeCompare(b.date) || a.reference.localeCompare(b.reference));
+  // A delayed release may publish two months together. Only the latest month is current.
+  const byDate = new Map(points.map((point) => [point.date, point]));
+  const releasePoints = [...byDate.values()];
+  return {
+    dates: releasePoints.map((point) => point.date),
+    values: releasePoints.map((point) => point.value),
+    releasePoints,
+    releaseAligned: true,
+  };
+}
+
+function macroValueBefore(item, startDate) {
+  let result = null;
+  for (let i = 0; i < item.dates.length; i += 1) {
+    if (item.dates[i] >= startDate) break;
+    if (Number.isFinite(item.values[i])) result = item.values[i];
+  }
+  return result;
+}
+
+function macroReleaseTooltip(dataset, date) {
+  const point = (dataset.releasePoints ?? []).filter((entry) => entry.date <= date).at(-1);
+  return point ? ` | 대상 ${point.reference} · 발표 ${point.date} (미국)` : "";
+}
+
 function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, axis = "percent", formatter = null }) {
   const series = getMacroDashboardSeriesByKey(seriesKey);
   if (!series?.dates?.length) {
     return null;
   }
   const values = getMacroDerivedValues(series, kind);
-  const dates = [];
-  const cleanValues = [];
-  (series.dates ?? []).forEach((dateText, index) => {
-    const value = values[index];
-    if (!Number.isFinite(Number(value))) {
-      return;
-    }
-    dates.push(dateText.length === 7 ? `${dateText}-01` : dateText);
-    cleanValues.push(Number(value));
-  });
+  const group = (macroIndicatorsData.indicators ?? []).find((indicator) =>
+    (indicator.series ?? []).some((entry) => entry.key === seriesKey))?.key;
+  const published = alignPublishedMacroSeries({ dates: series.dates, values }, group);
   return {
     key,
     label,
-    dates,
-    values: cleanValues,
+    ...published,
     color,
     axis,
     formatter: formatter ?? (kind === "mom_change" ? "number1" : "percent2"),
@@ -5791,8 +5827,7 @@ function getMacroDashboardItems() {
     gdpSeries.real_gdp_annualized && {
       key: "gdp:real_gdp_annualized",
       label: "Real GDP QoQ SAAR",
-      dates: gdpSeries.real_gdp_annualized.dates ?? [],
-      values: gdpSeries.real_gdp_annualized.values ?? [],
+      ...alignPublishedMacroSeries(gdpSeries.real_gdp_annualized, "gdp"),
       color: "#8b5cf6",
       axis: "percent",
       formatter: "percent2",
@@ -5987,7 +6022,7 @@ function buildMacroDashboardChartPayload(rangeKey) {
     item.dates.forEach((date, index) => dateIndex.set(date, index));
     const baseDate = labels.find((date) => dateIndex.has(date) && Number.isFinite(Number(item.values[dateIndex.get(date)])));
     const baseValue = baseDate ? Number(item.values[dateIndex.get(baseDate)]) : null;
-    let lastForwardValue = null;
+    let lastForwardValue = item.fillForward ? macroValueBefore(item, labels[0]) : null;
     const data = labels.map((date) => {
       const index = dateIndex.get(date);
       if (index === undefined) {
@@ -5996,7 +6031,7 @@ function buildMacroDashboardChartPayload(rangeKey) {
         }
         return null;
       }
-      const rawValue = Number(item.values[index]);
+      const rawValue = item.values[index] == null ? NaN : Number(item.values[index]);
       const value = Number.isFinite(rawValue) ? rawValue : null;
       if (item.fillForward && Number.isFinite(value)) {
         lastForwardValue = value;
@@ -6022,6 +6057,8 @@ function buildMacroDashboardChartPayload(rangeKey) {
       backgroundColor: item.color,
       borderWidth: item.axis === "index" ? 2.6 : 2.2,
       borderDash: item.dash ?? [],
+      stepped: item.releaseAligned ? "before" : false,
+      releasePoints: item.releasePoints,
       tension: 0.18,
       pointRadius: 0,
       pointHoverRadius: 4,
@@ -6070,7 +6107,7 @@ function createMacroDashboardChart(canvas, rangeKey) {
             label: (context) => {
               const dataset = context.dataset;
               const suffix = dataset.normalize ? " (Start=100)" : "";
-              return `${dataset.label}: ${formatMacroValue(context.parsed.y, dataset.normalize ? "number1" : dataset.formatter)}${suffix}`;
+              return `${dataset.label}: ${formatMacroValue(context.parsed.y, dataset.normalize ? "number1" : dataset.formatter)}${suffix}${macroReleaseTooltip(dataset, context.label)}`;
             },
           },
         },
@@ -19357,12 +19394,13 @@ function renderMarketOverview() {
     )
     .join("");
   usOverviewRoot.innerHTML = `
-    <section class="market-overview">
+    <section class="market-overview market-release-comparison">
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
             <h2>Total Dashboard</h2>
             <p>Market series use Start = 100 normalized performance; YTD uses the final valid close of the prior calendar year. US and Japan yields stay on the right axis in raw percent terms.</p>
+            <p>월간 지표·GDP는 미국 발표일부터 적용합니다. 발표일 미확인 구간은 비교에서 제외하며, 값은 최신 수정치입니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${totalRangeMarkup}</div>
@@ -19769,7 +19807,7 @@ function renderMarketMacroOverview() {
     .join("");
 
   usOverviewRoot.innerHTML = `
-    <section class="market-overview">
+    <section class="market-overview market-release-comparison">
       <section class="us-panel macro-panel macro-dashboard-panel">
         <div class="us-section-head us-price-head">
           <div>
@@ -19784,6 +19822,8 @@ function renderMarketMacroOverview() {
           <span>좌측축: 주식/원자재 Start=100</span>
           <span>우측축: 금리/인플레/고용률 %</span>
           <span>ISM축: 50 기준 확산지수</span>
+          <span>월간 지표·GDP: 미국 발표일 기준 · 다음 발표까지 유지</span>
+          <span>발표일 미확인 구간 제외 · 최신 수정치 사용(당시 발표치 복원 아님)</span>
         </div>
         <div class="total-date-row">
           <label class="total-date-field">

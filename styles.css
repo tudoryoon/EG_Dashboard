@@ -7795,6 +7795,17 @@ h1 {
   min-width: 0;
 }
 
+.market-release-comparison,
+.market-release-comparison > .us-panel {
+  min-width: 0;
+}
+
+.market-release-comparison .macro-release-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .us-price-head {
   align-items: center;
 }

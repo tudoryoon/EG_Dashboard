@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import re
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from macro_release_dates import enrich_release_calendar
 
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "macro-indicators-data.js"
@@ -794,7 +796,7 @@ def apply_manual_release_override(series_key: str, release_history: list[dict[st
         )
     ]
     filtered.append(override)
-    return sorted(filtered, key=lambda item: item["releaseDate"])
+    return sorted(filtered, key=lambda item: item.get("releaseDate") or item.get("observedAt", ""))
 
 
 def month_name_from_key(month: str | None) -> str:
@@ -820,7 +822,8 @@ def build_fallback_release_row(series: SeriesConfig, snapshot: dict[str, Any]) -
         "core_ppi": "Core PPI MoM",
     }.get(series.key, f"{series.label} MoM")
     return {
-        "releaseDate": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "releaseDate": None,
+        "observedAt": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "time": "-",
         "reference": f"{reference_label} {month_name_from_key(str(latest_month))}".strip(),
         "actual": format_release_numeric(float(mom_pct), "percent"),
@@ -847,7 +850,7 @@ def append_fallback_release_if_needed(
         return release_history
     deduped = [row for row in release_history if row.get("reference") != fallback["reference"]]
     deduped.append(fallback)
-    return sorted(deduped, key=lambda item: item["releaseDate"])
+    return sorted(deduped, key=lambda item: item.get("releaseDate") or item.get("observedAt", ""))
 
 
 def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1041,11 +1044,17 @@ def build_payload() -> dict[str, Any]:
         "commonStartMonth": COMMON_START_MONTH,
         "indicators": indicators,
         "categories": categories,
+        "releaseCalendar": existing_payload.get("releaseCalendar", {}),
     }
 
 
 def main() -> None:
-    payload = build_payload()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--release-dates-only", action="store_true")
+    parser.add_argument("--backfill-release-dates", action="store_true")
+    args = parser.parse_args()
+    payload = load_existing_payload() if args.release_dates_only else build_payload()
+    enrich_release_calendar(payload, backfill=args.backfill_release_dates)
     OUTPUT_PATH.write_text(
         "window.macroIndicatorsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
