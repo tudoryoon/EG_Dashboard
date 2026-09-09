@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-08",
+  "updatedAt": "2026-09-09",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-08",
+  "calendarToday": "2026-09-09",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 5,
@@ -270,6 +270,5 @@ window.studyCalendarData = {
       "label": "Yahoo Finance Earnings Calendar",
       "url": "https://finance.yahoo.com/calendar/earnings/"
     }
-  ],
-  "policyUpdatedAt": "2026-09-09T09:06:16+09:00"
+  ]
 };
