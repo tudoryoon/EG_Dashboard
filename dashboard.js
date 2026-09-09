@@ -17669,8 +17669,8 @@ function renderStudyCalendarOverview() {
     .map((dateValue, index) => {
       const dayEvents = [...(eventsByDate.get(dateValue) ?? [])].sort((left, right) => {
         const sessionOrder = (event) => (event.session === "B" ? "0" : event.session === "A" ? "2" : "1");
-        return `${sessionOrder(left)}${left.time || ""}${left.ticker || ""}`.localeCompare(
-          `${sessionOrder(right)}${right.time || ""}${right.ticker || ""}`,
+        return `${sessionOrder(left)}${left.kstDate || left.date}${left.time || ""}${left.ticker || ""}`.localeCompare(
+          `${sessionOrder(right)}${right.kstDate || right.date}${right.time || ""}${right.ticker || ""}`,
         );
       });
       const dayNumber = formatStudyCalendarDayNumber(dateValue);
@@ -17683,7 +17683,7 @@ function renderStudyCalendarOverview() {
               const isEarnings = event.kind === "earnings";
               const eventLabel = isEarnings
                 ? `${event.ticker || "실적"}${event.session ? ` (${event.session})` : ""}`
-                : "MACRO";
+                : event.centralBank || "MACRO";
               const usSessionLabel = event.session === "A" ? "장후" : event.session === "B" ? "장전" : "";
               const kstDateValue = event.kstDate || event.date || "";
               const kstDateLabel = kstDateValue ? kstDateValue.slice(5).replace("-", "/") : "";
@@ -17697,7 +17697,9 @@ function renderStudyCalendarOverview() {
                   ? `<small class="study-calendar-chip-timing${event.confirmed ? " is-confirmed" : ""}">
                       <span>${event.confirmed ? "공식 확정" : "예상"}</span> ${escapeHtml(kstTimingLabel)}
                     </small>`
-                  : "";
+                  : kstDateValue !== event.date
+                    ? `<small class="study-calendar-chip-timing">${escapeHtml(`KST ${kstDateLabel} ${event.time || "시간 미정"}`)}</small>`
+                    : "";
               const eventTitle = [event.title, event.note].filter(Boolean).join(" · ");
               const displayTitle =
                 isEarnings && event.ticker && !String(event.title || "").includes(`(${event.ticker})`)
@@ -17750,7 +17752,7 @@ function renderStudyCalendarOverview() {
           <div>
             <p>RESEARCH CALENDAR</p>
             <h2>향후 4주 일정</h2>
-            <span>실적과 미국 Macro 모두 미국 현지 발표일에 배치하고 KST 시각을 함께 표시합니다.</span>
+            <span>실적·미국 Macro·FOMC는 미국 날짜, BOJ는 일본 날짜에 배치하며 KST 시각을 함께 표시합니다.</span>
           </div>
           <time>Updated ${escapeHtml(studyCalendarData.updatedAt || "-")}</time>
         </div>
@@ -17758,9 +17760,9 @@ function renderStudyCalendarOverview() {
           <span><b>(B)</b> 미국 장전</span>
           <span><b>(A)</b> 미국 장후</span>
           <span>실적 날짜는 <b>미국 현지 기준</b> · 카드 하단은 <b>KST</b></span>
-          <span><b>MACRO</b> 미국 공식 일정 · 카드 상단은 <b>KST 발표 시각</b></span>
+          <span><b>MACRO · FOMC · BOJ</b> 공식 일정 · 카드 상단은 <b>KST 발표 시각</b> · BOJ 시각 미정</span>
           <span><b>공식 확정</b> 기업 IR 확인</span>
-          <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · 실적 <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 · 미국 Macro <b>${escapeHtml(studyCalendarData.coverage?.matchedMacro ?? "-")}</b>건</span>
+          <span><b>${escapeHtml(studyCalendarData.coverage?.dailyBriefingUniverse ?? "-")}</b>개 Daily Briefing 종목 대조 · 실적 <b>${escapeHtml(studyCalendarData.coverage?.matchedEarnings ?? "-")}</b>건 · Macro·금리 결정 <b>${escapeHtml(studyCalendarData.coverage?.matchedMacro ?? "-")}</b>건</span>
         </div>
         <div class="study-calendar-range-row">${rangeMarkup}</div>
         <div class="study-calendar-board-wrap">
@@ -21885,7 +21887,7 @@ function renderSummary(list) {
     } else if (state.researchView === "TrendSearch") {
       summaryText.textContent = "Google web and YouTube search-interest dashboard with moving averages";
     } else if (state.researchView === "Calendar") {
-      summaryText.textContent = "향후 4주 일정 · 미국 현지 발표일 · KST 시각 병기";
+      summaryText.textContent = "향후 4주 일정 · 각국 현지 발표일 · KST 시각 병기";
     } else {
       summaryText.textContent = "Focused market-cap and cross-market research comparisons";
     }

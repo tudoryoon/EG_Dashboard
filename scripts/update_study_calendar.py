@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import ast
 import html
 import json
@@ -11,6 +12,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import requests
+from bs4 import BeautifulSoup
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +27,13 @@ BLS_ICAL_URL = "https://www.bls.gov/schedule/news_release/bls.ics"
 BEA_SCHEDULE_URL = "https://www.bea.gov/news/schedule"
 CENSUS_SCHEDULE_URL = "https://www.census.gov/economic-indicators/calendar-listview.html"
 ISM_SCHEDULE_URL = "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/"
+FOMC_SCHEDULE_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+BOJ_SCHEDULE_URL = "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm"
+# Official published calendars, used only when the live schedule cannot be parsed.
+POLICY_2026_FALLBACKS = {
+    "FOMC": [(1, 28), (3, 18), (4, 29), (6, 17), (7, 29), (9, 16), (10, 28), (12, 9)],
+    "BOJ": [(1, 23), (3, 19), (4, 28), (6, 16), (7, 31), (9, 18), (10, 30), (12, 18)],
+}
 
 # BLS and ISM occasionally block non-browser requests. These dates are copied
 # from their official 2026 release calendars so the daily job never drops the
@@ -423,6 +432,85 @@ def load_existing_macro_events(start: date, end: date) -> list[dict]:
     ]
 
 
+def parse_policy_schedule(raw_text: str, bank: str) -> list[tuple[date, bool]]:
+    soup = BeautifulSoup(raw_text, "html.parser")
+    meetings = []
+    if bank == "FOMC":
+        for heading in soup.select("h4"):
+            year = re.fullmatch(r"(\d{4}) FOMC Meetings", heading.get_text(" ", strip=True))
+            if not year:
+                continue
+            panel = heading.find_parent(class_="panel")
+            if panel is None:
+                continue
+            for meeting in panel.select(".fomc-meeting"):
+                month = meeting.select_one(".fomc-meeting__month")
+                days = meeting.select_one(".fomc-meeting__date")
+                if month is None or days is None:
+                    continue
+                day_match = re.fullmatch(r"\d{1,2}\s*-\s*(\d{1,2})(\*)?", days.get_text(strip=True))
+                if not day_match:
+                    continue
+                name = month.get_text(strip=True).split("/")[-1]
+                month_number = next((m for m in range(1, 13) if datetime(2000, m, 1).strftime("%B").startswith(name)), None)
+                if month_number:
+                    meetings.append((date(int(year[1]), month_number, int(day_match[1])), bool(day_match[2])))
+    else:
+        for heading in soup.select('h2[id]'):
+            year = re.fullmatch(r"p(\d{4})", heading["id"])
+            if not year:
+                continue
+            table = heading.find_next("table")
+            if table is None:
+                continue
+            for row in table.select("tr"):
+                cells = row.find_all(["td", "th"], recursive=False)
+                if not cells:
+                    continue
+                text = cells[0].get_text(" ", strip=True)
+                match = re.match(r"([A-Za-z]+)\.?\s+\d{1,2}\s*\([^)]*\),\s*(\d{1,2})\s*\(", text)
+                if not match:
+                    continue
+                month_number = next((m for m in range(1, 13) if datetime(2000, m, 1).strftime("%B").startswith(match[1])), None)
+                if month_number:
+                    meetings.append((date(int(year[1]), month_number, int(match[2])), False))
+    if not meetings:
+        raise ValueError(f"No {bank} meetings found in official schedule")
+    return sorted(set(meetings))
+
+
+def build_policy_event(bank: str, decision_date: date, projections=False) -> dict:
+    if bank == "FOMC":
+        event = build_macro_event(
+            release_date=decision_date, eastern_time=datetime_time(14, 0), title="FOMC 금리 결정",
+            note="정책금리 결정·성명" + (" · 경제전망(SEP)" if projections else ""),
+            source_label="Federal Reserve", source_url=FOMC_SCHEDULE_URL,
+        )
+        event.update({"centralBank": bank, "calendarTimezone": "America/New_York"})
+        return event
+    return {
+        "date": decision_date.isoformat(), "kstDate": decision_date.isoformat(), "time": "",
+        "kind": "macro", "centralBank": bank, "calendarTimezone": "Asia/Tokyo",
+        "title": "BOJ 금리 결정", "note": "일본 금융정책결정회의 마지막 날 · 회의 종료 후 발표 · 시각 미정 · JST=KST",
+        "sourceLabel": "Bank of Japan", "sourceUrl": BOJ_SCHEDULE_URL,
+    }
+
+
+def collect_policy_events(start: date, end: date) -> tuple[list[dict], list[str]]:
+    events, failures = [], []
+    for bank, url in [("FOMC", FOMC_SCHEDULE_URL), ("BOJ", BOJ_SCHEDULE_URL)]:
+        try:
+            meetings = parse_policy_schedule(fetch_schedule_text(url), bank)
+        except (requests.RequestException, ValueError, OSError) as error:
+            failures.append(f"{bank}: {error.__class__.__name__} (official cached schedule)")
+            meetings = [(date(2026, month, day), bank == "FOMC" and month in (3, 6, 9, 12))
+                        for month, day in POLICY_2026_FALLBACKS[bank]]
+            events.extend(event for event in load_existing_macro_events(start, end)
+                          if event.get("centralBank") == bank and not event["date"].startswith("2026-"))
+        events.extend(build_policy_event(bank, day, projections) for day, projections in meetings if start <= day <= end)
+    return events, failures
+
+
 def build_macro_events(start: date, end: date) -> tuple[list[dict], list[str]]:
     official_builders = (
         ("BLS", build_bls_macro_events),
@@ -442,6 +530,9 @@ def build_macro_events(start: date, end: date) -> tuple[list[dict], list[str]]:
     # fallback is intentionally only the official 2026 schedule, not estimates.
     events.extend(build_bls_fallback_events(start, end))
     events.extend(build_ism_fallback_events(start, end))
+    policy_events, policy_failures = collect_policy_events(start, end)
+    events.extend(policy_events)
+    failures.extend(policy_failures)
 
     deduped_events: list[dict] = []
     seen: set[tuple[str, str]] = set()
@@ -452,6 +543,8 @@ def build_macro_events(start: date, end: date) -> tuple[list[dict], list[str]]:
         deduped_events.append(event)
         seen.add(key)
     for event in load_existing_macro_events(start, end):
+        if event.get("centralBank"):
+            continue
         key = (event["date"], event["title"])
         if key not in seen:
             deduped_events.append(event)
@@ -658,6 +751,12 @@ def week_status(today: date, start: date, end: date) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--policy-only", action="store_true", help="Refresh FOMC/BOJ without refetching earnings")
+    args = parser.parse_args()
+    if args.policy_only:
+        refresh_policy_only()
+        return
     today_kst = datetime.now(KST).date()
     today_us = datetime.now(NEW_YORK).date()
     universe = load_daily_briefing_universe()
@@ -704,9 +803,9 @@ def main() -> None:
             "windowEnd": end.isoformat(),
         },
         "methodology": {
-            "macro": "미국 Macro는 BLS·BEA·U.S. Census Bureau·ISM의 공식 발표 일정에서 매일 갱신",
+            "macro": "미국 Macro·FOMC 및 일본 BOJ 금리 결정은 각 공식 기관 일정에서 매일 갱신",
             "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
-            "timing": "일정은 모두 미국 현지 발표일에 배치. 실적과 Macro 모두 KST 시각을 함께 표시",
+            "timing": "실적·미국 Macro·FOMC는 미국 날짜, BOJ는 일본 날짜에 배치. KST 날짜·시각 병기, BOJ 발표 시각은 미정",
             "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음",
             "macroWarning": "공식 기관 일정에 일시적 접속 문제가 생기면 직전 저장 일정만 유지하며, 다음 실행에서 재확인",
         },
@@ -722,10 +821,31 @@ def main() -> None:
     print(
         f"Updated {OUTPUT_PATH.relative_to(ROOT)}: "
         f"{len(universe)} Daily Briefing tickers, {len(earnings)} earnings events, "
-        f"{len(macro_events)} U.S. macro events"
+        f"{len(macro_events)} macro/policy events"
     )
     if macro_failures:
         print(f"Macro source warnings: {', '.join(macro_failures)}")
+
+
+def refresh_policy_only() -> None:
+    raw = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+    payload = json.loads(raw.removeprefix("window.studyCalendarData = ").removesuffix(";"))
+    start = date.fromisoformat(payload["coverage"]["windowStart"])
+    end = date.fromisoformat(payload["coverage"]["windowEnd"])
+    events, failures = collect_policy_events(start, end)
+    for week in payload["weeks"]:
+        dates = week["range"].split(" - ")
+        week_start = datetime.strptime(dates[0], "%Y.%m.%d").date()
+        week_end = week_start + timedelta(days=6)
+        week["events"] = [event for event in week["events"] if not event.get("centralBank")]
+        week["events"].extend(event for event in events if week_start <= date.fromisoformat(event["date"]) <= week_end)
+        week["events"].sort(key=lambda event: (event["date"], event["time"], event.get("ticker", "")))
+    payload["coverage"]["matchedMacro"] = sum(event["kind"] == "macro" for week in payload["weeks"] for event in week["events"])
+    payload["policyUpdatedAt"] = datetime.now(KST).isoformat(timespec="seconds")
+    payload["methodology"]["macro"] = "미국 Macro·FOMC 및 일본 BOJ 금리 결정은 각 공식 기관 일정에서 매일 갱신"
+    payload["methodology"]["timing"] = "실적·미국 Macro·FOMC는 미국 날짜, BOJ는 일본 날짜에 배치. KST 날짜·시각 병기, BOJ 발표 시각은 미정"
+    OUTPUT_PATH.write_text("window.studyCalendarData = " + json.dumps(payload, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    print(f"Updated {len(events)} policy events; warnings: {failures}")
 
 
 if __name__ == "__main__":
