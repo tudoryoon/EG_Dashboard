@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'dashboard.js'), 'utf8');
 const helper = source.slice(source.indexOf('function renderMarketRsSelectionPreservingScroll()'), source.indexOf('function renderMarketRsOverview()'));
 const nodes = {
+  '.market-rs-card-grid': [{scrollLeft: 0, scrollTop: 420}],
   '.market-rs-table-wrap': [{scrollLeft: 150, scrollTop: 600}],
   '.market-rs-new-high-list': [{scrollLeft: 0, scrollTop: 120}, {scrollLeft: 0, scrollTop: 90}],
   '.market-rs-period-list': [{scrollLeft: 0, scrollTop: 220}],

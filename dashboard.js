@@ -13572,7 +13572,7 @@ function createMarketRsAtrChart(canvas, row) {
 
 function renderMarketRsSelectionPreservingScroll() {
   const pagePosition = { left: window.scrollX, top: window.scrollY };
-  const selectors = [".market-rs-table-wrap", ".market-rs-new-high-list", ".market-rs-period-list"];
+  const selectors = [".market-rs-card-grid", ".market-rs-table-wrap", ".market-rs-new-high-list", ".market-rs-period-list"];
   const positions = selectors.map((selector) => ({
     selector,
     items: [...usOverviewRoot.querySelectorAll(selector)].map((node) => ({
