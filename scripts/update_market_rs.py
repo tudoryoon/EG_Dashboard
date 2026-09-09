@@ -1798,7 +1798,7 @@ def load_daily_briefing_tickers() -> set[str]:
 def read_cached_universe(existing: dict) -> pd.DataFrame:
     rows = []
     for row in existing.get("rows", []):
-        if not isinstance(row, dict):
+        if not isinstance(row, dict) or row.get("isIndex"):
             continue
         ticker = normalize_ticker(row.get("ticker"))
         if not ticker or is_terminal_symbol(ticker):
@@ -1874,6 +1874,7 @@ def refresh_daily_briefing_priority() -> dict[str, object]:
 
 
 def main() -> None:
+    from msci_acwi_ntr import append_rs_index
     parser = argparse.ArgumentParser(description="Refresh market RS data.")
     parser.add_argument(
         "--daily-briefing-priority",
@@ -1884,6 +1885,7 @@ def main() -> None:
 
     if args.daily_briefing_priority:
         payload = refresh_daily_briefing_priority()
+        append_rs_index(payload)
         OUTPUT_PATH.write_text(
             "window.marketRsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
             encoding="utf-8",
@@ -1951,6 +1953,7 @@ def main() -> None:
         volume_frame,
         shares_cache,
     )
+    append_rs_index(payload)
 
     OUTPUT_PATH.write_text(
         "window.marketRsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",

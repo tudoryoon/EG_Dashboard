@@ -564,7 +564,7 @@ def build_universe_payload(
     if not members:
         return [], {}
 
-    score_matrix = pd.concat({ticker: frame["rankScore"] for ticker, _, _, frame in members}, axis=1)
+    score_matrix = pd.DataFrame({ticker: frame["rankScore"] for ticker, row, _, frame in members if not row.get("isIndex")})
     rank_matrix = rank_scores(score_matrix)
 
     rows = []
@@ -610,6 +610,7 @@ def build_universe_payload(
             {
                 "ticker": ticker,
                 "name": row.get("name") or ticker,
+                **({"isIndex": True, "sourceUrl": row.get("sourceUrl")} if row.get("isIndex") else {}),
                 "asOfDate": valid_at.date().isoformat(),
                 "marketCap": row.get("marketCap"),
                 "price": nullable_round(latest.get("price")),

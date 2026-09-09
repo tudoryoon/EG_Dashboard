@@ -284,7 +284,7 @@ def list_from_series(series: pd.Series, digits: int = 2) -> list[float | int | N
     return output
 
 
-def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, name: str, shares: int) -> tuple[dict, dict]:
+def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, name: str, shares: int | None, *, is_index: bool = False) -> tuple[dict, dict]:
     latest_date = pd.Timestamp(payload["updatedAt"])
     history_dates = payload.get("historyDates", [])
     history_index = pd.Index(pd.to_datetime(history_dates), name="date")
@@ -294,8 +294,8 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
     current_price = value_at_or_before(close, latest_date)
     if current_price is None:
         raise RuntimeError(f"No current price available for {ticker}.")
-    market_cap = round(current_price * shares)
-    if market_cap <= rs.MIN_MARKET_CAP_USD:
+    market_cap = None if is_index else round(current_price * shares)
+    if not is_index and market_cap <= rs.MIN_MARKET_CAP_USD:
         raise RuntimeError(f"{ticker} market cap is below the RS minimum.")
 
     high = frame["high"].dropna()

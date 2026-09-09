@@ -267,18 +267,24 @@ def refresh_vixeq_item(output_path: Path) -> dict[str, object]:
 
 
 def main() -> None:
+    from msci_acwi_ntr import KEY as ACWI_KEY, fetch_item as fetch_acwi
     parser = argparse.ArgumentParser()
     parser.add_argument("--vixeq-only", action="store_true", help="Refresh VIXEQ without changing other indices")
+    parser.add_argument("--acwi-ntr-only", action="store_true", help="Refresh only MSCI ACWI NTR USD")
     args = parser.parse_args()
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-price-data.js"
-    if args.vixeq_only:
+    if args.vixeq_only or args.acwi_ntr_only:
         text = output_path.read_text(encoding="utf-8").strip()
         payload = json.loads(text.removeprefix("window.marketPriceData = ").rstrip(";"))
-        payload["items"]["vixeq"] = refresh_vixeq_item(output_path)
+        if args.acwi_ntr_only:
+            payload["items"][ACWI_KEY] = fetch_acwi(payload["items"].get(ACWI_KEY))
+        else:
+            payload["items"]["vixeq"] = refresh_vixeq_item(output_path)
         output_path.write_text("window.marketPriceData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8", newline="\n")
         return
     items = {meta["key"]: build_item(meta) for meta in SYMBOLS}
     items["vixeq"] = refresh_vixeq_item(output_path)
+    items[ACWI_KEY] = fetch_acwi(load_existing_item(output_path, ACWI_KEY))
     try:
         items["vkospi"] = build_vkospi_item()
     except Exception as exc:

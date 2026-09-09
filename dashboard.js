@@ -289,6 +289,7 @@ const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "russell2000", label: "Russell 2000" },
   { key: "vkospi", label: "VKOSPI" },
   { key: "vixeq", label: "VIXEQ" },
+  { key: "acwiNtrUsd", label: "MSCI ACWI NTR USD" },
 ];
 const BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS = [
   {
@@ -2952,6 +2953,8 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
   }
 
   const payload = buildMarketTrendChartPayload(rangeKey, indexKey, customStart, customEnd);
+  const formatIndexValue = (value, digits = 2) => payload.item?.msciIndexCode
+    ? `${Number(value).toFixed(digits)} pt` : formatUsStockPrice(value, digits);
   const allValues = [
     ...payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value))),
     ...(payload.useCandlestick ? payload.candlestickData.flatMap((candle) => [candle.h, candle.l]) : []),
@@ -3083,13 +3086,13 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
                 const candle = context.dataset.ohlc?.[context.dataIndex];
                 if (candle && [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite)) {
                   return [
-                    `Open ${formatUsStockPrice(candle.o, 2)} · High ${formatUsStockPrice(candle.h, 2)}`,
-                    `Low ${formatUsStockPrice(candle.l, 2)} · Close ${formatUsStockPrice(candle.c, 2)}`,
+                    `Open ${formatIndexValue(candle.o, 2)} · High ${formatIndexValue(candle.h, 2)}`,
+                    `Low ${formatIndexValue(candle.l, 2)} · Close ${formatIndexValue(candle.c, 2)}`,
                   ];
                 }
               }
               const value = Number(context.parsed.y);
-              const baseText = `${context.dataset.label}: ${payload.item?.closeOnly ? `${value.toFixed(2)} pt` : formatUsStockPrice(value, 2)}`;
+              const baseText = `${context.dataset.label}: ${payload.item?.closeOnly ? `${value.toFixed(2)} pt` : formatIndexValue(value, 2)}`;
               const emaMatch = String(context.dataset.label ?? "").match(/^EMA\s+(\d+)/);
               if (!emaMatch) {
                 return baseText;
@@ -3150,7 +3153,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
           max: yMax,
           ticks: {
             color: "#8d8d86",
-            callback: (value) => payload.item?.closeOnly ? `${Number(value).toFixed(2)} pt` : formatUsStockPrice(Number(value), Number(value) >= 1000 ? 0 : 2),
+            callback: (value) => payload.item?.closeOnly ? `${Number(value).toFixed(2)} pt` : formatIndexValue(Number(value), Number(value) >= 1000 ? 0 : 2),
             maxTicksLimit: 6,
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
@@ -10489,7 +10492,7 @@ function renderExtensionTick(label, value, maxRange) {
   return `<span class="market-rs-extension-tick" style="left:${position}%"><i></i><b>${label}</b></span>`;
 }
 
-function renderMarketRsExtensionGauge(metric) {
+function renderMarketRsExtensionGauge(metric, isIndex = false) {
   if (!metric || !Number.isFinite(Number(metric.atrMultiple))) {
     return "";
   }
@@ -10537,7 +10540,7 @@ function renderMarketRsExtensionGauge(metric) {
         <span>ATR Multiple <strong>${formatAtrMultiple(metric.atrMultiple)}</strong></span>
         <span>Gap <strong>${formatSignedPercent(metric.deviationPct)}</strong></span>
         <span>Sigma <strong>${formatSignedSigma(metric.signedSigma)}</strong></span>
-        <span>Anchor <strong>${formatDollarPrice(metric.anchor)}</strong></span>
+        <span>Anchor <strong>${isIndex ? `${Number(metric.anchor).toFixed(2)} pt` : formatDollarPrice(metric.anchor)}</strong></span>
         <span>${atrLabel.label} <strong>${atrLabel.value}</strong></span>
       </div>
     </article>
@@ -12382,7 +12385,7 @@ function updateMarketRsEmaReadout(labels, emaSeries, priceSeries, index) {
     return `
       <span class="market-rs-ema-readout-item" style="--ema-color:${series.color}">
         <i></i><b>${series.label}</b>
-        <span>${Number.isFinite(value) ? formatUsStockPrice(value) : "-"}</span>
+        <span>${Number.isFinite(value) ? (marketRsRowByTicker.get(state.rsSelectedTicker)?.isIndex ? `${value.toFixed(2)} pt` : formatUsStockPrice(value)) : "-"}</span>
         <em class="market-rs-ema-gap ${gapClass}">Gap ${Number.isFinite(gap) ? formatSignedPercent(gap) : "-"}</em>
       </span>
     `;
@@ -12820,6 +12823,8 @@ function createMarketRsChart(canvas, row) {
   if (typeof Chart === "undefined" || !row) {
     return;
   }
+  const formatPrice = (value, digits = 2) => row.isIndex
+    ? `${Number(value).toFixed(digits)} pt` : formatUsStockPrice(value, digits);
   const history = marketRsData.histories?.[row.ticker];
   const labels = marketRsData.historyDates ?? [];
   if (!history || !labels.length) {
@@ -12922,7 +12927,7 @@ function createMarketRsChart(canvas, row) {
   const priceDataset = useCandlestick
     ? {
         type: "line",
-        label: "Stock Price(R) · Candle",
+        label: `${row.isIndex ? "Index Level" : "Stock Price"}(R) · Candle`,
         data: paddedPrice,
         borderColor: "#111827",
         backgroundColor: "#111827",
@@ -12937,7 +12942,7 @@ function createMarketRsChart(canvas, row) {
       }
     : {
         type: "line",
-        label: "Stock Price(R) · Line",
+        label: `${row.isIndex ? "Index Level" : "Stock Price"}(R) · Line`,
         data: paddedPrice,
         borderColor: "#111827",
         backgroundColor: "#111827",
@@ -13097,15 +13102,15 @@ function createMarketRsChart(canvas, row) {
                 const candle = context.dataset.ohlc?.[context.dataIndex];
                 if (candle && [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite)) {
                   return [
-                    `Open ${formatUsStockPrice(candle.o)} · High ${formatUsStockPrice(candle.h)}`,
-                    `Low ${formatUsStockPrice(candle.l)} · Close ${formatUsStockPrice(candle.c)}`,
+                    `Open ${formatPrice(candle.o)} · High ${formatPrice(candle.h)}`,
+                    `Low ${formatPrice(candle.l)} · Close ${formatPrice(candle.c)}`,
                   ];
                 }
               }
               if (context.dataset.yAxisID === "y") {
                 return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(0)}`;
               }
-              return `${context.dataset.label}: ${formatUsStockPrice(Number(context.parsed.y))}`;
+              return `${context.dataset.label}: ${formatPrice(Number(context.parsed.y))}`;
             },
           },
         },
@@ -13179,7 +13184,7 @@ function createMarketRsChart(canvas, row) {
           grid: { drawOnChartArea: false },
           ticks: {
             color: "#111827",
-            callback: (value) => formatUsStockPrice(Number(value), value >= 100 ? 0 : 2),
+            callback: (value) => formatPrice(Number(value), value >= 100 ? 0 : 2),
           },
         },
         yEarnings: {
@@ -13880,7 +13885,7 @@ function renderMarketRsOverview() {
     .join("");
   const extension = selected?.extension ?? {};
   const extensionMarkup = ["ema21", "sma50"]
-    .map((key) => renderMarketRsExtensionGauge(extension[key]))
+    .map((key) => renderMarketRsExtensionGauge(extension[key], selected?.isIndex))
     .join("");
   const rsChartSeriesChips = MARKET_RS_CHART_SERIES.map(
     (series) => `
@@ -14038,6 +14043,7 @@ function renderMarketRsOverview() {
             <div>
               <h2>${selected?.ticker ?? "-"}</h2>
               <p>${selected?.name ?? "Select a ticker from the table or search box."}</p>
+              ${selected?.isIndex ? `<p><a href="${selected.sourceUrl}" target="_blank" rel="noopener noreferrer">NTR USD 지수 · ${selected.asOfDate} · Investing.com / MSCI</a></p>` : ""}
             </div>
             <span class="market-rs-detail-score">${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</span>
           </div>
@@ -14100,8 +14106,8 @@ function renderMarketRsOverview() {
             <div class="market-rs-chart-control-row">
               <span>Volume</span>
               <label class="market-rs-volume-toggle">
-                <input type="checkbox" data-rs-volume-toggle ${isMarketRsVolumeVisible() ? "checked" : ""} />
-                <span>Show volume</span>
+                <input type="checkbox" data-rs-volume-toggle ${selected?.isIndex ? "disabled" : isMarketRsVolumeVisible() ? "checked" : ""} />
+                <span>${selected?.isIndex ? "지수 거래량 없음" : "Show volume"}</span>
               </label>
             </div>
             <div class="market-rs-chart-control-row">
@@ -14114,7 +14120,7 @@ function renderMarketRsOverview() {
             <div class="market-rs-ema-readout" data-rs-ema-readout aria-label="Selected EMA values"></div>
             <canvas data-rs-chart="detail"></canvas>
           </div>
-          ${isMarketRsVolumeVisible() ? `
+          ${isMarketRsVolumeVisible() && !selected?.isIndex ? `
             <div class="chart-wrap market-rs-volume-chart-wrap">
               <div class="market-rs-volume-head"><strong>Volume</strong><span>Daily shares</span></div>
               <canvas data-rs-chart="volume"></canvas>
@@ -15076,7 +15082,7 @@ function renderMarketTrendScoreOverview() {
             </div>
             <div class="market-rs-metric">
               <span>Price</span>
-              <strong>${formatUsStockPrice(selected?.price)}</strong>
+              <strong>${selected?.isIndex ? `${Number(selected.price).toFixed(2)} pt` : formatUsStockPrice(selected?.price)}</strong>
             </div>
             <div class="market-rs-metric">
               <span>50DMA Gap</span>
@@ -19163,6 +19169,7 @@ function renderIndexTrendOverview() {
           <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
           <span>Gap = Index / EMA - 1</span>
           ${marketTrendCloseOnly ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">Cboe 공식 종가</a> · ${marketTrendItem.dates.at(-1)} · OHLC 미제공: Candle·ATR 미산출</span>` : ""}
+          ${marketTrendItem?.msciIndexCode ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">MSCI ACWI · 배당 원천세 차감 후 재투자 · USD · Investing.com</a> · ${marketTrendItem.dates.at(-1)}</span>` : ""}
         </div>
         <div class="market-trend-gap-row">
           ${marketTrendGapMarkup}
