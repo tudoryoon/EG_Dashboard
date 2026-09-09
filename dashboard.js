@@ -13570,6 +13570,28 @@ function createMarketRsAtrChart(canvas, row) {
   charts.push(chart);
 }
 
+function renderMarketRsSelectionPreservingScroll() {
+  const pagePosition = { left: window.scrollX, top: window.scrollY };
+  const selectors = [".market-rs-table-wrap", ".market-rs-new-high-list", ".market-rs-period-list"];
+  const positions = selectors.map((selector) => ({
+    selector,
+    items: [...usOverviewRoot.querySelectorAll(selector)].map((node) => ({
+      left: node.scrollLeft, top: node.scrollTop,
+    })),
+  }));
+
+  // Ticker selection replaces these DOM nodes; restore their independent scrolls.
+  render();
+  positions.forEach(({ selector, items }) => {
+    usOverviewRoot.querySelectorAll(selector).forEach((node, index) => {
+      if (!items[index]) return;
+      node.scrollLeft = items[index].left;
+      node.scrollTop = items[index].top;
+    });
+  });
+  window.scrollTo({ ...pagePosition, behavior: "instant" });
+}
+
 function renderMarketRsOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -14382,7 +14404,7 @@ function renderMarketRsOverview() {
         state.rsMonitorSelectedTicker = element.dataset.rsTicker;
       }
       state.rsSelectedTicker = element.dataset.rsTicker;
-      render();
+      renderMarketRsSelectionPreservingScroll();
     });
   });
 
