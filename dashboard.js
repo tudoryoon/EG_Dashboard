@@ -126,6 +126,7 @@ const screeningSubtabMeta = {
   RS: { label: "RS" },
   TrendScore: { label: "추세스코어" },
   Canslim: { label: "CANSLIM" },
+  Company: { label: "Company" },
 };
 
 const marketSubtabMeta = {
@@ -355,6 +356,7 @@ const FX_CURRENCY_OPTIONS = [
 const state = {
   tab: "DailyBriefing",
   screeningView: "RS",
+  companyTicker: "",
   asiaView: "Taiwan",
   marketView: "Index",
   marketIndexView: "Trend",
@@ -525,6 +527,7 @@ const DASHBOARD_ROUTE_META = {
       RS: "rs",
       TrendScore: "trend-score",
       Canslim: "canslim",
+      Company: "company",
     },
   },
   Market: {
@@ -633,6 +636,9 @@ function buildDashboardRouteHash() {
     }
   }
 
+  if (tabKey === "Screening" && state.screeningView === "Company" && isCompanyPilotTicker(state.companyTicker)) {
+    parts.push(state.companyTicker.toLowerCase());
+  }
   return `#/${parts.join("/")}`;
 }
 
@@ -657,6 +663,8 @@ function applyDashboardRouteFromHash(hash = window.location.hash) {
     }
   }
 
+  state.companyTicker = tabKey === "Screening" && state.screeningView === "Company" && isCompanyPilotTicker(parts[2])
+    ? parts[2].toUpperCase() : "";
   return buildDashboardRouteHash();
 }
 
@@ -21697,6 +21705,7 @@ function renderSubtabs() {
     activeKey = state.screeningView;
     setActive = (viewKey) => {
       state.screeningView = viewKey;
+      if (viewKey === "Company") state.companyTicker = "";
       if (viewKey === "RS") state.rsHistoryRange = "1y";
       state.query = "";
       if (searchInput) searchInput.value = "";
@@ -21836,6 +21845,8 @@ function renderSummary(list) {
       summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
     } else if (state.screeningView === "TrendScore") {
       summaryText.textContent = "NASDAQ100, S&P500, and Russell 2000 trend score rankings with daily rank history";
+    } else if (state.screeningView === "Company") {
+      summaryText.textContent = "";
     } else {
       summaryText.textContent = "CANSLIM coverage, financial trends, and earnings-surprise history across the RS universe";
     }
@@ -22465,6 +22476,7 @@ function renderOpenrouterOverview() {
 }
 
 function render() {
+  prepareCompanyViewRender();
   syncDashboardRoute();
   destroyCharts();
   const asiaRegion = getAsiaScreeningRegion();
@@ -22518,6 +22530,7 @@ function render() {
     else if (state.screeningView === "Breadth") renderMarketBreadthOverview();
     else if (state.screeningView === "RS") renderMarketRsOverview();
     else if (state.screeningView === "TrendScore") renderMarketTrendScoreOverview();
+    else if (state.screeningView === "Company") renderCompanyOverview();
     else renderMarketCanslimOverview();
     return;
   }
