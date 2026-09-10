@@ -446,6 +446,33 @@ def extract_tag_series(
     *,
     allow_annual_derive: bool = True,
 ) -> dict[str, dict[str, Any]]:
+    series = [
+        _extract_tag_series_single(facts, [tag], preferred_units, allow_annual_derive=allow_annual_derive)
+        for tag in tags
+    ]
+    # Issuers can rename a revenue concept. Keep older concepts for historical
+    # comparisons, while the concept with the latest observation takes precedence.
+    series.sort(key=lambda values: max((str(item.get("end") or "") for item in values.values()), default=""), reverse=True)
+    merged: dict[str, dict[str, Any]] = {}
+    for values in series:
+        if merged and values:
+            by_end = {str(item.get("end")): item["value"] for item in merged.values()}
+            overlap = [(item["value"], by_end[str(item.get("end"))]) for item in values.values() if str(item.get("end")) in by_end]
+            if not overlap or any(abs(left - right) > max(1, abs(right) * 1e-6) for left, right in overlap):
+                continue
+        for period, item in values.items():
+            if period not in merged:
+                merged[period] = item
+    return merged
+
+
+def _extract_tag_series_single(
+    facts: dict[str, Any],
+    tags: list[str],
+    preferred_units: tuple[str, ...] = ("USD",),
+    *,
+    allow_annual_derive: bool = True,
+) -> dict[str, dict[str, Any]]:
     us_gaap = facts.get("facts", {}).get("us-gaap", {})
     selected_rows: list[dict[str, Any]] = []
     selected_tag = None
@@ -482,10 +509,24 @@ def extract_tag_series(
     quarters: dict[str, dict[str, Any]] = {}
     annuals: dict[str, dict[str, Any]] = {}
     ytd: dict[tuple[str, int], dict[str, Any]] = {}
+    own_annual_years: dict[str, int] = {}
+    for row in sorted(selected_rows, key=lambda item: str(item.get("filed") or "")):
+        end = parse_iso_date(row.get("end"))
+        filed = parse_iso_date(row.get("filed"))
+        if (row.get("fp") == "FY" and isinstance(row.get("fy"), int)
+                and is_full_year_fact(row.get("start"), row.get("end"))
+                and end and filed and 0 <= (filed - end).days <= 300):
+            own_annual_years.setdefault(str(row["end"]), row["fy"])
+
+    def annual_year(row: dict[str, Any]) -> int | None:
+        return own_annual_years.get(str(row.get("end"))) or annual_fiscal_year(
+            row.get("fy"), row.get("end"), row.get("frame"), row.get("filed"),
+        )
+
     annual_ranges = sorted(
         [
             {
-                "fy": annual_fiscal_year(row.get("fy"), row.get("end"), row.get("frame"), row.get("filed")),
+                "fy": annual_year(row),
                 "start": row.get("start"),
                 "end": row.get("end"),
             }
@@ -535,10 +576,10 @@ def extract_tag_series(
 
         if frame and re.match(r"CY\d{4}Q[1-4]$", frame):
             if frame.endswith("Q4") and is_full_year_fact(row.get("start"), end):
-                annual_year = str(annual_fiscal_year(fy, end, frame, row.get("filed")) or inferred_fy or frame[2:6])
-                existing_annual = annuals.get(annual_year)
+                year = str(annual_year(row) or inferred_fy or frame[2:6])
+                existing_annual = annuals.get(year)
                 if not existing_annual or str(item.get("filed") or "") >= str(existing_annual.get("filed") or ""):
-                    annuals[annual_year] = item
+                    annuals[year] = item
                 continue
             existing = quarters.get(period or "")
             if not existing or str(item.get("filed") or "") >= str(existing.get("filed") or ""):
@@ -546,7 +587,7 @@ def extract_tag_series(
             continue
 
         if frame and re.match(r"CY\d{4}$", frame):
-            year = str(annual_fiscal_year(fy, end, frame, row.get("filed")) or inferred_fy or "")
+            year = str(annual_year(row) or inferred_fy or "")
             if year and is_full_year_fact(row.get("start"), end):
                 annuals[year] = item
             continue
@@ -1127,15 +1168,12 @@ def build_ir_only_rows(releases: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def recompute_quarterly_changes(rows: list[dict[str, Any]]) -> None:
-    by_period = {str(row.get("periodKey") or ""): row for row in rows}
     for row in rows:
-        period_key = str(row.get("periodKey") or "")
-        match = re.match(r"FY(\d{4})Q([1-4])$", period_key)
-        if not match:
+        candidates = [prior for prior in rows if is_same_quarter_year_ago(row.get("periodEnd"), prior.get("periodEnd"))]
+        if not candidates:
             continue
-        prior = by_period.get(f"FY{int(match.group(1)) - 1}Q{match.group(2)}")
-        if not prior:
-            continue
+        current_end = parse_iso_date(row.get("periodEnd"))
+        prior = min(candidates, key=lambda candidate: abs((current_end - parse_iso_date(candidate["periodEnd"])).days - 365))
         row["revenueYoyPct"] = safe_round(pct_change(row.get("revenue"), prior.get("revenue")), 1)
         current_opm = safe_float(row.get("operatingMarginPct"))
         prior_opm = safe_float(prior.get("operatingMarginPct"))
@@ -1144,6 +1182,12 @@ def recompute_quarterly_changes(rows: list[dict[str, Any]]) -> None:
             if current_opm is not None and prior_opm is not None
             else None
         )
+        row["yoyComparison"] = {
+            "periodEnd": prior.get("periodEnd"),
+            "revenue": prior.get("revenue"),
+            "operatingMarginPct": prior.get("operatingMarginPct"),
+        }
+        row.setdefault("metricSources", {})["revenueYoyPct"] = f"Revenue / same-quarter revenue ended {prior['periodEnd']} - 1"
 
 
 def sanitize_financial_rows(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
@@ -1321,6 +1365,9 @@ def build_company_financials(
     name: str,
     cik: str,
     adjustments_by_ticker: dict[str, list[dict[str, Any]]],
+    *,
+    facts_payload: dict[str, Any] | None = None,
+    ir_releases: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if ticker in UNSUPPORTED_AUTOMATED_TICKERS:
         return {
@@ -1335,8 +1382,9 @@ def build_company_financials(
             "nonGaapRows": 0,
             "quarters": [],
         }
-    facts = fetch_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
-    ir_releases = build_ir_release_metrics(cik)
+    facts = facts_payload if facts_payload is not None else fetch_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
+    if ir_releases is None:
+        ir_releases = build_ir_release_metrics(cik)
     revenue = extract_tag_series(facts, REVENUE_TAGS)
     bank_revenue = add_series(
         extract_tag_series(facts, NET_INTEREST_INCOME_TAGS),

@@ -10679,7 +10679,7 @@ function renderMarketRsFinancials(row) {
         <td>${quarter.period ?? "-"}</td>
         <td>${formatRsFinancialPeriodRange(quarter.periodStart, quarter.periodEnd)}</td>
         <td title="${metricSource(quarter, "revenue")}">${formatRsFinancialUsd(quarter.revenue)}</td>
-        <td title="Derived from same-quarter revenue"><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
+        <td title="${metricSource(quarter, "revenueYoyPct")}"><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
         <td title="${metricSource(quarter, "grossMarginPct")}">${formatRsFinancialMargin(quarter.grossMarginPct)}</td>
         <td title="${metricSource(quarter, "operatingMarginPct")}">${formatRsFinancialMargin(quarter.operatingMarginPct)}</td>
         <td><span class="${getSignedValueClass(quarter.operatingMarginYoyPp)}">${formatRsFinancialPp(quarter.operatingMarginYoyPp)}</span></td>
@@ -10818,7 +10818,7 @@ function createMarketCanslimFinancialChart(canvas, financialItem) {
           pointBorderColor: "#dc2626",
           pointBorderWidth: 2,
           tension: 0.22,
-          spanGaps: true,
+          spanGaps: false,
           yAxisID: "yPercent",
           order: 1,
         },
@@ -14597,7 +14597,7 @@ function formatTrendList(items) {
   return items.join(", ");
 }
 
-function createTrendScoreChart(canvas, row) {
+function createTrendScoreChart(canvas, row, plugins = []) {
   if (typeof Chart === "undefined" || !row) {
     return;
   }
@@ -14621,6 +14621,7 @@ function createTrendScoreChart(canvas, row) {
 
   const chart = new Chart(canvas, {
     type: "line",
+    plugins,
     data: {
       labels: selectedLabels,
       datasets: [
