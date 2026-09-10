@@ -1,6 +1,6 @@
 """Exact MSCI ACWI Net Total Return USD index, not the ACWI ETF."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 import math
 from zoneinfo import ZoneInfo
 
@@ -42,10 +42,18 @@ def parse_history(payload, through):
     }
 
 
+def latest_completed_date(now=None):
+    now = (now or datetime.now(ZoneInfo("America/New_York"))).astimezone(ZoneInfo("America/New_York"))
+    # Match the RS collector's close buffer. UTC midnight is 09:00 KST and
+    # would incorrectly exclude the completed US session from morning runs.
+    day = now.date() if now.time() >= time(16, 10) else now.date() - timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day.isoformat()
+
+
 def fetch_item(existing=None):
-    # The global index is not final at the US cash close. Never ingest the
-    # current UTC date's intraday quote as a finalized daily index observation.
-    through = (datetime.now(ZoneInfo("UTC")).date() - timedelta(days=1)).isoformat()
+    through = latest_completed_date()
     try:
         response = requests.get(HISTORY_URL, params={
             "start-date": START_DATE, "end-date": through,
@@ -125,16 +133,24 @@ def append_rs_index(payload, item=None):
 
 
 def main():
+    import argparse
     import json
     from pathlib import Path
     import update_market_trend_score as trend
     from add_market_rs_tickers import load_js_payload
 
+    parser = argparse.ArgumentParser(description="Refresh MSCI ACWI NTR without changing other symbols")
+    parser.add_argument("--rs-only", action="store_true", help="Leave the separate Index Trend file to its own workflow")
+    parser.add_argument("--if-stale", action="store_true", help="Skip when the index RS chart reaches the RS data date")
+    args = parser.parse_args()
     data = Path(__file__).resolve().parents[1] / "data"
+    rs = load_js_payload(data / "market-rs-data.js", "marketRsData")
+    if args.if_stale and not rs_index_is_stale(rs):
+        print("MSCI ACWI NTR RS chart already reaches the current RS session")
+        return
     prices = load_js_payload(data / "market-price-data.js", "marketPriceData")
     item = fetch_item(prices["items"].get(KEY))
     prices["items"][KEY] = item
-    rs = load_js_payload(data / "market-rs-data.js", "marketRsData")
     append_rs_index(rs, item)
     result = load_js_payload(data / "market-trend-score-data.js", "marketTrendScoreData")
     if result["historyDates"] != rs["historyDates"][-trend.HISTORY_POINTS:]:
@@ -149,11 +165,20 @@ def main():
         ("market-rs-data.js", "marketRsData", rs),
         ("market-trend-score-data.js", "marketTrendScoreData", result),
     ]:
+        if args.rs_only and filename == "market-price-data.js":
+            continue
         # Match the compact daily collector format; only the new index changes.
         (data / filename).write_text("window." + variable + " = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8", newline="\n")
     row = next(r for r in rs["rows"] if r["ticker"] == TICKER)
     print(f"{LABEL}: {item['dates'][-1]} = {item['values'][-1]}; {len(item['dates'])} index sessions")
     print(f"RS {row['rsRatingAll']}, Trend {next(r['score'] for r in result['rows']['all'] if r['ticker'] == TICKER)}")
+
+
+def rs_index_is_stale(payload):
+    row = next((r for r in payload.get("rows", []) if r.get("ticker") == TICKER), {})
+    history = payload.get("histories", {}).get(TICKER, {})
+    return (str(row.get("asOfDate") or "") < str(payload.get("updatedAt") or "")
+            or any(not history.get(key) or history[key][-1] is None for key in ("price", "rsRatingAll")))
 
 
 if __name__ == "__main__":
