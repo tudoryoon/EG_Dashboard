@@ -153,7 +153,7 @@ def main():
     prices["items"][KEY] = item
     append_rs_index(rs, item)
     result = load_js_payload(data / "market-trend-score-data.js", "marketTrendScoreData")
-    if result["historyDates"] != rs["historyDates"][-trend.HISTORY_POINTS:]:
+    if result["historyDates"] != trend.get_history_dates(rs):
         raise ValueError("RS and Trend history dates differ; refresh Trend before targeted update")
     for key, meta in trend.UNIVERSES.items():
         rows, histories = trend.build_universe_payload(key, meta, rs, prices, {}, {}, {TICKER})

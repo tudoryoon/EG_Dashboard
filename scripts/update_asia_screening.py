@@ -227,7 +227,7 @@ def run(region, full=False, recalculate=False):
     # The same trend/climax implementation is called with a regional benchmark.
     tmeta = {"label": meta["label"], "include_all": True, "history_key": "rsRatingAll", "benchmark_key": "regional", "color": "#0f766e"}
     trows, thistories = trend.build_universe_payload("all", tmeta, rs_payload, bench_data, {}, {})
-    trend_payload = {"updatedAt": rs_payload["updatedAt"], "historyDates": rs_payload["historyDates"][-trend.HISTORY_POINTS:], "rows": {"all": trows}, "histories": {"all": thistories}, "universes": {"all": tmeta}, "scoring": {"description": f"가격 추세 4 + {meta['benchmarkLabel']} 대비 추세 4 + 모멘텀 2 · Market Cap: USD"}}
+    trend_payload = {"updatedAt": rs_payload["updatedAt"], "historyDates": trend.get_history_dates(rs_payload), "rows": {"all": trows}, "histories": {"all": thistories}, "universes": {"all": tmeta}, "scoring": {"description": f"가격 추세 4 + {meta['benchmarkLabel']} 대비 추세 4 + 모멘텀 2 · Market Cap: USD"}}
     benchmark_note = "HSCI 무료 장기 이력 부족으로 항셍지수를 상대추세 기준으로 사용" if region == "hk" else "CSI800 지수 일별 가격: Eastmoney 공개 시세"
     output = {"meta": {**meta, "sources": sources, "requested": len(members), "covered": len(rows), "missing": errors, "fxLocalPerUsd": fx, "benchmarkNote": benchmark_note, "watchlist": WATCH[region]}, "rs": rs_payload, "trend": trend_payload}
     assert len(trows) == len(rows), "Trend and RS coverage differ"

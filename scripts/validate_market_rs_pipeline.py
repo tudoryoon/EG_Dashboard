@@ -75,6 +75,16 @@ def main() -> None:
     require(trend.get("updatedAt") == rs.get("updatedAt"), "Trend Score and RS dates differ.")
     require(len(trend_rows.get("all") or []) == len(rs_rows), "Trend Score all-universe count differs from RS.")
     require(len(trend_rows.get("nasdaq100") or []) >= 90, "Trend Score NASDAQ 100 universe is too small.")
+    trend_dates = trend.get("historyDates") or []
+    require(trend_dates == history_dates, "Trend Score history no longer covers the complete RS window from 2025.")
+    for universe, histories in (trend.get("histories") or {}).items():
+        for ticker, history in histories.items():
+            for key in ("score", "rank", "climaxScore"):
+                require(len(history.get(key) or []) == len(trend_dates),
+                        f"Trend {universe}/{ticker} {key} is not aligned to historyDates.")
+    nvda_scores = (trend.get("histories") or {}).get("all", {}).get("NVDA", {}).get("score") or []
+    require(len(nvda_scores) >= 200 and nvda_scores[199] is not None,
+            "Trend warmup was reset: NVDA must have a score after its first 200 stored sessions.")
     trend_all_rows = {
         row.get("ticker"): row
         for row in trend_rows.get("all") or []

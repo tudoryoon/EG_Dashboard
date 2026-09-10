@@ -14,7 +14,15 @@ RS_DATA_PATH = ROOT / "data" / "market-rs-data.js"
 MARKET_PRICE_DATA_PATH = ROOT / "data" / "market-price-data.js"
 OUTPUT_PATH = ROOT / "data" / "market-trend-score-data.js"
 BRIEFING_DATA_PATH = ROOT / "data" / "market-briefing-data.js"
-HISTORY_POINTS = 252
+HISTORY_START_DATE = "2025-01-01"
+HISTORY_RANGES = [
+    {"key": "1m", "label": "1M"},
+    {"key": "3m", "label": "3M"},
+    {"key": "6m", "label": "6M"},
+    {"key": "ytd", "label": "YTD"},
+    {"key": "1y", "label": "1Y"},
+    {"key": "max", "label": "2025~"},
+]
 ATR_MIN_PERIODS = 2
 # Newly listed names can be scored before a full 200-session history is
 # available. Keep DRAM's established 50-session threshold, while SPCX only
@@ -150,7 +158,7 @@ def serialize_series(series: pd.Series, digits: int = 2) -> list[float | int | N
     values = []
     for value in series.tolist():
         numeric = number_or_none(value)
-        values.append(None if numeric is None else round(numeric, digits))
+        values.append(None if numeric is None else int(round(numeric)) if digits == 0 else round(numeric, digits))
     return values
 
 
@@ -166,6 +174,20 @@ def as_tail_aligned_series(values: list[object], dates: list[str]) -> pd.Series:
     trimmed_values = values[-len(dates):]
     aligned_dates = dates[-len(trimmed_values):]
     return as_numeric_series(trimmed_values, aligned_dates).reindex(full_index)
+
+
+def get_history_dates(source: dict) -> list[str]:
+    return [date for date in source.get("historyDates", []) if date >= HISTORY_START_DATE]
+
+
+def align_existing_history(history: dict, old_dates: list[str], dates: list[str]) -> dict:
+    # A priority refresh must preserve actual dates, not shift the old tail
+    # onto a newer calendar or an expanded history window.
+    output = {}
+    for key in ["score", "rank", "climaxScore"]:
+        aligned = as_tail_aligned_series(history.get(key, []), old_dates).reindex(pd.to_datetime(dates))
+        output[key] = serialize_series(aligned, 0)
+    return output
 
 
 def score_label(score: int | None) -> str:
@@ -511,7 +533,12 @@ def build_universe_payload(
     ticker_filter: set[str] | None = None,
 ) -> tuple[list[dict], dict[str, dict]]:
     rows_by_ticker = {row.get("ticker"): row for row in source.get("rows", []) if row.get("ticker")}
-    dates = source.get("historyDates", [])[-HISTORY_POINTS:]
+    # Keep the complete price window for the 200-session inputs. Only trim
+    # output after calculating, so each daily run retains past valid scores.
+    dates = source.get("historyDates", [])
+    output_dates = pd.to_datetime(get_history_dates(source))
+    if not dates:
+        return [], {}
     histories = source.get("histories", {})
     benchmark = build_benchmark_series(market_price_payload, str(meta["benchmark_key"]))
     members: list[tuple[str, dict, dict, pd.DataFrame]] = []
@@ -659,13 +686,12 @@ def build_universe_payload(
                 ),
             }
         )
+        # Prices and RS ratings already live in the RS payload. The Trend
+        # charts consume only these three integer-valued histories.
         output_histories[ticker] = {
-            "score": serialize_series(frame["score"], 0),
-            "rank": serialize_series(rank_matrix[ticker] if ticker in rank_matrix.columns else pd.Series(index=frame.index), 0),
-            "climaxScore": serialize_series(climax_history, 0),
-            "price": serialize_series(frame["price"], 2),
-            "relative": serialize_series(frame["relative"], 6),
-            "rsRating": serialize_series(frame["rsRating"], 0),
+            "score": serialize_series(frame["score"].reindex(output_dates), 0),
+            "rank": serialize_series((rank_matrix[ticker] if ticker in rank_matrix.columns else pd.Series(index=frame.index, dtype="float64")).reindex(output_dates), 0),
+            "climaxScore": serialize_series(climax_history.reindex(output_dates), 0),
         }
 
     rows.sort(key=lambda item: (item["rank"] is None, item["rank"] or 9999, item["ticker"]))
@@ -675,7 +701,7 @@ def build_universe_payload(
 def build_payload() -> dict:
     source = load_market_rs_payload()
     market_price_payload = load_market_price_payload()
-    dates = source.get("historyDates", [])[-HISTORY_POINTS:]
+    dates = get_history_dates(source)
     rows_by_universe = {}
     histories_by_universe = {}
     frame_cache: dict[tuple[str, str], pd.DataFrame] = {}
@@ -700,13 +726,7 @@ def build_payload() -> dict:
             "benchmarkInput": "data/market-price-data.js",
         },
         "historyDates": dates,
-        "ranges": [
-            {"key": "1m", "label": "1M"},
-            {"key": "3m", "label": "3M"},
-            {"key": "6m", "label": "6M"},
-            {"key": "ytd", "label": "YTD"},
-            {"key": "1y", "label": "1Y"},
-        ],
+        "ranges": HISTORY_RANGES,
         "universes": UNIVERSES,
         "scoring": {
             "label": "Trend Score",
@@ -757,7 +777,7 @@ def build_daily_briefing_priority_payload() -> dict:
         if isinstance(row, dict) and row.get("ticker")
     }
     fresh_tickers = tickers & source_tickers
-    dates = source.get("historyDates", [])[-HISTORY_POINTS:]
+    dates = get_history_dates(source)
     rows_by_universe: dict[str, list[dict]] = {}
     histories_by_universe: dict[str, dict[str, dict]] = {}
     frame_cache: dict[tuple[str, str], pd.DataFrame] = {}
@@ -793,7 +813,12 @@ def build_daily_briefing_priority_payload() -> dict:
         merged_rows = list(previous_rows.values())
         merged_rows.sort(key=lambda item: (item.get("rank") is None, item.get("rank") or 9999, item.get("ticker") or ""))
         rows_by_universe[universe_key] = merged_rows
-        merged_histories = dict(existing_histories.get(universe_key, {}))
+        merged_histories = {
+            ticker: align_existing_history(history, existing.get("historyDates", []), dates)
+            for ticker, history in existing_histories.get(universe_key, {}).items()
+        }
+        for ticker, history in priority_histories.items():
+            history["rank"] = merged_histories.get(ticker, {}).get("rank", [None] * len(dates))
         merged_histories.update(priority_histories)
         histories_by_universe[universe_key] = merged_histories
 
@@ -805,13 +830,7 @@ def build_daily_briefing_priority_payload() -> dict:
             "benchmarkInput": "data/market-price-data.js",
         },
         "historyDates": dates,
-        "ranges": [
-            {"key": "1m", "label": "1M"},
-            {"key": "3m", "label": "3M"},
-            {"key": "6m", "label": "6M"},
-            {"key": "ytd", "label": "YTD"},
-            {"key": "1y", "label": "1Y"},
-        ],
+        "ranges": HISTORY_RANGES,
         "universes": UNIVERSES,
         "scoring": {
             "label": "Trend Score",

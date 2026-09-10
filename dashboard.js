@@ -466,7 +466,7 @@ const state = {
     ema200: false,
   },
   trendScoreUniverse: "all",
-  trendScoreRange: "1y",
+  trendScoreRange: "max",
   trendScoreSelectedTicker: "",
   trendScoreMarketCapRange: "all",
   trendScoreCustomMarketCapMin: "",
@@ -14686,7 +14686,7 @@ function createTrendScoreChart(canvas, row) {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            const indexes = buildRegularDateTickIndexes(selectedLabels, state.trendScoreRange);
+            const indexes = getMacroTickIndexes(selectedLabels, state.trendScoreRange, axis.chart.width);
             axis.ticks = indexes.map((index) => ({ value: index }));
           },
           ticks: {
@@ -15157,6 +15157,12 @@ function renderMarketTrendScoreOverview() {
               </article>
             </div>
           </div>
+          <div class="market-rs-chip-row" role="group" aria-label="추세 차트 기간">
+            ${(marketTrendScoreData.ranges ?? []).map((range) => `
+              <button type="button" class="market-rs-chip${state.trendScoreRange === range.key ? " active" : ""}"
+                data-trend-score-history-range="${range.key}" aria-pressed="${state.trendScoreRange === range.key}">${range.label}</button>
+            `).join("")}
+          </div>
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-trend-score-chart="detail"></canvas>
           </div>
@@ -15345,6 +15351,23 @@ function renderMarketTrendScoreOverview() {
   });
 
   const detailCanvas = usOverviewRoot.querySelector('[data-trend-score-chart="detail"]');
+  usOverviewRoot.querySelectorAll("[data-trend-score-history-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.trendScoreRange = button.dataset.trendScoreHistoryRange;
+      usOverviewRoot.querySelectorAll("[data-trend-score-history-range]").forEach((item) => {
+        const active = item.dataset.trendScoreHistoryRange === state.trendScoreRange;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      const previousChart = typeof Chart !== "undefined" && detailCanvas ? Chart.getChart(detailCanvas) : null;
+      if (previousChart) {
+        const chartIndex = charts.indexOf(previousChart);
+        if (chartIndex >= 0) charts.splice(chartIndex, 1);
+        previousChart.destroy();
+      }
+      createTrendScoreChart(detailCanvas, selected);
+    });
+  });
   if (detailCanvas && selected) {
     createTrendScoreChart(detailCanvas, selected);
   }
