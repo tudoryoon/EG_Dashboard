@@ -21,11 +21,8 @@ let companyQuery = "";
 let companySort = "marketCap";
 let companyLazyBuilt = new Set();
 let companyTrendRange = "max";
-let companyTrendMode = "3d";
 let companyTrendSeries = { "Rank": true, "Trend Score": true, "Climax Score": true };
 let companyFinancialRange = "all";
-let companyFinancialMode = "3d";
-let companyDepthModule;
 const companyFinancialSelected = new Set(["revenue", "revenueYoyPct"]);
 const COMPANY_FINANCIAL_METRICS = [
   { key: "revenue", label: "매출", unit: "usd", type: "bar", color: "#39d3a1", column: 2, group: "금액" },
@@ -282,35 +279,12 @@ function renderCompanyAnalysisControls(financial) {
     const available = financial?.quarters?.some((quarter) => companyFinite(quarter[metric.key]) !== null);
     return `<label style="--metric-color:${metric.color}" title="${available ? metric.label : "저장된 데이터 없음"}"><input type="checkbox" data-company-financial="${metric.key}" ${companyFinancialSelected.has(metric.key) ? "checked" : ""} ${available ? "" : "disabled"} /><i></i>${metric.label}</label>`;
   }).join("")}</div></fieldset>`).join("")}
-  <div class="company-control-group company-financial-mode" role="group" aria-label="재무 차트 표현">${["3d", "2d"].map(mode => `<button type="button" data-company-financial-mode="${mode}" aria-pressed="${companyFinancialMode === mode}">${mode.toUpperCase()}</button>`).join("")}</div>
   <label class="company-analysis-range">분기<select data-company-financial-range>${[4, 8].filter((value) => value < count).map((value) => `<option value="${value}" ${companyFinancialRange === String(value) ? "selected" : ""}>최근 ${value}분기</option>`).join("")}<option value="all" ${companyFinancialRange === "all" || Number(companyFinancialRange) >= count ? "selected" : ""}>전체 ${count}분기</option></select></label></div>`;
 }
 
 function renderCompanyTrendControls() {
   return `<div class="company-analysis-controls"><fieldset class="company-metric-group"><legend>추세 지표</legend><div>${[["Rank","순위","#39d3a1"],["Trend Score","Trend Score","#ecf0ed"],["Climax Score","Climax Score","#ffb641"]].map(([key,label,color]) => `<label style="--metric-color:${color}"><input type="checkbox" data-company-trend="${key}" ${companyTrendSeries[key] ? "checked" : ""} /><i></i>${label}</label>`).join("")}</div></fieldset>
-  <div class="company-control-group company-financial-mode" role="group" aria-label="추세 차트 표현">${["3d", "2d"].map(mode => `<button type="button" data-company-trend-mode="${mode}" aria-pressed="${companyTrendMode === mode}">${mode.toUpperCase()}</button>`).join("")}</div>
   <label class="company-analysis-range">추세 기간<select data-company-trend-range>${[["1m","1M"],["3m","3M"],["6m","6M"],["1y","1Y"],["ytd","YTD"],["max","2025~"]].map(([key,label]) => `<option value="${key}" ${companyTrendRange === key ? "selected" : ""}>${label}</option>`).join("")}</select></label></div>`;
-}
-
-function enableCompanyDepth(canvas, chart, kind) {
-  const getMode = () => kind === "financial" ? companyFinancialMode : companyTrendMode;
-  if (getMode() !== "3d") return;
-  companyDepthModule ??= import("./company-depth-chart.js?v=20260910-1");
-  companyDepthModule.then(module => {
-    if (getMode() === "3d" && canvas.isConnected && Chart.getChart(canvas) === chart) module.mountCompanyDepthChart(chart);
-  }).catch(error => {
-    if (!canvas.isConnected || Chart.getChart(canvas) !== chart) return;
-    chart.$companyDepth?.destroy();
-    chart.update("none");
-    console.warn("Company 3D unavailable; using 2D", error);
-    if (kind === "financial") companyFinancialMode = "2d";
-    else companyTrendMode = "2d";
-    companyDepthModule = undefined;
-    companyModal.querySelectorAll(`[data-company-${kind}-mode]`).forEach(button => {
-      button.setAttribute("aria-pressed", String(button.getAttribute(`data-company-${kind}-mode`) === "2d"));
-      if (button.getAttribute(`data-company-${kind}-mode`) === "3d") button.title = "이 브라우저에서는 3D를 사용할 수 없습니다.";
-    });
-  });
 }
 
 function updateCompanyFinancialTable(row) {
@@ -337,7 +311,7 @@ function createCompanyFinancialChart(canvas, item) {
   empty.textContent = companyFinancialSelected.size ? "선택한 기간에 공시된 데이터가 없습니다." : "선택된 재무 지표 없음";
   if (!model.datasets.length) return;
   const chart = new Chart(canvas, {
-    type: "bar", plugins: [], data: { labels: model.quarters.map((quarter) => quarter.period ?? "-"), datasets: model.datasets },
+    type: "bar", data: { labels: model.quarters.map((quarter) => quarter.period ?? "-"), datasets: model.datasets },
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
       interaction: { mode: "index", intersect: false },
@@ -375,7 +349,6 @@ function createCompanyFinancialChart(canvas, item) {
   });
   charts.push(chart);
   applyCompanyChartTheme(canvas);
-  enableCompanyDepth(canvas, chart, "financial");
 }
 
 function updateCompanyTrendVisibility(canvas) {
@@ -393,16 +366,6 @@ function updateCompanyTrendVisibility(canvas) {
 }
 
 function bindCompanyAnalysisControls(row, trend) {
-  companyModal.querySelectorAll("[data-company-trend-mode]").forEach(button => button.addEventListener("click", () => {
-    companyTrendMode = button.dataset.companyTrendMode;
-    companyModal.querySelectorAll("[data-company-trend-mode]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.companyTrendMode === companyTrendMode)));
-    drawCompanyLazy("trend", row, trend);
-  }));
-  companyModal.querySelectorAll("[data-company-financial-mode]").forEach(button => button.addEventListener("click", () => {
-    companyFinancialMode = button.dataset.companyFinancialMode;
-    companyModal.querySelectorAll("[data-company-financial-mode]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.companyFinancialMode === companyFinancialMode)));
-    drawCompanyLazy("financial", row, trend);
-  }));
   companyModal.querySelectorAll("[data-company-financial]").forEach((input) => input.addEventListener("change", () => {
     if (input.checked) companyFinancialSelected.add(input.dataset.companyFinancial);
     else companyFinancialSelected.delete(input.dataset.companyFinancial);
@@ -530,8 +493,6 @@ function drawCompanyLazy(key, row, trend) {
     createTrendScoreChart(canvas, trend);
     applyCompanyChartTheme(canvas);
     updateCompanyTrendVisibility(canvas);
-    const chart = typeof Chart !== "undefined" && canvas ? Chart.getChart(canvas) : null;
-    if (chart) enableCompanyDepth(canvas, chart, "trend");
   } else if (key === "financial") {
     const canvas = companyModal.querySelector('[data-canslim-chart="financials"]');
     createCompanyFinancialChart(canvas, marketRsFinancialsData.financials?.[row.ticker]);

@@ -14597,7 +14597,7 @@ function formatTrendList(items) {
   return items.join(", ");
 }
 
-function createTrendScoreChart(canvas, row, plugins = []) {
+function createTrendScoreChart(canvas, row) {
   if (typeof Chart === "undefined" || !row) {
     return;
   }
@@ -14621,7 +14621,6 @@ function createTrendScoreChart(canvas, row, plugins = []) {
 
   const chart = new Chart(canvas, {
     type: "line",
-    plugins,
     data: {
       labels: selectedLabels,
       datasets: [

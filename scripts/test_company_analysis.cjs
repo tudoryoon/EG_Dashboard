@@ -15,7 +15,10 @@ const context = vm.createContext({
   Chart: { getChart() { return currentChart; } },
 });
 const run = code => vm.runInContext(code, context);
-run(fs.readFileSync(path.join(root, 'company-view.js'), 'utf8'));
+const companySource = fs.readFileSync(path.join(root, 'company-view.js'), 'utf8');
+assert.doesNotMatch(companySource, /companyDepth|company(?:Financial|Trend)Mode\b|data-company-(?:financial|trend)-mode/);
+assert.equal(fs.existsSync(path.join(root, 'company-depth-chart.js')), false);
+run(companySource);
 run('prepareCompanyViewRender()');
 assert.equal(classes.has('company-workspace'), true);
 run('state.screeningView = "RS"; prepareCompanyViewRender()');
