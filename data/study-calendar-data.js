@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-09",
+  "updatedAt": "2026-09-10",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-09",
+  "calendarToday": "2026-09-10",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 5,
@@ -146,7 +146,7 @@ window.studyCalendarData = {
           "ticker": "COST",
           "session": "A",
           "title": "Costco Wholesale Corporation (COST) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $6.50 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $6.48 · Nasdaq/Zacks 예상 일정",
           "sector": "필수 소비재",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-24",
