@@ -10582,20 +10582,25 @@ function formatLargeNumber(value) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numeric);
 }
 
-function formatRsFinancialUsd(value) {
+function financialCurrencyPrefix(currency = "USD") {
+  return currency === "USD" ? "$" : `${String(currency).replace(/[^A-Z]/g, "").slice(0, 3)} `;
+}
+
+function formatRsFinancialUsd(value, currency = "USD") {
   if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
     return "-";
   }
   const numeric = Number(value);
   const sign = numeric < 0 ? "-" : "";
   const absolute = Math.abs(numeric);
+  const prefix = financialCurrencyPrefix(currency);
   if (absolute >= 1_000_000_000) {
-    return `${sign}$${(absolute / 1_000_000_000).toFixed(1)}B`;
+    return `${sign}${prefix}${(absolute / 1_000_000_000).toFixed(1)}B`;
   }
   if (absolute >= 1_000_000) {
-    return `${sign}$${(absolute / 1_000_000).toFixed(0)}M`;
+    return `${sign}${prefix}${(absolute / 1_000_000).toFixed(0)}M`;
   }
-  return `${sign}$${absolute.toFixed(0)}`;
+  return `${sign}${prefix}${absolute.toFixed(0)}`;
 }
 
 function formatRsFinancialPercent(value) {
@@ -10623,13 +10628,13 @@ function formatRsFinancialPp(value) {
   return `${sign}${numeric.toFixed(1)}pp`;
 }
 
-function formatRsFinancialEps(value) {
+function formatRsFinancialEps(value, currency = "USD") {
   if (value === null || value === undefined || value === "" || !Number.isFinite(Number(value))) {
     return "-";
   }
   const numeric = Number(value);
   const sign = numeric < 0 ? "-" : "";
-  return `${sign}$${Math.abs(numeric).toFixed(2)}`;
+  return `${sign}${financialCurrencyPrefix(currency)}${Math.abs(numeric).toFixed(2)}`;
 }
 
 function formatRsFinancialPeriodRange(start, end) {
@@ -10648,8 +10653,10 @@ function renderMarketRsFinancials(row) {
 
   const ticker = row.ticker;
   const item = marketRsFinancialsData.financials?.[ticker];
-  const updatedAt = marketRsFinancialsData.updatedAt ? formatKstDateTime(marketRsFinancialsData.updatedAt) : "";
-  const scopeText = marketRsFinancialsData.scope?.basis ?? "SEC GAAP/XBRL proxy.";
+  const currency = item?.currency ?? "USD";
+  const profileUpdatedAt = item?.financialUpdatedAt;
+  const updatedAt = profileUpdatedAt ? formatKstDateTime(profileUpdatedAt) : "";
+  const scopeText = escapeHtml(item?.basis ?? marketRsFinancialsData.scope?.basis ?? "SEC GAAP/XBRL proxy.");
 
   if (!item?.quarters?.length) {
     return `
@@ -10669,8 +10676,8 @@ function renderMarketRsFinancials(row) {
   ).length;
   const basisLabel = adjustedQuarterCount
     ? `IR Adjusted ${adjustedQuarterCount}/${item.quarters.length}Q`
-    : "Reported GAAP";
-  const latestRelease = item.quarters.find((quarter) => quarter.irReleaseUrl)?.irReleaseUrl;
+    : "Reported";
+  const latestRelease = item.quarters.find((quarter) => quarter.irReleaseUrl)?.irReleaseUrl ?? item.statementSourceUrl;
   const basisMarkup = latestRelease
     ? `<a href="${escapeHtml(latestRelease)}" target="_blank" rel="noreferrer">${basisLabel}</a>`
     : `<span>${basisLabel}</span>`;
@@ -10680,14 +10687,14 @@ function renderMarketRsFinancials(row) {
       <tr>
         <td>${quarter.period ?? "-"}</td>
         <td>${formatRsFinancialPeriodRange(quarter.periodStart, quarter.periodEnd)}</td>
-        <td title="${metricSource(quarter, "revenue")}">${formatRsFinancialUsd(quarter.revenue)}</td>
+        <td title="${metricSource(quarter, "revenue")}">${formatRsFinancialUsd(quarter.revenue, currency)}</td>
         <td title="${metricSource(quarter, "revenueYoyPct")}"><span class="${getSignedValueClass(quarter.revenueYoyPct)}">${formatRsFinancialPercent(quarter.revenueYoyPct)}</span></td>
         <td title="${metricSource(quarter, "grossMarginPct")}">${formatRsFinancialMargin(quarter.grossMarginPct)}</td>
         <td title="${metricSource(quarter, "operatingMarginPct")}">${formatRsFinancialMargin(quarter.operatingMarginPct)}</td>
-        <td><span class="${getSignedValueClass(quarter.operatingMarginYoyPp)}">${formatRsFinancialPp(quarter.operatingMarginYoyPp)}</span></td>
-        <td title="${metricSource(quarter, "epsDiluted")}">${formatRsFinancialEps(quarter.epsDiluted)}</td>
-        <td title="${metricSource(quarter, "ocf")}">${formatRsFinancialUsd(quarter.ocf)}</td>
-        <td title="${metricSource(quarter, "fcf")}">${formatRsFinancialUsd(quarter.fcf)}</td>
+        <td title="${metricSource(quarter, "operatingMarginYoyPp")}"><span class="${getSignedValueClass(quarter.operatingMarginYoyPp)}">${formatRsFinancialPp(quarter.operatingMarginYoyPp)}</span></td>
+        <td title="${metricSource(quarter, "epsDiluted")}">${formatRsFinancialEps(quarter.epsDiluted, currency)}</td>
+        <td title="${metricSource(quarter, "ocf")}">${formatRsFinancialUsd(quarter.ocf, currency)}</td>
+        <td title="${metricSource(quarter, "fcf")}">${formatRsFinancialUsd(quarter.fcf, currency)}</td>
       </tr>
     `)
     .join("");
@@ -10697,7 +10704,7 @@ function renderMarketRsFinancials(row) {
       <div class="market-rs-financial-head">
         <div>
           <strong>Quarterly Financials</strong>
-          <p>Latest 8 quarters. Revenue YoY / OPM YoY pp included.</p>
+          <p>최근 ${item.quarters.length}개 분기 · 재무통화 ${escapeHtml(currency)} · Revenue YoY / OPM YoY</p>
         </div>
         <div class="market-rs-financial-basis">${basisMarkup}<span>${updatedAt ? `Updated ${updatedAt}` : "SEC EDGAR"}</span></div>
       </div>
@@ -10734,6 +10741,7 @@ function createMarketCanslimFinancialChart(canvas, financialItem) {
   }
 
   const quarters = [...financialItem.quarters].slice(0, 8).reverse();
+  const currencyPrefix = financialCurrencyPrefix(financialItem.currency ?? "USD");
   const finiteOrNull = (value) => {
     if (value === null || value === undefined || value === "") {
       return null;
@@ -10855,7 +10863,7 @@ function createMarketCanslimFinancialChart(canvas, financialItem) {
                 return `${context.dataset.label}: -`;
               }
               if (context.dataset.yAxisID === "yRevenue") {
-                return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(1)}B`;
+                return `${context.dataset.label}: ${currencyPrefix}${Number(context.parsed.y).toFixed(1)}B`;
               }
               return `${context.dataset.label}: ${Number(context.parsed.y).toFixed(1)}%`;
             },
@@ -10873,10 +10881,10 @@ function createMarketCanslimFinancialChart(canvas, financialItem) {
           position: "left",
           min: revenueAxisMin,
           max: revenueAxisMax,
-          title: { display: true, text: "Revenue ($B)", color: "#111827", font: { weight: "700" } },
+          title: { display: true, text: `Revenue (${currencyPrefix}B)`, color: "#111827", font: { weight: "700" } },
           ticks: {
             color: "#111827",
-            callback: (value) => (Number(value) < 0 ? "" : `$${Number(value).toFixed(0)}B`),
+            callback: (value) => (Number(value) < 0 ? "" : `${currencyPrefix}${Number(value).toFixed(0)}B`),
             maxTicksLimit: 6,
           },
           grid: {
@@ -11053,6 +11061,12 @@ function getCanslimStatusClass(status) {
   return " pending";
 }
 
+function canslimFiniteNumber(value) {
+  if (value === null || value === undefined || value === "") return NaN;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : NaN;
+}
+
 function buildCanslimC(row, financialItem) {
   const latest = financialItem?.quarters?.[0];
   if (!latest) {
@@ -11064,9 +11078,9 @@ function buildCanslimC(row, financialItem) {
       detail: "O'Neil식 C는 최근 분기 EPS YoY가 핵심입니다. 해당 데이터가 들어오면 EPS YoY와 매출 YoY를 같이 판정합니다.",
     };
   }
-  const revenueYoy = Number(latest.revenueYoyPct);
-  const opmYoy = Number(latest.operatingMarginYoyPp);
-  const eps = Number(latest.epsDiluted);
+  const revenueYoy = canslimFiniteNumber(latest.revenueYoyPct);
+  const opmYoy = canslimFiniteNumber(latest.operatingMarginYoyPp);
+  const eps = canslimFiniteNumber(latest.epsDiluted);
   let status = "pending";
   if (Number.isFinite(eps) && eps > 0 && Number.isFinite(revenueYoy)) {
     if (revenueYoy >= 25 && (!Number.isFinite(opmYoy) || opmYoy >= 0)) {
@@ -11081,7 +11095,7 @@ function buildCanslimC(row, financialItem) {
     key: "C",
     title: "Current Earnings",
     status,
-    summary: `${latest.period ?? "Latest"} Rev YoY ${formatRsFinancialPercent(latest.revenueYoyPct)} / EPS ${formatRsFinancialEps(latest.epsDiluted)}`,
+    summary: `${latest.period ?? "Latest"} Rev YoY ${formatRsFinancialPercent(latest.revenueYoyPct)} / EPS ${formatRsFinancialEps(latest.epsDiluted, financialItem?.currency)}`,
     detail:
       "EPS YoY는 아직 별도 산출 전이라 Revenue YoY, EPS 흑자 여부, OPM YoY를 보조로 보는 proxy입니다. 엄밀한 C 판정은 EPS YoY 추가 후 확정해야 합니다.",
   };
@@ -11090,7 +11104,7 @@ function buildCanslimC(row, financialItem) {
 function buildAutoMarketCanslimProfile(row, financialItem) {
   const quarters = financialItem?.quarters ?? [];
   const revenueYoyValues = quarters
-    .map((quarter) => Number(quarter.revenueYoyPct))
+    .map((quarter) => canslimFiniteNumber(quarter.revenueYoyPct))
     .filter((value) => Number.isFinite(value));
   const averageRevenueYoy = revenueYoyValues.length
     ? revenueYoyValues.reduce((sum, value) => sum + value, 0) / revenueYoyValues.length
@@ -11116,16 +11130,22 @@ function buildAutoMarketCanslimProfile(row, financialItem) {
 
 function buildCanslimA(profile, financialItem) {
   const quarters = financialItem?.quarters ?? [];
-  const epsValues = quarters
-    .map((quarter) => Number(quarter.epsDiluted))
+  const ttmQuarters = quarters.slice(0, 4);
+  const epsValues = ttmQuarters
+    .map((quarter) => canslimFiniteNumber(quarter.epsDiluted))
     .filter((value) => Number.isFinite(value));
   const revenueYoyValues = quarters
-    .map((quarter) => Number(quarter.revenueYoyPct))
+    .map((quarter) => canslimFiniteNumber(quarter.revenueYoyPct))
     .filter((value) => Number.isFinite(value));
   const averageRevenueYoy = revenueYoyValues.length
     ? revenueYoyValues.reduce((sum, value) => sum + value, 0) / revenueYoyValues.length
     : null;
-  const ttmEps = epsValues.length ? epsValues.reduce((sum, value) => sum + value, 0) : null;
+  const ttmSpanDays = ttmQuarters.length === 4
+    ? (Date.parse(ttmQuarters[0].periodEnd) - Date.parse(ttmQuarters[3].periodEnd)) / 86_400_000
+    : NaN;
+  const epsBases = new Set(ttmQuarters.map((quarter) => /non-gaap/i.test(quarter.metricSources?.epsDiluted ?? "")));
+  const ttmEps = epsValues.length === 4 && ttmSpanDays >= 240 && ttmSpanDays <= 315 && epsBases.size === 1
+    ? epsValues.reduce((sum, value) => sum + value, 0) : null;
   let status = "pending";
   if (epsValues.length >= 4 && ttmEps !== null && averageRevenueYoy !== null) {
     if (ttmEps > 0 && averageRevenueYoy >= 25) {
@@ -11143,7 +11163,7 @@ function buildCanslimA(profile, financialItem) {
     key: "A",
     title: "Annual Earnings",
     status,
-    summary: ttmEps === null ? "5Y annual EPS pending" : `TTM EPS proxy ${formatRsFinancialEps(ttmEps)} / Avg Rev YoY ${formatRsFinancialPercent(averageRevenueYoy)}`,
+    summary: ttmEps === null ? "TTM EPS: 비교 가능한 최근 4분기 필요" : `TTM EPS proxy ${formatRsFinancialEps(ttmEps, financialItem?.currency)} / Avg Rev YoY ${formatRsFinancialPercent(averageRevenueYoy)}`,
     detail: profile?.annualNote ?? "최근 3~5년 연간 EPS 성장률 데이터가 아직 연결되지 않았습니다.",
   };
 }

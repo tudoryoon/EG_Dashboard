@@ -1,5 +1,27 @@
 {
   "policy": "Remove only separately quantified, non-recurring operating items. Keep reported results when no defensible bridge is available.",
+  "quarterOverrides": {
+    "APLD": [
+      {
+        "period": "FY2026 Q4",
+        "periodStart": "2026-03-01",
+        "periodEnd": "2026-05-31",
+        "filed": "2026-07-27",
+        "source": "https://ir.applieddigital.com/sec-filings/all-sec-filings/content/0001144879-26-000044/apldq426earningsreleaseasf.htm",
+        "values": {"revenue": 258748000, "grossMarginPct": 15.7, "operatingMarginPct": 10.0, "epsDiluted": 0.04},
+        "metricBasis": {"operatingMarginPct": "Non-GAAP", "epsDiluted": "Non-GAAP"}
+      },
+      {
+        "period": "FY2025 Q4",
+        "periodStart": "2025-03-01",
+        "periodEnd": "2025-05-31",
+        "filed": "2026-07-27",
+        "source": "https://ir.applieddigital.com/sec-filings/all-sec-filings/content/0001144879-26-000044/apldq426earningsreleaseasf.htm",
+        "values": {"revenue": 51076000, "grossMarginPct": -6.1, "operatingMarginPct": -8.0},
+        "metricBasis": {"operatingMarginPct": "Non-GAAP"}
+      }
+    ]
+  },
   "adjustments": {
     "AAPL": [
       {

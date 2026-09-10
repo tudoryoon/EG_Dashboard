@@ -5,6 +5,46 @@ import repair_company_financial_yoy as repair
 
 
 class FinancialYoyTest(unittest.TestCase):
+    def test_native_statement_failure_never_restores_dollar_ir_guess(self):
+        old = {'currency': 'EUR', 'statementSourceUrl': 'yahoo', 'quarters': [{'periodEnd': '2026-06-30'}]}
+        fresh = {'currency': 'USD', 'usesIrOnly': True, 'quarters': [{'periodEnd': '2026-08-01'}]}
+        with self.assertRaises(ValueError):
+            financials.validate_refresh_profile(fresh, old)
+
+    def test_stale_yahoo_quarter_is_rejected_but_date_normalization_is_allowed(self):
+        old = {'quarters': [{'periodEnd': '2026-06-30'}]}
+        with self.assertRaises(ValueError):
+            financials.validate_refresh_profile({'quarters': [{'periodEnd': '2026-03-31', 'periodBasis': 'Yahoo'}]}, old)
+        financials.validate_refresh_profile({'quarters': [{'periodEnd': '2026-06-27'}]}, old)
+
+    def test_future_guidance_does_not_overwrite_reported_adjusted_eps(self):
+        html = '''<table><tr><th>Three Months Ended July 31, 2026</th></tr>
+        <tr><td>Non-GAAP diluted EPS</td><td>7.04</td></tr></table>
+        <table><tr><th>Three Months Ending October 30, 2026</th></tr>
+        <tr><td>Non-GAAP diluted EPS</td><td>6.50</td></tr></table>'''
+        self.assertEqual(financials.extract_metrics_from_release_html(html)['nonGaapEpsDiluted'], 7.04)
+
+    def test_invalid_own_fiscal_year_is_not_trusted(self):
+        annual = {'start': '2024-06-29', 'end': '2025-06-27', 'val': 100, 'fy': 2027, 'fp': 'FY', 'form': '10-K', 'filed': '2025-08-01'}
+        quarter = {'start': '2024-06-29', 'end': '2024-09-27', 'val': 20, 'fy': 2025, 'fp': 'Q1', 'form': '10-Q', 'filed': '2024-10-30', 'frame': 'CY2024Q3'}
+        facts = {'facts': {'us-gaap': {'Revenues': {'units': {'USD': [annual, quarter]}}}}}
+        self.assertIn('FY2025Q1', financials.extract_tag_series(facts, ['Revenues']))
+
+    def test_interim_mistag_does_not_replace_official_annual_total(self):
+        rows = [{'start': f'2025-{month:02d}-01', 'end': end, 'val': 10, 'fy': 2025, 'fp': f'Q{q}', 'form': '10-Q', 'filed': '2025-11-01', 'frame': f'CY2025Q{q}'}
+                for q, month, end in [(1, 1, '2025-03-31'), (2, 4, '2025-06-30'), (3, 7, '2025-09-30')]]
+        annual = {'start': '2025-01-01', 'end': '2025-12-31', 'val': 50, 'fy': 2025, 'fp': 'FY', 'form': '10-K', 'filed': '2026-02-01'}
+        bad = {**annual, 'val': 10, 'fy': 2026, 'fp': 'Q1', 'form': '10-Q', 'filed': '2026-04-01', 'frame': 'CY2025'}
+        facts = {'facts': {'us-gaap': {'Revenues': {'units': {'USD': [*rows, annual, bad]}}}}}
+        self.assertEqual(financials.extract_tag_series(facts, ['Revenues'])['FY2025Q4']['value'], 20)
+
+    def test_annual_total_with_quarter_frame_is_not_a_quarter(self):
+        quarter = {'start': '2025-07-01', 'end': '2025-09-30', 'val': 10, 'fy': 2025, 'fp': 'Q3', 'form': '10-Q', 'filed': '2025-11-01', 'accn': 'quarter'}
+        bad = {**quarter, 'val': 40, 'fp': 'FY', 'form': '10-K', 'filed': '2026-02-01', 'frame': 'CY2025Q3', 'accn': 'annual'}
+        annual = {**bad, 'start': '2025-01-01', 'end': '2025-12-31', 'frame': 'CY2025'}
+        facts = {'facts': {'us-gaap': {'Revenues': {'units': {'USD': [quarter, bad, annual]}}}}}
+        self.assertEqual(financials.extract_tag_series(facts, ['Revenues'])['FY2025Q3']['value'], 10)
+
     def test_fiscal_comparison_metadata_does_not_rename_a_year(self):
         annual = {'start': '2023-01-30', 'end': '2024-01-28', 'val': 60, 'fy': 2024, 'fp': 'FY', 'form': '10-K', 'filed': '2024-02-21'}
         later_comparison = {**annual, 'fy': 2026, 'filed': '2026-02-25', 'frame': 'CY2023'}

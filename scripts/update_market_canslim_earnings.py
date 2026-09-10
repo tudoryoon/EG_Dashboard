@@ -138,7 +138,7 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
     symbol = ticker
     yf_ticker = yf.Ticker(symbol)
     try:
-        earnings_dates = yf_ticker.earnings_dates
+        earnings_dates = yf_ticker.get_earnings_dates(limit=24)
     except Exception:
         earnings_dates = None
     try:
@@ -146,27 +146,51 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
     except Exception:
         earnings_history = None
 
+    return {"ticker": ticker, "sourceTicker": symbol, "quarters": build_quarters(earnings_dates, earnings_history)}
+
+
+def build_quarters(earnings_dates, earnings_history) -> list[dict[str, object]]:
     if earnings_dates is None or earnings_dates.empty:
-        return {"ticker": ticker, "sourceTicker": symbol, "quarters": []}
+        return []
 
     reported = earnings_dates.copy()
     reported = reported[pd.notna(reported.get("Reported EPS"))]
-    reported = reported.sort_index().tail(4)
-
-    periods: list[str | None] = []
-    if earnings_history is not None and not earnings_history.empty:
-        periods = [clean_date(index) for index in earnings_history.sort_index().tail(len(reported)).index]
+    reported = reported.sort_index()
 
     quarters: list[dict[str, object]] = []
-    for idx, (_, row) in enumerate(reported.iterrows()):
+    used_periods: set[str] = set()
+    for _, row in reported.iterrows():
         estimate = clean_number(row.get("EPS Estimate"), 4)
         actual = clean_number(row.get("Reported EPS"), 4)
+        release_date = clean_date(row.name)
+        candidates = []
+        if earnings_history is not None and not earnings_history.empty:
+            for date, history in earnings_history.iterrows():
+                period = clean_date(date)
+                history_actual = clean_number(history.get("epsActual"), 4)
+                history_estimate = clean_number(history.get("epsEstimate"), 4)
+                if not period or period in used_periods or history_actual is None or actual is None:
+                    continue
+                days = (pd.Timestamp(release_date) - pd.Timestamp(period)).days
+                # Yahoo sometimes rounds fiscal quarter ends to month end.
+                # Match values as well as dates; history can omit middle quarters.
+                if not -7 <= days <= 120 or abs(history_actual - actual) > 0.011:
+                    continue
+                if estimate is not None and history_estimate is not None and abs(history_estimate - estimate) > 0.011:
+                    continue
+                candidates.append((period, history_estimate))
+        period = None
+        if len(candidates) == 1:
+            period, precise_estimate = candidates[0]
+            used_periods.add(period)
+            if precise_estimate is not None:
+                estimate = precise_estimate
         surprise_pct = clean_number(row.get("Surprise(%)"), 2)
         surprise_value = clean_number(actual - estimate, 4) if actual is not None and estimate is not None else None
         quarters.append(
             {
-                "period": periods[idx] if idx < len(periods) else None,
-                "releaseDate": clean_date(row.name),
+                "period": period,
+                "releaseDate": release_date,
                 "eps": {
                     "estimate": estimate,
                     "actual": actual,
@@ -176,7 +200,18 @@ def build_ticker_payload(ticker: str) -> dict[str, object]:
             }
         )
 
-    return {"ticker": ticker, "sourceTicker": symbol, "quarters": quarters}
+    unique = {}
+    for quarter in quarters:
+        date = quarter['releaseDate']
+        previous = unique.get(date)
+        if previous is None or (quarter['period'] and not previous['period']):
+            unique[date] = quarter
+        elif previous['eps'] != quarter['eps'] and not previous['period']:
+            # Conflicting duplicate estimates without a matching history row
+            # cannot safely produce a surprise percentage.
+            previous['eps'] = {'actual': previous['eps']['actual'] if previous['eps']['actual'] == quarter['eps']['actual'] else None,
+                               'estimate': None, 'surpriseValue': None, 'surprisePct': None}
+    return sorted(unique.values(), key=lambda quarter: quarter['releaseDate'])[-4:]
 
 
 def main() -> None:

@@ -44,6 +44,12 @@ REVENUE_TAGS = [
     "SalesRevenueNet",
     "SalesRevenueGoodsNet",
 ]
+REVENUE_TAG_OVERRIDES = {
+    # Contract-only concepts omit financing/reserve income from consolidated revenue.
+    "GM": ["Revenues"],
+    "CRCL": ["Revenues"],
+    "KMI": ["Revenues"],
+}
 NET_INTEREST_INCOME_TAGS = ["InterestIncomeExpenseNet"]
 NONINTEREST_INCOME_TAGS = ["NoninterestIncome"]
 GROSS_PROFIT_TAGS = ["GrossProfit"]
@@ -60,6 +66,7 @@ EARNINGS_RELEASE_FORMS = {"8-K", "6-K"}
 EARNINGS_RELEASE_DOC_LIMIT = 8
 EARNINGS_RELEASE_FILING_SCAN_LIMIT = 12
 SEC_REQUEST_INTERVAL_SECONDS = 0.16
+FORECAST_TABLE_PATTERN = r'\b(?:guidance|outlook|forecast|projected)\b|\b(?:months?|quarters?|years?) ending\b'
 _SEC_REQUEST_LOCK = threading.Lock()
 _SEC_LAST_REQUEST_AT = 0.0
 
@@ -516,7 +523,7 @@ def _extract_tag_series_single(
         if (row.get("fp") == "FY" and isinstance(row.get("fy"), int)
                 and is_full_year_fact(row.get("start"), row.get("end"))
                 and end and filed and 0 <= (filed - end).days <= 300):
-            own_annual_years.setdefault(str(row["end"]), row["fy"])
+            own_annual_years.setdefault(str(row["end"]), annual_fiscal_year(row['fy'], row['end'], row.get('frame'), row.get('filed')))
 
     def annual_year(row: dict[str, Any]) -> int | None:
         return own_annual_years.get(str(row.get("end"))) or annual_fiscal_year(
@@ -545,6 +552,10 @@ def _extract_tag_series_single(
         for row in selected_rows
         if row.get("frame") and re.match(r"CY\d{4}Q[1-4]$", str(row.get("frame")))
     }
+    annual_filing_rows = [row for row in selected_rows
+                          if row.get('form') in {'10-K', '10-K/A', '20-F', '20-F/A'}
+                          and row.get('fp') == 'FY'
+                          and is_full_year_fact(row.get('start'), row.get('end'))]
 
     for row in selected_rows:
         form = row.get("form")
@@ -575,6 +586,11 @@ def _extract_tag_series_single(
         }
 
         if frame and re.match(r"CY\d{4}Q[1-4]$", frame):
+            # Reject an annual total mistagged as a standalone Q1-Q3 fact.
+            if (fp == 'FY' and is_quarter_length_fact(row.get('start'), end)
+                    and any(annual.get('accn') == row.get('accn') and annual.get('val') == value
+                            and annual.get('end') != end for annual in annual_filing_rows)):
+                continue
             if frame.endswith("Q4") and is_full_year_fact(row.get("start"), end):
                 year = str(annual_year(row) or inferred_fy or frame[2:6])
                 existing_annual = annuals.get(year)
@@ -589,7 +605,22 @@ def _extract_tag_series_single(
         if frame and re.match(r"CY\d{4}$", frame):
             year = str(annual_year(row) or inferred_fy or "")
             if year and is_full_year_fact(row.get("start"), end):
+                # An interim filing can mis-tag its comparative quarter with
+                # a full-year duration. Prefer the issuer's annual filing.
+                official = [annual for annual in annual_filing_rows
+                            if annual.get('start') == row.get('start') and annual.get('end') == end]
+                if official and form not in {'10-K', '10-K/A', '20-F', '20-F/A'}:
+                    annual = max(official, key=lambda entry: str(entry.get('filed') or ''))
+                    item = {**item, 'value': float(annual['val']), 'filed': annual.get('filed'), 'form': annual.get('form')}
                 annuals[year] = item
+            continue
+
+        if fp == 'FY' and is_full_year_fact(row.get('start'), end):
+            year = str(annual_year(row) or '')
+            if year:
+                existing = annuals.get(year)
+                if not existing or str(item.get('filed') or '') >= str(existing.get('filed') or ''):
+                    annuals[year] = item
             continue
 
         if not frame and (end, row.get("filed")) in framed_fact_keys:
@@ -962,6 +993,8 @@ def extract_metrics_from_release_html(html: str) -> dict[str, Any]:
     soup = BeautifulSoup(html, "html.parser")
     for table in soup.find_all("table")[:50]:
         table_label = normalize_label(table.get_text(" ", strip=True)[:1200])
+        if re.search(FORECAST_TABLE_PATTERN, table_label):
+            continue
         is_fcf_reconciliation = "free cash flow" in table_label
         for tr in table.find_all("tr"):
             cells = tr.find_all(["td", "th"])
@@ -1177,11 +1210,17 @@ def recompute_quarterly_changes(rows: list[dict[str, Any]]) -> None:
         row["revenueYoyPct"] = safe_round(pct_change(row.get("revenue"), prior.get("revenue")), 1)
         current_opm = safe_float(row.get("operatingMarginPct"))
         prior_opm = safe_float(prior.get("operatingMarginPct"))
+        current_adjusted = bool(re.search(r"non-gaap", str(row.get("metricSources", {}).get("operatingMarginPct", "")), re.I))
+        prior_adjusted = bool(re.search(r"non-gaap", str(prior.get("metricSources", {}).get("operatingMarginPct", "")), re.I))
         row["operatingMarginYoyPp"] = (
             safe_round(current_opm - prior_opm, 1)
-            if current_opm is not None and prior_opm is not None
+            if current_opm is not None and prior_opm is not None and current_adjusted == prior_adjusted
             else None
         )
+        if current_adjusted != prior_adjusted:
+            row.setdefault("metricSources", {})["operatingMarginYoyPp"] = "Unavailable: reported and Non-GAAP margin bases differ"
+        else:
+            row.setdefault("metricSources", {})["operatingMarginYoyPp"] = f"OPM minus same-quarter OPM ended {prior['periodEnd']} (percentage points)"
         row["yoyComparison"] = {
             "periodEnd": prior.get("periodEnd"),
             "revenue": prior.get("revenue"),
@@ -1219,7 +1258,7 @@ def sanitize_financial_rows(rows: list[dict[str, Any]]) -> tuple[list[dict[str, 
             rows_by_end[period_end] = row
 
     cleaned = [*rows_by_end.values(), *undated_rows]
-    cleaned.sort(key=lambda item: str(item.get("periodKey") or ""), reverse=True)
+    cleaned.sort(key=lambda item: str(item.get("periodEnd") or ""), reverse=True)
     return cleaned, rejected
 
 
@@ -1385,7 +1424,7 @@ def build_company_financials(
     facts = facts_payload if facts_payload is not None else fetch_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
     if ir_releases is None:
         ir_releases = build_ir_release_metrics(cik)
-    revenue = extract_tag_series(facts, REVENUE_TAGS)
+    revenue = extract_tag_series(facts, REVENUE_TAG_OVERRIDES.get(ticker, REVENUE_TAGS))
     bank_revenue = add_series(
         extract_tag_series(facts, NET_INTEREST_INCOME_TAGS),
         extract_tag_series(facts, NONINTEREST_INCOME_TAGS),
@@ -1456,6 +1495,7 @@ def build_company_financials(
             }
         )
 
+    uses_ir_only = not rows
     if not rows:
         rows = build_ir_only_rows(ir_releases)
     rows, rejected_structural_rows = sanitize_financial_rows(rows)
@@ -1484,6 +1524,8 @@ def build_company_financials(
         "financialUpdatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "SEC EDGAR companyfacts + EDGAR earnings release exhibits",
         "basis": "Revenue, OCF, and derived FCF use SEC GAAP companyfacts. Company-presented Non-GAAP GPM, OPM, and EPS are used only when the official IR exhibit provides a defensible value; curated one-off bridges take precedence.",
+        "usesIrOnly": uses_ir_only,
+        "currency": "USD",
         "irReleaseCount": len(ir_releases),
         "irValuesApplied": ir_values_applied,
         "curatedAdjustmentsApplied": curated_adjustments_applied,
@@ -1495,10 +1537,27 @@ def build_company_financials(
     }
 
 
+def validate_refresh_profile(profile: dict[str, Any], previous: dict[str, Any]) -> None:
+    if previous.get('statementSourceUrl') and (
+        profile.get('usesIrOnly') or
+        (previous.get('currency', 'USD') != 'USD' and not profile.get('statementSourceUrl'))
+    ):
+        raise ValueError('Currency-verified statement source unavailable; existing profile retained')
+    previous_end = max((q.get('periodEnd') or '' for q in previous.get('quarters', [])), default='')
+    current_end = max((q.get('periodEnd') or '' for q in profile.get('quarters', [])), default='')
+    if previous_end and current_end < previous_end:
+        old_ir_dates = (not previous.get('statementSourceUrl') and previous.get('quarters') and
+                       all('Official IR earnings release' in q.get('metricSources', {}).get('revenue', '') for q in previous['quarters']))
+        same_quarter_date_correction = current_end and duration_days(current_end, previous_end) <= 21
+        if not old_ir_dates and not same_quarter_date_correction:
+            raise ValueError(f'Source quarter regressed ({current_end or "empty"} < {previous_end}); existing profile retained')
+
+
 def main() -> None:
     rs_payload = read_js_payload(RS_DATA_PATH, "marketRsData")
     briefing_tickers = load_daily_briefing_tickers()
     adjustments_by_ticker = load_financial_adjustments()
+    verified_quarters = json.loads(FINANCIAL_ADJUSTMENTS_PATH.read_text(encoding="utf-8")).get("quarterOverrides", {}) if FINANCIAL_ADJUSTMENTS_PATH.exists() else {}
     extra_tickers_env = os.environ.get("MARKET_RS_FINANCIALS_EXTRA_TICKERS", "")
     extra_tickers = {
         ticker.strip().upper()
@@ -1649,8 +1708,8 @@ def main() -> None:
                 },
                 "tickers": sorted(row.get("ticker") for row in target_rows),
                 "pendingTickers": pending_tickers,
-                "source": "SEC EDGAR companyfacts + EDGAR 8-K/6-K earnings release exhibits",
-                "basis": "Daily Briefing, S&P500, and NASDAQ100 coverage. Revenue, OCF, and derived FCF use SEC GAAP companyfacts. Official company Non-GAAP GPM, OPM, and EPS are used only when defensibly extractable; separately quantified one-off bridges are curated and take precedence. ETFs and unsupported non-US filing formats remain blank.",
+                "source": "SEC EDGAR companyfacts + official earnings releases + Yahoo Finance quarterly statement fallback",
+                "basis": "Daily Briefing, S&P500, and NASDAQ100 coverage. SEC GAAP and official adjusted values are retained where available. Daily Briefing coverage gaps use Yahoo quarterly statements with explicit financial currency. YoY compares same-quarter dates on a consistent basis; unavailable comparisons and ETF financials remain blank.",
             },
             "metrics": [
                 {"key": "revenue", "label": "Revenue", "unit": "usd", "note": "YoY is shown against the same quarter a year ago."},
@@ -1672,7 +1731,7 @@ def main() -> None:
 
     def process_company(row: dict[str, Any]) -> tuple[str, dict[str, Any] | None, str | None, bool]:
         ticker = str(row.get("ticker") or "").upper()
-        mapping = next((ticker_map.get(candidate) for candidate in sec_ticker_candidates(ticker) if ticker_map.get(candidate)), None)
+        mapping = next((ticker_map.get(candidate) for candidate in sec_ticker_candidates(ticker) if ticker_map.get(candidate)), None) or fallback_ticker_map.get(ticker)
         if not mapping:
             return ticker, None, None, True
         try:
@@ -1682,6 +1741,17 @@ def main() -> None:
                 mapping["cik"],
                 adjustments_by_ticker,
             )
+            if ticker in briefing_tickers:
+                from financial_statement_overlay import load_statements, overlay, apply_verified_quarters
+                try:
+                    profile = overlay(profile, load_statements(ticker))
+                except Exception as statement_error:
+                    profile["statementError"] = str(statement_error)
+                profile = apply_verified_quarters(profile, verified_quarters.get(ticker, []))
+                recompute_quarterly_changes(profile["quarters"])
+                profile["quarters"] = profile["quarters"][:8]
+            previous = financials.get(ticker) or {}
+            validate_refresh_profile(profile, previous)
             return ticker, profile, None, False
         except Exception as error:  # pragma: no cover - source variability
             return ticker, None, str(error), False
