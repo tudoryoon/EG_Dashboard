@@ -151,6 +151,7 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
+  MarketRegime: { label: "시장 국면" },
   MemoryCapa: { label: "Memory CAPA" },
   Comparisons: { label: "NVDA vs Memory" },
   M7: { label: "M7" },
@@ -589,6 +590,7 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
+      MarketRegime: "market-regime",
       MemoryCapa: "memory-capa",
       Comparisons: "nvda-vs-memory",
       M7: "m7",
@@ -17696,6 +17698,29 @@ function formatStudyCalendarDayNumber(value) {
   };
 }
 
+function renderStudyMarketRegimeOverview() {
+  destroyCharts();
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+  usOverviewRoot.innerHTML = `<iframe
+    data-study-market-regime
+    title="시장 국면 스코어카드 · 미국·한국·중국"
+    src="./study/market-regime/index.html?v=20260910-1"
+    sandbox="allow-scripts"
+    referrerpolicy="no-referrer"
+    style="display:block;width:100%;height:1200px;min-height:640px;border:0;background:#eef1f3"
+  ></iframe>`;
+}
+
+window.addEventListener("message", event => {
+  const frame = usOverviewRoot.querySelector("[data-study-market-regime]");
+  if (!frame || event.source !== frame.contentWindow || event.data?.type !== "eg-market-regime-size") return;
+  const height = event.data.height;
+  if (typeof height !== "number" || !Number.isFinite(height) || height < 1 || height > 50000) return;
+  frame.style.height = `${Math.max(640, Math.ceil(height))}px`;
+});
+
 function renderStudyCalendarOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -21949,6 +21974,8 @@ function renderSummary(list) {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
     } else if (state.researchView === "TrendSearch") {
       summaryText.textContent = "Google web and YouTube search-interest dashboard with moving averages";
+    } else if (state.researchView === "MarketRegime") {
+      summaryText.textContent = "";
     } else if (state.researchView === "Calendar") {
       summaryText.textContent = "향후 4주 일정 · 각국 현지 발표일 · KST 시각 병기";
     } else {
@@ -22634,6 +22661,10 @@ function render() {
     }
     if (state.researchView === "TrendSearch") {
       renderTrendSearchOverview();
+      return;
+    }
+    if (state.researchView === "MarketRegime") {
+      renderStudyMarketRegimeOverview();
       return;
     }
     if (state.researchView === "Calendar") {

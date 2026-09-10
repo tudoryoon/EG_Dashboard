@@ -1,0 +1,15 @@
+[hidden] { display: none !important; }
+* { letter-spacing: 0 !important; }
+svg { display: block; width: 100%; }
+.wrap, .pane, .two > *, .mgrid > *, .cmpcol { min-width: 0; }
+.snapshot-chip { color: var(--accent); border-color: var(--accent); }
+.snapshot-note { margin: 0 0 14px; padding: 10px 12px; border-left: 2px solid var(--accent); background: var(--surface2); }
+@media (max-width: 600px) {
+  .wrap { padding: 20px 12px 40px; }
+  section { padding: 15px 12px; }
+  .shead, .mhead { flex-wrap: wrap; }
+  .tabs button { padding: 10px 8px; font-size: 13px; word-break: keep-all; line-height: 1.5; }
+  .cmphead { flex-wrap: wrap; }
+  .brow { grid-template-columns: 16px 100px minmax(40px,1fr) 34px; gap: 6px; }
+  .readout { min-height: 4.5em; }
+}

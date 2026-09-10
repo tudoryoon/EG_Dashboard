@@ -1,0 +1,28 @@
+{
+  "title": "시장 국면 스코어카드",
+  "sourceUrl": "https://claude.ai/code/artifact/76bae242-11c2-4615-8a97-bb6655301a0c",
+  "mode": "source-snapshot",
+  "automaticRefresh": false,
+  "markets": {
+    "us": {
+      "asOf": "2026-09-09",
+      "generatedAt": "2026-09-10 08:00 KST",
+      "historyRows": 252,
+      "universeCount": 497
+    },
+    "kr": {
+      "asOf": "2026-09-09",
+      "generatedAt": "2026-09-09 17:13 KST",
+      "historyRows": 252,
+      "universeCount": 298
+    },
+    "cn": {
+      "asOf": "2026-09-09",
+      "generatedAt": "2026-09-10 11:03 KST",
+      "historyRows": 252,
+      "universeCount": 556
+    }
+  },
+  "snapshotSha256": "f74119584f3ef5f1523fb2e89156e8909160bc8edf2a90a851362e2d3736ef4f",
+  "note": "Original display code and stored results; source collection and backtest code were not included. Claude authentication and frame runtime are excluded."
+}

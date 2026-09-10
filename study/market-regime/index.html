@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>시장 국면 스코어카드 | EG Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="./scorecard.css?v=20260910-1">
+<link rel="stylesheet" href="./integration.css?v=20260910-1">
+</head>
+<body>
+<div class="wrap">
+<header>
+<div>
+<div class="eyebrow" style="color:var(--accent)">Market Regime · S&amp;P 500 · KRX 300 · STAR Market</div>
+<h1>시장 국면 스코어카드</h1>
+<div class="hsub">세 시장에 동일한 방법론 — 지수 이평 배열로 국면을 판정하고, 전략 성과는 0~10 원점수로 잰다</div>
+</div>
+<div class="meta" id="meta"></div>
+</header>
+<section style="padding-bottom:22px">
+<div class="shead"><h2>미국 · 한국 · 중국 한눈에</h2><div class="note">모든 지표 0~10 원점수 하나로 읽는다 · <b style="color:var(--ink2)">5.0 = 중립선</b> (④⑥⑦⑧은 손익분기) · ⑤만 역방향이라 막대를 반전 표시</div></div>
+<div class="cmp" id="cmp"></div>
+<div class="gap" id="gapnote"></div>
+</section>
+<div>
+<div class="tabs" id="tabs" role="tablist"></div>
+</div>
+<div class="pane" id="pane_us" role="tabpanel"></div>
+<div class="pane" hidden="" id="pane_kr" role="tabpanel"></div>
+<div class="pane" hidden="" id="pane_cn" role="tabpanel"></div>
+<section>
+<div class="shead"><h2>방법론 — 지표 상세</h2><div class="note">두 시장 공통 구조 · 시장별 차이는 각 카드 하단에</div></div>
+<div class="mgrid" id="method"></div>
+<div class="shead" style="margin-top:26px"><h2>데이터 및 한계</h2><div class="note">읽기 전에 반드시 확인</div></div>
+<div class="foot" id="limits"></div>
+</section>
+</div>
+<div class="tip" id="tip"></div>
+<script src="./snapshot.js?v=20260910-1"></script>
+<script src="./scorecard.js?v=20260910-1"></script>
+<script src="./integration.js?v=20260910-1"></script>
+</body>
+</html>
