@@ -12295,7 +12295,7 @@ const MARKET_RS_CANDLESTICK_PLUGIN = {
 
         const isUp = close > open;
         const isDown = close < open;
-        const color = isUp ? "#089981" : isDown ? "#f23645" : "#6b7280";
+        const color = isUp ? (dataset.candleColors?.up ?? "#089981") : isDown ? (dataset.candleColors?.down ?? "#f23645") : (dataset.candleColors?.unchanged ?? "#6b7280");
         const yOpen = yScale.getPixelForValue(open);
         const yHigh = yScale.getPixelForValue(high);
         const yLow = yScale.getPixelForValue(low);
@@ -12391,7 +12391,7 @@ function updateMarketRsEmaReadout(labels, emaSeries, priceSeries, index) {
       : null;
     const gapClass = Number(gap) > 0 ? "positive" : Number(gap) < 0 ? "negative" : "neutral";
     return `
-      <span class="market-rs-ema-readout-item" style="--ema-color:${series.color}">
+      <span class="market-rs-ema-readout-item" style="--ema-color:var(--rs-${series.key}-color,${series.color})">
         <i></i><b>${series.label}</b>
         <span>${Number.isFinite(value) ? (marketRsRowByTicker.get(state.rsSelectedTicker)?.isIndex ? `${value.toFixed(2)} pt` : formatUsStockPrice(value)) : "-"}</span>
         <em class="market-rs-ema-gap ${gapClass}">Gap ${Number.isFinite(gap) ? formatSignedPercent(gap) : "-"}</em>

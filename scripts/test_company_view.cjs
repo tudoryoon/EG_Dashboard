@@ -19,7 +19,7 @@ const state = structuredClone(originalState);
 let lazyDraws = 0;
 const context = vm.createContext({
   state, structuredClone,
-  document: { body: { classList: { remove() {} } } },
+  document: { body: { classList: { remove() {}, toggle() {} } } },
   marketRsData: { histories: {
     NVDA: { price: [null, 100, 110] },
     AAPL: { price: [NaN, 100, 95, null] },

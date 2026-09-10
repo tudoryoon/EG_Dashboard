@@ -1,12 +1,12 @@
 /* Company pilot composes the existing RS, Trend and financial renderers. */
 const COMPANY_PILOT = [
-  { ticker: "AAPL", name: "Apple", color: "#374151" },
-  { ticker: "MSFT", name: "Microsoft", color: "#087eb9" },
-  { ticker: "NVDA", name: "NVIDIA", color: "#518608" },
-  { ticker: "GOOGL", name: "Alphabet", color: "#c53a2e" },
-  { ticker: "AMZN", name: "Amazon", color: "#a86700" },
-  { ticker: "META", name: "Meta", color: "#1766c5" },
-  { ticker: "TSLA", name: "Tesla", color: "#c32640" },
+  { ticker: "AAPL", name: "Apple", color: "#c8d1cb" },
+  { ticker: "MSFT", name: "Microsoft", color: "#87b7ff" },
+  { ticker: "NVDA", name: "NVIDIA", color: "#39d3a1" },
+  { ticker: "GOOGL", name: "Alphabet", color: "#ff8c76" },
+  { ticker: "AMZN", name: "Amazon", color: "#ffb641" },
+  { ticker: "META", name: "Meta", color: "#729dff" },
+  { ticker: "TSLA", name: "Tesla", color: "#ff756e" },
 ];
 
 const COMPANY_CHART_KEYS = ["rsUniverse", "rsSelectedTicker", "rsHistoryRange", "rsPriceChartType",
@@ -20,6 +20,118 @@ let companyReturnTicker = "";
 let companyQuery = "";
 let companySort = "marketCap";
 let companyLazyBuilt = new Set();
+let companyTrendRange = "max";
+let companyTrendSeries = { "Rank": true, "Trend Score": true, "Climax Score": true };
+let companyFinancialRange = "all";
+const companyFinancialSelected = new Set(["revenue", "revenueYoyPct"]);
+const COMPANY_FINANCIAL_METRICS = [
+  { key: "revenue", label: "매출", unit: "usd", type: "bar", color: "#c8d1cb", column: 2, group: "금액" },
+  { key: "ocf", label: "영업현금흐름", unit: "usd", type: "bar", color: "#87b7ff", column: 8, group: "금액" },
+  { key: "fcf", label: "FCF", unit: "usd", type: "bar", color: "#b59af6", column: 9, group: "금액" },
+  { key: "revenueYoyPct", label: "매출 YoY", unit: "pct", type: "line", color: "#ff756e", column: 3, group: "수익성 · 성장" },
+  { key: "grossMarginPct", label: "GPM", unit: "pct", type: "bar", color: "#39d3a1", column: 4, group: "수익성 · 성장" },
+  { key: "operatingMarginPct", label: "OPM", unit: "pct", type: "bar", color: "#ffb641", column: 5, group: "수익성 · 성장" },
+  { key: "operatingMarginYoyPp", label: "OPM YoY", unit: "pct", type: "line", color: "#52c6bb", column: 6, group: "수익성 · 성장", suffix: "pp" },
+  { key: "epsDiluted", label: "EPS", unit: "eps", type: "line", color: "#e3a4cc", column: 7, group: "주당 ($)" },
+];
+
+function companyFinite(value) {
+  return value == null || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+}
+
+function companyFinancialQuarters(item) {
+  const quarters = [...(item?.quarters ?? [])].sort((a, b) => String(b.periodEnd).localeCompare(String(a.periodEnd)));
+  return (companyFinancialRange === "all" ? quarters : quarters.slice(0, Number(companyFinancialRange))).reverse();
+}
+
+function companyFinancialModel(item) {
+  const quarters = companyFinancialQuarters(item);
+  const metrics = COMPANY_FINANCIAL_METRICS.filter((metric) => companyFinancialSelected.has(metric.key)
+    && quarters.some((quarter) => companyFinite(quarter[metric.key]) !== null));
+  const datasets = metrics.map((metric) => ({
+    label: metric.label, metricKey: metric.key, type: metric.type, yAxisID: metric.unit,
+    data: quarters.map((quarter) => {
+      const value = companyFinite(quarter[metric.key]);
+      return value === null ? null : metric.unit === "usd" ? value / 1e9 : value;
+    }),
+    borderColor: metric.color, backgroundColor: metric.type === "bar" ? `${metric.color}aa` : metric.color,
+    borderWidth: metric.type === "bar" ? 1 : 2.4, borderRadius: 3,
+    pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: metric.color,
+    categoryPercentage: .75, barPercentage: .8, tension: .12, spanGaps: false, order: metric.type === "line" ? 0 : 1,
+  }));
+  const units = [...new Set(metrics.map((metric) => metric.unit))];
+  const bounds = Object.fromEntries(units.map((unit) => {
+    const values = datasets.filter((dataset) => dataset.yAxisID === unit).flatMap((dataset) => dataset.data).filter(Number.isFinite);
+    return [unit, { positive: Math.max(0, ...values), negative: Math.max(0, ...values.map((value) => -value)) }];
+  }));
+  // Use a common zero position across dollars, percentages and per-share dollars.
+  const fraction = Math.max(0, ...Object.values(bounds).map(({positive, negative}) => negative / (positive + negative || 1)));
+  const negativeSteps = fraction > 0 ? Math.min(4, Math.max(1, Math.ceil(fraction * 5))) : 0;
+  const scales = Object.fromEntries(units.map((unit) => {
+    const { positive, negative } = bounds[unit];
+    const rawStep = Math.max(positive / (5 - negativeSteps), negativeSteps ? negative / negativeSteps : 0, .001) * 1.12;
+    const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+    const step = Math.ceil(rawStep / magnitude) * magnitude;
+    return [unit, { min: -negativeSteps * step, max: (5 - negativeSteps) * step, step }];
+  }));
+  return { quarters, metrics, datasets, scales };
+}
+
+function applyCompanyChartTheme(canvas) {
+  if (typeof Chart === "undefined" || !canvas?.closest?.(".company-dialog, .company-overview")) return;
+  const chart = Chart.getChart(canvas);
+  if (!chart) return;
+  const colors = { "Rank": "#39d3a1", "Trend Score": "#ecf0ed", "Climax Score": "#ffb641",
+    "Stock MDD": "#ff756e", "21D ATR%": "#87b7ff", "Selected-period avg": "#a6b1a9",
+    "10EMA": "#87b7ff", "20EMA": "#ffb641", "50EMA": "#39d3a1", "100EMA": "#52c6bb", "200EMA": "#b59af6" };
+  for (const dataset of chart.data.datasets) {
+    if (dataset.isDailyReturn) continue;
+    const label = dataset.label ?? "";
+    const color = label.startsWith("Stock Price") ? "#ecf0ed" : label.startsWith("RS Rating") ? "#ff756e" : colors[label];
+    if (color) {
+      dataset.borderColor = color;
+      dataset.backgroundColor = dataset.fill ? `${color}20` : color;
+      dataset.pointBackgroundColor = color;
+      dataset.pointBorderColor = color;
+    }
+    if (dataset.ohlc) dataset.candleColors = { up: "#39d3a1", down: "#ff756e", unchanged: "#a6b1a9" };
+    if (dataset.isEarningsSurprise && Array.isArray(dataset.backgroundColor)) {
+      dataset.backgroundColor = dataset.backgroundColor.map((value) => /dc2626|ff756e/i.test(String(value)) ? "#ff756e" : "#39d3a1");
+      dataset.borderColor = dataset.backgroundColor;
+    }
+    if (label === "Volume" && Array.isArray(dataset.backgroundColor)) {
+      dataset.backgroundColor = dataset.backgroundColor.map((value) => /242|f23645|ff756e/i.test(String(value)) ? "#ff756e99" : "#39d3a199");
+    }
+  }
+  for (const [key, scale] of Object.entries(chart.options.scales ?? {})) {
+    const color = key === "pct" ? "#ffb641" : key === "eps" ? "#e3a4cc" : key === "usd" ? "#c8d1cb"
+      : key === "y" && chart.data.datasets.some((dataset) => (dataset.label ?? "").startsWith("RS Rating")) ? "#ff756e"
+      : key === "y" && chart.data.datasets.some((dataset) => dataset.label === "Rank") ? "#39d3a1" : "#b4bfb7";
+    scale.ticks.color = color;
+    scale.grid.color = "rgba(224,238,227,0.08)";
+    scale.border.color = "#414b43";
+    if (scale.title) scale.title.color = color;
+  }
+  const plugins = chart.options.plugins;
+  if (chart.data.datasets.some((dataset) => (dataset.label ?? "").startsWith("Stock Price"))) {
+    plugins.legend.labels.filter = (item, data) => data.datasets[item.datasetIndex]?.isEarningsSurprise
+      || (data.datasets[item.datasetIndex]?.label ?? "").startsWith("Stock Price");
+  }
+  if (plugins.legend?.labels) plugins.legend.labels.color = "#c5d0c8";
+  if (plugins.tooltip) Object.assign(plugins.tooltip, {
+    backgroundColor: "#111a14", titleColor: "#f0f4f1", bodyColor: "#e2eae4",
+    borderColor: "#58645b", borderWidth: 1, padding: 12,
+  });
+  chart.update("none");
+}
+
+function destroyCompanyChart(canvas) {
+  const chart = typeof Chart !== "undefined" && canvas ? Chart.getChart(canvas) : null;
+  if (!chart) return;
+  const index = charts.indexOf(chart);
+  chart.destroy();
+  if (index >= 0) charts.splice(index, 1);
+}
 
 function isCompanyPilotTicker(ticker) {
   return COMPANY_PILOT.some((item) => item.ticker === String(ticker ?? "").toUpperCase());
@@ -59,6 +171,7 @@ function prepareCompanyViewRender() {
     companyModal = null;
   }
   document.body.classList.remove("company-focus");
+  document.body.classList.toggle("company-workspace", state.tab === "Screening" && state.screeningView === "Company");
   if (!remainsOpen && companySavedChartState) {
     companyChartPreferences = Object.fromEntries(COMPANY_CHART_KEYS.map((key) => [key, structuredClone(state[key])]));
     Object.assign(state, companySavedChartState);
@@ -77,7 +190,7 @@ function enterCompanyChartContext(ticker) {
   state.rsSelectedTicker = ticker;
   state.rsUniverse = "all";
   state.trendScoreUniverse = "all";
-  state.trendScoreRange = state.rsHistoryRange;
+  state.trendScoreRange = companyTrendRange;
   state.canslimUniverse = "all";
 }
 
@@ -156,7 +269,123 @@ function renderCompanyChartControls() {
     <div class="company-control-group" role="group" aria-label="가격 차트 유형">${MARKET_RS_PRICE_CHART_TYPES.map((type) => `<button type="button" data-company-price="${type.key}" aria-pressed="${state.rsPriceChartType === type.key}">${type.label}</button>`).join("")}</div>
     <label class="company-volume-toggle"><input type="checkbox" data-company-volume ${state.rsVolumeVisible ? "checked" : ""} />거래량</label>
     <div class="company-zoom">${companyIconButton("zoom-in", "plus", "확대")}${companyIconButton("zoom-out", "minus", "축소")}${companyIconButton("zoom-reset", "rotate-ccw", "차트 초기화")}</div>
-  </div><div class="company-series" role="group" aria-label="차트 표시선">${MARKET_RS_CHART_SERIES.map((series) => `<label style="--line-color:${series.color}"><input type="checkbox" data-company-series="${series.key}" ${isMarketRsChartSeriesVisible(series.key) ? "checked" : ""} /><i></i>${series.label}</label>`).join("")}</div>`;
+  </div><div class="company-series" role="group" aria-label="차트 표시선">${MARKET_RS_CHART_SERIES.map((series) => `<label style="--line-color:var(--rs-${series.key}-color,${series.color})"><input type="checkbox" data-company-series="${series.key}" ${isMarketRsChartSeriesVisible(series.key) ? "checked" : ""} /><i></i>${series.label}</label>`).join("")}</div>`;
+}
+
+function renderCompanyAnalysisControls(financial) {
+  const groups = [...new Set(COMPANY_FINANCIAL_METRICS.map((metric) => metric.group))];
+  const count = financial?.quarters?.length ?? 0;
+  return `<div class="company-analysis-controls">${groups.map((group) => `<fieldset class="company-metric-group"><legend>${group}</legend><div>${COMPANY_FINANCIAL_METRICS.filter((metric) => metric.group === group).map((metric) => {
+    const available = financial?.quarters?.some((quarter) => companyFinite(quarter[metric.key]) !== null);
+    return `<label style="--metric-color:${metric.color}" title="${available ? metric.label : "저장된 데이터 없음"}"><input type="checkbox" data-company-financial="${metric.key}" ${companyFinancialSelected.has(metric.key) ? "checked" : ""} ${available ? "" : "disabled"} /><i></i>${metric.label}</label>`;
+  }).join("")}</div></fieldset>`).join("")}
+  <label class="company-analysis-range">분기<select data-company-financial-range>${[4, 8].filter((value) => value < count).map((value) => `<option value="${value}" ${companyFinancialRange === String(value) ? "selected" : ""}>최근 ${value}분기</option>`).join("")}<option value="all" ${companyFinancialRange === "all" || Number(companyFinancialRange) >= count ? "selected" : ""}>전체 ${count}분기</option></select></label></div>`;
+}
+
+function renderCompanyTrendControls() {
+  return `<div class="company-analysis-controls"><fieldset class="company-metric-group"><legend>추세 지표</legend><div>${[["Rank","순위","#39d3a1"],["Trend Score","Trend Score","#ecf0ed"],["Climax Score","Climax Score","#ffb641"]].map(([key,label,color]) => `<label style="--metric-color:${color}"><input type="checkbox" data-company-trend="${key}" ${companyTrendSeries[key] ? "checked" : ""} /><i></i>${label}</label>`).join("")}</div></fieldset>
+  <label class="company-analysis-range">추세 기간<select data-company-trend-range>${[["1m","1M"],["3m","3M"],["6m","6M"],["1y","1Y"],["ytd","YTD"],["max","2025~"]].map(([key,label]) => `<option value="${key}" ${companyTrendRange === key ? "selected" : ""}>${label}</option>`).join("")}</select></label></div>`;
+}
+
+function updateCompanyFinancialTable(row) {
+  const section = companyModal.querySelector(".company-financial-section");
+  const item = marketRsFinancialsData.financials?.[row.ticker];
+  const quarters = companyFinancialQuarters(item);
+  const allowedPeriods = new Set(quarters.map((quarter) => quarter.period));
+  const columns = new Set([0, 1, ...COMPANY_FINANCIAL_METRICS.filter((metric) => companyFinancialSelected.has(metric.key)).map((metric) => metric.column)]);
+  section.querySelectorAll(".market-rs-financial-table tr").forEach((tr) => {
+    [...tr.children].forEach((cell, index) => { cell.hidden = !columns.has(index); });
+    if (tr.parentElement.tagName === "TBODY") tr.hidden = !allowedPeriods.has(tr.firstElementChild.textContent.trim());
+  });
+  const caption = section.querySelector(".market-rs-financial-head p");
+  if (caption) caption.textContent = `${quarters.length}개 분기 · 기업 회계연도 기준`;
+}
+
+function createCompanyFinancialChart(canvas, item) {
+  if (!canvas || typeof Chart === "undefined") return;
+  destroyCompanyChart(canvas);
+  const model = companyFinancialModel(item);
+  const empty = companyModal.querySelector("[data-company-financial-empty]");
+  canvas.parentElement.hidden = model.datasets.length === 0;
+  empty.hidden = model.datasets.length > 0;
+  empty.textContent = companyFinancialSelected.size ? "선택한 기간에 공시된 데이터가 없습니다." : "선택된 재무 지표 없음";
+  if (!model.datasets.length) return;
+  const chart = new Chart(canvas, {
+    type: "bar", data: { labels: model.quarters.map((quarter) => quarter.period ?? "-"), datasets: model.datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: {
+        filter: (item) => companyFinite(item.dataset.data[item.dataIndex]) !== null,
+        callbacks: {
+        afterTitle: (items) => { const q = model.quarters[items?.[0]?.dataIndex]; return q ? formatRsFinancialPeriodRange(q.periodStart, q.periodEnd) : ""; },
+        label: (context) => {
+          const metric = model.metrics.find((entry) => entry.key === context.dataset.metricKey);
+          const value = context.parsed.y;
+          const formatted = metric.unit === "usd" ? formatRsFinancialUsd(value * 1e9) : metric.unit === "eps" ? formatRsFinancialEps(value) : `${value.toFixed(1)}${metric.suffix ?? "%"}`;
+          return `${metric.label}: ${formatted}`;
+        },
+        afterBody: (items) => {
+          const q = model.quarters[items?.[0]?.dataIndex];
+          return [...new Set(items.map((entry) => q?.metricSources?.[entry.dataset.metricKey]).filter(Boolean))]
+            .flatMap((source) => String(source).match(/.{1,38}(?:\s|$)|.{1,38}/g) ?? []);
+        },
+      } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, autoSkipPadding: 16,
+          callback(value) { return this.getLabelForValue(value).replace(/^FY20/, "FY").split(" "); } } },
+        ...Object.fromEntries(Object.entries(model.scales).map(([unit, bounds], index) => [unit, {
+          position: unit === "usd" || (unit === "eps" && !model.scales.usd) ? "left" : "right",
+          min: bounds.min, max: bounds.max,
+          title: { display: true, text: unit === "usd" ? "금액 ($B)" : unit === "eps" ? "EPS ($/주)" : model.metrics.some((metric) => metric.suffix === "pp") ? "비율 (%) / 변화 (pp)" : "비율 (%)" },
+          ticks: { stepSize: bounds.step, maxTicksLimit: 6, callback: (value) => {
+            const number = Number(value).toLocaleString("en-US", { maximumFractionDigits: unit === "eps" || bounds.step < 1 ? 2 : 1 });
+            return unit === "usd" ? `$${number}B` : unit === "eps" ? `$${number}` : number;
+          } },
+          grid: { drawOnChartArea: index === 0 },
+        }])),
+      },
+    },
+  });
+  charts.push(chart);
+  applyCompanyChartTheme(canvas);
+}
+
+function updateCompanyTrendVisibility(canvas) {
+  const chart = typeof Chart !== "undefined" && canvas ? Chart.getChart(canvas) : null;
+  if (!chart) return;
+  chart.options.plugins.legend.display = false;
+  chart.data.datasets.forEach((dataset, index) => chart.setDatasetVisibility(index, Boolean(companyTrendSeries[dataset.label])));
+  chart.options.scales.y.display = companyTrendSeries.Rank;
+  chart.options.scales.y1.display = companyTrendSeries["Trend Score"] || companyTrendSeries["Climax Score"];
+  chart.options.scales.y1.grid.drawOnChartArea = !companyTrendSeries.Rank;
+  const visible = Object.values(companyTrendSeries).some(Boolean);
+  canvas.parentElement.hidden = !visible;
+  companyModal.querySelector("[data-company-trend-empty]").hidden = visible;
+  chart.update("none");
+}
+
+function bindCompanyAnalysisControls(row, trend) {
+  companyModal.querySelectorAll("[data-company-financial]").forEach((input) => input.addEventListener("change", () => {
+    if (input.checked) companyFinancialSelected.add(input.dataset.companyFinancial);
+    else companyFinancialSelected.delete(input.dataset.companyFinancial);
+    updateCompanyFinancialTable(row);
+    drawCompanyLazy("financial", row, trend);
+  }));
+  companyModal.querySelector("[data-company-financial-range]").addEventListener("change", (event) => {
+    companyFinancialRange = event.target.value;
+    updateCompanyFinancialTable(row);
+    drawCompanyLazy("financial", row, trend);
+  });
+  companyModal.querySelectorAll("[data-company-trend]").forEach((input) => input.addEventListener("change", () => {
+    companyTrendSeries = { ...companyTrendSeries, [input.dataset.companyTrend]: input.checked };
+    updateCompanyTrendVisibility(companyModal.querySelector('[data-company-chart="trend"]'));
+  }));
+  companyModal.querySelector("[data-company-trend-range]").addEventListener("change", (event) => {
+    companyTrendRange = event.target.value;
+    state.trendScoreRange = companyTrendRange;
+    drawCompanyLazy("trend", row, trend);
+  });
 }
 
 function renderCompanyDialog(ticker) {
@@ -194,11 +423,15 @@ function renderCompanyDialog(ticker) {
     </section>
     <section class="company-trend-section" data-company-lazy="trend"><div class="company-section-title"><h3>추세스코어</h3><span>${trend?.asOfDate ?? "-"} · ${escapeHtml(trend?.state ?? "데이터 없음")}</span></div>
       <div class="company-trend-summary">${[["가격 추세",trend?.absoluteScore,4],["상대강도 추세",trend?.relativeScore,4],["모멘텀",trend?.momentumScore,2]].map(([label,value,max]) => `<div><span>${label}</span><meter min="0" max="${max}" value="${value ?? 0}" aria-label="${label}"></meter><b>${formatRsNumber(value)}/${max}</b></div>`).join("")}</div>
+      ${renderCompanyTrendControls()}
       <div class="company-medium-chart"><canvas data-company-chart="trend"></canvas></div>
+      <p class="company-chart-empty" data-company-trend-empty hidden>선택된 추세 지표 없음</p>
     </section>
     <section class="company-financial-section" data-company-lazy="financial"><div class="company-section-title"><h3>분기 재무</h3><span>${quarter?.period ?? "-"} · ${quarter?.periodEnd ?? "-"}</span></div>
       <div class="company-financial-metrics">${[["매출",formatRsFinancialUsd(quarter?.revenue)],["매출 YoY",formatRsFinancialPercent(quarter?.revenueYoyPct)],["GPM",formatRsFinancialMargin(quarter?.grossMarginPct)],["OPM",formatRsFinancialMargin(quarter?.operatingMarginPct)]].map(([label,value])=>`<div><span>${label}</span><strong>${value}</strong></div>`).join("")}</div>
+      ${renderCompanyAnalysisControls(financial)}
       ${renderMarketRsFinancials(row)}
+      <p class="company-chart-empty" data-company-financial-empty hidden></p>
     </section>
     <section class="company-earnings-section">${renderMarketCanslimEarningsSurprise(row)}</section>
     <section class="company-canslim-section"><div class="company-section-title"><h3>CANSLIM</h3><span>Proxy · ${analysis ? formatCanslimScore(analysis.score) : "-"}</span></div>
@@ -229,6 +462,8 @@ function renderCompanyDialog(ticker) {
     }
   }));
   bindCompanyChartControls(row, trend);
+  bindCompanyAnalysisControls(row, trend);
+  updateCompanyFinancialTable(row);
   drawCompanyCharts(row, trend);
   if (typeof IntersectionObserver !== "undefined") {
     companyObserver = new IntersectionObserver((entries) => {
@@ -250,20 +485,17 @@ function drawCompanyLazy(key, row, trend) {
   if (key === "risk") {
     createMarketRsMddChart(companyModal.querySelector('[data-rs-chart="mdd"]'), row);
     createMarketRsAtrChart(companyModal.querySelector('[data-rs-chart="atr"]'), row);
+    applyCompanyChartTheme(companyModal.querySelector('[data-rs-chart="mdd"]'));
+    applyCompanyChartTheme(companyModal.querySelector('[data-rs-chart="atr"]'));
   } else if (key === "trend" && trend) {
-    createTrendScoreChart(companyModal.querySelector('[data-company-chart="trend"]'), trend);
+    const canvas = companyModal.querySelector('[data-company-chart="trend"]');
+    destroyCompanyChart(canvas);
+    createTrendScoreChart(canvas, trend);
+    applyCompanyChartTheme(canvas);
+    updateCompanyTrendVisibility(canvas);
   } else if (key === "financial") {
     const canvas = companyModal.querySelector('[data-canslim-chart="financials"]');
-    createMarketCanslimFinancialChart(canvas, marketRsFinancialsData.financials?.[row.ticker]);
-    const chart = typeof Chart !== "undefined" && canvas ? Chart.getChart(canvas) : null;
-    if (chart) {
-      Object.assign(chart.options.scales.x.ticks, {
-        autoSkip: true,
-        autoSkipPadding: 12,
-        callback(value) { return this.getLabelForValue(value).replace(/^FY20/, "FY").split(" "); },
-      });
-      chart.update("none");
-    }
+    createCompanyFinancialChart(canvas, marketRsFinancialsData.financials?.[row.ticker]);
   }
 }
 
@@ -271,16 +503,17 @@ function drawCompanyCharts(row, trend) {
   const built = [...companyLazyBuilt];
   destroyCharts();
   createMarketRsChart(companyModal.querySelector('[data-rs-chart="detail"]'), row);
+  applyCompanyChartTheme(companyModal.querySelector('[data-rs-chart="detail"]'));
   const volume = companyModal.querySelector(".company-volume-chart");
   volume.hidden = !state.rsVolumeVisible;
   if (state.rsVolumeVisible) createMarketRsVolumeChart(volume.querySelector("canvas"), row);
+  applyCompanyChartTheme(volume.querySelector("canvas"));
   built.forEach((key) => drawCompanyLazy(key, row, trend));
 }
 
 function bindCompanyChartControls(row, trend) {
   const controls = companyModal.querySelector("[data-company-controls]");
   const redraw = () => {
-    state.trendScoreRange = state.rsHistoryRange;
     controls.innerHTML = renderCompanyChartControls();
     bindCompanyChartControls(row, trend);
     drawCompanyCharts(row, trend);
