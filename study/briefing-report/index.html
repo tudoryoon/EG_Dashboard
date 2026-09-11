@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EG Daily Briefing | PDF</title>
+  <link rel="stylesheet" href="./report.css?v=20260911-1">
+  <script src="./model.js?v=20260911-1" defer></script>
+  <script src="./report.js?v=20260911-1" defer></script>
+</head>
+<body>
+  <header class="controls">
+    <div class="controls-title"><strong>브리핑 PDF</strong><span>A4 세로 · 1페이지</span></div>
+    <div class="controls-actions">
+      <label><input id="cap-floor" type="checkbox" checked> 시총 $10B 미만 제외</label>
+      <select id="preview-scale" aria-label="미리보기 배율"><option value="fit">한 페이지</option><option value="1">100%</option></select>
+      <button id="print" type="button" disabled aria-label="PDF 인쇄" title="PDF 인쇄">
+        <span class="printer-icon" aria-hidden="true"></span>PDF 인쇄
+      </button>
+    </div>
+  </header>
+  <div id="status" role="status">브리핑 데이터를 불러오는 중입니다.</div>
+  <main class="preview"><div class="sheet-holder"><article id="report" class="sheet" aria-label="Daily Briefing 인쇄용 리포트"></article></div></main>
+</body>
+</html>

@@ -151,6 +151,7 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
+  BriefingPrint: { label: "브리핑 PDF" },
   MarketRegime: { label: "시장 국면" },
   MemoryCapa: { label: "Memory CAPA" },
   Comparisons: { label: "NVDA vs Memory" },
@@ -590,6 +591,7 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
+      BriefingPrint: "briefing-pdf",
       MarketRegime: "market-regime",
       MemoryCapa: "memory-capa",
       Comparisons: "nvda-vs-memory",
@@ -17734,6 +17736,23 @@ function formatStudyCalendarDayNumber(value) {
   };
 }
 
+function renderStudyBriefingPrintOverview() {
+  destroyCharts();
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+  const model = window.EgBriefingReport.build(window.marketBriefingData ?? {}, marketRsData);
+  usOverviewRoot.innerHTML = `<iframe
+    data-study-briefing-print title="Daily Briefing PDF 인쇄용 리포트"
+    src="./study/briefing-report/index.html?v=20260911-1"
+    style="display:block;width:100%;height:max(660px,calc(100vh - 245px));border:1px solid #d8dddf;border-radius:6px;background:#edf0f1"
+  ></iframe>`;
+  const frame = usOverviewRoot.querySelector("[data-study-briefing-print]");
+  frame.addEventListener("load", () => {
+    frame.contentWindow.postMessage({type: "eg-briefing-report", model}, window.location.origin);
+  }, {once: true});
+}
+
 function renderStudyMarketRegimeOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -22010,7 +22029,7 @@ function renderSummary(list) {
       summaryText.textContent = "Magnificent Seven quarterly fundamentals and relative performance";
     } else if (state.researchView === "TrendSearch") {
       summaryText.textContent = "Google web and YouTube search-interest dashboard with moving averages";
-    } else if (state.researchView === "MarketRegime") {
+    } else if (state.researchView === "MarketRegime" || state.researchView === "BriefingPrint") {
       summaryText.textContent = "";
     } else if (state.researchView === "Calendar") {
       summaryText.textContent = "향후 4주 일정 · 각국 현지 발표일 · KST 시각 병기";
@@ -22683,6 +22702,10 @@ function render() {
 
   if (state.tab === "Research") {
     renderSummary([]);
+    if (state.researchView === "BriefingPrint") {
+      renderStudyBriefingPrintOverview();
+      return;
+    }
     if (state.researchView === "DataCenter") {
       renderStudyDataCenterOverview();
       return;
