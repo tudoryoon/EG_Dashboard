@@ -4,9 +4,86 @@ import unittest
 from unittest.mock import patch
 
 import msci_acwi_ntr as acwi
+import update_market_trend_score as trend
+from test_trend_history import fixture
 
 
 class AcwiTests(unittest.TestCase):
+    def trend_fixture(self):
+        rs, prices = fixture(tickers=("AAA", acwi.TICKER))
+        rs["rows"][-1].update(isIndex=True, marketCap=None, asOfDate=rs["updatedAt"], rsRatingAll=70)
+        result = {"updatedAt": rs["updatedAt"], "historyDates": rs["historyDates"],
+                  "rows": {"all": [{"ticker": "AAA", "rank": 17}], "sp500": []},
+                  "histories": {"all": {"AAA": {"score": [7], "rank": [17]}}, "sp500": {}}}
+        return rs, prices, result
+
+    def test_trend_repair_preserves_stocks_and_does_not_rank_index(self):
+        rs, prices, result = self.trend_fixture()
+        before = copy.deepcopy((rs, prices, result))
+        acwi.refresh_trend_index(result, rs, prices)
+        row = result["rows"]["all"][-1]
+        self.assertEqual(row["asOfDate"], rs["updatedAt"])
+        self.assertEqual(row["score"], 10)
+        self.assertTrue(row["isIndex"])
+        self.assertIsNone(row["rank"])
+        self.assertTrue(all(v is None for v in result["histories"]["all"][acwi.TICKER]["rank"]))
+        self.assertEqual(result["rows"]["all"][0], before[2]["rows"]["all"][0])
+        self.assertEqual(result["histories"]["all"]["AAA"], before[2]["histories"]["all"]["AAA"])
+        self.assertEqual(result["rows"]["sp500"], [])
+        self.assertEqual((rs, prices), before[:2])
+        acwi.refresh_trend_index(result, rs, prices)
+        self.assertEqual(len(result["rows"]["all"]), 2)
+
+    def test_trend_staleness_checks_row_and_history_not_global_date(self):
+        rs, prices, result = self.trend_fixture()
+        self.assertTrue(acwi.trend_index_is_stale(rs, result))
+        acwi.refresh_trend_index(result, rs, prices)
+        self.assertFalse(acwi.trend_index_is_stale(rs, result))
+        current = copy.deepcopy(result)
+        result["histories"]["all"][acwi.TICKER]["score"][-1] = None
+        self.assertTrue(acwi.trend_index_is_stale(rs, result))
+        result = copy.deepcopy(current)
+        result["rows"]["all"][-1]["asOfDate"] = rs["historyDates"][-2]
+        self.assertTrue(acwi.trend_index_is_stale(rs, result))
+        result = copy.deepcopy(current)
+        result["rows"]["all"][-1]["price"] = 1
+        self.assertTrue(acwi.trend_index_is_stale(rs, result))
+
+    def test_guard_repairs_trend_when_rs_is_fresh_without_network(self):
+        import json
+        rs, prices, result = self.trend_fixture()
+        self.assertFalse(acwi.rs_index_is_stale(rs))
+        payloads = {"marketRsData": rs, "marketPriceData": prices, "marketTrendScoreData": result}
+        with patch("sys.argv", ["msci_acwi_ntr.py", "--if-stale", "--rs-only"]), \
+             patch("add_market_rs_tickers.load_js_payload", side_effect=lambda p, name: payloads[name]), \
+             patch.object(acwi, "fetch_item") as fetch, \
+             patch.object(acwi, "append_rs_index") as append, \
+             patch("pathlib.Path.write_text", autospec=True) as write:
+            acwi.main()
+        fetch.assert_not_called()
+        append.assert_not_called()
+        self.assertEqual(write.call_count, 1)
+        self.assertEqual(write.call_args.args[0].name, "market-trend-score-data.js")
+        saved = json.loads(write.call_args.args[1].split("=", 1)[1].strip().rstrip(";"))
+        self.assertFalse(acwi.trend_index_is_stale(rs, saved))
+
+    def test_full_refresh_includes_index_but_excludes_it_from_rank(self):
+        rs, prices, _ = self.trend_fixture()
+        with patch.object(trend, "load_market_rs_payload", return_value=rs), \
+             patch.object(trend, "load_market_price_payload", return_value=prices):
+            result = trend.build_payload()
+        self.assertFalse(acwi.trend_index_is_stale(rs, result))
+        self.assertEqual(result["rows"]["all"][0]["rank"], 1)
+        self.assertIsNone(result["rows"]["all"][-1]["rank"])
+
+    def test_targeted_update_rejects_calendar_mismatch_without_mutating(self):
+        rs, prices, result = self.trend_fixture()
+        result["historyDates"] = result["historyDates"][:-1]
+        before = copy.deepcopy(result)
+        with self.assertRaisesRegex(ValueError, "history dates differ"):
+            acwi.refresh_trend_index(result, rs, prices)
+        self.assertEqual(result, before)
+
     def test_morning_cutoff_includes_completed_us_session(self):
         for stamp, expected in [
             ("2026-09-09T20:09:00+00:00", "2026-09-08"),

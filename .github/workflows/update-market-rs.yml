@@ -111,7 +111,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install pandas yfinance requests curl_cffi lxml html5lib beautifulsoup4
 
-      - name: Catch up delayed MSCI index without refreshing the full universe
+      - name: Catch up delayed MSCI RS and Trend without refreshing the full universe
         if: steps.refresh-guard.outputs.should_run != 'true'
         run: python scripts/msci_acwi_ntr.py --if-stale --rs-only
 

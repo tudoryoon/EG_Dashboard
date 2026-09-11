@@ -136,42 +136,74 @@ def main():
     import argparse
     import json
     from pathlib import Path
-    import update_market_trend_score as trend
     from add_market_rs_tickers import load_js_payload
 
     parser = argparse.ArgumentParser(description="Refresh MSCI ACWI NTR without changing other symbols")
     parser.add_argument("--rs-only", action="store_true", help="Leave the separate Index Trend file to its own workflow")
-    parser.add_argument("--if-stale", action="store_true", help="Skip when the index RS chart reaches the RS data date")
+    parser.add_argument("--if-stale", action="store_true", help="Skip only when both index RS and Trend reach the RS data date")
+    parser.add_argument("--trend-only", action="store_true", help="Recompute only this index's Trend from the saved RS and benchmark data")
     args = parser.parse_args()
     data = Path(__file__).resolve().parents[1] / "data"
     rs = load_js_payload(data / "market-rs-data.js", "marketRsData")
-    if args.if_stale and not rs_index_is_stale(rs):
-        print("MSCI ACWI NTR RS chart already reaches the current RS session")
+    result = load_js_payload(data / "market-trend-score-data.js", "marketTrendScoreData")
+    rs_stale = rs_index_is_stale(rs)
+    if args.if_stale and not rs_stale and not trend_index_is_stale(rs, result):
+        print("MSCI ACWI NTR RS and Trend already reach the current RS session")
         return
     prices = load_js_payload(data / "market-price-data.js", "marketPriceData")
-    item = fetch_item(prices["items"].get(KEY))
-    prices["items"][KEY] = item
-    append_rs_index(rs, item)
-    result = load_js_payload(data / "market-trend-score-data.js", "marketTrendScoreData")
-    if result["historyDates"] != trend.get_history_dates(rs):
-        raise ValueError("RS and Trend history dates differ; refresh Trend before targeted update")
-    for key, meta in trend.UNIVERSES.items():
-        rows, histories = trend.build_universe_payload(key, meta, rs, prices, {}, {}, {TICKER})
-        result["rows"][key] = [r for r in result["rows"][key] if r["ticker"] != TICKER] + rows
-        result["histories"][key].pop(TICKER, None)
-        result["histories"][key].update(histories)
+    refresh_rs = not args.trend_only and (rs_stale or not args.if_stale)
+    if refresh_rs:
+        item = fetch_item(prices["items"].get(KEY))
+        prices["items"][KEY] = item
+        append_rs_index(rs, item)
+    refresh_trend_index(result, rs, prices)
     for filename, variable, payload in [
         ("market-price-data.js", "marketPriceData", prices),
         ("market-rs-data.js", "marketRsData", rs),
         ("market-trend-score-data.js", "marketTrendScoreData", result),
     ]:
+        if filename != "market-trend-score-data.js" and not refresh_rs:
+            continue
         if args.rs_only and filename == "market-price-data.js":
             continue
         # Match the compact daily collector format; only the new index changes.
         (data / filename).write_text("window." + variable + " = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8", newline="\n")
     row = next(r for r in rs["rows"] if r["ticker"] == TICKER)
-    print(f"{LABEL}: {item['dates'][-1]} = {item['values'][-1]}; {len(item['dates'])} index sessions")
-    print(f"RS {row['rsRatingAll']}, Trend {next(r['score'] for r in result['rows']['all'] if r['ticker'] == TICKER)}")
+    trend_row = next(r for r in result['rows']['all'] if r['ticker'] == TICKER)
+    print(f"{LABEL}: RS {row['asOfDate']} = {row['price']}; RS rating {row['rsRatingAll']}")
+    print(f"Trend {trend_row['asOfDate']}: {trend_row['score']}/10")
+    if trend_index_is_stale(rs, result):
+        print("MSCI Trend still trails RS; awaiting complete index/benchmark inputs (no fabricated prices).")
+
+
+def refresh_trend_index(result, rs, prices):
+    import update_market_trend_score as trend
+
+    if result.get("historyDates") != trend.get_history_dates(rs):
+        raise ValueError("RS and Trend history dates differ; refresh Trend before targeted update")
+    # The index is scored using ALL's S&P 500 benchmark but never ranks stocks.
+    rows, histories = trend.build_universe_payload("all", trend.UNIVERSES["all"], rs, prices, {}, {}, {TICKER})
+    if not rows or TICKER not in histories:
+        raise ValueError("Cannot compute MSCI Trend from the saved index and benchmark history")
+    result.setdefault("rows", {}).setdefault("all", [])
+    result["rows"]["all"] = [r for r in result["rows"]["all"] if r["ticker"] != TICKER] + rows
+    result.setdefault("histories", {}).setdefault("all", {}).update(histories)
+    return result
+
+
+def trend_index_is_stale(rs, result):
+    import update_market_trend_score as trend
+
+    dates = result.get("historyDates", [])
+    if not dates or dates != trend.get_history_dates(rs):
+        return True
+    index_row = next((r for r in rs.get("rows", []) if r.get("ticker") == TICKER), {})
+    row = next((r for r in result.get("rows", {}).get("all", []) if r.get("ticker") == TICKER), {})
+    scores = result.get("histories", {}).get("all", {}).get(TICKER, {}).get("score", [])
+    return (str(row.get("asOfDate") or "") < str(index_row.get("asOfDate") or rs.get("updatedAt") or "")
+            or row.get("price") != index_row.get("price")
+            or row.get("score") is None
+            or len(scores) != len(dates) or scores[-1] != row.get("score"))
 
 
 def rs_index_is_stale(payload):

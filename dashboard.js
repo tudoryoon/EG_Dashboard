@@ -14456,6 +14456,9 @@ function getTrendScoreRows() {
 }
 
 function getTrendScoreBriefingSectorLabel(sectorKey, sectorData = getMarketRsBriefingSectorData()) {
+  if (sectorKey === "indices") {
+    return "지수";
+  }
   if (sectorKey === "all") {
     return "All Trend";
   }
@@ -14466,6 +14469,9 @@ function getTrendScoreBriefingSectorLabel(sectorKey, sectorData = getMarketRsBri
 }
 
 function matchesTrendScoreBriefingSector(row, sectorData) {
+  if (state.trendScoreBriefingSector === "indices") {
+    return row.isIndex === true;
+  }
   if (state.trendScoreBriefingSector === "all") {
     return true;
   }
@@ -14679,7 +14685,7 @@ function createTrendScoreChart(canvas, row) {
           pointHoverRadius: 4,
           yAxisID: "y1",
         },
-      ],
+      ].filter((dataset) => !row.isIndex || dataset.yAxisID !== "y"),
     },
     options: {
       responsive: true,
@@ -14722,6 +14728,7 @@ function createTrendScoreChart(canvas, row) {
           },
         },
         y: {
+          display: !row.isIndex,
           position: "left",
           reverse: true,
           min: 1,
@@ -14736,7 +14743,7 @@ function createTrendScoreChart(canvas, row) {
           position: "right",
           min: 0,
           max: 10,
-          grid: { drawOnChartArea: false },
+          grid: { drawOnChartArea: Boolean(row.isIndex) },
           ticks: { color: "#111827", stepSize: 2 },
         },
       },
@@ -14826,6 +14833,7 @@ function renderMarketTrendScoreOverview() {
   if (
     state.trendScoreBriefingSector !== "all" &&
     state.trendScoreBriefingSector !== "briefingAll" &&
+    state.trendScoreBriefingSector !== "indices" &&
     !briefingSectorData.groups.some((sector) => sector.key === state.trendScoreBriefingSector)
   ) {
     state.trendScoreBriefingSector = "briefingAll";
@@ -14851,6 +14859,7 @@ function renderMarketTrendScoreOverview() {
   const briefingSectorChips = [
     { key: "all", label: "All Trend", count: getTrendScoreRows().length },
     { key: "briefingAll", label: "Daily Briefing 전체", count: briefingSectorData.allTickers.length },
+    { key: "indices", label: "지수", count: (marketTrendScoreData.rows?.all ?? []).filter((row) => row.isIndex).length },
     ...briefingSectorData.groups.map((sector) => ({
       key: sector.key,
       label: sector.label,
@@ -15107,7 +15116,7 @@ function renderMarketTrendScoreOverview() {
           <div class="us-section-head">
             <div>
               <h2>${selected?.ticker ?? "-"}</h2>
-              <p>${selected?.name ?? "Select a ticker from the table or search box."}</p>
+              <p>${selected?.name ?? "Select a ticker from the table or search box."}${selected?.isIndex ? ` · ${selected.asOfDate}` : ""}</p>
             </div>
             <span class="market-rs-detail-score">${formatRsNumber(selected?.score)}</span>
           </div>
@@ -15188,7 +15197,7 @@ function renderMarketTrendScoreOverview() {
           <div class="chart-wrap market-rs-chart-wrap">
             <canvas data-trend-score-chart="detail"></canvas>
           </div>
-          <p class="market-rs-chart-caption">Left axis: daily rank, inverted so #1 is at the top. Right axis: 0-10 trend and climax scores. Hover shows the exact date.</p>
+          <p class="market-rs-chart-caption">${selected?.isIndex ? "지수는 종목 순위에서 제외 · Climax: 거래량 없는 종가 기반" : "Left axis: daily rank, inverted so #1 is at the top. Right axis: 0-10 trend and climax scores. Hover shows the exact date."}</p>
         </article>
       </section>
 
@@ -15238,6 +15247,13 @@ function renderMarketTrendScoreOverview() {
   usOverviewRoot.querySelectorAll("[data-trend-score-briefing-sector]").forEach((button) => {
     button.addEventListener("click", () => {
       state.trendScoreBriefingSector = button.dataset.trendScoreBriefingSector || "all";
+      if (state.trendScoreBriefingSector === "indices") {
+        state.trendScoreUniverse = "all";
+        state.trendScoreMarketCapRange = "all";
+        state.trendScoreCustomMarketCapMin = "";
+        state.trendScoreCustomMarketCapMax = "";
+        state.query = "";
+      }
       state.trendScoreSelectedTicker = "";
       resetTrendScoreCardLimit();
       render();
