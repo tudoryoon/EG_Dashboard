@@ -29,14 +29,14 @@
   }
 
   function leaderTable(title, rows, metric) {
-    const markup = rows.map((row, index) => `<tr>
+    const markup = rows.map((row, index) => `<tr data-ticker="${esc(row.ticker)}">
       <td class="company" title="${esc(row.name)} · ${esc(row.sectors.join(', '))}"><strong><i>${index + 1}</i>${esc(row.ticker)}</strong><span>${esc(row.name)}</span></td>
       <td class="spark-cell">${spark(row)}</td>
-      <td class="numeric ${metric === 'rs' ? 'key-metric' : ''}">${fmt(row.rs1w, 0)}</td>
-      ${cell(row.day)}${cell(row.week, metric === 'returns' ? 'key-metric' : '')}${cell(row.month)}
+      <td class="numeric">${fmt(row.rs1w, 0)}</td>
+      ${cell(row.day)}${cell(row.week, metric === 'week' ? 'key-metric' : '')}${cell(row.month, metric === 'month' ? 'key-metric' : '')}
     </tr>`).join('');
     const blanks = Array.from({length: 10 - Math.max(1, rows.length)}, () => '<tr class="blank"><td colspan="6">&nbsp;</td></tr>').join('');
-    return `<section class="leaders">${sectionHead(title, `${rows.length}종목 · ${esc(model.rsDate)}`)}
+    return `<section class="leaders" data-period="${metric}">${sectionHead(title, `${rows.length}종목 · ${esc(model.rsDate)}`)}
       <table><colgroup><col class="name-col"><col class="spark-col"><col class="rs-col"><col><col><col></colgroup>
       <thead><tr><th>티커 / 기업</th><th>주가 · 6M</th><th>RS 1W</th><th>1D</th><th>1W</th><th>1M</th></tr></thead>
       <tbody>${markup || '<tr class="empty"><td colspan="6">해당 종목 없음</td></tr>'}${blanks}</tbody></table></section>`;
@@ -57,17 +57,17 @@
     const mismatch = model.briefingDate !== model.rsDate;
     report.innerHTML = `
       <header class="report-title"><div><div class="eyebrow">EG RESEARCH / DAILY MARKET NOTE</div><h1>Daily Briefing<span>US EQUITIES</span></h1></div><div class="report-date"><strong>${esc(model.briefingDate)}</strong><span>미국 종가 기준</span></div></header>
-      <div class="scope-line"><span>Daily Briefing · 미국 주식 ${selected.eligible}개${capFloor ? ' · 시총 $10B 이상' : ' · 시총 전체'}</span><span>종목 ${esc(model.rsDate)} · 수익률 % / 초과수익 %p</span></div>
+      <div class="scope-line"><span>미국 전체 ${model.universeCount}개 · 순위 대상 ${selected.eligible}개 · ${capFloor ? '$10B 이상' : '시총 전체'} · ETF 제외</span><span>종목 ${esc(model.rsDate)} · 수익률 % / 초과수익 %p</span></div>
       ${mismatch ? `<p class="date-warning">기준일 차이: 지수·섹터 ${esc(model.briefingDate)} / 종목 ${esc(model.rsDate)}</p>` : ''}
       <section class="indices">${model.indices.slice(0, 6).map(item => `<div class="index"><h2>${esc(labels[item.key] || item.label)}</h2><strong>${fmt(item.price)}</strong><div><span class="${tone(item.day)}">1D ${pct(item.day)}%</span><span class="${tone(item.week)}">1W ${pct(item.week)}%</span></div><small>21D ATR ${valid(item.atr) ? fmt(item.atr) + '%' : '-'}${item.asOf !== model.briefingDate ? ' · ' + esc(item.asOf) : ''}</small></div>`).join('')}</section>
-      <div class="leader-grid">${leaderTable('RS 1W 상위', selected.rs, 'rs')}${leaderTable('1주 수익률 상위', selected.returns, 'returns')}</div>
+      <div class="leader-grid">${leaderTable('1주 수익률 상위', selected.week, 'week')}${leaderTable('1개월 수익률 상위', selected.month, 'month')}</div>
       <section class="sector-section">${sectionHead('섹터별 성과', `1W 내림차순 · QQQ 1W ${pct(model.benchmark.returns?.['1w'])}%`)}<div class="sector-grid">${sectorTable(selected.sectors.slice(0, split))}${sectorTable(selected.sectors.slice(split))}</div></section>
       <section class="highs-section">${sectionHead('52주 신고가', `252거래일 확보 · 시총순 최대 8개 · 전체 ${selected.highCount}개`)}
         <table class="highs-table"><colgroup><col style="width:10%"><col style="width:23%"><col style="width:23%"><col><col><col><col><col></colgroup><thead><tr><th>티커</th><th>기업</th><th>Daily Briefing 섹터</th><th>시총</th><th>RS</th><th>1W</th><th>1M</th><th>YTD</th></tr></thead><tbody>
         ${selected.highs.map(row => `<tr><td><b>${esc(row.ticker)}</b></td><td class="ellipsis">${esc(row.name)}</td><td class="ellipsis" title="${esc(row.sectors.join(', '))}">${esc(row.sectors[0])}</td><td class="numeric">${cap(row.marketCap)}</td><td class="numeric">${fmt(row.rs, 0)}</td>${cell(row.week)}${cell(row.month)}${cell(row.ytd)}</tr>`).join('') || '<tr><td colspan="8" class="no-highs">해당 종목 없음</td></tr>'}
         </tbody></table>
       </section>
-      <footer class="report-footer"><p>출처: EG Dashboard 저장 데이터 · Yahoo Finance / yfinance. RS 1W는 ALL 유니버스의 기존 1주 RS(1~99); 필터 내 재산출 없음. 동점은 1W 수익률순.</p><p>섹터 수익률: 시총가중 50% + 동일가중 50%, 기존 Rotation Score 유지. vs QQQ는 1주 초과수익률. 가격 차트: 최대 126거래일, 각 종목별 축. 신규상장 YTD는 전년말 가격 없으면 미표시.${model.missing ? ` 최신 가격 누락 ${model.missing}개 제외.` : ''}</p><div><span>EG DASHBOARD · BRIEFING PRINT / PILOT</span><span>01 / 01</span></div></footer>`;
+      <footer class="report-footer"><p>출처: EG Dashboard 저장 데이터 · Yahoo Finance / yfinance. 1주(5거래일)·1개월(21거래일) 수익률순, 동률은 시총순. RS 1W는 ALL 유니버스 기존값.</p><p>섹터 수익률: 시총가중 50% + 동일가중 50%, 기존 Rotation Score 유지. vs QQQ는 1주 초과수익률. 가격 차트: 최대 126거래일, 각 종목별 축. 신규상장 YTD는 전년말 가격 없으면 미표시.${model.missing ? ` 최신 가격 누락 ${model.missing}개 제외.` : ''}</p><div><span>EG DASHBOARD · BRIEFING PRINT / PILOT</span><span>01 / 01</span></div></footer>`;
     document.title = `EG Daily Briefing ${model.briefingDate}`;
     status.hidden = true;
     fit();

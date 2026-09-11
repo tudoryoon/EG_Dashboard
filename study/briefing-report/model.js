@@ -46,6 +46,7 @@
     }
     return {
       briefingDate: briefing.updatedAt || '', rsDate: asOf, missing,
+      universeCount: [...members.values()].filter(item => item.currency === 'USD').length,
       generatedAt: briefing.generatedAt || '',
       indices: (briefing.indexCards || []).map(item => ({
         key: item.key, label: item.label, asOf: item.updatedAt,
@@ -66,8 +67,8 @@
     const capTie = (a, b) => (b.marketCap || 0) - (a.marketCap || 0) || a.ticker.localeCompare(b.ticker);
     return {
       eligible: eligible.length,
-      rs: eligible.filter(row => finite(row.rs1w)).sort((a, b) => b.rs1w - a.rs1w || (b.week ?? -Infinity) - (a.week ?? -Infinity) || capTie(a, b)).slice(0, 10),
-      returns: eligible.filter(row => finite(row.week)).sort((a, b) => b.week - a.week || (b.rs1w ?? -Infinity) - (a.rs1w ?? -Infinity) || capTie(a, b)).slice(0, 10),
+      week: eligible.filter(row => finite(row.week)).sort((a, b) => b.week - a.week || capTie(a, b)).slice(0, 10),
+      month: eligible.filter(row => finite(row.month)).sort((a, b) => b.month - a.month || capTie(a, b)).slice(0, 10),
       highs: eligible.filter(row => row.newHigh).sort(capTie).slice(0, 8),
       highCount: eligible.filter(row => row.newHigh).length,
       sectors: [...model.sectors].sort((a, b) => (b.week ?? -Infinity) - (a.week ?? -Infinity) || a.label.localeCompare(b.label)),

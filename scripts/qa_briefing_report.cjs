@@ -32,6 +32,23 @@ fs.mkdirSync(artifacts, {recursive: true});
     assert.equal(initial.sparks, 20);
     assert.deepEqual(initial.rows, [10, 10]);
     assert.ok(initial.content <= initial.height + 1);
+    assert.deepEqual(await page.locator('.leaders h2').allTextContents(), ['1주 수익률 상위', '1개월 수익률 상위']);
+    const rankings = await page.evaluate(() => {
+      const model = window.EgBriefingReport.build(window.marketBriefingData, window.marketRsData);
+      const selected = window.EgBriefingReport.select(model);
+      return ['week', 'month'].map(period => ({
+        expected: selected[period].map(row => row.ticker),
+        actual: [...document.querySelectorAll(`[data-period="${period}"] tr[data-ticker]`)].map(row => row.dataset.ticker),
+        highlighted: [...document.querySelectorAll(`[data-period="${period}"] .key-metric`)].map(cell => cell.cellIndex),
+        expectedCell: period === 'week' ? 4 : 5,
+        countShown: document.querySelector('.scope-line').textContent.includes(`미국 전체 ${model.universeCount}개 · 순위 대상 ${selected.eligible}개`),
+      }));
+    });
+    for (const ranking of rankings) {
+      assert.deepEqual(ranking.actual, ranking.expected);
+      assert.ok(ranking.highlighted.every(index => index === ranking.expectedCell));
+      assert.equal(ranking.countShown, true);
+    }
     await page.locator('#preview-scale').selectOption('1');
     await page.screenshot({path: path.join(artifacts, 'desktop.png'), fullPage: true});
     const date = await page.locator('.report-date strong').innerText();
