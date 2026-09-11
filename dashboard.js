@@ -17744,7 +17744,7 @@ function renderStudyBriefingPrintOverview() {
   const model = window.EgBriefingReport.build(window.marketBriefingData ?? {}, marketRsData);
   usOverviewRoot.innerHTML = `<iframe
     data-study-briefing-print title="Daily Briefing PDF 인쇄용 리포트"
-    src="./study/briefing-report/index.html?v=20260911-2"
+    src="./study/briefing-report/index.html?v=20260911-3"
     style="display:block;width:100%;height:max(660px,calc(100vh - 245px));border:1px solid #d8dddf;border-radius:6px;background:#edf0f1"
   ></iframe>`;
   const frame = usOverviewRoot.querySelector("[data-study-briefing-print]");

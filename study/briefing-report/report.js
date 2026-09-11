@@ -3,6 +3,13 @@
   const report = document.querySelector('#report');
   const status = document.querySelector('#status');
   let model;
+  let liveModel;
+  let activeArchive = '';
+  let archiveRequest = 0;
+  const parameters = new URLSearchParams(location.search);
+  const exportMode = parameters.has('export');
+  const archiveSelect = document.querySelector('#archive-select');
+  if (exportMode) document.querySelector('.archive-controls').hidden = true;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char]));
   const valid = value => typeof value === 'number' && Number.isFinite(value);
   const fmt = (value, digits = 2) => valid(value) ? value.toLocaleString('en-US', {minimumFractionDigits: digits, maximumFractionDigits: digits}) : '-';
@@ -62,9 +69,9 @@
       <section class="indices">${model.indices.slice(0, 6).map(item => `<div class="index"><h2>${esc(labels[item.key] || item.label)}</h2><strong>${fmt(item.price)}</strong><div><span class="${tone(item.day)}">1D ${pct(item.day)}%</span><span class="${tone(item.week)}">1W ${pct(item.week)}%</span></div><small>21D ATR ${valid(item.atr) ? fmt(item.atr) + '%' : '-'}${item.asOf !== model.briefingDate ? ' · ' + esc(item.asOf) : ''}</small></div>`).join('')}</section>
       <div class="leader-grid">${leaderTable('1주 수익률 상위', selected.week, 'week')}${leaderTable('1개월 수익률 상위', selected.month, 'month')}</div>
       <section class="sector-section">${sectionHead('섹터별 성과', `1W 내림차순 · QQQ 1W ${pct(model.benchmark.returns?.['1w'])}%`)}<div class="sector-grid">${sectorTable(selected.sectors.slice(0, split))}${sectorTable(selected.sectors.slice(split))}</div></section>
-      <section class="highs-section">${sectionHead('52주 신고가', `252거래일 확보 · 시총순 최대 8개 · 전체 ${selected.highCount}개`)}
-        <table class="highs-table"><colgroup><col style="width:10%"><col style="width:23%"><col style="width:23%"><col><col><col><col><col></colgroup><thead><tr><th>티커</th><th>기업</th><th>Daily Briefing 섹터</th><th>시총</th><th>RS</th><th>1W</th><th>1M</th><th>YTD</th></tr></thead><tbody>
-        ${selected.highs.map(row => `<tr><td><b>${esc(row.ticker)}</b></td><td class="ellipsis">${esc(row.name)}</td><td class="ellipsis" title="${esc(row.sectors.join(', '))}">${esc(row.sectors[0])}</td><td class="numeric">${cap(row.marketCap)}</td><td class="numeric">${fmt(row.rs, 0)}</td>${cell(row.week)}${cell(row.month)}${cell(row.ytd)}</tr>`).join('') || '<tr><td colspan="8" class="no-highs">해당 종목 없음</td></tr>'}
+      <section class="highs-section">${sectionHead('52주 고점 대비 5% 이내', `종가 · 252거래일 · 시총순 최대 8개 · 전체 ${selected.highCount}개`)}
+        <table class="highs-table"><colgroup><col style="width:8%"><col style="width:17%"><col style="width:19%"><col style="width:10%"><col style="width:6%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup><thead><tr><th>티커</th><th>기업</th><th>Daily Briefing 섹터</th><th>시총</th><th>RS</th><th>1W</th><th>1M</th><th>YTD</th><th>고점 대비</th></tr></thead><tbody>
+        ${selected.highs.map(row => `<tr><td><b>${esc(row.ticker)}</b></td><td class="ellipsis">${esc(row.name)}</td><td class="ellipsis" title="${esc(row.sectors.join(', '))}">${esc(row.sectors[0])}</td><td class="numeric">${cap(row.marketCap)}</td><td class="numeric">${fmt(row.rs, 0)}</td>${cell(row.week)}${cell(row.month)}${cell(row.ytd)}${row.highGap === 0 ? '<td class="numeric up">신고가</td>' : cell(row.highGap)}</tr>`).join('') || '<tr><td colspan="9" class="no-highs">해당 종목 없음</td></tr>'}
         </tbody></table>
       </section>
       <footer class="report-footer"><p>출처: EG Dashboard 저장 데이터 · Yahoo Finance / yfinance. 1주(5거래일)·1개월(21거래일) 수익률순, 동률은 시총순. RS 1W는 ALL 유니버스 기존값.</p><p>섹터 수익률: 시총가중 50% + 동일가중 50%, 기존 Rotation Score 유지. vs QQQ는 1주 초과수익률. 가격 차트: 최대 126거래일, 각 종목별 축. 신규상장 YTD는 전년말 가격 없으면 미표시.${model.missing ? ` 최신 가격 누락 ${model.missing}개 제외.` : ''}</p><div><span>EG DASHBOARD · BRIEFING PRINT / PILOT</span><span>01 / 01</span></div></footer>`;
@@ -78,7 +85,7 @@
     const preview = document.querySelector('.preview');
     const holder = document.querySelector('.sheet-holder');
     const mode = document.querySelector('#preview-scale').value;
-    const scale = mode === 'fit' ? Math.min(1, (preview.clientWidth - 24) / report.offsetWidth, (window.innerHeight - document.querySelector('.controls').offsetHeight - 26) / report.offsetHeight) : 1;
+    const scale = mode === 'fit' ? Math.min(1, (preview.clientWidth - 24) / report.offsetWidth, (window.innerHeight - document.querySelector('.controls').offsetHeight - document.querySelector('.archive-controls').offsetHeight - 26) / report.offsetHeight) : 1;
     const safeScale = Math.max(.2, scale);
     holder.style.width = `${report.offsetWidth * safeScale}px`;
     holder.style.height = `${report.offsetHeight * safeScale}px`;
@@ -100,9 +107,67 @@
 
   function accept(payload) {
     if (!payload || !Array.isArray(payload.rows) || !Array.isArray(payload.sectors)) return;
+    liveModel = payload;
+    if (activeArchive) return;
     model = payload;
     render();
   }
+
+  async function chooseArchive() {
+    const request = ++archiveRequest;
+    const date = archiveSelect.value;
+    activeArchive = date;
+    const capFloor = document.querySelector('#cap-floor');
+    capFloor.disabled = Boolean(date);
+    for (const [id, file] of [['archive-pdf', 'report.pdf'], ['archive-image', 'preview.png']]) {
+      const link = document.getElementById(id);
+      link.hidden = !date;
+      if (date) link.href = `./archive/${date}/${file}`;
+    }
+    if (!date) {
+      if (liveModel) { model = liveModel; render(); }
+      return;
+    }
+    capFloor.checked = true;
+    report.innerHTML = '';
+    document.querySelector('#print').disabled = true;
+    status.hidden = false;
+    status.textContent = '보관 자료를 불러오는 중입니다.';
+    try {
+      const response = await fetch(`./archive/${date}/snapshot.json`);
+      if (!response.ok) throw new Error('Archive unavailable');
+      const snapshot = await response.json();
+      if (snapshot.version !== 1 || snapshot.model?.briefingDate !== date || !Array.isArray(snapshot.model?.rows)) throw new Error('Invalid archive snapshot');
+      if (request !== archiveRequest) return;
+      model = snapshot.model;
+      render();
+    } catch (_) {
+      if (request !== archiveRequest) return;
+      status.textContent = '보관 자료를 불러오지 못했습니다. 날짜를 다시 선택해 주세요.';
+    }
+  }
+
+  async function loadArchives() {
+    try {
+      const response = await fetch('./archive/index.json', {cache: 'no-cache'});
+      if (!response.ok) throw new Error('Archive index unavailable');
+      const manifest = await response.json();
+      const entries = (manifest.reports || []).filter(entry => /^\d{4}-\d{2}-\d{2}$/.test(entry.date)).sort((a, b) => b.date.localeCompare(a.date));
+      for (const entry of entries) {
+        const option = document.createElement('option');
+        option.value = entry.date;
+        option.textContent = `${entry.date} · ${entry.kind === 'weekly' ? '주간 보고서' : '초기 예시'}`;
+        archiveSelect.appendChild(option);
+      }
+      if (entries.length && !parameters.has('live') && archiveRequest === 0) {
+        archiveSelect.value = entries[0].date;
+        await chooseArchive();
+      }
+    } catch (_) {
+      archiveSelect.options[0].textContent = '실시간 미리보기 · 보관함 연결 확인 필요';
+    }
+  }
+  archiveSelect.addEventListener('change', chooseArchive);
   window.addEventListener('message', event => {
     if (event.source !== window.parent || event.origin !== window.location.origin || event.data?.type !== 'eg-briefing-report') return;
     accept(event.data.model);
@@ -131,5 +196,8 @@
       status.textContent = '데이터를 불러오지 못했습니다. 연결 상태를 확인하고 새로고침해 주세요.';
     }
   }
-  if (window.parent === window) loadStandalone();
+  if (!exportMode) {
+    loadArchives();
+    if (window.parent === window) loadStandalone();
+  }
 })();

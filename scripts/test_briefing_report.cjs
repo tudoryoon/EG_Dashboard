@@ -22,7 +22,9 @@ assert.deepEqual(built.rows.find(r => r.ticker === 'AAA').sectors, ['Group A', '
 assert.equal(built.rows.find(r => r.ticker === 'AAA').ytd, 25);
 assert.equal(built.rows.find(r => r.ticker === 'IPO').ytd, null);
 assert.equal(built.rows.find(r => r.ticker === 'AAA').newHigh, false, 'A short history cannot establish a 52-week high');
+assert.equal(built.rows.find(r => r.ticker === 'AAA').highGap, null);
 assert.equal(built.missing, 1);
+assert.equal(model.build(briefing, {...rs, rows: rs.rows.filter(row => row.ticker !== 'AAA')}).missing, 2);
 assert.ok(!built.rows.some(r => ['OLD', 'ETF', 'INDEX', 'KR'].includes(r.ticker)));
 const selected = model.select(built);
 assert.ok(!selected.week.some(r => ['SMALL', 'NODATA'].includes(r.ticker)));
@@ -35,6 +37,8 @@ assert.equal(model.select(built, false).month[0].ticker, 'SMALL');
 const ties = model.select({rows: [{ticker: 'A', marketCap: 20e9, week: -1, month: -2}, {ticker: 'B', marketCap: 30e9, week: -1, month: -3}], sectors: []});
 assert.deepEqual(ties.week.map(r => r.ticker), ['B', 'A']);
 assert.deepEqual(ties.month.map(r => r.ticker), ['A', 'B']);
+const nearHighs = model.select({rows: [0, -5, -5.01, null, 0.1].map((highGap, i) => ({ticker: `HIGH${i}`, marketCap: 20e9, highGap})), sectors: []});
+assert.deepEqual(nearHighs.highs.map(r => r.ticker), ['HIGH0', 'HIGH1'], 'Include exact highs and -5%, but not missing data or prices below -5%');
 assert.equal(JSON.stringify({rs, briefing}), before);
 const fullDates = Array.from({length: 252}, (_, i) => new Date(Date.UTC(2025, 0, i + 1)).toISOString().slice(0, 10));
 const fullHistory = {...rs, updatedAt: fullDates.at(-1), historyDates: fullDates,

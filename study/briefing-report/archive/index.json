@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "reports": [
+    {
+      "date": "2026-09-10",
+      "kind": "sample",
+      "issueDate": null,
+      "createdAt": "2026-09-11T01:59:38.345Z",
+      "sourceCommit": "3ff65302dbf979d46b783089c28819e25b267089",
+      "universeCount": 211,
+      "eligible": 181,
+      "files": {
+        "report.pdf": "cb1a2a6b518f3bddff604cd89e5e95c3afdd2fc1702fa8a9718d3e38e42b9e32",
+        "preview.png": "8e5ea942c9ce9688a2d5fc9d80ec5775d85900611204435ff6f2c3bc1ee94aa4",
+        "snapshot.json": "d7fbdf3288c5a2aa90e5fd3c2e0ec33eea95ab34fc188577e6346d370f494759"
+      }
+    }
+  ],
+  "updatedAt": "2026-09-11T01:59:38.345Z"
+}

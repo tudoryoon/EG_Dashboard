@@ -15,7 +15,7 @@ fs.mkdirSync(artifacts, {recursive: true});
     const page = await browser.newPage({viewport: {width: 1280, height: 900}});
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(base + '/study/briefing-report/index.html', {waitUntil: 'load', timeout: 90000});
+    await page.goto(base + '/study/briefing-report/index.html?live=1', {waitUntil: 'load', timeout: 90000});
     await page.locator('.leaders tbody tr').first().waitFor({timeout: 90000});
     await page.evaluate(() => document.fonts.ready);
     const check = async () => page.evaluate(() => {
@@ -63,7 +63,7 @@ fs.mkdirSync(artifacts, {recursive: true});
 
     await page.evaluate(() => {
       const data = window.EgBriefingReport.build(window.marketBriefingData, window.marketRsData);
-      data.rows.slice(0, 12).forEach(row => { row.newHigh = true; });
+      data.rows.slice(0, 12).forEach(row => { row.newHigh = true; row.highGap = -1; });
       data.briefingDate = '2026-01-01';
       window.postMessage({type: 'eg-briefing-report', model: data}, location.origin);
     });
@@ -87,7 +87,16 @@ fs.mkdirSync(artifacts, {recursive: true});
     await frame.locator('.spark').first().waitFor({timeout: 90000});
     assert.equal(await frame.locator('.spark').count(), 20);
     assert.equal(await frame.locator('#print').isEnabled(), true);
+    const archivedOptions = await frame.locator('#archive-select option').count();
+    if (archivedOptions > 1) {
+      await page.waitForFunction(() => Boolean(document.querySelector('[data-study-briefing-print]').contentDocument.querySelector('#archive-select').value));
+      assert.equal(await frame.locator('#cap-floor').isDisabled(), true);
+      assert.ok((await frame.locator('#archive-pdf').getAttribute('href')).endsWith('/report.pdf'));
+      assert.equal(await frame.locator('.highs-section h2').innerText(), '52주 고점 대비 5% 이내');
+    }
     await page.screenshot({path: path.join(artifacts, 'dashboard.png'), fullPage: true});
+    await frame.locator('#archive-select').selectOption('');
+    assert.equal(await frame.locator('#cap-floor').isEnabled(), true);
     assert.deepEqual(errors, []);
     console.log('PASS: PDF, desktop/mobile, max-density, date mismatch, print handler and Research iframe.', pdf);
   } finally {

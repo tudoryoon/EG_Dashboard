@@ -1,0 +1,94 @@
+name: Publish Weekly Briefing PDF
+
+on:
+  schedule:
+    # Sunday 02:00 UTC = Sunday 11:00 KST, after the final US session of the week.
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Validate PDF generation with current data without publishing an archive"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: publish-weekly-briefing
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned report dependencies
+        run: |
+          npm ci --prefix scripts/briefing-report
+          python -m pip install -r scripts/briefing-report/requirements.txt
+          node scripts/briefing-report/node_modules/playwright/cli.js install --with-deps chromium
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Test report and trading-calendar guards
+        run: |
+          node scripts/test_briefing_report.cjs
+          node --test scripts/briefing-report/test_export.cjs
+          python -m unittest discover -s scripts/briefing-report -p 'test_session.py'
+      - name: Resolve the completed reporting week
+        run: python scripts/briefing-report/session.py > "$RUNNER_TEMP/briefing-session.json"
+      - name: Generate and validate immutable PDF, image, and snapshot
+        id: export
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            node scripts/briefing-report/export.cjs --sample --output "$RUNNER_TEMP/briefing-preview"
+          else
+            node scripts/briefing-report/export.cjs --session "$RUNNER_TEMP/briefing-session.json"
+          fi
+      - name: Publish archive only, retaining every previous report
+        if: env.DRY_RUN != 'true' && steps.export.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- study/briefing-report/archive
+          git commit -m "Archive weekly briefing for ${{ steps.export.outputs.date }}"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          echo "Archive push failed; no existing reports were removed."
+          exit 1
+      - name: Request Pages rebuild after the bot push
+        if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"
+      - name: Retain dry-run output for inspection
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: briefing-preview
+          path: ${{ runner.temp }}/briefing-preview
+          retention-days: 7
+      - name: Report archive result
+        env:
+          REPORT_DATE: ${{ steps.export.outputs.date }}
+          CHANGED: ${{ steps.export.outputs.changed }}
+        run: |
+          echo "### Weekly Briefing" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Scheduled: Sunday 11:00 KST" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Data date: $REPORT_DATE; new archive: $CHANGED; dry run: $DRY_RUN" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Existing PDF, PNG and data snapshots are never overwritten or expired." >> "$GITHUB_STEP_SUMMARY"

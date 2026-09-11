@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>EG Daily Briefing | PDF</title>
-  <link rel="stylesheet" href="./report.css?v=20260911-1">
-  <script src="./model.js?v=20260911-2" defer></script>
-  <script src="./report.js?v=20260911-2" defer></script>
+  <link rel="stylesheet" href="./report.css?v=20260911-3">
+  <script src="./model.js?v=20260911-3" defer></script>
+  <script src="./report.js?v=20260911-3" defer></script>
 </head>
 <body>
   <header class="controls">
@@ -19,6 +19,13 @@
       </button>
     </div>
   </header>
+  <nav class="archive-controls" aria-label="지난 브리핑 보관함">
+    <label for="archive-select">보관함</label>
+    <select id="archive-select"><option value="">실시간 미리보기</option></select>
+    <a id="archive-pdf" class="archive-link" target="_blank" rel="noopener" hidden>PDF</a>
+    <a id="archive-image" class="archive-link" target="_blank" rel="noopener" hidden>이미지</a>
+    <span>매주 일요일 11:00 KST</span>
+  </nav>
   <div id="status" role="status">브리핑 데이터를 불러오는 중입니다.</div>
   <main class="preview"><div class="sheet-holder"><article id="report" class="sheet" aria-label="Daily Briefing 인쇄용 리포트"></article></div></main>
 </body>

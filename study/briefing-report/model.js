@@ -20,7 +20,8 @@
       }
     }
     const rows = [];
-    let missing = 0;
+    const availableTickers = new Set((rs.rows || []).map(row => row.ticker));
+    let missing = [...members.values()].filter(item => item.currency === 'USD' && !/\bETF\b/i.test(item.name || '') && !availableTickers.has(item.ticker)).length;
     for (const row of rs.rows || []) {
       const item = members.get(row.ticker);
       if (!item || row.isIndex || item.currency !== 'USD' || row.isEtf || row.isETF || /\bETF\b/i.test(row.name || item.name || '')) continue;
@@ -33,14 +34,15 @@
         if (dates[i] < `${asOf.slice(0, 4)}-01-01` && finite(history[i])) { yearEnd = i; break; }
       }
       const sparkStart = Math.max(0, end - 125);
+      const hasYearHistory = end >= 251 && history.slice(end - 251, end + 1).every(finite);
       rows.push({
         ticker: row.ticker, name: item.name || row.name || row.ticker,
         sectors: [...new Set(item.sectors)], marketCap: number(row.marketCap), price: last,
         rs1w: number(row.rsPeriods?.['1w']), rs: number(row.rsRatingAll),
         day: change(last, history[end - 1]), week: number(row.returns?.['1w']),
         month: number(row.returns?.['1m']), ytd: yearEnd >= 0 ? change(last, history[yearEnd]) : null,
-        newHigh: row.priceNewHigh1y === true && end >= 251 && history.slice(end - 251, end + 1).every(finite),
-        highGap: finite(row.distanceTo52wHighPct) ? -row.distanceTo52wHighPct : null,
+        newHigh: row.priceNewHigh1y === true && hasYearHistory,
+        highGap: hasYearHistory && finite(row.distanceTo52wHighPct) ? -row.distanceTo52wHighPct : null,
         sparkDates: dates.slice(sparkStart, end + 1), spark: history.slice(sparkStart, end + 1).map(number),
       });
     }
@@ -65,12 +67,13 @@
   function select(model, capFloor = true) {
     const eligible = model.rows.filter(row => !capFloor || (finite(row.marketCap) && row.marketCap >= 1e10));
     const capTie = (a, b) => (b.marketCap || 0) - (a.marketCap || 0) || a.ticker.localeCompare(b.ticker);
+    const nearHighs = eligible.filter(row => finite(row.highGap) && row.highGap >= -5 && row.highGap <= 0).sort(capTie);
     return {
       eligible: eligible.length,
       week: eligible.filter(row => finite(row.week)).sort((a, b) => b.week - a.week || capTie(a, b)).slice(0, 10),
       month: eligible.filter(row => finite(row.month)).sort((a, b) => b.month - a.month || capTie(a, b)).slice(0, 10),
-      highs: eligible.filter(row => row.newHigh).sort(capTie).slice(0, 8),
-      highCount: eligible.filter(row => row.newHigh).length,
+      highs: nearHighs.slice(0, 8),
+      highCount: nearHighs.length,
       sectors: [...model.sectors].sort((a, b) => (b.week ?? -Infinity) - (a.week ?? -Infinity) || a.label.localeCompare(b.label)),
     };
   }
