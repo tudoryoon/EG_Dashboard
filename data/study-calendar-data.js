@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-10",
+  "updatedAt": "2026-09-11",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-10",
+  "calendarToday": "2026-09-11",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 5,
@@ -31,7 +31,7 @@ window.studyCalendarData = {
           "ticker": "ORCL",
           "session": "A",
           "title": "Oracle Corporation (ORCL) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.40 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.39 · Nasdaq/Zacks 예상 일정",
           "sector": "네오클라우드",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-10",
