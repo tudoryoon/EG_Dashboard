@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-11",
+  "updatedAt": "2026-09-12",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-11",
+  "calendarToday": "2026-09-12",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 5,
@@ -26,21 +26,6 @@ window.studyCalendarData = {
       "events": [
         {
           "date": "2026-09-10",
-          "time": "05:00 이후",
-          "kind": "earnings",
-          "ticker": "ORCL",
-          "session": "A",
-          "title": "Oracle Corporation (ORCL) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.39 · Nasdaq/Zacks 예상 일정",
-          "sector": "네오클라우드",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-10",
-          "usDate": "2026-09-10",
-          "kstDate": "2026-09-11",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-10",
           "time": "21:30",
           "kind": "macro",
           "title": "생산자물가 PPI",
@@ -49,6 +34,21 @@ window.studyCalendarData = {
           "sourceUrl": "https://www.bls.gov/schedule/2026/",
           "usDate": "2026-09-10",
           "kstDate": "2026-09-10"
+        },
+        {
+          "date": "2026-09-10",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "ORCL",
+          "session": "",
+          "title": "Oracle Corporation (ORCL) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.39 · Nasdaq/Zacks 예상 일정",
+          "sector": "네오클라우드",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-10",
+          "usDate": "2026-09-10",
+          "kstDate": "2026-09-10",
+          "confirmed": false
         },
         {
           "date": "2026-09-11",
