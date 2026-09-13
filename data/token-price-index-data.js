@@ -1,6 +1,6 @@
 window.tokenPriceIndexData = {
   "updatedAt": "2026-09-10",
-  "generatedAt": "2026-09-12T06:40:16.456917Z",
+  "generatedAt": "2026-09-13T06:57:42.601525Z",
   "source": {
     "provider": "Silicon Data",
     "label": "Silicon Data LLM Token Expenditure Index",
