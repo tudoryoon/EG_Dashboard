@@ -56,7 +56,7 @@ function hideTip(){tip.style.opacity=0;}
 document.getElementById("meta").innerHTML=
  MKS.map(k=>`<span class="chip ${k}">${MK[k].short} ${DATA[k].asof}${k==="us"&&DATA.us.quality&&DATA.us.quality.startsWith("잠정")?" 잠정":""}</span>`).join("")+
  `<span class="chip">백분위 기준 ${DATA.us.pct_base_days}거래일</span>`+
- `<span class="chip">산출 ${DATA.cn.generated_at}</span>`;
+ `<span class="chip">미국 산출 ${DATA.us.generated_at}</span>`;
 
 /* ---------- 비교 스트립 ---------- */
 document.getElementById("cmp").innerHTML=MKS.map(k=>{
@@ -164,8 +164,7 @@ function renderMarket(k){
      <span style="flex:1"></span><span class="state" style="color:var(${b.c});background:var(${b.t})">${b.label}</span></div>
    <div class="meter"><i style="width:${fillOf(s,L)}%;background:var(${b.c})"></i><u style="left:50%"></u></div>
    <div class="sub"><span>${tagOf(s,L)?tagOf(s,L)+" · ":""}${sub}</span></div>
-   ${(s.k==="s6"&&p!=null&&p>=HOT6)?`<div class="cau">⚠ <b>과열 구간</b> (p${HOT6} 이상) — 검증상 이 구간에서 새로 나온 눌림목 신호는
-     승률이 오히려 낮았다(미국 p80~100 48.2% vs 그 외 54~56%). 반등이 이미 상당 부분 진행됐을 가능성.</div>`:""}
+   ${(s.k==="s6"&&p!=null&&p>=HOT6)?`<div class="cau">⚠ <b>높은 백분위</b> (p${HOT6} 이상) — 최근 평가 완료된 눌림목 신호의 상대적 위치입니다. 다음 신호의 수익률을 보장하지 않습니다.</div>`:""}
    </article>`;}).join("");
 
  /* 10영업일 */
@@ -479,7 +478,7 @@ Choppy 플래그 (별도 축) : ⑤ ≥ 6.0</div>
  ④&lt;5 &amp; ⑥≥5 → 눌림목 매수 우위
  ④&lt;5 &amp; ⑥&lt;5 → 관망 / 포지션 축소</div>
    <p>④⑥⑦은 산식상 <b>5.0이 손익분기</b>다 — 승률 50%에 5일 수익률 0%면 정확히 5.0이 나온다.
-   따라서 5.0 아래는 "그 전략이 최근 실제로 돈을 잃었다"는 뜻이고 시장과 무관하게 성립한다.
+   ④⑥은 성공률과 평균수익률의 합성점수이므로, 실제 손익은 평균수익률을 별도로 확인한다.
    백분위(p)는 "이 시장 평소 대비 어디쯤인가"라는 <b>다른 질문</b>에 답하므로 보조줄에만 남겼다.</p></article>`;
 
 document.getElementById("limits").innerHTML=`<ul>

@@ -17761,7 +17761,7 @@ function renderStudyMarketRegimeOverview() {
   usOverviewRoot.innerHTML = `<iframe
     data-study-market-regime
     title="시장 국면 스코어카드 · 미국·한국·중국"
-    src="./study/market-regime/index.html?v=20260910-1"
+    src="./study/market-regime/index.html?v=20260913-1&refresh=${Date.now()}"
     sandbox="allow-scripts"
     referrerpolicy="no-referrer"
     style="display:block;width:100%;height:1200px;min-height:640px;border:0;background:#eef1f3"

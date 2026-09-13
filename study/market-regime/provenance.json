@@ -1,14 +1,20 @@
 {
   "title": "시장 국면 스코어카드",
   "sourceUrl": "https://claude.ai/code/artifact/76bae242-11c2-4615-8a97-bb6655301a0c",
-  "mode": "source-snapshot",
-  "automaticRefresh": false,
+  "mode": "us-daily-with-frozen-kr-cn",
+  "automaticRefresh": true,
   "markets": {
     "us": {
-      "asOf": "2026-09-09",
-      "generatedAt": "2026-09-10 08:00 KST",
+      "asOf": "2026-09-11",
+      "generatedAt": "2026-09-13 23:15 KST",
       "historyRows": 252,
-      "universeCount": 497
+      "universeCount": 502,
+      "automaticRefresh": true,
+      "methodologyVersion": "eg-us-regime-v1",
+      "membershipAsOf": "2026-09-11",
+      "missingLatestTickers": [],
+      "source": "Yahoo Finance via yfinance; split-adjusted OHLC and volume, dividends not reinvested",
+      "schedule": "05:05 KST Tue-Sat, NYSE holidays skipped; wait until session close + 5 minutes"
     },
     "kr": {
       "asOf": "2026-09-09",
@@ -23,6 +29,6 @@
       "universeCount": 556
     }
   },
-  "snapshotSha256": "f74119584f3ef5f1523fb2e89156e8909160bc8edf2a90a851362e2d3736ef4f",
-  "note": "Original display code and stored results; source collection and backtest code were not included. Claude authentication and frame runtime are excluded."
+  "snapshotSha256": "ad4f2e4a1e32528e588bb01207ee7569b77831a7b815bca9fff671d79b915c88",
+  "note": "US independently recalculated from the displayed methodology; KR/CN remain original unverified snapshots."
 }
