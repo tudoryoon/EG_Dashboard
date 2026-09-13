@@ -6,7 +6,7 @@
   "markets": {
     "us": {
       "asOf": "2026-09-11",
-      "generatedAt": "2026-09-13 23:15 KST",
+      "generatedAt": "2026-09-13 23:21 KST",
       "historyRows": 252,
       "universeCount": 502,
       "automaticRefresh": true,
@@ -29,6 +29,6 @@
       "universeCount": 556
     }
   },
-  "snapshotSha256": "ad4f2e4a1e32528e588bb01207ee7569b77831a7b815bca9fff671d79b915c88",
+  "snapshotSha256": "ac9c626425589f3122bb1dea96c6fe2f85d53244a553fd821d559c47ab589d27",
   "note": "US independently recalculated from the displayed methodology; KR/CN remain original unverified snapshots."
 }
