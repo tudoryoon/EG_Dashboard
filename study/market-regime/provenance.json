@@ -5,13 +5,13 @@
   "automaticRefresh": true,
   "markets": {
     "us": {
-      "asOf": "2026-09-11",
-      "generatedAt": "2026-09-13 23:21 KST",
+      "asOf": "2026-09-14",
+      "generatedAt": "2026-09-15 08:00 KST",
       "historyRows": 252,
       "universeCount": 502,
       "automaticRefresh": true,
       "methodologyVersion": "eg-us-regime-v1",
-      "membershipAsOf": "2026-09-11",
+      "membershipAsOf": "2026-09-14",
       "missingLatestTickers": [],
       "source": "Yahoo Finance via yfinance; split-adjusted OHLC and volume, dividends not reinvested",
       "schedule": "05:05 KST Tue-Sat, NYSE holidays skipped; wait until session close + 5 minutes"
@@ -29,6 +29,6 @@
       "universeCount": 556
     }
   },
-  "snapshotSha256": "ac9c626425589f3122bb1dea96c6fe2f85d53244a553fd821d559c47ab589d27",
+  "snapshotSha256": "d195c8bbf8ea61b0437d5dd42b86edc505d08e4730029c5ee29fa6f37630b432",
   "note": "US independently recalculated from the displayed methodology; KR/CN remain original unverified snapshots."
 }
