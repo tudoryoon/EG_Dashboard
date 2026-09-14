@@ -2,8 +2,8 @@ name: Publish Weekly Briefing PDF
 
 on:
   schedule:
-    # Sunday 02:00 UTC = Sunday 11:00 KST, after the final US session of the week.
-    - cron: "0 2 * * 0"
+    # Saturday 02:00 UTC = Saturday 11:00 KST, after the final US session of the week.
+    - cron: "0 2 * * 6"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -89,6 +89,6 @@ jobs:
           CHANGED: ${{ steps.export.outputs.changed }}
         run: |
           echo "### Weekly Briefing" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Scheduled: Sunday 11:00 KST" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Scheduled: Saturday 11:00 KST" >> "$GITHUB_STEP_SUMMARY"
           echo "- Data date: $REPORT_DATE; new archive: $CHANGED; dry run: $DRY_RUN" >> "$GITHUB_STEP_SUMMARY"
           echo "- Existing PDF, PNG and data snapshots are never overwritten or expired." >> "$GITHUB_STEP_SUMMARY"
