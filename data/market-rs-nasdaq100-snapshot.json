@@ -1,5 +1,5 @@
 {
-  "updatedAt": "Sep 10, 2026",
+  "updatedAt": "Sep 14, 2026",
   "source": "https://api.nasdaq.com/api/quote/list-type/nasdaq100",
   "rows": [
     {
@@ -201,10 +201,6 @@
     {
       "Ticker": "KDP",
       "Name": "Keurig Dr Pepper Inc. Common Stock"
-    },
-    {
-      "Ticker": "KHC",
-      "Name": "The Kraft Heinz Company Common Stock"
     },
     {
       "Ticker": "KLAC",
