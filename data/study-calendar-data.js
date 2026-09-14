@@ -1,14 +1,14 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-13",
+  "updatedAt": "2026-09-14",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-13",
+  "calendarToday": "2026-09-14",
   "coverage": {
     "dailyBriefingUniverse": 211,
-    "matchedEarnings": 5,
-    "matchedMacro": 12,
-    "windowStart": "2026-09-07",
-    "windowEnd": "2026-10-04"
+    "matchedEarnings": 7,
+    "matchedMacro": 11,
+    "windowStart": "2026-09-14",
+    "windowEnd": "2026-10-11"
   },
   "methodology": {
     "macro": "미국 Macro·FOMC 및 일본 BOJ 금리 결정은 각 공식 기관 일정에서 매일 갱신",
@@ -21,53 +21,8 @@ window.studyCalendarData = {
     {
       "key": "this-week",
       "label": "이번 주",
-      "range": "2026.09.07 - 09.13",
-      "status": "진행 중",
-      "events": [
-        {
-          "date": "2026-09-10",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "생산자물가 PPI",
-          "note": "Headline·Core PPI · August 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-09-10",
-          "kstDate": "2026-09-10"
-        },
-        {
-          "date": "2026-09-10",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "ORCL",
-          "session": "",
-          "title": "Oracle Corporation (ORCL) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.39 · Nasdaq/Zacks 예상 일정",
-          "sector": "네오클라우드",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-10",
-          "usDate": "2026-09-10",
-          "kstDate": "2026-09-10",
-          "confirmed": false
-        },
-        {
-          "date": "2026-09-11",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "소비자물가 CPI",
-          "note": "Headline·Core CPI · August 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-09-11",
-          "kstDate": "2026-09-11"
-        }
-      ]
-    },
-    {
-      "key": "next-week",
-      "label": "다음 주",
       "range": "2026.09.14 - 09.20",
-      "status": "예정",
+      "status": "진행 중",
       "events": [
         {
           "date": "2026-09-16",
@@ -119,8 +74,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-3",
-      "label": "3주차",
+      "key": "next-week",
+      "label": "다음 주",
       "range": "2026.09.21 - 09.27",
       "status": "예정",
       "events": [
@@ -168,8 +123,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-4",
-      "label": "4주차",
+      "key": "week-3",
+      "label": "3주차",
       "range": "2026.09.28 - 10.04",
       "status": "예정",
       "events": [
@@ -257,6 +212,70 @@ window.studyCalendarData = {
           "sourceUrl": "https://www.bls.gov/schedule/2026/",
           "usDate": "2026-10-02",
           "kstDate": "2026-10-02"
+        }
+      ]
+    },
+    {
+      "key": "week-4",
+      "label": "4주차",
+      "range": "2026.10.05 - 10.11",
+      "status": "예정",
+      "events": [
+        {
+          "date": "2026-10-05",
+          "time": "23:00",
+          "kind": "macro",
+          "title": "ISM 서비스업 PMI",
+          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "ISM",
+          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+          "usDate": "2026-10-05",
+          "kstDate": "2026-10-05"
+        },
+        {
+          "date": "2026-10-05",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "CCL",
+          "session": "",
+          "title": "Carnival Corporation Ltd. (CCL) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.36 · Nasdaq/Zacks 예상 일정",
+          "sector": "여행 & 레저",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-05",
+          "usDate": "2026-10-05",
+          "kstDate": "2026-10-05",
+          "confirmed": false
+        },
+        {
+          "date": "2026-10-08",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "APLD",
+          "session": "",
+          "title": "Applied Digital Corporation (APLD) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 ($0.25) · Nasdaq/Zacks 예상 일정",
+          "sector": "네오클라우드",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-08",
+          "usDate": "2026-10-08",
+          "kstDate": "2026-10-08",
+          "confirmed": false
+        },
+        {
+          "date": "2026-10-08",
+          "time": "시간 미정",
+          "kind": "earnings",
+          "ticker": "DAL",
+          "session": "",
+          "title": "Delta Air Lines, Inc. (DAL) 실적 발표",
+          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $2.03 · Nasdaq/Zacks 예상 일정",
+          "sector": "항공/운송",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-08",
+          "usDate": "2026-10-08",
+          "kstDate": "2026-10-08",
+          "confirmed": false
         }
       ]
     }
