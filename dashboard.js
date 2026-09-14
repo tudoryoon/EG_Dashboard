@@ -117,6 +117,7 @@ const primaryTabMeta = {
   Tech: { label: "Tech", className: "is-tech", defaultView: "LLM" },
   AIData: { label: "AI Data", className: "is-ai-data", defaultView: "TokenPrice" },
   Flows: { label: "Flows", className: "is-flows", defaultView: "EtfStatus" },
+  TradeData: { label: "수출입데이터" },
   Research: { label: "Research", className: "is-research", defaultView: "DataCenter" },
 };
 
@@ -519,6 +520,7 @@ const state = {
 
 const DASHBOARD_ROUTE_META = {
   DailyBriefing: { slug: "daily-briefing" },
+  TradeData: { slug: "trade-data" },
   Screening: {
     slug: "screening",
     viewStateKey: "screeningView",
@@ -17736,6 +17738,22 @@ function formatStudyCalendarDayNumber(value) {
   };
 }
 
+function renderTradeDataOverview() {
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.innerHTML = "";
+  companyGrid.classList.add("hidden");
+  usOverviewRoot.innerHTML = `
+    <section aria-labelledby="trade-data-title">
+      <div class="us-section-head">
+        <div>
+          <h2 id="trade-data-title">수출입데이터</h2>
+          <p role="status">데이터 준비 중</p>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
 function renderStudyBriefingPrintOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -21939,6 +21957,11 @@ function renderSectors() {
 }
 
 function renderSummary(list) {
+  if (state.tab === "TradeData") {
+    summaryText.textContent = "";
+    return;
+  }
+
   if (state.tab === "Screening") {
     if (state.screeningView === "VIX") {
       summaryText.textContent = "2018-01-01 이후 수집 가능한 VIX family history와 최신 CBOE settlement curve";
@@ -22626,6 +22649,12 @@ function render() {
   if (state.tab === "DailyBriefing") {
     renderSummary([]);
     renderMarketBriefingOverview();
+    return;
+  }
+
+  if (state.tab === "TradeData") {
+    renderSummary([]);
+    renderTradeDataOverview();
     return;
   }
 
