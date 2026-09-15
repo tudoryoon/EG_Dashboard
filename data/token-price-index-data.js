@@ -1,6 +1,6 @@
 window.tokenPriceIndexData = {
-  "updatedAt": "2026-09-10",
-  "generatedAt": "2026-09-14T07:19:56.349072Z",
+  "updatedAt": "2026-09-13",
+  "generatedAt": "2026-09-15T06:56:20.611130Z",
   "source": {
     "provider": "Silicon Data",
     "label": "Silicon Data LLM Token Expenditure Index",
@@ -13,8 +13,8 @@ window.tokenPriceIndexData = {
     "overall": {
       "ticker": "SDLLMTK",
       "label": "LLM Token Expenditure Index",
-      "value": 0.9754,
-      "date": "2026-09-10",
+      "value": 0.9682,
+      "date": "2026-09-13",
       "quality": "official-public"
     },
     "closed": {
@@ -31,8 +31,8 @@ window.tokenPriceIndexData = {
       "date": "2026-08-03",
       "quality": "public-chart-reference"
     },
-    "dailyChangePct": 0.09,
-    "publicWindowChangePct": -28.13,
+    "dailyChangePct": -0.8,
+    "publicWindowChangePct": -28.66,
     "closedOpenPremium": 4.65
   },
   "series": {
@@ -245,6 +245,21 @@ window.tokenPriceIndexData = {
       {
         "date": "2026-09-10",
         "value": 0.9754,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-09-11",
+        "value": 0.9865,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-09-12",
+        "value": 0.976,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-09-13",
+        "value": 0.9682,
         "quality": "official-public"
       }
     ],
