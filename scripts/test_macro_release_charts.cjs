@@ -27,8 +27,13 @@ for (const name of ['getMacroDerivedValues', 'getMacroDashboardSeriesByKey', 'al
 }
 const run = (expression) => vm.runInContext(expression, context);
 const cpi = run(`buildMacroIndicatorDashboardItem({key:'indicator:headline_cpi_yoy', label:'CPI', seriesKey:'headline_cpi', kind:'yoy'})`);
-assert.equal(cpi.dates.at(-1), '2026-08-12');
-assert.equal(cpi.releasePoints.at(-1).reference, '2026-07');
+const latestCpiMonth = run(`macroIndicatorsData.indicators.find(i => i.key === 'cpi').series.find(s => s.key === 'headline_cpi').dates.at(-1)`);
+const latestCpiRelease = run(`macroIndicatorsData.releaseCalendar.groups.cpi[${JSON.stringify(latestCpiMonth)}].releaseDate`);
+assert.equal(cpi.dates.at(-1), latestCpiRelease);
+assert.equal(cpi.releasePoints.at(-1).reference, latestCpiMonth);
+const julyReleaseIndex = cpi.releasePoints.findIndex(point => point.reference === '2026-07');
+assert.ok(julyReleaseIndex > 0);
+assert.equal(cpi.dates[julyReleaseIndex], '2026-08-12');
 assert.ok(!cpi.dates.includes('2026-07-01'));
 assert.equal(run(`getMacroDerivedValues({dates:['2025-01','2026-01'], values:[100,110], yoyValues:[null,null]}, 'yoy')[1]`), 10);
 assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01'],values:[1]},'cpi').dates.length`), 0);
@@ -47,9 +52,19 @@ assert.ok(Number.isFinite(a.data[0]), 'Carry previous publication into a mid-mon
 for (const date of ['2026-08-03','2026-08-11','2026-08-12','2026-08-13']) {
   assert.equal(a.data[macro.labels.indexOf(date)], b.data[total.labels.indexOf(date)], date);
 }
-const last = cpi.values.at(-1), previous = cpi.values.at(-2);
+const last = cpi.values[julyReleaseIndex], previous = cpi.values[julyReleaseIndex - 1];
 assert.equal(a.data[macro.labels.indexOf('2026-08-11')], previous);
 assert.equal(a.data[macro.labels.indexOf('2026-08-12')], last);
+const augustReleaseIndex = cpi.releasePoints.findIndex(point => point.reference === '2026-08');
+assert.ok(augustReleaseIndex > 0);
+assert.equal(cpi.dates[augustReleaseIndex], '2026-09-11');
+run(`state.macroDashboardCustomStart = state.totalDashboardCustomStart = '2026-09-10';
+state.macroDashboardCustomEnd = state.totalDashboardCustomEnd = '2026-09-14';`);
+for (const payload of [run(`buildMacroDashboardChartPayload('1m')`), run(`buildTotalDashboardPayload('1m')`)]) {
+  const values = payload.datasets.find(d => d.label === 'CPI YoY').data;
+  assert.equal(values[payload.labels.indexOf('2026-09-10')], cpi.values[augustReleaseIndex - 1]);
+  assert.equal(values[payload.labels.indexOf('2026-09-11')], cpi.values[augustReleaseIndex]);
+}
 run(`macroIndicatorsData.releaseCalendar.groups.test = {
  '2026-01':{releaseDate:'2026-03-01'}, '2026-02':{releaseDate:'2026-03-01'}}`);
 assert.equal(run(`alignPublishedMacroSeries({dates:['2026-01','2026-02'],values:[1,2]}, 'test').values[0]`), 2);

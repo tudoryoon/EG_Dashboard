@@ -3,7 +3,8 @@ name: Update Macro Data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "20 5 * * 5"
+    # Saturday 02:33 UTC = Saturday 11:33 KST, after Friday US releases.
+    - cron: "33 2 * * 6"
 
 permissions:
   contents: write
