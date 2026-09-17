@@ -1,5 +1,5 @@
 window.llmDashboardData = {
-  updatedAt: "2026-08-03",
+  updatedAt: "2026-09-17",
   colors: {
     openai: "#111827",
     anthropic: "#d97745",
@@ -7,16 +7,16 @@ window.llmDashboardData = {
   snapshots: [
     {
       provider: "OpenAI",
-      metric: "추적 연환산 매출 런레이트",
-      value: "$41.3B",
-      asOf: "2026-07-22 · TickerTrends 추정",
+      metric: "보도된 연환산 매출 런레이트",
+      value: "$40B+",
+      asOf: "2026-07 말 기준 · Bloomberg 8/13 보도",
       tone: "openai",
     },
     {
       provider: "Anthropic",
-      metric: "추적 연환산 매출 런레이트",
-      value: "$74.1B",
-      asOf: "2026-07-22 · TickerTrends 추정",
+      metric: "보도된 연환산 매출 런레이트",
+      value: "$65B+",
+      asOf: "2026-07 말 기준 · Reuters 8/17 보도",
       tone: "anthropic",
     },
     {
@@ -36,7 +36,7 @@ window.llmDashboardData = {
   ],
   revenue: {
     title: "OpenAI vs Anthropic 매출 런레이트",
-    subtitle: "실선: 실제 발표값 · 점선: TickerTrends 추정치 · 단위 $B",
+    subtitle: "실선: 회사 발표·언론 보도 · 점선: TickerTrends 추정치 · 단위 $B",
     labels: [
       "2023-12",
       "2024-01",
@@ -57,9 +57,20 @@ window.llmDashboardData = {
     series: [
       {
         key: "openai",
-        name: "OpenAI 실제 발표",
+        name: "OpenAI 회사 발표·보도",
         mode: "actual",
-        values: [1.6, null, 3.4, 5.5, null, 10, 13, 20, null, 25, null, null, null, null, null],
+        values: [1.6, null, 3.4, 5.5, null, 10, 13, 20, null, 25, null, null, null, null, 40],
+        observations: {
+          "2026-07": {
+            asOf: "2026-07-31",
+            reportedAt: "2026-08-13",
+            status: "reported",
+            qualifier: "more-than",
+            sourceUrl: "https://finance.yahoo.com/technology/ai/articles/openai-revenue-run-rate-tops-213604019.html",
+            periodSourceUrl: "https://blog.tickertrends.io/p/openai-arr-tracking-44-3b-bloomberg-40b-run-rate",
+            note: "Bloomberg 관계자 인용 보도. 7월 말 기준은 TickerTrends의 해당 보도 대조 자료로 확인. OpenAI 공식 공시나 감사된 연매출이 아님.",
+          },
+        },
         sourceLabels: [
           "The Information",
           null,
@@ -75,7 +86,7 @@ window.llmDashboardData = {
           null,
           null,
           null,
-          null,
+          "Bloomberg · 2026-08-13 보도 · $40B 초과",
         ],
       },
       {
@@ -103,9 +114,19 @@ window.llmDashboardData = {
       },
       {
         key: "anthropic",
-        name: "Anthropic 실제 발표",
+        name: "Anthropic 회사 발표·보도",
         mode: "actual",
-        values: [null, 0.087, null, 1, 3, null, 5, 9, null, 14, 19, 30, 47, null, null],
+        values: [null, 0.087, null, 1, 3, null, 5, 9, null, 14, 19, 30, 47, null, 65],
+        observations: {
+          "2026-07": {
+            asOf: "2026-07-31",
+            reportedAt: "2026-08-17",
+            status: "reported",
+            qualifier: "more-than",
+            sourceUrl: "https://www.aol.com/articles/anthropic-revenue-run-rate-tops-213602000.html",
+            note: "Reuters가 투자자에게 공유된 수치를 관계자에게 확인. Bloomberg 최초 보도. 공식 공시나 감사된 연매출이 아님.",
+          },
+        },
         sourceLabels: [
           null,
           "Anthropic",
@@ -121,7 +142,7 @@ window.llmDashboardData = {
           "Anthropic",
           "Anthropic",
           null,
-          null,
+          "Reuters / Bloomberg · 2026-08-17 보도 · $65B 초과",
         ],
       },
       {
@@ -159,12 +180,12 @@ window.llmDashboardData = {
         startDate: "2023-03-14",
         startLabel: "Claude 상용 공개",
         startUrl: "https://www.anthropic.com/news/introducing-claude",
-        basis: "TickerTrends 연환산 매출 추정치",
+        basis: "도달 시점은 TickerTrends 추정 · 최신 규모는 Reuters 보도 연환산 매출",
         milestones: [
           { amount: 10, years: 2.85, date: "2026-01-19", status: "tracking", sourceLabel: "TickerTrends 추정" },
           { amount: 50, years: 3.19, date: "2026-05-21", status: "tracking", sourceLabel: "TickerTrends 추정" },
         ],
-        latest: { amount: 74.1, years: 3.36, date: "2026-07-22", status: "tracking", sourceLabel: "TickerTrends 추정" },
+        latest: { amount: 65, years: 3.38, date: "2026-07-31", status: "reported", qualifier: "more-than", sourceLabel: "Reuters / Bloomberg · 8/17 보도" },
       },
       {
         name: "OpenAI",
@@ -172,11 +193,11 @@ window.llmDashboardData = {
         startDate: "2020-06-11",
         startLabel: "OpenAI API 공개",
         startUrl: "https://openai.com/index/openai-api/",
-        basis: "회사 발표 연환산 매출 + TickerTrends 추정치",
+        basis: "회사 발표·언론 보도 연환산 매출",
         milestones: [
           { amount: 10, years: 4.99, date: "2025-06-09", status: "official", sourceLabel: "OpenAI / Reuters" },
         ],
-        latest: { amount: 41.3, years: 6.11, date: "2026-07-22", status: "tracking", sourceLabel: "TickerTrends 추정" },
+        latest: { amount: 40, years: 6.14, date: "2026-07-31", status: "reported", qualifier: "more-than", sourceLabel: "Bloomberg · 8/13 보도" },
       },
       {
         name: "Microsoft Cloud",
@@ -271,13 +292,31 @@ window.llmDashboardData = {
     millionDollarLabel: "연간 지출 $1M+ 계정 (우축)",
   },
   methodology: [
-    "매출 실선은 실제 발표된 연환산 런레이트이고, 점선은 미공개 기간에 대한 TickerTrends 추정치입니다. 점선을 회사 공식 ARR로 해석하면 안 됩니다.",
+    "매출 실선은 회사 발표 또는 언론이 보도한 연환산 런레이트입니다. 관계자 인용 보도는 공식 공시와 다릅니다. 점선은 TickerTrends 추정치로, 회사 공식 ARR이 아닙니다.",
+    "2026년 7월 말 Anthropic $65B 초과, OpenAI $40B 초과를 보도값으로 반영했습니다. 그래프는 보도된 문턱값 65·40에 표시하며, 툴팁에서 초과 여부·기준일·보도일을 구분합니다. 기존 7/22 추적치 $74.1B·$41.3B는 별도 추정 계열로 유지합니다.",
+    "두 회사의 클라우드 파트너 매출 총액·순액 인식 방식이 달라 완전히 동일한 회계 기준 비교는 아닙니다. 월별 순증가 속도와 연말 $100B 도달 전망은 이번 보도값에서 외삽하지 않았습니다.",
     "Revenue run-rate는 보통 최근 월 매출을 12배한 속도 지표입니다. 감사된 연간 매출이나 계약 잔고 기준 SaaS ARR과는 다릅니다.",
     "ChatGPT는 WAU를 사용합니다. Anthropic은 비교 가능한 Claude 활성 사용자 수를 공개하지 않아 기업 고객과 연간 지출 $1M 이상 계정을 도입 프록시로 표시합니다.",
     "OpenAI Agent 계열은 기준이 바뀝니다. 6월은 Codex 단독 WAU, 7월은 Codex와 ChatGPT Work 합산이며 ChatGPT 전체 900M WAU와 별도입니다.",
     "공개되지 않은 월은 빈칸으로 유지합니다. 선은 확인된 이정표를 연결할 뿐 매월 관측치가 있다는 의미는 아닙니다.",
   ],
   sources: [
+    {
+      label: "Anthropic: 7월 말 $65B 초과 (Reuters 2026-08-17, AOL 전재)",
+      url: "https://www.aol.com/articles/anthropic-revenue-run-rate-tops-213602000.html",
+    },
+    {
+      label: "OpenAI: $40B 초과 (Bloomberg 2026-08-13, Yahoo 전재)",
+      url: "https://finance.yahoo.com/technology/ai/articles/openai-revenue-run-rate-tops-213604019.html",
+    },
+    {
+      label: "OpenAI 보도 기준일 대조: 7/31 (TickerTrends 2026-08-14)",
+      url: "https://blog.tickertrends.io/p/openai-arr-tracking-44-3b-bloomberg-40b-run-rate",
+    },
+    {
+      label: "매출 비교 유의사항: 클라우드 파트너 총액·순액 인식 (Axios 2026-09-03)",
+      url: "https://www.axios.com/2026/09/03/anthropic-and-openais-revenue-chasm-explained",
+    },
     {
       label: "TickerTrends: OpenAI vs Anthropic ARR tracking (Jul 23, 2026)",
       url: "https://blog.tickertrends.io/p/anthropic-vs-openai-arr-tracking",

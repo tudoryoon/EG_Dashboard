@@ -7273,6 +7273,7 @@ function createLlmRevenueChart(canvas) {
     label: series.name,
     data: series.values,
     sourceLabels: series.sourceLabels,
+    observations: series.observations,
     borderColor: llmDashboardData.colors?.[series.key] ?? "#111827",
     backgroundColor: series.mode === "tracking" ? "#ffffff" : llmDashboardData.colors?.[series.key] ?? "#111827",
     borderWidth: series.mode === "tracking" ? 2.5 : 3,
@@ -7301,10 +7302,15 @@ function createLlmRevenueChart(canvas) {
         tooltip: {
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
-            label: (context) => `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 1)}B`,
+            label: (context) => {
+              const point = context.dataset.observations?.[panel.labels[context.dataIndex]];
+              return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 1)}B${point?.qualifier === "more-than" ? " 초과" : ""}`;
+            },
             afterLabel: (context) => {
               const source = context.dataset.sourceLabels?.[context.dataIndex];
-              return source ? `출처: ${source}` : "";
+              const point = context.dataset.observations?.[panel.labels[context.dataIndex]];
+              if (!point) return source ? `출처: ${source}` : "";
+              return [`출처: ${source}`, `기준일: ${point.asOf} · 보도일: ${point.reportedAt}`, `구분: 언론 보도값 (공식 공시 아님)`, point.note];
             },
           },
         },
@@ -7392,12 +7398,12 @@ function createLlmScaleSpeedChart(canvas) {
             label: (context) => {
               const point = context.raw;
               return point.kind === "latest"
-                ? `현재 추적치: $${Number(point.amount).toFixed(1)}B · ${Number(point.years).toFixed(2)}년차`
+                ? `최근 ${point.status === "reported" ? "보도값" : "추적치"}: $${Number(point.amount).toFixed(1)}B${point.qualifier === "more-than" ? " 초과" : ""} · ${Number(point.years).toFixed(2)}년차`
                 : `$${Number(point.amount).toFixed(0)}B 도달: ${Number(point.years).toFixed(2)}년`;
             },
             afterLabel: (context) => {
               const point = context.raw;
-              const status = point.status === "tracking" ? "추정치" : "공식 발표·공시";
+              const status = point.status === "tracking" ? "추정치" : point.status === "reported" ? "언론 보도 (공식 공시 아님)" : "공식 발표·공시";
               return [`기준일: ${point.date}`, `구분: ${status}`, `근거: ${point.sourceLabel}`, `산식: ${context.dataset.company?.basis ?? ""}`];
             },
           },
@@ -7707,7 +7713,7 @@ function renderLlmOverview() {
               <span><i class="is-10"></i>$10B</span>
               <span><i class="is-50"></i>$50B</span>
               <span><i class="is-100"></i>$100B</span>
-              <span><i class="is-tracking"></i>최신 추정치</span>
+              <span><i class="is-tracking"></i>최근 보도·추정치</span>
             </div>
           </div>
           <div class="llm-chart-wrap llm-scale-chart-wrap">
@@ -7722,7 +7728,7 @@ function renderLlmOverview() {
                   <th>$10B</th>
                   <th>$50B</th>
                   <th>$100B</th>
-                  <th>현재 추적 위치</th>
+                  <th>최근 확인 규모</th>
                   <th>지표 기준</th>
                 </tr>
               </thead>
@@ -7736,7 +7742,7 @@ function renderLlmOverview() {
                         <td>${formatScaleMilestone(company, 10)}</td>
                         <td>${formatScaleMilestone(company, 50)}</td>
                         <td>${formatScaleMilestone(company, 100)}</td>
-                        <td>${company.latest ? `<strong>$${Number(company.latest.amount).toFixed(1)}B · ${Number(company.latest.years).toFixed(2)}년차</strong><small>${company.latest.date} · 추정</small>` : '<span class="llm-scale-empty">—</span>'}</td>
+                        <td>${company.latest ? `<strong>$${Number(company.latest.amount).toFixed(1)}B${company.latest.qualifier === "more-than" ? " 초과" : ""} · ${Number(company.latest.years).toFixed(2)}년차</strong><small>${company.latest.date} · ${company.latest.status === "reported" ? "언론 보도" : company.latest.status === "tracking" ? "추정" : "공식 발표"}</small>` : '<span class="llm-scale-empty">—</span>'}</td>
                         <td>${company.basis}</td>
                       </tr>`,
                   )
