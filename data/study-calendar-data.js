@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-16",
+  "updatedAt": "2026-09-17",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-16",
+  "calendarToday": "2026-09-17",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 7,
@@ -130,6 +130,21 @@ window.studyCalendarData = {
       "events": [
         {
           "date": "2026-09-29",
+          "time": "22:30 이전",
+          "kind": "earnings",
+          "ticker": "CCL",
+          "session": "B",
+          "title": "Carnival Corporation Ltd. (CCL) 실적 발표",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.36 · Nasdaq/Zacks 예상 일정",
+          "sector": "여행 & 레저",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-29",
+          "usDate": "2026-09-29",
+          "kstDate": "2026-09-29",
+          "confirmed": false
+        },
+        {
+          "date": "2026-09-29",
           "time": "23:00",
           "kind": "macro",
           "title": "JOLTS 구인·이직 보고서",
@@ -183,7 +198,7 @@ window.studyCalendarData = {
           "ticker": "NKE",
           "session": "A",
           "title": "Nike, Inc. (NKE) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $0.45 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $0.44 · Nasdaq/Zacks 예상 일정",
           "sector": "경기 소비재",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-01",
@@ -231,21 +246,6 @@ window.studyCalendarData = {
           "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
           "usDate": "2026-10-05",
           "kstDate": "2026-10-05"
-        },
-        {
-          "date": "2026-10-05",
-          "time": "시간 미정",
-          "kind": "earnings",
-          "ticker": "CCL",
-          "session": "",
-          "title": "Carnival Corporation Ltd. (CCL) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.36 · Nasdaq/Zacks 예상 일정",
-          "sector": "여행 & 레저",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-05",
-          "usDate": "2026-10-05",
-          "kstDate": "2026-10-05",
-          "confirmed": false
         },
         {
           "date": "2026-10-08",
