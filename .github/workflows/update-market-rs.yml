@@ -166,4 +166,6 @@ jobs:
       - name: Validate market RS pipeline outputs
         if: steps.refresh-guard.outputs.should_run == 'true'
         continue-on-error: true
-        run: python scripts/validate_market_rs_pipeline.py
+        run: |
+          python scripts/test_rs_maturity_ramp.py
+          python scripts/validate_market_rs_pipeline.py

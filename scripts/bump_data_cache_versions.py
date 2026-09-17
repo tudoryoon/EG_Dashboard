@@ -47,7 +47,10 @@ def bump_index_versions(data_paths: list[str]) -> list[str]:
     for data_path in data_paths:
         normalized = normalize_data_path(data_path)
         escaped = re.escape("./" + normalized)
-        pattern = re.compile(rf'(<script\s+src="{escaped})(?:\?v=([^"]+))?("></script>)')
+        pattern = re.compile(
+            rf'(<script\s+src="{escaped}|<link\s+rel="stylesheet"\s+href="{escaped})'
+            rf'(?:\?v=([^"]+))?("(?=[^>]*>))'
+        )
 
         def replace(match: re.Match[str]) -> str:
             version = next_version(match.group(2), today)

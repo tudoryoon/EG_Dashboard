@@ -212,11 +212,16 @@ def recompute_latest_rs(rows: list[dict], new_rows: list[dict]) -> None:
             period_output[period_key] = ratings_by_period[period_key].get(ticker)
         weighted_sum = 0.0
         weight_sum = 0.0
+        history_sessions = int(row.get("historySessions") or 0)
+        is_provisional = bool(row.get("rsProvisional"))
         for period_key, weight in rs.RS_WEIGHTS.items():
             rating = ratings_by_period[period_key].get(ticker)
             if rating is not None:
-                weighted_sum += rating * weight
-                weight_sum += weight
+                effective_weight = weight
+                if is_provisional:
+                    effective_weight *= rs.rs_period_maturity_multiplier(history_sessions, period_key)
+                weighted_sum += rating * effective_weight
+                weight_sum += effective_weight
         if weight_sum > 0:
             row["rsRatingAll"] = int(round(weighted_sum / weight_sum))
 
@@ -242,24 +247,12 @@ def compute_history_rating(
     latest_rating: int | None,
 ) -> list[int | None]:
     price_frame = build_price_frame_from_histories(payload, {ticker: new_price_series})
-    period_ratings: dict[str, pd.DataFrame] = {}
-    for period_key in ["1m", "3m", "6m"]:
-        periods = rs.LOOKBACKS[period_key]
-        if len(price_frame) <= periods:
-            continue
-        period_ratings[period_key] = rs.percentile_to_rating(price_frame.div(price_frame.shift(periods)).sub(1))
-    if not period_ratings:
+    if price_frame.empty:
         values = [None for _ in payload.get("historyDates", [])]
     else:
-        weights = {key: rs.RS_WEIGHTS[key] for key in period_ratings}
-        first = next(iter(period_ratings.values()))
-        weighted_sum = pd.DataFrame(0.0, index=first.index, columns=first.columns)
-        weight_sum = pd.DataFrame(0.0, index=first.index, columns=first.columns)
-        for period_key, component in period_ratings.items():
-            weight = weights[period_key]
-            weighted_sum = weighted_sum.add(component.fillna(0).mul(weight), fill_value=0)
-            weight_sum = weight_sum.add(component.notna().astype(float).mul(weight), fill_value=0)
-        weighted = weighted_sum.div(weight_sum.where(weight_sum > 0)).round().clip(lower=1, upper=99)
+        period_ratings = rs.build_period_rs_ratings(price_frame)
+        limited_history = rs.identify_limited_history_tickers(price_frame)
+        weighted = rs.weighted_rs_rating(period_ratings, limited_history)
         series = weighted[ticker] if ticker in weighted.columns else pd.Series(index=price_frame.index, dtype=float)
         values = [None if pd.isna(value) else int(value) for value in series.tolist()]
     if values and latest_rating is not None:
@@ -309,6 +302,14 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
         if period_key in {"1w", "2w", "1m", "3m", "6m", "12m"}
     }
     price_history = close.reindex(history_index).ffill(limit=1)
+    history_sessions = int(adj_close.loc[:latest_date].count())
+    common_window_cutoff = history_index[min(rs.RS_NEW_LISTING_GRACE_SESSIONS - 1, len(history_index) - 1)]
+    first_valid_date = adj_close.first_valid_index()
+    limited_history = bool(first_valid_date is not None and first_valid_date > common_window_cutoff)
+    provisional_rs = bool(
+        limited_history
+        and history_sessions < rs.LOOKBACKS["12m"] + rs.RS_MATURITY_RAMP_SESSIONS
+    )
     latest_rating = None
     row = {
         "ticker": ticker,
@@ -317,6 +318,8 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
         "marketCap": market_cap,
         "sharesOutstanding": shares,
         "rsRatingAll": None,
+        "rsProvisional": provisional_rs,
+        "historySessions": history_sessions,
         "rsRatingSp500": None,
         "rsRatingNasdaq100": None,
         "rsRatingDowjones": None,

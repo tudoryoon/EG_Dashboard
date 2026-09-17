@@ -103,6 +103,8 @@ COLOR_BY_UNIVERSE = {
     "russell2000": "#0f766e",
 }
 RS_WEIGHTS = {"1m": 0.20, "3m": 0.40, "6m": 0.20, "12m": 0.20}
+RS_MATURITY_RAMP_SESSIONS = 21
+RS_NEW_LISTING_GRACE_SESSIONS = 5
 ATR_WINDOW = 21
 ATR_MIN_PERIODS = 2
 EXTENSION_ANCHORS = {
@@ -1221,7 +1223,8 @@ def percentile_to_rating(frame: pd.DataFrame) -> pd.DataFrame:
     rating = rating.where(frame.notna())
     single_name_mask = valid_counts <= 1
     if single_name_mask.any():
-        rating.loc[single_name_mask] = frame.loc[single_name_mask].notna().astype(float) * 99
+        single_rows = frame.loc[single_name_mask]
+        rating.loc[single_name_mask] = single_rows.where(single_rows.isna(), 99.0)
     return rating.round().clip(lower=1, upper=99)
 
 
@@ -1237,17 +1240,86 @@ def cross_sectional_percentile(frame: pd.DataFrame) -> pd.DataFrame:
     return percentile.clip(lower=0, upper=1)
 
 
-def weighted_rs_rating(period_ratings: dict[str, pd.DataFrame]) -> pd.DataFrame:
+def identify_limited_history_tickers(close_frame: pd.DataFrame) -> pd.Series:
+    """Flag tickers whose stored history starts after the common market window."""
+    if close_frame.empty:
+        return pd.Series(False, index=close_frame.columns, dtype=bool)
+    observed_dates = close_frame.index[close_frame.notna().any(axis=1)]
+    if observed_dates.empty:
+        return pd.Series(False, index=close_frame.columns, dtype=bool)
+    cutoff_index = min(RS_NEW_LISTING_GRACE_SESSIONS - 1, len(observed_dates) - 1)
+    common_window_cutoff = observed_dates[cutoff_index]
+    first_valid_dates = close_frame.apply(lambda series: series.first_valid_index())
+    return first_valid_dates.apply(
+        lambda value: bool(value is not None and not pd.isna(value) and value > common_window_cutoff)
+    ).astype(bool)
+
+
+def rs_component_weight(
+    component: pd.DataFrame,
+    base_weight: float,
+    limited_history: pd.Series,
+) -> pd.DataFrame:
+    weights = pd.DataFrame(base_weight, index=component.index, columns=component.columns)
+    limited_columns = [
+        ticker
+        for ticker in component.columns
+        if bool(limited_history.get(ticker, False))
+    ]
+    if limited_columns:
+        maturity = (
+            component[limited_columns]
+            .notna()
+            .cumsum()
+            .clip(upper=RS_MATURITY_RAMP_SESSIONS)
+            .div(RS_MATURITY_RAMP_SESSIONS)
+        )
+        weights.loc[:, limited_columns] = maturity.mul(base_weight)
+    return weights
+
+
+def rs_period_maturity_multiplier(history_sessions: int, period_key: str) -> float:
+    available_observations = max(0, int(history_sessions) - LOOKBACKS[period_key])
+    return min(available_observations, RS_MATURITY_RAMP_SESSIONS) / RS_MATURITY_RAMP_SESSIONS
+
+
+def weighted_rs_rating(
+    period_ratings: dict[str, pd.DataFrame],
+    limited_history: pd.Series | None = None,
+) -> pd.DataFrame:
     first = next(iter(period_ratings.values()))
     weighted_sum = pd.DataFrame(0.0, index=first.index, columns=first.columns)
     weight_sum = pd.DataFrame(0.0, index=first.index, columns=first.columns)
+    limited_history = (
+        limited_history.reindex(first.columns).fillna(False).astype(bool)
+        if limited_history is not None
+        else pd.Series(False, index=first.columns, dtype=bool)
+    )
 
     for period_key, weight in RS_WEIGHTS.items():
         component = period_ratings[period_key]
-        weighted_sum = weighted_sum.add(component.fillna(0).mul(weight), fill_value=0)
-        weight_sum = weight_sum.add(component.notna().astype(float).mul(weight), fill_value=0)
+        component_weight = rs_component_weight(component, weight, limited_history)
+        active_weight = component_weight.where(component.notna(), 0.0)
+        weighted_sum = weighted_sum.add(component.fillna(0).mul(active_weight), fill_value=0)
+        weight_sum = weight_sum.add(active_weight, fill_value=0)
 
     return weighted_sum.div(weight_sum.where(weight_sum > 0)).round().clip(lower=1, upper=99)
+
+
+def rs_provisional_status(
+    period_ratings: dict[str, pd.DataFrame],
+    limited_history: pd.Series,
+) -> pd.Series:
+    twelve_month_observations = period_ratings["12m"].notna().cumsum()
+    latest_counts = (
+        twelve_month_observations.iloc[-1]
+        if not twelve_month_observations.empty
+        else pd.Series(0, index=limited_history.index, dtype=int)
+    )
+    return (
+        limited_history.reindex(latest_counts.index).fillna(False).astype(bool)
+        & latest_counts.lt(RS_MATURITY_RAMP_SESSIONS)
+    )
 
 
 def build_period_rs_ratings(close_frame: pd.DataFrame) -> dict[str, pd.DataFrame]:
@@ -1378,7 +1450,9 @@ def build_payload(
         raise RuntimeError("No RS universe members passed the market-cap filter.")
 
     period_rs_ratings_all = build_period_rs_ratings(stock_adjusted_close)
-    rs_rating_all = weighted_rs_rating(period_rs_ratings_all)
+    limited_history = identify_limited_history_tickers(stock_adjusted_close)
+    provisional_status = rs_provisional_status(period_rs_ratings_all, limited_history)
+    rs_rating_all = weighted_rs_rating(period_rs_ratings_all, limited_history)
 
     rs_ratings_by_universe = {"all": rs_rating_all}
     for key in UNIVERSES:
@@ -1390,7 +1464,10 @@ def build_payload(
         if not tickers:
             continue
         subset_period_ratings = build_period_rs_ratings(stock_adjusted_close[tickers])
-        rs_ratings_by_universe[key] = weighted_rs_rating(subset_period_ratings)
+        rs_ratings_by_universe[key] = weighted_rs_rating(
+            subset_period_ratings,
+            limited_history.reindex(tickers).fillna(False),
+        )
 
     latest_date = rs_rating_all.dropna(how="all").index.max()
     if pd.isna(latest_date):
@@ -1481,6 +1558,8 @@ def build_payload(
             "marketCap": market_cap,
             "sharesOutstanding": shares_outstanding,
             "rsRatingAll": nullable_int(latest_rating),
+            "rsProvisional": bool(provisional_status.get(ticker, False)),
+            "historySessions": int(performance_series.count()),
             "rsRatingSp500": nullable_int(rs_ratings_by_universe.get("sp500", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingNasdaq100": nullable_int(rs_ratings_by_universe.get("nasdaq100", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
             "rsRatingDowjones": nullable_int(rs_ratings_by_universe.get("dowjones", pd.DataFrame()).get(ticker, pd.Series(dtype=float)).get(latest_date)),
@@ -1583,9 +1662,10 @@ def build_payload(
         },
         "scoring": {
             "label": "StockEasy-style RS Rating",
-            "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. Names with market cap at or below $200M are excluded.",
+            "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. For newly listed names, each newly available period weight ramps in over 21 trading sessions. Names with market cap at or below $200M are excluded.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
             "weights": RS_WEIGHTS,
+            "maturityRampSessions": RS_MATURITY_RAMP_SESSIONS,
             "atr": "ATR% = the average of each session's true range divided by its previous close over up to 21 trading days; newly listed names use available history after two trading sessions.",
         },
         "rows": rows,

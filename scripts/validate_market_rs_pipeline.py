@@ -39,6 +39,10 @@ def main() -> None:
     require(history_dates[0] <= "2025-01-10", f"RS history starts too late: {history_dates[0]}")
     require(len(history_dates) >= 300, f"RS history is unexpectedly short after {HISTORY_START_DATE}: {len(history_dates)}")
     require(rs.get("updatedAt") == history_dates[-1], "RS updatedAt and latest history date differ.")
+    require(
+        (rs.get("scoring") or {}).get("maturityRampSessions") == 21,
+        "RS maturity ramp configuration is missing or changed.",
+    )
     rs_histories = rs.get("histories") or {}
     require(len(rs_histories) == len(rs_rows), "RS history count differs from the RS row count.")
     for ticker, history in rs_histories.items():
@@ -59,6 +63,24 @@ def main() -> None:
         latest_ohlc_count >= len(rs_histories) - 10,
         f"Latest RS candle coverage is too small: {latest_ohlc_count} / {len(rs_histories)}",
     )
+    for row in rs_rows:
+        ticker = row.get("ticker")
+        if not ticker or row.get("isIndex"):
+            continue
+        history = rs_histories.get(ticker) or {}
+        prices = history.get("price") or []
+        ratings = history.get("rsRatingAll") or []
+        first_price_index = next((index for index, value in enumerate(prices) if value is not None), None)
+        if first_price_index is not None:
+            require(
+                all(value is None for value in ratings[:first_price_index]),
+                f"Pre-listing RS values remain for {ticker}.",
+            )
+        if row.get("rsProvisional"):
+            require(
+                int(row.get("historySessions") or 0) < 252 + 21,
+                f"RS provisional flag did not expire for {ticker}.",
+            )
 
     membership_counts = {
         key: sum(1 for row in rs_rows if (row.get("memberships") or {}).get(key))

@@ -10440,6 +10440,14 @@ function formatRsNumber(value, digits = 0) {
   return Number(value).toFixed(digits);
 }
 
+function renderMarketRsProvisionalBadge(row) {
+  if (!row?.rsProvisional) {
+    return "";
+  }
+  const sessions = Number.isFinite(Number(row.historySessions)) ? ` · ${Number(row.historySessions)}거래일` : "";
+  return `<span class="market-rs-provisional-badge" title="상장 이력 부족으로 새로 활성화되는 기간 비중을 21거래일 동안 점진 적용 중입니다${sessions}">잠정 RS</span>`;
+}
+
 function formatRsPercent(value) {
   if (!Number.isFinite(Number(value))) {
     return "-";
@@ -13887,7 +13895,10 @@ function renderMarketRsOverview() {
         >
           <div class="market-rs-card-top">
             <span class="market-rs-card-ticker">${row.ticker}</span>
-            <span class="market-rs-card-score">${formatRsNumber(score)}</span>
+            <span class="market-rs-score-stack">
+              <span class="market-rs-card-score">${formatRsNumber(score)}</span>
+              ${renderMarketRsProvisionalBadge(row)}
+            </span>
           </div>
           <p class="market-rs-card-name">${row.name}</p>
           <p class="market-rs-card-cap">${formatMarketCapCompact(row.marketCap)}</p>
@@ -14107,7 +14118,10 @@ function renderMarketRsOverview() {
               <p>${selected?.name ?? "Select a ticker from the table or search box."}</p>
               ${selected?.isIndex ? `<p><a href="${selected.sourceUrl}" target="_blank" rel="noopener noreferrer">NTR USD 지수 · ${selected.asOfDate} · Investing.com / MSCI</a></p>` : ""}
             </div>
-            <span class="market-rs-detail-score">${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</span>
+            <span class="market-rs-score-stack market-rs-detail-score-stack">
+              <span class="market-rs-detail-score">${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</span>
+              ${renderMarketRsProvisionalBadge(selected)}
+            </span>
           </div>
           <div class="market-rs-metrics">
             <div class="market-rs-metric">
