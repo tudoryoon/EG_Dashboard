@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-18",
+  "updatedAt": "2026-09-19",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-18",
+  "calendarToday": "2026-09-19",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 7,
@@ -135,7 +135,7 @@ window.studyCalendarData = {
           "ticker": "CCL",
           "session": "B",
           "title": "Carnival Corporation Ltd. (CCL) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.35 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $1.36 · Nasdaq/Zacks 예상 일정",
           "sector": "여행 & 레저",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-29",
@@ -161,7 +161,7 @@ window.studyCalendarData = {
           "ticker": "MU",
           "session": "A",
           "title": "Micron Technology, Inc. (MU) 실적 발표",
-          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $31.17 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $31.24 · Nasdaq/Zacks 예상 일정",
           "sector": "반도체(대형주)",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-30",
