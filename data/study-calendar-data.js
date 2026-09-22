@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-21",
+  "updatedAt": "2026-09-22",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-21",
+  "calendarToday": "2026-09-22",
   "coverage": {
     "dailyBriefingUniverse": 211,
     "matchedEarnings": 21,
@@ -208,18 +208,18 @@ window.studyCalendarData = {
           "confirmed": false
         },
         {
-          "date": "2026-10-08",
-          "time": "시간 미정",
+          "date": "2026-10-09",
+          "time": "22:30 이전",
           "kind": "earnings",
           "ticker": "DAL",
-          "session": "",
+          "session": "B",
           "title": "Delta Air Lines, Inc. (DAL) 실적 발표",
           "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $2.03 · Nasdaq/Zacks 예상 일정",
           "sector": "항공/운송",
           "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-08",
-          "usDate": "2026-10-08",
-          "kstDate": "2026-10-08",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-09",
+          "usDate": "2026-10-09",
+          "kstDate": "2026-10-09",
           "confirmed": false
         }
       ]
@@ -252,7 +252,7 @@ window.studyCalendarData = {
           "ticker": "GS",
           "session": "B",
           "title": "The Goldman Sachs Group, Inc. (GS) 실적 발표",
-          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $15.62 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $15.37 · Nasdaq/Zacks 예상 일정",
           "sector": "금융",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
@@ -297,7 +297,7 @@ window.studyCalendarData = {
           "ticker": "UNH",
           "session": "B",
           "title": "UnitedHealth Group Incorporated (UNH) 실적 발표",
-          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $4.07 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $4.12 · Nasdaq/Zacks 예상 일정",
           "sector": "바이오",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
@@ -398,7 +398,7 @@ window.studyCalendarData = {
           "ticker": "AA",
           "session": "A",
           "title": "Alcoa Corporation (AA) 실적 발표",
-          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $1.56 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $1.55 · Nasdaq/Zacks 예상 일정",
           "sector": "원자재",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
