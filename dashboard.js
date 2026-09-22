@@ -786,7 +786,21 @@ const usOverviewRoot = document.querySelector("#us-overview");
 const toolbarRow = document.querySelector(".toolbar .toolbar-row-filters");
 const brandMeta = document.querySelector(".brand-meta");
 const headerCalendarLink = document.querySelector("#header-calendar-link");
+const headerRefreshButton = document.createElement("button");
+headerRefreshButton.type = "button";
+headerRefreshButton.className = "header-refresh-button";
+headerRefreshButton.title = "최신 데이터 확인";
+headerRefreshButton.setAttribute("aria-label", "최신 데이터 확인");
+const headerRefreshIcon = document.createElement("span");
+headerRefreshIcon.setAttribute("aria-hidden", "true");
+headerRefreshIcon.textContent = "\u21bb";
+headerRefreshButton.append(headerRefreshIcon);
+const headerRefreshStatus = document.createElement("span");
+headerRefreshStatus.className = "header-refresh-status";
+headerRefreshStatus.setAttribute("role", "status");
+headerCalendarLink?.after(headerRefreshButton, headerRefreshStatus);
 let searchRenderTimer = null;
+let headerRefreshResetTimer = null;
 
 function resetTrendScoreCardLimit() {
   state.trendScoreVisibleCardCount = TREND_SCORE_CARD_BATCH_SIZE;
@@ -848,6 +862,53 @@ async function refreshBrandMeta() {
     console.warn("Failed to refresh brand meta", error);
   }
 }
+
+function dashboardAssetSignature(doc) {
+  return Array.from(
+    doc.querySelectorAll('script[src^="./"], link[rel="stylesheet"][href^="./"]'),
+    (element) => element.getAttribute("src") || element.getAttribute("href"),
+  ).join("\n");
+}
+
+headerRefreshButton.addEventListener("click", async () => {
+  window.clearTimeout(headerRefreshResetTimer);
+  headerRefreshIcon.textContent = "\u21bb";
+  headerRefreshButton.disabled = true;
+  headerRefreshButton.classList.add("is-checking");
+  headerRefreshStatus.textContent = "업데이트 확인 중";
+
+  try {
+    const url = new URL("./index.html", window.location.href);
+    url.searchParams.set("refresh_check", Date.now().toString());
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Update check failed (${response.status})`);
+    const latestPage = new DOMParser().parseFromString(await response.text(), "text/html");
+    const latestSignature = dashboardAssetSignature(latestPage);
+    if (!latestSignature) throw new Error("Update manifest is unavailable");
+    if (latestSignature !== dashboardAssetSignature(document)) {
+      headerRefreshStatus.textContent = "새 데이터를 불러옵니다.";
+      window.location.reload();
+      return;
+    }
+
+    headerRefreshIcon.textContent = "\u2713";
+    headerRefreshButton.title = "이미 최신 버전입니다";
+    headerRefreshButton.setAttribute("aria-label", "이미 최신 버전입니다");
+    headerRefreshStatus.textContent = "이미 최신 버전입니다.";
+    headerRefreshResetTimer = window.setTimeout(() => {
+      headerRefreshIcon.textContent = "\u21bb";
+      headerRefreshButton.title = "최신 데이터 확인";
+      headerRefreshButton.setAttribute("aria-label", "최신 데이터 확인");
+    }, 2200);
+  } catch (error) {
+    console.warn("Failed to check dashboard update", error);
+    headerRefreshStatus.textContent = "업데이트 확인에 실패해 페이지를 새로고침합니다.";
+    window.location.reload();
+  } finally {
+    headerRefreshButton.disabled = false;
+    headerRefreshButton.classList.remove("is-checking");
+  }
+});
 
 function formatCompactDollarMillions(value) {
   if (!Number.isFinite(value)) {
