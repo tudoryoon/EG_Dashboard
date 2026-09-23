@@ -368,7 +368,7 @@ SECTOR_GROUPS = [
         "items": [
             {"ticker": "RKLB", "label": "RKLB US", "name": "Rocket Lab", "query": "Rocket Lab stock"},
             {"ticker": "ASTS", "label": "ASTS US", "name": "AST SpaceMobile", "query": "AST SpaceMobile stock"},
-            {"ticker": "SATS", "label": "SATS US", "name": "EchoStar", "query": "EchoStar stock"},
+            {"ticker": "ECHO", "label": "ECHO US", "name": "EchoStar", "query": "EchoStar stock"},
             {"ticker": "PL", "label": "PL US", "name": "Planet Labs", "query": "Planet Labs stock"},
             {"ticker": "LUNR", "label": "LUNR US", "name": "Intuitive Machines", "query": "Intuitive Machines stock"},
         ],

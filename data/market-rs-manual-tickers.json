@@ -815,17 +815,6 @@
       "sharesOutstanding": 91896494
     },
     {
-      "ticker": "SATS",
-      "name": "EchoStar Corporation",
-      "memberships": {
-        "sp500": false,
-        "nasdaq100": false,
-        "dowjones": false,
-        "russell2000": false
-      },
-      "sharesOutstanding": 289813488
-    },
-    {
       "ticker": "SCCO",
       "name": "Southern Copper Corporation",
       "memberships": {
