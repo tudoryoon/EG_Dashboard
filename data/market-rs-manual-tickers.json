@@ -914,6 +914,17 @@
       "sharesOutstanding": 127215411
     },
     {
+      "ticker": "TEM",
+      "name": "Tempus AI, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 180434756
+    },
+    {
       "ticker": "TLN",
       "name": "Talen Energy Corporation",
       "memberships": {
