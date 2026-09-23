@@ -15203,7 +15203,7 @@ function createMemoryContractGuideChart(canvas, rows) {
   const series = [
     { key: "dram", label: "DRAM", color: "#2563eb" },
     { key: "nand", label: "NAND", color: "#ea580c" },
-    { key: "hbm", label: "HBM / Blended", color: "#0f766e" },
+    { key: "blendedDram", label: "DRAM incl. HBM", color: "#0f766e" },
   ];
 
   const chart = new Chart(canvas, {
@@ -16341,11 +16341,25 @@ function renderMemorySpotOverview() {
             <small>${row.basis}</small>
             <a href="${row.sourceUrl}" target="_blank" rel="noreferrer">${row.sourceTitle}</a>
             ${row.nandSourceUrl ? `<a href="${row.nandSourceUrl}" target="_blank" rel="noreferrer">${row.nandSourceTitle}</a>` : ""}
-            ${row.hbmSourceUrl ? `<a href="${row.hbmSourceUrl}" target="_blank" rel="noreferrer">${row.hbmSourceTitle}</a>` : ""}
+            ${row.blendedSourceUrl ? `<a href="${row.blendedSourceUrl}" target="_blank" rel="noreferrer">${row.blendedSourceTitle}</a>` : ""}
           </span>
           <span>${formatMemoryRangeValue(row.dram)}</span>
           <span>${formatMemoryRangeValue(row.nand)}</span>
-          <span>${formatMemoryRangeValue(row.hbm)}</span>
+          <span>${formatMemoryRangeValue(row.blendedDram)}</span>
+        </div>`,
+    )
+    .join("");
+  const hbmContractRows = (contractGuide.hbmContractRows ?? [])
+    .map(
+      (row) => `
+        <div class="memory-note-row">
+          <span>
+            <strong>${row.period}</strong>
+            <small>${row.basis}</small>
+            <a href="${row.sourceUrl}" target="_blank" rel="noreferrer">${row.sourceTitle}</a>
+            ${row.secondarySourceUrl ? `<a href="${row.secondarySourceUrl}" target="_blank" rel="noreferrer">${row.secondarySourceTitle}</a>` : ""}
+          </span>
+          <span>${row.range}</span>
         </div>`,
     )
     .join("");
@@ -16579,12 +16593,21 @@ function renderMemorySpotOverview() {
               <span>Period</span>
               <span>DRAM</span>
               <span>NAND</span>
-              <span>HBM/Blend</span>
+              <span>DRAM+HBM</span>
             </div>
             ${contractTableRows}
           </div>
         </div>
         <div class="memory-guide-note">${contractGuide.note ?? ""}</div>
+        ${hbmContractRows ? `
+          <div class="memory-monthly-watch">
+            <div class="memory-list-head memory-note-head">
+              <span>Standalone HBM contract outlook (annual)</span>
+              <span>Change</span>
+            </div>
+            ${hbmContractRows}
+          </div>
+        ` : ""}
         ${monthlyWatchRows ? `
           <div class="memory-monthly-watch">
             <div class="memory-list-head memory-note-head">
