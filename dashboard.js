@@ -798,9 +798,14 @@ headerRefreshButton.append(headerRefreshIcon);
 const headerRefreshStatus = document.createElement("span");
 headerRefreshStatus.className = "header-refresh-status";
 headerRefreshStatus.setAttribute("role", "status");
-headerCalendarLink?.after(headerRefreshButton, headerRefreshStatus);
+const headerRefreshControls = document.createElement("div");
+headerRefreshControls.className = "header-refresh-controls";
+headerRefreshControls.append(headerRefreshStatus, headerRefreshButton);
+headerCalendarLink?.after(headerRefreshControls);
 let searchRenderTimer = null;
-let headerRefreshResetTimer = null;
+let headerRefreshChecking = false;
+let headerRefreshLastCheckedAt = 0;
+let headerRefreshState = "checking";
 
 function resetTrendScoreCardLimit() {
   state.trendScoreVisibleCardCount = TREND_SCORE_CARD_BATCH_SIZE;
@@ -870,12 +875,29 @@ function dashboardAssetSignature(doc) {
   ).join("\n");
 }
 
-headerRefreshButton.addEventListener("click", async () => {
-  window.clearTimeout(headerRefreshResetTimer);
-  headerRefreshIcon.textContent = "\u21bb";
+function setHeaderRefreshState(nextState) {
+  headerRefreshState = nextState;
+  const labels = {
+    checking: ["확인 중", "업데이트 확인 중"],
+    current: ["최신", "새 버전 확인"],
+    available: ["업데이트 있음", "새 버전으로 새로고침"],
+    error: ["확인 실패", "다시 확인"],
+  };
+  const [status, action] = labels[nextState];
+  headerRefreshStatus.className = `header-refresh-status is-${nextState}`;
+  headerRefreshStatus.textContent = status;
+  headerRefreshButton.classList.toggle("has-update", nextState === "available");
+  headerRefreshButton.title = action;
+  headerRefreshButton.setAttribute("aria-label", action);
+}
+
+async function checkForDashboardUpdate({ manual = false } = {}) {
+  if (headerRefreshChecking || (!manual && document.visibilityState === "hidden")) return;
+  headerRefreshChecking = true;
+  headerRefreshLastCheckedAt = Date.now();
   headerRefreshButton.disabled = true;
   headerRefreshButton.classList.add("is-checking");
-  headerRefreshStatus.textContent = "업데이트 확인 중";
+  setHeaderRefreshState("checking");
 
   try {
     const url = new URL("./index.html", window.location.href);
@@ -886,27 +908,37 @@ headerRefreshButton.addEventListener("click", async () => {
     const latestSignature = dashboardAssetSignature(latestPage);
     if (!latestSignature) throw new Error("Update manifest is unavailable");
     if (latestSignature !== dashboardAssetSignature(document)) {
-      headerRefreshStatus.textContent = "새 데이터를 불러옵니다.";
-      window.location.reload();
+      setHeaderRefreshState("available");
+      if (manual) window.location.reload();
       return;
     }
 
-    headerRefreshIcon.textContent = "\u2713";
-    headerRefreshButton.title = "이미 최신 버전입니다";
-    headerRefreshButton.setAttribute("aria-label", "이미 최신 버전입니다");
-    headerRefreshStatus.textContent = "이미 최신 버전입니다.";
-    headerRefreshResetTimer = window.setTimeout(() => {
-      headerRefreshIcon.textContent = "\u21bb";
-      headerRefreshButton.title = "최신 데이터 확인";
-      headerRefreshButton.setAttribute("aria-label", "최신 데이터 확인");
-    }, 2200);
+    setHeaderRefreshState("current");
   } catch (error) {
     console.warn("Failed to check dashboard update", error);
-    headerRefreshStatus.textContent = "업데이트 확인에 실패해 페이지를 새로고침합니다.";
-    window.location.reload();
+    setHeaderRefreshState("error");
+    if (manual) window.location.reload();
   } finally {
+    headerRefreshLastCheckedAt = Date.now();
+    headerRefreshChecking = false;
     headerRefreshButton.disabled = false;
     headerRefreshButton.classList.remove("is-checking");
+  }
+}
+
+headerRefreshButton.addEventListener("click", () => {
+  if (headerRefreshState === "available") {
+    window.location.reload();
+    return;
+  }
+  checkForDashboardUpdate({ manual: true });
+});
+
+checkForDashboardUpdate();
+window.setInterval(() => checkForDashboardUpdate(), 5 * 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && Date.now() - headerRefreshLastCheckedAt > 60 * 1000) {
+    checkForDashboardUpdate();
   }
 });
 
