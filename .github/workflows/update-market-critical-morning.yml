@@ -89,8 +89,20 @@ jobs:
                   ):
                       available_dates = [day for day in available_dates if day < now_new_york.date()]
                   latest_available = available_dates[-1].isoformat() if available_dates else ""
+                  previous_session = available_dates[-2].isoformat() if len(available_dates) >= 2 else ""
+                  incomplete = sorted({
+                      str(item.get("ticker"))
+                      for sector in payload.get("sectorPanels", [])
+                      for item in sector.get("items", [])
+                      if not str(item.get("ticker", "")).endswith(".KS")
+                      and (
+                          item.get("priceDate") != latest_available
+                          or item.get("previousCloseDate") != previous_session
+                          or item.get("dayChangePct") is None
+                      )
+                  })
 
-                  if current_date and latest_available and current_date >= latest_available:
+                  if current_date and latest_available and current_date >= latest_available and not incomplete:
                       should_run = False
                       reason = (
                           f"Daily Briefing is current ({current_date}); "
@@ -98,8 +110,9 @@ jobs:
                       )
                   else:
                       reason = (
-                          f"Daily Briefing {current_date or 'missing'} trails "
-                          f"latest completed QQQ session {latest_available or 'unknown'}"
+                          f"Daily Briefing {current_date or 'missing'} needs refresh against "
+                          f"completed session {latest_available or 'unknown'}; "
+                          f"incomplete daily returns: {', '.join(incomplete[:10]) or 'none'}"
                       )
               except Exception as error:
                   if now_new_york.weekday() < 5 and now_new_york.time() < time(16, 10):
@@ -128,6 +141,7 @@ jobs:
       - name: Refresh market prices and briefing
         if: steps.backup-guard.outputs.should_run == 'true'
         run: |
+          python scripts/test_briefing_price_sessions.py
           python scripts/update_market_prices.py
           python scripts/update_market_briefing.py
 

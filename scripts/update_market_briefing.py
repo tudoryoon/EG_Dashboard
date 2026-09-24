@@ -777,7 +777,8 @@ def load_previous_market_prices() -> tuple[pd.Timestamp | None, dict[str, float]
         for item in sector.get("items", []):
             ticker = str(item.get("ticker") or "")
             price = normalize_number(item.get("price"))
-            if ticker and price is not None:
+            price_date = item.get("priceDate") or str(payload.get("updatedAt") or "")
+            if ticker and price is not None and not item.get("isStalePrice") and price_date == snapshot_date.strftime("%Y-%m-%d"):
                 prices.setdefault(ticker, price)
     benchmark = payload.get("rotationSignal", {}).get("benchmark", {})
     benchmark_price = normalize_number(benchmark.get("price")) if isinstance(benchmark, dict) else None
@@ -831,36 +832,71 @@ def fetch_nasdaq_daily_closes(symbol: str, start_date: pd.Timestamp, end_date: p
     return {}
 
 
+def fetch_recent_price_action_dates(symbol: str) -> set[pd.Timestamp] | None:
+    try:
+        response = requests.get(
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{quote_plus(symbol)}",
+            params={"range": "1mo", "interval": "1d", "events": "div,splits"},
+            headers=USER_AGENT,
+            timeout=10,
+        )
+        response.raise_for_status()
+        result = response.json()["chart"]["result"][0]
+        timezone_name = result.get("meta", {}).get("exchangeTimezoneName") or "America/New_York"
+        return {
+            pd.Timestamp(event["date"], unit="s", tz="UTC").tz_convert(timezone_name).tz_localize(None).normalize()
+            for events in result.get("events", {}).values()
+            for event in events.values()
+        }
+    except Exception:
+        return None
+
+
 def fill_missing_recent_session_gaps(close_map: dict[str, pd.Series]) -> None:
-    """Backfill a recent Yahoo gap with Nasdaq's official end-of-day quote feed."""
+    """Repair each US ticker independently, including gaps absent from QQQ."""
     benchmark = close_map.get(ROTATION_BENCHMARK_SYMBOL)
     if benchmark is None or len(benchmark) < 2:
         return
 
     benchmark = benchmark.sort_index().dropna()
-    previous_date = pd.Timestamp(benchmark.index[-2]).normalize()
-    latest_date = pd.Timestamp(benchmark.index[-1]).normalize()
-    if (latest_date - previous_date).days <= 1:
+    latest_date = latest_completed_market_timestamp(benchmark)
+    if latest_date is None:
         return
-
+    recent_dates = benchmark.loc[:latest_date].tail(10).index
+    if len(recent_dates) < 2:
+        return
+    start_date = recent_dates[0]
     snapshot_date, snapshot_prices, _ = load_previous_market_prices()
-    use_snapshot = snapshot_date is not None and previous_date < snapshot_date < latest_date and ROTATION_BENCHMARK_SYMBOL in snapshot_prices
-    benchmark_closes = {snapshot_date: snapshot_prices[ROTATION_BENCHMARK_SYMBOL]} if use_snapshot else fetch_nasdaq_daily_closes(
-        ROTATION_BENCHMARK_SYMBOL, previous_date, latest_date
-    )
-    missing_dates = sorted(date for date in benchmark_closes if previous_date < date < latest_date)
-    if not missing_dates:
-        return
 
-    symbols = [symbol for symbol, series in close_map.items() if not series.empty]
+    # Other US benchmarks retain the session when QQQ alone has a missing bar.
+    for symbol in ("SPY", "^GSPC", "^IXIC", "^DJI", "^RUT"):
+        reference = close_map.get(symbol)
+        if reference is not None:
+            recent_dates = recent_dates.union(reference.loc[start_date:latest_date].dropna().index)
+    if snapshot_date is not None and start_date <= snapshot_date <= latest_date and ROTATION_BENCHMARK_SYMBOL in snapshot_prices:
+        recent_dates = recent_dates.union(pd.DatetimeIndex([snapshot_date]))
+
+    benchmark_closes: dict[pd.Timestamp, float] = {}
+    recent_benchmark_dates = benchmark.loc[:latest_date].tail(10).index
+    if any((right - left).days > 1 for left, right in zip(recent_benchmark_dates, recent_benchmark_dates[1:])):
+        benchmark_closes = fetch_nasdaq_daily_closes(ROTATION_BENCHMARK_SYMBOL, start_date, latest_date)
+        recent_dates = recent_dates.union(pd.DatetimeIndex([date for date in benchmark_closes if start_date <= date <= latest_date]))
+    recent_dates = recent_dates.sort_values()
+
+    missing_by_symbol = {}
+    for symbol, series in close_map.items():
+        if series.empty or not re.fullmatch(r"[A-Z0-9.-]+", symbol) or symbol.endswith(".KS"):
+            continue
+        missing = recent_dates[(recent_dates >= series.index.min()) & ~recent_dates.isin(series.dropna().index)]
+        if len(missing):
+            missing_by_symbol[symbol] = missing
+
     fetched: dict[str, dict[pd.Timestamp, float]] = {ROTATION_BENCHMARK_SYMBOL: benchmark_closes}
-    if use_snapshot:
-        fetched.update({symbol: {snapshot_date: price} for symbol, price in snapshot_prices.items()})
     with ThreadPoolExecutor(max_workers=12) as executor:
         futures = {
-            executor.submit(fetch_nasdaq_daily_closes, symbol, previous_date, latest_date): symbol
-            for symbol in symbols
-            if symbol != ROTATION_BENCHMARK_SYMBOL and not use_snapshot
+            executor.submit(fetch_nasdaq_daily_closes, symbol, start_date, latest_date): symbol
+            for symbol in missing_by_symbol
+            if symbol != ROTATION_BENCHMARK_SYMBOL or not benchmark_closes
         }
         for future in as_completed(futures):
             symbol = futures[future]
@@ -869,15 +905,41 @@ def fill_missing_recent_session_gaps(close_map: dict[str, pd.Series]) -> None:
             except Exception:
                 fetched[symbol] = {}
 
-    for symbol, series in list(close_map.items()):
+    for symbol, missing_dates in missing_by_symbol.items():
+        series = close_map[symbol].copy()
         additions = fetched.get(symbol, {})
+        repaired = []
+        action_dates = None
         for date in missing_dates:
             close = additions.get(date)
-            if close is None or date in series.index:
+            if close is not None:
+                # Nasdaq supplies raw closes; keep Yahoo's adjusted-price basis.
+                overlaps = [(day, float(series.loc[day]) / value) for day, value in additions.items()
+                            if value > 0 and day in series.index and pd.notna(series.loc[day])]
+                before = sorted((item for item in overlaps if item[0] < date), reverse=True)[:1]
+                after = sorted(item for item in overlaps if item[0] > date)[:1]
+                anchors = before + after
+                if len(anchors) == 2 and abs(anchors[0][1] / anchors[1][1] - 1) > 0.00001:
+                    if action_dates is None:
+                        action_dates = fetch_recent_price_action_dates(symbol)
+                    if action_dates is not None:
+                        anchors = [anchor for anchor in anchors if not any(
+                            min(date, anchor[0]) < action_date <= max(date, anchor[0])
+                            for action_date in action_dates
+                        )]
+                if not anchors or (len(anchors) == 2 and abs(anchors[0][1] / anchors[1][1] - 1) > 0.00001):
+                    close = None
+                else:
+                    close *= anchors[0][1]
+            if close is None and date == snapshot_date:
+                close = snapshot_prices.get(symbol)
+            if close is None:
                 continue
-            series = pd.concat([series, pd.Series([close], index=[date], name=symbol)]).sort_index().dropna()
-            series = series[~series.index.duplicated(keep="last")]
-        close_map[symbol] = series.rename(symbol)
+            series.loc[date] = close
+            repaired.append(date.strftime("%Y-%m-%d"))
+        close_map[symbol] = series.sort_index().rename(symbol)
+        unresolved = [date.strftime("%Y-%m-%d") for date in missing_dates if date not in series.index or pd.isna(series.loc[date])]
+        print(f"Session repair {symbol}: filled={repaired}, unresolved={unresolved}", flush=True)
 
 
 def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
@@ -908,8 +970,8 @@ def fetch_price_frame(symbols: list[str]) -> pd.DataFrame:
         close = close[~close.index.duplicated(keep="last")]
         if len(close) >= 2:
             close_map[symbol] = close.rename(symbol)
-    fill_missing_recent_session_gaps(close_map)
     fill_latest_chart_close_gaps(close_map)
+    fill_missing_recent_session_gaps(close_map)
     return pd.concat(close_map.values(), axis=1).sort_index() if close_map else pd.DataFrame()
 
 
@@ -1076,15 +1138,11 @@ def compute_recent_day_change(series: pd.Series, max_abs_return: float = MAX_DAI
     if current is None:
         return None, None, None
 
-    previous_candidates = list(series.iloc[:-1].tail(10).iloc[::-1])
-    for previous_raw in previous_candidates:
-        previous = normalize_number(previous_raw)
-        if previous is None or previous == 0:
-            continue
-        pct = (current / previous - 1) * 100
-        if abs(pct) <= max_abs_return:
-            return round(pct, 2), current, previous
-    return None, current, normalize_number(series.iloc[-2])
+    previous = normalize_number(series.iloc[-2])
+    if previous is None or previous <= 0:
+        return None, current, None
+    pct = (current / previous - 1) * 100
+    return (round(pct, 2) if abs(pct) <= max_abs_return else None), current, previous
 
 
 def fetch_meta(symbol: str) -> dict[str, float | None]:
@@ -1142,7 +1200,7 @@ def compute_period_return(series: pd.Series, periods: int) -> float | None:
 
 
 def compute_period_return_at(series: pd.Series, end_date: pd.Timestamp, periods: int) -> float | None:
-    history = series.loc[:end_date].dropna()
+    history = series.loc[:end_date]
     if history.empty or not is_same_price_date(history.index[-1], end_date):
         return None
     if len(history) <= periods:
@@ -1177,6 +1235,22 @@ def is_same_price_date(left: pd.Timestamp | None, right: pd.Timestamp | None) ->
     if left is None or right is None:
         return False
     return pd.Timestamp(left).date() == pd.Timestamp(right).date()
+
+
+def us_session_dates(close_frame: pd.DataFrame) -> pd.DatetimeIndex:
+    sessions = close_frame.attrs.get("usSessionDates")
+    if sessions is None:
+        reference_symbols = [symbol for symbol in (ROTATION_BENCHMARK_SYMBOL, "SPY", "^GSPC", "^IXIC", "^DJI", "^RUT") if symbol in close_frame.columns]
+        sessions = close_frame[reference_symbols].dropna(how="all").index
+        close_frame.attrs["usSessionDates"] = sessions
+    return sessions
+
+
+def session_aligned_close(close_frame: pd.DataFrame, symbol: str) -> pd.Series:
+    series = close_frame[symbol].dropna()
+    if not symbol.endswith(".KS") and symbol != USD_PER_KRW_SYMBOL and ROTATION_BENCHMARK_SYMBOL in close_frame.columns:
+        return series.reindex(us_session_dates(close_frame))
+    return series
 
 
 def latest_completed_market_timestamp(series: pd.Series) -> pd.Timestamp | None:
@@ -1239,10 +1313,12 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
     snapshots: list[dict[str, object]] = []
     for company in companies:
         symbol = company["ticker"]
-        series = close_frame[symbol].loc[:latest_timestamp].dropna() if symbol in close_frame.columns else pd.Series(dtype=float)
+        series = session_aligned_close(close_frame, symbol).loc[:latest_timestamp] if symbol in close_frame.columns else pd.Series(dtype=float)
         price = previous_close = day_change_pct = None
-        price_date = series.index.max() if not series.empty else None
+        price_date = series.last_valid_index()
         is_current_price = is_same_price_date(price_date, latest_timestamp)
+        if not is_current_price:
+            series = series.loc[:price_date] if price_date is not None else pd.Series(dtype=float)
         range_returns = {key: None for key in MAP_RANGE_LABELS}
         if len(series) >= 2:
             computed_day_change_pct, price, previous_close = compute_recent_day_change(series)
@@ -1273,6 +1349,7 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
             "currency": "KRW" if symbol.endswith(".KS") else "USD",
             "price": round(price, 2) if price is not None else None,
             "previousClose": round(previous_close, 2) if previous_close is not None else None,
+            "previousCloseDate": series.index[-2].strftime("%Y-%m-%d") if previous_close is not None and len(series) >= 2 else None,
             "priceDate": price_date.strftime("%Y-%m-%d") if price_date is not None else None,
             "isStalePrice": not is_current_price,
             "dayChangePct": day_change_pct,
@@ -1321,7 +1398,7 @@ def safe_float(value: object) -> float | None:
 
 def build_rotation_benchmark(close_frame: pd.DataFrame) -> dict[str, object]:
     series = (
-        close_frame[ROTATION_BENCHMARK_SYMBOL].dropna()
+        session_aligned_close(close_frame, ROTATION_BENCHMARK_SYMBOL)
         if ROTATION_BENCHMARK_SYMBOL in close_frame.columns
         else pd.Series(dtype=float)
     )
@@ -1485,7 +1562,7 @@ def compute_series_rotation_returns(
 ) -> dict[str, float | None]:
     if symbol not in close_frame.columns:
         return {key: None for key in ROTATION_WEIGHTS}
-    series = close_frame[symbol].dropna()
+    series = session_aligned_close(close_frame, symbol)
     output: dict[str, float | None] = {}
     for key in ROTATION_WEIGHTS:
         periods = MAP_RANGE_PERIODS.get(key)
@@ -1558,7 +1635,7 @@ def build_rotation_history(
 ) -> dict[str, list[dict[str, object]]]:
     if ROTATION_BENCHMARK_SYMBOL not in close_frame.columns:
         return {}
-    benchmark_dates = close_frame[ROTATION_BENCHMARK_SYMBOL].dropna().index
+    benchmark_dates = us_session_dates(close_frame)
     if len(benchmark_dates) <= max(MAP_RANGE_PERIODS[key] for key in ROTATION_WEIGHTS):
         return {}
     history_dates = benchmark_dates[-ROTATION_HISTORY_POINTS:]
