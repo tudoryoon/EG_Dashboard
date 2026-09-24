@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from curl_cffi import requests as curl_requests
+from index_price_history import INDEX_SYMBOLS, apply_frame_to_item, item_to_frame, repair_recent_index_frames
 
 
 START_DATE = "1965-01-01"
@@ -283,6 +284,13 @@ def main() -> None:
         output_path.write_text("window.marketPriceData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8", newline="\n")
         return
     items = {meta["key"]: build_item(meta) for meta in SYMBOLS}
+    frames = {item["symbol"]: item_to_frame(item) for item in items.values() if item["symbol"] in INDEX_SYMBOLS}
+    cached_frames = {meta["symbol"]: item_to_frame(existing) for meta in SYMBOLS
+                     if meta["symbol"] in INDEX_SYMBOLS and (existing := load_existing_item(output_path, meta["key"]))}
+    repaired = repair_recent_index_frames(frames, items["smh"]["dates"], cached_frames)
+    for key, item in items.items():
+        if item["symbol"] in repaired:
+            items[key] = apply_frame_to_item(item, repaired[item["symbol"]])
     items["vixeq"] = refresh_vixeq_item(output_path)
     items[ACWI_KEY] = fetch_acwi(load_existing_item(output_path, ACWI_KEY))
     try:

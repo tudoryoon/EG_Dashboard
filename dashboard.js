@@ -284,6 +284,7 @@ const MARKET_TREND_PRICE_CHART_TYPES = [
 const MARKET_PRICE_TREND_INDEX_OPTIONS = [
   { key: "sp500", label: "S&P 500" },
   { key: "dowjones", label: "Dow Jones" },
+  { key: "nasdaq", label: "NASDAQ Composite" },
   { key: "nasdaq100", label: "NASDAQ 100" },
   { key: "sox", label: "SOX" },
   { key: "russell2000", label: "Russell 2000" },
@@ -2228,6 +2229,15 @@ function getMarketTrendBounds() {
   };
 }
 
+function getMarketTrendDayChange(values, index) {
+  const current = values[index];
+  const previous = values[index - 1];
+  if (current == null || previous == null || !Number.isFinite(Number(current)) || !Number.isFinite(Number(previous)) || Number(previous) <= 0) {
+    return null;
+  }
+  return (Number(current) / Number(previous) - 1) * 100;
+}
+
 function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", customEnd = "") {
   const trendStart = marketPriceData?.startDate ?? "1980-01-01";
   const item = marketPriceData?.items?.[indexKey];
@@ -2266,6 +2276,9 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
     h: Number(priceHighs[index]),
     l: Number(priceLows[index]),
     c: Number(priceValues[index]),
+    changePct: getMarketTrendDayChange(fullValues, startIndex + index),
+    previousClose: fullValues[startIndex + index - 1] ?? null,
+    previousCloseDate: fullLabels[startIndex + index - 1] ?? null,
   }));
   const useCandlestick = !item.closeOnly && state.marketTrendChartType !== "line"
     && candlestickData.some((candle) => [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite));
@@ -2666,7 +2679,7 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
   }
 
   const payload = buildMarketTrendChartPayload(rangeKey, indexKey, customStart, customEnd);
-  const formatIndexValue = (value, digits = 2) => payload.item?.msciIndexCode
+  const formatIndexValue = (value, digits = 2) => payload.item?.isIndex
     ? `${Number(value).toFixed(digits)} pt` : formatUsStockPrice(value, digits);
   const allValues = [
     ...payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value))),
@@ -2792,8 +2805,13 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
         },
         tooltip: {
           enabled: true,
+          titleFont: { size: 14, weight: "bold" },
           callbacks: {
-            title: (items) => items?.[0]?.label ?? "",
+            title: (items) => {
+              const index = items?.[0]?.dataIndex;
+              const candle = payload.candlestickData[index];
+              return [items?.[0]?.label ?? "", `전일 대비 ${formatSignedPercent(candle?.changePct)}`];
+            },
             label: (context) => {
               if (context.dataset.isCandlestick) {
                 const candle = context.dataset.ohlc?.[context.dataIndex];
@@ -9479,12 +9497,12 @@ function renderMarketBriefingOverview() {
     .join("");
 
   const briefingIndexConfigs = [
-    { key: "dowjones", label: "Dow Jones (DIA)" },
-    { key: "sp500", label: "S&P 500 (SPY)" },
+    { key: "dowjones", label: "Dow Jones" },
+    { key: "sp500", label: "S&P 500" },
     { key: "nasdaq", label: "NASDAQ Composite" },
-    { key: "nasdaq100", label: "NASDAQ 100 (QQQ)" },
+    { key: "nasdaq100", label: "NASDAQ 100" },
     { key: "sox", label: "필라델피아 반도체 (SOX)" },
-    { key: "russell2000", label: "Russell 2000 (IWM)" },
+    { key: "russell2000", label: "Russell 2000" },
   ];
 
   const indexMarkup = briefingIndexConfigs
@@ -9975,7 +9993,7 @@ function renderMarketBriefingOverview() {
         <div class="us-section-head">
           <div>
             <h2>미국 주요 지수</h2>
-            <p>다우 (DIA), S&amp;P 500 (SPY), 나스닥 100 (QQQ), 러셀 2000 (IWM)의 최신 레벨과 등락을 바로 확인합니다.</p>
+            <p>다우, S&amp;P 500, 나스닥 종합, 나스닥 100, SOX, 러셀 2000</p>
           </div>
         </div>
         <div class="briefing-index-grid">${indexMarkup}</div>
@@ -18970,7 +18988,7 @@ function renderIndexTrendOverview() {
     .map((item) => {
       const gapClass = item.gap === null ? "neutral" : Number(item.gap) >= 0 ? "positive" : "negative";
       return `
-        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${marketTrendCloseOnly ? `${item.indexValue?.toFixed(2)} pt` : formatUsStockPrice(item.indexValue, 2)} / EMA ${item.period} ${marketTrendCloseOnly ? `${item.emaValue?.toFixed(2)} pt` : formatUsStockPrice(item.emaValue, 2)}">
+        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${marketTrendItem?.isIndex ? `${item.indexValue?.toFixed(2)} pt` : formatUsStockPrice(item.indexValue, 2)} / EMA ${item.period} ${marketTrendItem?.isIndex ? `${item.emaValue?.toFixed(2)} pt` : formatUsStockPrice(item.emaValue, 2)}">
           <span>EMA ${item.period}</span>
           <strong>${formatMarketTrendGap(item.gap)}</strong>
         </span>`;
@@ -18992,7 +19010,7 @@ function renderIndexTrendOverview() {
         <div class="us-section-head us-price-head">
           <div>
             <h2>Index Trend & EMA</h2>
-            <p>S&P 500, Dow Jones, NASDAQ 100, SOX, Russell 2000, VKOSPI, VIXEQ의 일별 지수와 EMA(20, 50, 100, 200)를 장기 시계열 기준으로 확인합니다.</p>
+            <p>NASDAQ Composite · NASDAQ 100 · S&P 500 · Dow Jones · SOX · Russell 2000 · VKOSPI · VIXEQ · MSCI ACWI NTR USD</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${marketTrendRangeMarkup}</div>

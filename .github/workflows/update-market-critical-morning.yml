@@ -101,6 +101,14 @@ jobs:
                           or item.get("dayChangePct") is None
                       )
                   })
+                  incomplete.extend(
+                      str(card.get("symbol")) for card in payload.get("indexCards", [])
+                      if card.get("updatedAt") != latest_available
+                      or card.get("previousCloseDate") != previous_session
+                      or card.get("returns", {}).get("1d") is None
+                  )
+                  if len(payload.get("indexCards", [])) != 6:
+                      incomplete.append("index cards missing")
 
                   if current_date and latest_available and current_date >= latest_available and not incomplete:
                       should_run = False
@@ -142,6 +150,7 @@ jobs:
         if: steps.backup-guard.outputs.should_run == 'true'
         run: |
           python scripts/test_briefing_price_sessions.py
+          python scripts/test_index_price_history.py
           python scripts/update_market_prices.py
           python scripts/update_market_briefing.py
 

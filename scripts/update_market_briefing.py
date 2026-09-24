@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import re
@@ -18,6 +19,7 @@ import requests
 import yfinance as yf
 
 from fedwatch_data import build_fedwatch_snapshot as build_official_fedwatch_snapshot
+from index_price_history import item_to_frame, repair_recent_index_frames
 
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-briefing-data.js"
@@ -39,12 +41,12 @@ INDEX_PROXY_SYMBOLS = {
 }
 NASDAQ_ETF_SYMBOLS = frozenset({"DIA", "DRAM", "GDX", "IBB", "IWM", "QQQ", "QQQE", "RSP", "SOXX", "SPY", "XBI"})
 INDEX_CARD_CONFIGS = [
-    {"key": "dowjones", "label": "Dow Jones (DIA)", "symbol": "^DJI"},
-    {"key": "sp500", "label": "S&P 500 (SPY)", "symbol": "^GSPC"},
+    {"key": "dowjones", "label": "Dow Jones", "symbol": "^DJI"},
+    {"key": "sp500", "label": "S&P 500", "symbol": "^GSPC"},
     {"key": "nasdaq", "label": "NASDAQ Composite", "symbol": "^IXIC"},
-    {"key": "nasdaq100", "label": "NASDAQ 100 (QQQ)", "symbol": "^NDX"},
+    {"key": "nasdaq100", "label": "NASDAQ 100", "symbol": "^NDX"},
     {"key": "sox", "label": "필라델피아 반도체 (SOX)", "symbol": "^SOX"},
-    {"key": "russell2000", "label": "Russell 2000 (IWM)", "symbol": "^RUT"},
+    {"key": "russell2000", "label": "Russell 2000", "symbol": "^RUT"},
 ]
 USD_PER_KRW_SYMBOL = "KRW=X"
 ROTATION_BENCHMARK_SYMBOL = "QQQ"
@@ -995,10 +997,10 @@ def fetch_ohlc_frames(symbols: list[str]) -> dict[str, pd.DataFrame]:
             frame = history[symbol] if multi else history
         except KeyError:
             continue
-        if not {"High", "Low", "Close"}.issubset(set(frame.columns)):
+        if not {"Open", "High", "Low", "Close"}.issubset(set(frame.columns)):
             continue
-        output = frame[["High", "Low", "Close"]].copy()
-        output.columns = ["high", "low", "close"]
+        output = frame[["Open", "High", "Low", "Close"]].copy()
+        output.columns = ["open", "high", "low", "close"]
         output = output.dropna(subset=["close"]).sort_index()
         output = output[~output.index.duplicated(keep="last")]
         if len(output) >= 2:
@@ -1441,51 +1443,18 @@ def compute_atr_percent_from_ohlc(frame: pd.DataFrame, period: int = 21) -> floa
     return round(float(atr_pct), 2)
 
 
-def close_with_recent_proxy_gap_fill(symbol: str, close: pd.Series, close_frame: pd.DataFrame) -> pd.Series:
-    snapshot_date, _, index_prices = load_previous_market_prices()
-    if snapshot_date is not None and symbol in index_prices and len(close) >= 2:
-        prior_date = pd.Timestamp(close.index[-2]).normalize()
-        latest_date = pd.Timestamp(close.index[-1]).normalize()
-        if prior_date < snapshot_date < latest_date and snapshot_date not in close.index:
-            close = pd.concat([close, pd.Series([index_prices[symbol]], index=[snapshot_date])]).sort_index()
-
-    proxy_symbol = INDEX_PROXY_SYMBOLS.get(symbol)
-    if not proxy_symbol or proxy_symbol not in close_frame.columns or close.empty:
-        return close
-
-    proxy = close_frame[proxy_symbol].dropna().sort_index()
-    output = close.sort_index().copy()
-    if proxy.empty or len(output) < 2:
-        return output
-
-    recent_start = pd.Timestamp(output.index[-6]).normalize()
-    for date, proxy_close in proxy.items():
-        date = pd.Timestamp(date).normalize()
-        if date <= recent_start or date in output.index or date >= pd.Timestamp(output.index[-1]).normalize():
-            continue
-        prior_index = output[output.index < date]
-        prior_proxy = proxy[proxy.index < date]
-        if prior_index.empty or prior_proxy.empty:
-            continue
-        prior_close = normalize_number(prior_index.iloc[-1])
-        prior_proxy_close = normalize_number(prior_proxy.iloc[-1])
-        current_proxy_close = normalize_number(proxy_close)
-        if not prior_close or not prior_proxy_close or not current_proxy_close:
-            continue
-        output.loc[date] = prior_close * current_proxy_close / prior_proxy_close
-        output = output.sort_index()
-    return output
-
-
-def build_index_cards(close_frame: pd.DataFrame) -> list[dict[str, object]]:
+def build_index_cards(close_frame: pd.DataFrame, frames=None) -> list[dict[str, object]]:
     symbols = [str(item["symbol"]) for item in INDEX_CARD_CONFIGS]
-    frames = fetch_ohlc_frames(symbols)
+    frames = fetch_ohlc_frames(symbols) if frames is None else frames
+    price_path = OUTPUT_PATH.with_name("market-price-data.js")
+    cached = json.loads(price_path.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";")) if price_path.exists() else {}
+    cached_frames = {item["symbol"]: item_to_frame(item) for item in cached.get("items", {}).values() if item.get("symbol") in symbols}
+    frames = repair_recent_index_frames(frames, us_session_dates(close_frame), cached_frames)
     cards: list[dict[str, object]] = []
     for config in INDEX_CARD_CONFIGS:
         symbol = str(config["symbol"])
         frame = frames.get(symbol, pd.DataFrame())
         close = pd.Series(frame.get("close", pd.Series(dtype=float)), dtype=float).dropna()
-        close = close_with_recent_proxy_gap_fill(symbol, close, close_frame)
         returns = {key: None for key in MAP_RANGE_LABELS}
         price = previous_close = day_change_pct = None
         if len(close) >= 2:
@@ -1502,6 +1471,7 @@ def build_index_cards(close_frame: pd.DataFrame) -> list[dict[str, object]]:
                 "updatedAt": close.index.max().strftime("%Y-%m-%d") if not close.empty else None,
                 "price": round(price, 2) if price is not None else None,
                 "previousClose": round(previous_close, 2) if previous_close is not None else None,
+                "previousCloseDate": close.index[-2].strftime("%Y-%m-%d") if len(close) >= 2 else None,
                 "returns": returns,
                 "atr21Pct": compute_atr_percent_from_ohlc(frame, 21),
             }
@@ -2164,7 +2134,18 @@ def build_payload() -> dict[str, object]:
 
 
 def main() -> None:
-    payload = build_payload()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--indices-only", action="store_true", help="Refresh only index cards from the checked Index Trend history")
+    args = parser.parse_args()
+    if args.indices_only:
+        payload = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
+        prices = json.loads(OUTPUT_PATH.with_name("market-price-data.js").read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
+        frames = {item["symbol"]: item_to_frame(item) for item in prices["items"].values() if item["symbol"] in {config["symbol"] for config in INDEX_CARD_CONFIGS}}
+        closes = pd.concat({symbol: frame["close"] for symbol, frame in frames.items()}, axis=1)
+        payload["indexCards"] = build_index_cards(closes, frames)
+        payload["generatedAt"] = datetime.now(timezone.utc).isoformat()
+    else:
+        payload = build_payload()
     existing_updated_at = load_existing_updated_at()
     candidate_updated_at = str(payload.get("updatedAt") or "")
     if existing_updated_at and candidate_updated_at and candidate_updated_at < existing_updated_at:

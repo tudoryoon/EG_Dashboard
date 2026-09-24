@@ -25,6 +25,7 @@ jobs:
       - name: Refresh market briefing
         run: |
           python scripts/test_briefing_price_sessions.py
+          python scripts/test_index_price_history.py
           python scripts/update_market_briefing.py
 
       - name: Commit updated market briefing
