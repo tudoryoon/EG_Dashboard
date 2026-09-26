@@ -1,8 +1,8 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-09-25",
+  "updatedAt": "2026-09-26",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-09-25",
+  "calendarToday": "2026-09-26",
   "coverage": {
     "dailyBriefingUniverse": 213,
     "matchedEarnings": 21,
@@ -26,17 +26,17 @@ window.studyCalendarData = {
       "events": [
         {
           "date": "2026-09-24",
-          "time": "05:00 이후",
+          "time": "시간 미정",
           "kind": "earnings",
           "ticker": "COST",
-          "session": "A",
+          "session": "",
           "title": "Costco Wholesale Corporation (COST) 실적 발표",
           "note": "회계분기 종료 Aug/2026 · EPS 컨센서스 $6.48 · Nasdaq/Zacks 예상 일정",
           "sector": "필수 소비재",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-09-24",
           "usDate": "2026-09-24",
-          "kstDate": "2026-09-25",
+          "kstDate": "2026-09-24",
           "confirmed": false
         },
         {
@@ -398,7 +398,7 @@ window.studyCalendarData = {
           "ticker": "AA",
           "session": "A",
           "title": "Alcoa Corporation (AA) 실적 발표",
-          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $1.55 · Nasdaq/Zacks 예상 일정",
+          "note": "회계분기 종료 Sep/2026 · EPS 컨센서스 $1.58 · Nasdaq/Zacks 예상 일정",
           "sector": "원자재",
           "sourceLabel": "Nasdaq",
           "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
