@@ -124,7 +124,10 @@ def parse_fred_series_or_existing(
     series_key: str,
 ) -> tuple[list[str], list[float]]:
     try:
-        return parse_fred_series(series_id, start_date)
+        dates, values = parse_fred_series(series_id, start_date)
+        if not dates:
+            raise ValueError(f"Empty FRED series: {series_id}")
+        return dates, values
     except Exception as error:  # pragma: no cover - network variability
         dates, values = existing_macro_series(panel_key, series_key)
         if dates:
@@ -329,7 +332,7 @@ def parse_fred_series(series_id: str, start_date: str = START_DATE) -> tuple[lis
             values: list[float] = []
             for row in reader:
                 lower_row = {str(key).lower(): value for key, value in row.items()}
-                raw_date = (row.get("DATE") or lower_row.get("yyyymmdd") or "").strip()
+                raw_date = (lower_row.get("observation_date") or lower_row.get("date") or lower_row.get("yyyymmdd") or "").strip()
                 raw_value = (row.get(series_id) or lower_row.get(series_id.lower()) or "").strip()
                 if not raw_date or raw_value in {"", "."}:
                     continue
@@ -621,6 +624,9 @@ def main() -> None:
     rates_series["jp30y"] = build_series_item("Japan 30Y", "#dc2626", *japan_series["jp30y"], [6, 4])
     fed_funds_dates, fed_funds_values = build_policy_rate_series()
     gdp_dates, gdp_values = parse_real_gdp_annualized_series()
+    gdp_yoy_dates, gdp_yoy_values = parse_fred_series_or_existing(
+        "A191RO1Q156NBEA", GDP_START_DATE, "gdp", "real_gdp_yoy"
+    )
     liquidity_fed_dates, liquidity_fed_values = build_daily_forward_series(
         *filter_series_start(fed_funds_dates, fed_funds_values, LIQUIDITY_START_DATE),
         LIQUIDITY_START_DATE,
@@ -707,16 +713,20 @@ def main() -> None:
         },
         "gdp": {
             "title": "US GDP",
-            "subtitle": "Quarterly real GDP percent change from preceding period, seasonally adjusted annual rate, from 1981 Q1.",
-            "source": "FRED A191RL1Q225SBEA / BEA",
+            "subtitle": "Quarterly real GDP growth: YoY and annualized QoQ (SAAR), seasonally adjusted, from 1981 Q1.",
+            "source": "FRED A191RL1Q225SBEA / A191RO1Q156NBEA / BEA",
             "mode": "raw",
             "connectGaps": True,
             "fillMissing": "forward",
-            "yAxisLabel": "Annualized QoQ %",
+            "yAxisLabel": "GDP growth %",
             "formatter": "percent2",
             "series": {
                 "real_gdp_annualized": {
                     **build_series_item("Real GDP QoQ SAAR", "#8b5cf6", gdp_dates, gdp_values),
+                    "fillForward": True,
+                },
+                "real_gdp_yoy": {
+                    **build_series_item("Real GDP YoY", "#b45309", gdp_yoy_dates, gdp_yoy_values),
                     "fillForward": True,
                 },
             },

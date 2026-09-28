@@ -68,4 +68,36 @@ for (const payload of [run(`buildMacroDashboardChartPayload('1m')`), run(`buildT
 run(`macroIndicatorsData.releaseCalendar.groups.test = {
  '2026-01':{releaseDate:'2026-03-01'}, '2026-02':{releaseDate:'2026-03-01'}}`);
 assert.equal(run(`alignPublishedMacroSeries({dates:['2026-01','2026-02'],values:[1,2]}, 'test').values[0]`), 2);
+
+const gdpYoy = run(`getMacroDashboardItems().find(item => item.key === 'gdp:real_gdp_yoy')`);
+const totalGdpYoy = run(`getTotalDashboardSeriesItems().find(item => item.key === 'macro:gdp:real_gdp_yoy')`);
+assert.ok(gdpYoy && totalGdpYoy, 'GDP YoY must be selectable in both dashboards');
+assert.equal(gdpYoy.normalize, false);
+assert.equal(gdpYoy.axis, 'percent');
+assert.equal(totalGdpYoy.isRate, true);
+assert.deepEqual(gdpYoy.dates, totalGdpYoy.dates);
+assert.deepEqual(gdpYoy.values, totalGdpYoy.values);
+assert.ok(run(`marketMacroData.panels.gdp.series.real_gdp_yoy.dates.length >= 180`));
+assert.equal(run(`marketMacroData.panels.gdp.series.real_gdp_yoy.dates[0]`), '1981-01-01');
+assert.ok(run(`getMacroDashboardItems().some(item => item.key === 'gdp:real_gdp_annualized')`));
+assert.ok(run(`getTotalDashboardSeriesItems().some(item => item.key === 'macro:gdp:real_gdp_annualized')`));
+const q2 = gdpYoy.releasePoints.findIndex(point => point.reference === '2026-04');
+assert.ok(q2 > 0);
+assert.equal(gdpYoy.dates[q2], '2026-07-30');
+assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01-01'],values:[2]}, 'gdp').dates.length`), 0);
+run(`state.macroDashboardSelection = ['market:sp500','gdp:real_gdp_yoy'];
+state.totalDashboardSelection = ['market:sp500','macro:gdp:real_gdp_yoy'];
+state.macroDashboardCustomStart = state.totalDashboardCustomStart = '2026-07-29';
+state.macroDashboardCustomEnd = state.totalDashboardCustomEnd = '2026-08-03';`);
+for (const [payload, axis] of [
+  [run(`buildMacroDashboardChartPayload('1m')`), 'yPercent'],
+  [run(`buildTotalDashboardPayload('1m')`), 'yYield'],
+]) {
+  const dataset = payload.datasets.find(d => d.label === 'Real GDP YoY');
+  assert.equal(dataset.yAxisID, axis);
+  assert.equal(dataset.stepped, 'before');
+  assert.equal(dataset.data[payload.labels.indexOf('2026-07-29')], gdpYoy.values[q2 - 1]);
+  assert.equal(dataset.data[payload.labels.indexOf('2026-07-30')], gdpYoy.values[q2]);
+  assert.equal(dataset.data[payload.labels.indexOf('2026-08-03')], gdpYoy.values[q2]);
+}
 console.log('Macro release charts: date alignment, no look-ahead date shift, carry-in, nulls, same-day releases, and both dashboards PASS');
