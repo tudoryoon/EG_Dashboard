@@ -4074,6 +4074,132 @@ h1 {
   font-size: 1rem;
 }
 
+.total-spread-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.total-curve-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #66665f;
+}
+
+.total-curve-window {
+  display: inline-flex;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.total-curve-window button {
+  min-width: 42px;
+  min-height: 34px;
+  border: 0;
+  background: #fff;
+  color: #555550;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.total-curve-window button[aria-pressed="true"] {
+  background: #292925;
+  color: #fff;
+}
+
+.total-curve-window button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -3px;
+}
+
+.total-curve-summary {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(0, 2fr);
+  gap: 20px;
+  padding: 16px 0;
+  margin: 12px 0;
+  border-block: 1px solid #e4e4de;
+}
+
+.total-curve-state {
+  display: grid;
+  gap: 5px;
+  border-left: 4px solid var(--regime-color);
+  padding-left: 12px;
+}
+
+.total-curve-state span,
+.total-curve-state small,
+.total-curve-metrics dt {
+  font-size: 0.78rem;
+  color: #66665f;
+}
+
+.total-curve-state strong {
+  color: var(--regime-color);
+  font-size: 1.15rem;
+}
+
+.total-curve-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+.total-curve-metrics dd {
+  margin: 6px 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #252522;
+}
+
+.total-curve-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: #66665f;
+  font-size: 0.78rem;
+}
+
+.total-curve-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.total-curve-legend i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 2px;
+}
+
+.total-curve-basis {
+  margin: 10px 0 0;
+  color: #77776f;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.total-curve-basis a { margin-left: 6px; }
+
+@media (max-width: 640px) {
+  .total-curve-summary { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .total-curve-metrics { gap: 8px; }
+  .total-curve-metrics dt { line-height: 1.5; }
+  .total-curve-metrics dd { font-size: 1rem; }
+}
+
 .total-spread-head p {
   margin: 5px 0 0;
   color: #77776f;

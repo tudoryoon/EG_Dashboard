@@ -18,7 +18,7 @@ function toDateKey(date) { return date; }
 function shiftDateByRange() { return '2026-08-01'; }`, context);
 for (const name of ['getMacroDerivedValues', 'getMacroDashboardSeriesByKey', 'alignPublishedMacroSeries',
   'macroValueBefore', 'macroReleaseTooltip', 'buildMacroIndicatorDashboardItem', 'mergeSeriesPreferRecent',
-  'scaleSeriesValues', 'getMacroDashboardItems', 'getTotalDashboardSeriesItems',
+  'scaleSeriesValues', 'getMacroDashboardItems', 'getYieldCurveRows', 'getTotalDashboardSeriesItems',
   'getTotalDashboardSelectedItems', 'buildMacroDashboardChartPayload', 'buildTotalDashboardPayload']) {
   const start = code.indexOf(`function ${name}(`);
   assert.ok(start >= 0, name);

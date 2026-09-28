@@ -252,7 +252,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "macro:rates:us5y": "#22c55e",
   "macro:rates:us10y": "#14b8a6",
   "macro:rates:us30y": "#06b6d4",
-  "macro:rates:us10y_minus_us30y": "#475569",
+  "macro:rates:us30y_minus_us10y": "#475569",
   "macro:rates:jp2y": "#f59e0b",
   "macro:rates:jp10y": "#f97316",
   "macro:rates:jp30y": "#ef4444",
@@ -277,6 +277,21 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "indicator:core_ppi_yoy": "#dc2626",
 };
 const MARKET_PRICE_EMA_OPTIONS = [20, 50, 100, 200];
+const YIELD_CURVE_WINDOWS = [
+  { sessions: 1, label: "1D" },
+  { sessions: 5, label: "1W" },
+  { sessions: 21, label: "1M" },
+  { sessions: 63, label: "3M" },
+];
+const YIELD_CURVE_REGIMES = {
+  bear_steepening: { label: "베어 스티프닝", color: "#c2410c" },
+  bear_flattening: { label: "베어 플래트닝", color: "#be123c" },
+  bull_steepening: { label: "불 스티프닝", color: "#2563eb" },
+  bull_flattening: { label: "불 플래트닝", color: "#0f766e" },
+  mixed: { label: "혼합 / 트위스트", color: "#78716c" },
+  neutral: { label: "중립 / 평행 이동", color: "#a1a1aa" },
+  insufficient: { label: "데이터 부족", color: "#d4d4d8" },
+};
 const MARKET_TREND_PRICE_CHART_TYPES = [
   { key: "candle", label: "Candle" },
   { key: "line", label: "Line" },
@@ -417,10 +432,11 @@ const state = {
     "market:nasdaq100",
     "macro:rates:us10y",
     "macro:rates:us30y",
-    "macro:rates:us10y_minus_us30y",
+    "macro:rates:us30y_minus_us10y",
   ],
   totalDashboardCustomStart: "",
   totalDashboardCustomEnd: "",
+  totalCurveWindow: 21,
   briefingMapRange: "1d",
   briefingRotationSectorKey: "",
   briefingRotationDistributionBenchmark: "qqq",
@@ -3686,9 +3702,82 @@ function createMarketVixCurveChart(canvas) {
   charts.push(chart);
 }
 
+function getYieldCurveRows(rates = marketMacroData?.panels?.rates?.series ?? {}) {
+  const validRate = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  const toMap = (item) => new Map((item?.dates ?? []).flatMap((date, index) =>
+    validRate(item.values?.[index]) ? [[date, Number(item.values[index])]] : [],
+  ));
+  const ten = toMap(rates.us10y);
+  const thirty = toMap(rates.us30y);
+  return [...ten.keys()].filter((date) => thirty.has(date)).sort().map((date) => ({
+    date, ten: ten.get(date), thirty: thirty.get(date),
+    spread: Number((thirty.get(date) - ten.get(date)).toFixed(3)),
+  }));
+}
+
+function classifyYieldCurve(delta10, delta30) {
+  if (![delta10, delta30].every(Number.isFinite)) {
+    return { key: "insufficient", ...YIELD_CURVE_REGIMES.insufficient };
+  }
+  const slopeBp = Number((delta30 - delta10).toFixed(6));
+  // Rates are published to 1bp precision; smaller moves are neutral.
+  const direction = (bp) => Math.abs(bp) < 1 - 1e-6 ? 0 : Math.sign(bp);
+  const tenDirection = direction(delta10);
+  const thirtyDirection = direction(delta30);
+  const slopeDirection = direction(slopeBp);
+  const shape = slopeDirection > 0 ? "스티프닝" : slopeDirection < 0 ? "플래트닝" : "평행 이동";
+  let key;
+  let label;
+  if (tenDirection * thirtyDirection < 0) {
+    key = "mixed";
+    label = `혼합 ${shape}`;
+  } else {
+    const move = tenDirection || thirtyDirection;
+    if (!move || !slopeDirection) {
+      key = "neutral";
+      label = move > 0 ? "베어 평행 이동" : move < 0 ? "불 평행 이동" : "중립";
+    } else {
+      key = `${move > 0 ? "bear" : "bull"}_${slopeDirection > 0 ? "steepening" : "flattening"}`;
+    }
+  }
+  return { key, ...YIELD_CURVE_REGIMES[key], ...(label ? { label } : {}), delta10, delta30, slopeBp };
+}
+
+function buildYieldCurveRegimeSeries(rows, sessions = state.totalCurveWindow) {
+  const lookback = YIELD_CURVE_WINDOWS.some((item) => item.sessions === sessions) ? sessions : 21;
+  return rows.map((row, index) => {
+    const base = rows[index - lookback];
+    return {
+      ...row, baseDate: base?.date ?? null, sessions: lookback,
+      ...classifyYieldCurve(
+        base ? Number(((row.ten - base.ten) * 100).toFixed(6)) : null,
+        base ? Number(((row.thirty - base.thirty) * 100).toFixed(6)) : null,
+      ),
+    };
+  });
+}
+
+function formatYieldCurveBp(value) {
+  return Number.isFinite(value) ? `${value > 0 ? "+" : ""}${value.toFixed(1)}bp` : "-";
+}
+
+function renderYieldCurveSummary(point) {
+  const current = point ?? YIELD_CURVE_REGIMES.insufficient;
+  return `<div class="total-curve-summary" aria-live="polite">
+    <div class="total-curve-state" style="--regime-color:${current.color}">
+      <span>10Y / 30Y 금리 국면</span><strong>${current.label}</strong>
+      <small>${point?.baseDate ? `${point.baseDate} → ${point.date}` : point?.date ? `${point.date} · 비교 이력 부족` : "선택 구간 데이터 없음"}</small>
+    </div>
+    <dl class="total-curve-metrics">
+      <div><dt>US 10Y 변화</dt><dd>${formatYieldCurveBp(point?.delta10)}</dd></div>
+      <div><dt>US 30Y 변화</dt><dd>${formatYieldCurveBp(point?.delta30)}</dd></div>
+      <div><dt>30Y−10Y 금리차 변화</dt><dd>${formatYieldCurveBp(point?.slopeBp)}</dd></div>
+    </dl>
+  </div>`;
+}
+
 function getTotalDashboardSeriesItems() {
   const items = [];
-  const rateSeries = marketMacroData?.panels?.rates?.series ?? {};
 
   Object.entries(marketPriceData?.items ?? {}).forEach(([key, item]) => {
     if (key === "dxy") {
@@ -3734,25 +3823,17 @@ function getTotalDashboardSeriesItems() {
     });
   });
 
-  const us10yByDate = new Map(
-    (rateSeries.us10y?.dates ?? []).map((date, index) => [date, Number(rateSeries.us10y?.values?.[index])]),
-  );
-  const us30yByDate = new Map(
-    (rateSeries.us30y?.dates ?? []).map((date, index) => [date, Number(rateSeries.us30y?.values?.[index])]),
-  );
-  const us10y30yDates = [...us10yByDate.keys()]
-    .filter((date) => Number.isFinite(us10yByDate.get(date)) && Number.isFinite(us30yByDate.get(date)))
-    .sort();
-  if (us10y30yDates.length) {
+  const curveRows = getYieldCurveRows();
+  if (curveRows.length) {
     items.push({
-      key: "macro:rates:us10y_minus_us30y",
+      key: "macro:rates:us30y_minus_us10y",
       group: "Rates",
-      label: "US 10Y - 30Y",
+      label: "US 30Y - 10Y",
       color: "#475569",
-      dates: us10y30yDates,
-      values: us10y30yDates.map((date) => Number((us10yByDate.get(date) - us30yByDate.get(date)).toFixed(3))),
+      dates: curveRows.map((row) => row.date),
+      values: curveRows.map((row) => row.spread),
       formatter: "percent2",
-      rawLabel: "US 10Y - 30Y",
+      rawLabel: "US 30Y - 10Y",
       isRate: true,
       chartType: "bar",
     });
@@ -3931,6 +4012,8 @@ function buildTotalDashboardPayload(rangeKey) {
 
 function buildTotalDashboardBarPayload(rangeKey) {
   const totalPayload = buildTotalDashboardPayload(rangeKey);
+  const regimeByDate = new Map(buildYieldCurveRegimeSeries(getYieldCurveRows()).map((point) => [point.date, point]));
+  const regimes = totalPayload.labels.map((date) => regimeByDate.get(date) ?? null);
   const barItems = getTotalDashboardSelectedItems().filter((item) => item.chartType === "bar");
   const datasets = barItems.map((item) => {
     const valuesByDate = new Map(
@@ -3947,7 +4030,13 @@ function buildTotalDashboardBarPayload(rangeKey) {
       formatter: item.formatter,
     };
   });
-  return { labels: totalPayload.labels, datasets };
+  return { labels: totalPayload.labels, datasets, regimes };
+}
+
+function fitTotalDashboardDateTicks(indexes, width) {
+  const count = Math.min(indexes.length, Math.max(2, Math.floor((width - 100) / 70)));
+  if (indexes.length <= count) return indexes;
+  return Array.from({ length: count }, (_, index) => indexes[Math.round(index * (indexes.length - 1) / (count - 1))]);
 }
 
 function createTotalDashboardChart(canvas, rangeKey) {
@@ -4014,7 +4103,8 @@ function createTotalDashboardChart(canvas, rangeKey) {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            axis.ticks = buildRegularDateTickIndexes(payload.labels, rangeKey).map((index) => ({ value: index }));
+            axis.ticks = fitTotalDashboardDateTicks(buildRegularDateTickIndexes(payload.labels, rangeKey), axis.chart.width)
+              .map((index) => ({ value: index }));
           },
           ticks: {
             color: "#8d8d86",
@@ -4077,8 +4167,6 @@ function createTotalDashboardSpreadChart(canvas, rangeKey) {
   const maxAbsoluteValue = Math.max(...values.map((value) => Math.abs(value)), 0.05);
   const axisLimit = Math.ceil(maxAbsoluteValue * 1.18 * 100) / 100;
   const tickIndexes = buildRegularDateTickIndexes(payload.labels, rangeKey);
-  const positiveFill = "rgba(22, 163, 74, 0.78)";
-  const negativeFill = "rgba(220, 38, 38, 0.78)";
 
   const chart = new Chart(canvas, {
     type: "bar",
@@ -4087,10 +4175,8 @@ function createTotalDashboardSpreadChart(canvas, rangeKey) {
       datasets: payload.datasets.map((dataset) => ({
         label: dataset.label,
         data: dataset.data,
-        backgroundColor: dataset.data.map((value) =>
-          Number(value) >= 0 ? positiveFill : negativeFill,
-        ),
-        borderColor: dataset.data.map((value) => (Number(value) >= 0 ? "#15803d" : "#b91c1c")),
+        backgroundColor: payload.regimes.map((point) => point?.color ?? YIELD_CURVE_REGIMES.insufficient.color),
+        borderColor: payload.regimes.map((point) => point?.color ?? YIELD_CURVE_REGIMES.insufficient.color),
         borderWidth: 0.4,
         borderSkipped: false,
         categoryPercentage: 1,
@@ -4109,6 +4195,18 @@ function createTotalDashboardSpreadChart(canvas, rangeKey) {
           callbacks: {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toFixed(2)}%p`,
+            afterLabel: (context) => {
+              const point = payload.regimes[context.dataIndex];
+              if (!point) return [];
+              if (!point.baseDate) return [point.label];
+              return [
+                point.label,
+                `US 10Y ${point.ten.toFixed(2)}% (${formatYieldCurveBp(point.delta10)})`,
+                `US 30Y ${point.thirty.toFixed(2)}% (${formatYieldCurveBp(point.delta30)})`,
+                `30Y−10Y 변화 ${formatYieldCurveBp(point.slopeBp)}`,
+                `${point.baseDate} 대비 · ${point.sessions}개 공통 관측일`,
+              ];
+            },
           },
         },
       },
@@ -4116,7 +4214,7 @@ function createTotalDashboardSpreadChart(canvas, rangeKey) {
         x: {
           grid: { display: false },
           afterBuildTicks: (axis) => {
-            axis.ticks = tickIndexes.map((index) => ({ value: index }));
+            axis.ticks = fitTotalDashboardDateTicks(tickIndexes, axis.chart.width).map((index) => ({ value: index }));
           },
           ticks: {
             color: "#8d8d86",
@@ -4136,7 +4234,7 @@ function createTotalDashboardSpreadChart(canvas, rangeKey) {
           },
           title: {
             display: true,
-            text: "10Y - 30Y (%p)",
+            text: "30Y - 10Y (%p)",
             color: "#8d8d86",
           },
           grid: {
@@ -19265,6 +19363,9 @@ function renderMarketOverview() {
   const selectedTotalBarItems = totalSeriesItems.filter(
     (item) => item.chartType === "bar" && (state.totalDashboardSelection ?? []).includes(item.key),
   );
+  const curvePayload = selectedTotalBarItems.length ? buildTotalDashboardBarPayload(state.totalDashboardRange) : null;
+  const curveLatest = curvePayload?.regimes.filter(Boolean).at(-1);
+  const curveWindow = YIELD_CURVE_WINDOWS.find((item) => item.sessions === state.totalCurveWindow) ?? YIELD_CURVE_WINDOWS[2];
   const totalSeriesMarkup = totalSeriesItems
     .map(
       (item) => `
@@ -19342,13 +19443,26 @@ function renderMarketOverview() {
               <section class="total-spread-panel">
                 <div class="total-spread-head">
                   <div>
-                    <h3>US 10Y - 30Y Spread</h3>
-                    <p>10년물 금리에서 30년물 금리를 뺀 값입니다. 0%p 아래의 빨간 막대는 30년물 금리가 더 높은 상태를 뜻합니다.</p>
+                    <h3>US 30Y - 10Y Spread</h3>
+                    <p>30년물−10년물 · 스프레드 상승 = 스티프닝 / 하락 = 플래트닝</p>
                   </div>
+                  <div class="total-curve-controls">
+                    <span>국면 비교 기간</span>
+                    <div class="total-curve-window" role="group" aria-label="금리 국면 비교 기간">
+                      ${YIELD_CURVE_WINDOWS.map((item) => `<button type="button" data-curve-window="${item.sessions}" aria-pressed="${item.sessions === curveWindow.sessions}">${item.label}</button>`).join("")}
+                    </div>
+                  </div>
+                </div>
+                ${renderYieldCurveSummary(curveLatest)}
+                <div class="total-curve-legend">
+                  ${Object.entries(YIELD_CURVE_REGIMES).filter(([key]) => key !== "insufficient").map(([, item]) => `<span><i style="background:${item.color}"></i>${item.label}</span>`).join("")}
                 </div>
                 <div class="total-spread-chart-wrap">
                   <canvas data-market-total-spread="overview"></canvas>
                 </div>
+                <p class="total-curve-basis">10Y·30Y 공통 관측일 ${curveWindow.sessions}개 전 대비 · 1bp 미만 변화는 중립 · 불/베어는 채권 가격 기준 · 10Y–30Y 구간만 판정
+                  <a href="https://www.cmegroup.com/articles/2024/bond-and-beyond.html" target="_blank" rel="noopener noreferrer">국면 정의</a>
+                </p>
               </section>`
             : ""
         }
@@ -19442,6 +19556,17 @@ function renderMarketOverview() {
   if (totalSpreadCanvas) {
     createTotalDashboardSpreadChart(totalSpreadCanvas, state.totalDashboardRange);
   }
+
+  usOverviewRoot.querySelectorAll("[data-curve-window]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sessions = Number(button.dataset.curveWindow);
+      if (!YIELD_CURVE_WINDOWS.some((item) => item.sessions === sessions)) return;
+      state.totalCurveWindow = sessions;
+      const position = { left: window.scrollX, top: window.scrollY };
+      render();
+      window.scrollTo({ ...position, behavior: "instant" });
+    });
+  });
 
   const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
   if (relativeCanvas) {
