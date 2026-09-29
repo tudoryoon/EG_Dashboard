@@ -397,6 +397,7 @@ const state = {
   marketPriceRange: "3y",
   yieldDecompositionRange: "3y",
   yieldDecompositionMode: "stacked",
+  yieldDecompositionHidden: [],
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendChartType: "candle",
@@ -4068,6 +4069,7 @@ function buildYieldDecompositionPayload(rangeKey, mode = state.yieldDecompositio
   const datasets = components.map((item, index) => ({
     label: item.label,
     componentKey: item.key,
+    hidden: !stacked && (state.yieldDecompositionHidden ?? []).includes(item.key),
     rawValues: rows.map((row) => row[item.key]),
     // Explicit cumulative boundaries preserve the algebraic sum even when a component is negative.
     data: rows.map((row) => stacked
@@ -4085,6 +4087,8 @@ function buildYieldDecompositionPayload(rangeKey, mode = state.yieldDecompositio
   }));
   datasets.push({
     label: "시장금리 (DKW 원본)",
+    componentKey: "marketYield",
+    hidden: !stacked && (state.yieldDecompositionHidden ?? []).includes("marketYield"),
     data: rows.map((row) => row.marketYield),
     rawValues: rows.map((row) => row.marketYield),
     borderColor: "#171717", backgroundColor: "#171717",
@@ -4123,7 +4127,9 @@ function renderYieldDecompositionPanel() {
       </div>
     </div>
     ${latest ? `<dl class="yield-decomposition-metrics">${metrics.map(([label, value, color]) => `<div><dt>${label}</dt><dd style="color:${color}">${value}</dd></div>`).join("")}</dl>
-      <div class="total-curve-legend">${payload.datasets.map((dataset) => `<span><i style="background:${dataset.borderColor}"></i>${dataset.label}</span>`).join("")}</div>
+      <div class="total-curve-legend yield-decomposition-legend" role="group" aria-label="금리 분해 요소">${payload.datasets.map((dataset) => state.yieldDecompositionMode === "lines"
+        ? `<label><input type="checkbox" data-yield-component="${dataset.componentKey}" style="accent-color:${dataset.borderColor}" ${dataset.hidden ? "" : "checked"}><i style="background:${dataset.borderColor}"></i>${dataset.label}</label>`
+        : `<span><i style="background:${dataset.borderColor}"></i>${dataset.label}</span>`).join("")}</div>
       <div class="yield-decomposition-chart"><canvas data-yield-decomposition="10y" role="img" aria-label="10년 명목금리의 기대 실질금리, 기대 인플레이션, 기간 프리미엄 분해"></canvas></div>`
       : `<p class="empty-state">금리 분해 데이터가 아직 없습니다.</p>`}
     <details class="yield-decomposition-notes">
@@ -19702,6 +19708,19 @@ function renderMarketOverview() {
   if (decompositionCanvas) {
     createYieldDecompositionChart(decompositionCanvas);
   }
+  usOverviewRoot.querySelectorAll("[data-yield-component]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const key = input.dataset.yieldComponent;
+      state.yieldDecompositionHidden = (state.yieldDecompositionHidden ?? []).filter((item) => item !== key);
+      if (!input.checked) state.yieldDecompositionHidden.push(key);
+      const chart = Chart.getChart(decompositionCanvas);
+      const index = chart?.data.datasets.findIndex((dataset) => dataset.componentKey === key);
+      if (index >= 0) {
+        chart.setDatasetVisibility(index, input.checked);
+        chart.update("none");
+      }
+    });
+  });
 }
 
 function renderMarketMacroOverview() {

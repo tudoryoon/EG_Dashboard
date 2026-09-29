@@ -4215,6 +4215,10 @@ h1 {
 .yield-decomposition-metrics dd { margin: 6px 0 0; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .yield-decomposition-chart { position: relative; height: 340px; margin-top: 12px; }
 .yield-decomposition-chart canvas { display: block; width: 100%; height: 100%; }
+.yield-decomposition-legend label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; min-height: 28px; }
+.yield-decomposition-legend input { width: 16px; height: 16px; margin: 0; }
+.yield-decomposition-legend label:has(input:not(:checked)) { color: #77776f; }
+.yield-decomposition-legend label:has(input:not(:checked)) i { opacity: 0.3; }
 .yield-decomposition-notes { margin-top: 12px; color: #66665f; font-size: 0.78rem; line-height: 1.65; }
 .yield-decomposition-notes summary { cursor: pointer; font-weight: 600; }
 .yield-decomposition-notes p { margin: 8px 0; }

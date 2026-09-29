@@ -56,6 +56,22 @@ assert.ok(run('renderYieldDecompositionPanel()').includes('아직 없습니다')
 context.marketMacroData = data.window.marketMacroData;
 const html = run('renderYieldDecompositionPanel()');
 assert.ok(html.includes('DKW_updates.csv') && html.includes('제로쿠폰') && html.includes('월간 공개'));
+assert.ok(!html.includes('data-yield-component='), 'Stacked mode has no component toggles');
+context.state.yieldDecompositionMode = 'lines';
+context.state.yieldDecompositionHidden = ['expectedInflation', 'marketYield'];
+const selectable = run('renderYieldDecompositionPanel()');
+assert.equal((selectable.match(/data-yield-component=/g) || []).length, 4);
+assert.equal((selectable.match(/ checked>/g) || []).length, 2);
+for (const range of ['1m', '3y', 'max']) {
+  const selected = run(`buildYieldDecompositionPayload('${range}', 'lines')`);
+  assert.deepEqual(Array.from(selected.datasets, dataset => dataset.hidden), [false, true, false, true]);
+  const stacked = run(`buildYieldDecompositionPayload('${range}', 'stacked')`);
+  assert.ok(stacked.datasets.every(dataset => !dataset.hidden), 'Stacked sum always includes all components');
+}
+context.state.yieldDecompositionHidden = ['expectedReal', 'expectedInflation', 'termPremium', 'marketYield'];
+assert.ok(run(`buildYieldDecompositionPayload('3y', 'lines').datasets.every(dataset => dataset.hidden)`));
+context.createYieldDecompositionChart({});
+assert.equal(config.options.plugins.tooltip.callbacks.afterBody([]).length, 0);
 assert.ok(!source.includes('<h2>Market Relative Performance</h2>'));
 assert.ok(source.indexOf('${renderYieldDecompositionPanel()}') > source.indexOf('<h3>US 30Y - 10Y Spread</h3>'));
 console.log('DKW decomposition: full-history identity, signed areas, raw tooltip, all ranges, no extrapolation, empty state and placement PASS');
