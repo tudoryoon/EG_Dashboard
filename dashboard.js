@@ -395,6 +395,8 @@ const state = {
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
   marketPriceRange: "3y",
+  yieldDecompositionRange: "3y",
+  yieldDecompositionMode: "stacked",
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendChartType: "candle",
@@ -4038,6 +4040,148 @@ function fitTotalDashboardDateTicks(indexes, width) {
   const count = Math.min(indexes.length, Math.max(2, Math.floor((width - 100) / 70)));
   if (indexes.length <= count) return indexes;
   return Array.from({ length: count }, (_, index) => indexes[Math.round(index * (indexes.length - 1) / (count - 1))]);
+}
+
+function getYieldDecompositionRows(data = marketMacroData?.yieldDecomposition) {
+  const fields = ["expectedReal", "expectedInflation", "realTermPremium", "inflationRiskPremium", "marketYield", "modelYield"];
+  return (data?.dates ?? []).flatMap((date, index) => {
+    const values = fields.map((key) => data.series?.[key]?.[index]);
+    if (!values.every((value) => typeof value === "number" && Number.isFinite(value))) return [];
+    const row = Object.fromEntries(fields.map((key, position) => [key, values[position]]));
+    const termPremium = row.realTermPremium + row.inflationRiskPremium;
+    return [{ date, ...row, termPremium, residualBp: (row.marketYield - row.modelYield) * 100 }];
+  });
+}
+
+function buildYieldDecompositionPayload(rangeKey, mode = state.yieldDecompositionMode) {
+  const allRows = getYieldDecompositionRows();
+  const allDates = allRows.map((row) => row.date);
+  const end = allDates.at(-1);
+  const start = end ? shiftDateByRange(end, rangeKey, allDates[0], allDates) : "";
+  const rows = allRows.filter((row) => row.date >= start);
+  const stacked = mode === "stacked";
+  const components = [
+    { key: "expectedReal", label: "기대 실질금리", color: "#0f766e", shade: "rgba(15,118,110,0.48)" },
+    { key: "expectedInflation", label: "기대 인플레이션", color: "#2563eb", shade: "rgba(37,99,235,0.40)" },
+    { key: "termPremium", label: "기간 프리미엄", color: "#d97706", shade: "rgba(217,119,6,0.48)" },
+  ];
+  const datasets = components.map((item, index) => ({
+    label: item.label,
+    componentKey: item.key,
+    rawValues: rows.map((row) => row[item.key]),
+    // Explicit cumulative boundaries preserve the algebraic sum even when a component is negative.
+    data: rows.map((row) => stacked
+      ? components.slice(0, index + 1).reduce((sum, component) => sum + row[component.key], 0)
+      : row[item.key]),
+    borderColor: item.color,
+    backgroundColor: item.shade,
+    borderWidth: stacked ? 1 : 1.8,
+    fill: stacked ? (index === 0 ? "origin" : index - 1) : false,
+    pointRadius: 0,
+    pointHoverRadius: 3,
+    tension: 0,
+    spanGaps: false,
+    order: index + 1,
+  }));
+  datasets.push({
+    label: "시장금리 (DKW 원본)",
+    data: rows.map((row) => row.marketYield),
+    rawValues: rows.map((row) => row.marketYield),
+    borderColor: "#171717", backgroundColor: "#171717",
+    borderWidth: 2, fill: false, pointRadius: 0, pointHoverRadius: 3, tension: 0, order: 0,
+  });
+  return { labels: rows.map((row) => row.date), rows, datasets };
+}
+
+function renderYieldDecompositionPanel() {
+  const data = marketMacroData?.yieldDecomposition;
+  const payload = buildYieldDecompositionPayload(state.yieldDecompositionRange);
+  const latest = payload.rows.at(-1);
+  const rate = (value) => Number.isFinite(value) ? `${value.toFixed(2)}%` : "-";
+  const metrics = latest ? [
+    ["기대 실질금리", rate(latest.expectedReal), "#0f766e"],
+    ["기대 인플레이션", rate(latest.expectedInflation), "#2563eb"],
+    ["기간 프리미엄", rate(latest.termPremium), "#d97706"],
+    ["모형 합계", rate(latest.modelYield), "#555550"],
+    ["시장금리 · 원본", rate(latest.marketYield), "#171717"],
+    ["차이 · 시장−모형", formatYieldCurveBp(latest.residualBp), "#555550"],
+  ] : [];
+  return `<section class="total-spread-panel yield-decomposition-panel" aria-labelledby="yield-decomposition-title">
+    <div class="total-spread-head">
+      <div>
+        <h3 id="yield-decomposition-title">10Y 명목금리 분해</h3>
+        <p>DKW 단일 모델 · 관측 기준 ${data?.updatedAt || "-"} · 일별 관측 / 월간 공개</p>
+      </div>
+      <div class="yield-decomposition-controls">
+        <div class="m7-range-row" role="group" aria-label="금리 분해 기간">
+          ${(marketMacroData.ranges ?? []).map((range) => `<button type="button" class="m7-range-chip${state.yieldDecompositionRange === range.key ? " active" : ""}" data-yield-range="${range.key}" aria-pressed="${state.yieldDecompositionRange === range.key}">${range.label}</button>`).join("")}
+        </div>
+        <div class="total-curve-window" role="group" aria-label="금리 분해 표시 방식">
+          <button type="button" data-yield-mode="stacked" aria-pressed="${state.yieldDecompositionMode === "stacked"}">누적 분해</button>
+          <button type="button" data-yield-mode="lines" aria-pressed="${state.yieldDecompositionMode === "lines"}">개별 추이</button>
+        </div>
+      </div>
+    </div>
+    ${latest ? `<dl class="yield-decomposition-metrics">${metrics.map(([label, value, color]) => `<div><dt>${label}</dt><dd style="color:${color}">${value}</dd></div>`).join("")}</dl>
+      <div class="total-curve-legend">${payload.datasets.map((dataset) => `<span><i style="background:${dataset.borderColor}"></i>${dataset.label}</span>`).join("")}</div>
+      <div class="yield-decomposition-chart"><canvas data-yield-decomposition="10y" role="img" aria-label="10년 명목금리의 기대 실질금리, 기대 인플레이션, 기간 프리미엄 분해"></canvas></div>`
+      : `<p class="empty-state">금리 분해 데이터가 아직 없습니다.</p>`}
+    <details class="yield-decomposition-notes">
+      <summary>산식 · 출처 · 한계</summary>
+      <p>모형 금리 = 향후 10년 평균 기대 단기 실질금리 + 기대 인플레이션 + 기간 프리미엄. 기간 프리미엄은 DKW 실질 기간 프리미엄과 인플레이션 위험 프리미엄의 합입니다. 기대 실질금리는 TIPS 금리 자체가 아닙니다.</p>
+      <p>시장금리는 DKW 원본의 10년 제로쿠폰 금리로, 상단 Treasury 10Y(파 수익률)와 기준이 다릅니다. 시장−모형 차이는 별도 표시하며 구성요소에 억지로 배분하지 않습니다. 음수 구성요소도 부호를 유지합니다.</p>
+      <p>월간 공개 자료로 최신 관측일까지 표시합니다. 최근 미공개 기간은 연장하지 않습니다. 과거 수치도 재추정되는 연구 자료이며 당시 추정치를 복원한 데이터가 아닙니다.</p>
+      <a href="https://www.federalreserve.gov/econres/notes/feds-notes/tips-from-tips-update-and-discussions-20190521.html" target="_blank" rel="noopener noreferrer">Federal Reserve · DKW 산식</a>
+      <a href="https://www.federalreserve.gov/econres/notes/feds-notes/DKW_updates.csv" target="_blank" rel="noopener noreferrer">원본 CSV</a>
+    </details>
+  </section>`;
+}
+
+function createYieldDecompositionChart(canvas) {
+  if (typeof Chart === "undefined") return;
+  const range = state.yieldDecompositionRange;
+  const payload = buildYieldDecompositionPayload(range);
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: payload.labels, datasets: payload.datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          itemSort: (a, b) => a.datasetIndex - b.datasetIndex,
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${context.dataset.rawValues[context.dataIndex].toFixed(3)}%`,
+            afterBody: (items) => {
+              const row = payload.rows[items[0]?.dataIndex];
+              return row ? [
+                `모형 합계: ${row.modelYield.toFixed(3)}%`,
+                `시장−모형: ${formatYieldCurveBp(row.residualBp)}`,
+                `기간 프리미엄 세부: 실질 ${row.realTermPremium.toFixed(3)}%p + 물가위험 ${row.inflationRiskPremium.toFixed(3)}%p`,
+              ] : [];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = fitTotalDashboardDateTicks(buildRegularDateTickIndexes(payload.labels, range), axis.chart.width).map((index) => ({ value: index }));
+          },
+          ticks: { autoSkip: false, maxRotation: 0, color: "#77776f", callback: (value) => formatRangeAxisDate(payload.labels[value], range) },
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "금리 / 기여도 (%)", color: "#77776f" },
+          ticks: { maxTicksLimit: 7, callback: (value) => `${Number(value).toFixed(1)}%`, color: "#77776f" },
+          grid: { color: "rgba(70,70,66,0.10)" },
+        },
+      },
+    },
+  });
+  charts.push(chart);
 }
 
 function createTotalDashboardChart(canvas, rangeKey) {
@@ -19353,19 +19497,6 @@ function renderMarketOverview() {
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
 
-  const rangeMarkup = ((marketMacroData.ranges ?? []).length ? marketMacroData.ranges : marketPriceData.ranges ?? [])
-    .map(
-      (range) => `
-        <button
-          type="button"
-          class="m7-range-chip${state.marketPriceRange === range.key ? " active" : ""}"
-          data-market-range="${range.key}"
-        >
-          ${range.label}
-        </button>`,
-    )
-    .join("");
-
   const marketUpdatedAt = [marketPriceData.updatedAt, marketMacroData.updatedAt].filter(Boolean).sort().slice(-1)[0] || "-";
   const totalBounds = getTotalDashboardBounds();
   const totalStartValue = state.totalDashboardCustomStart || "";
@@ -19477,31 +19608,10 @@ function renderMarketOverview() {
               </section>`
             : ""
         }
-      </section>
-      <section class="us-panel us-price-panel">
-        <div class="us-section-head us-price-head">
-          <div>
-            <h2>Market Relative Performance</h2>
-            <p>Daily close normalized to 100 at the selected start date. YTD uses the final valid close of the prior calendar year. Max begins ${marketPriceData.startDate ?? "2017-01-01"}.</p>
-          </div>
-          <div class="us-price-controls">
-            <div class="m7-range-row">${rangeMarkup}</div>
-            <div class="us-price-updated">Updated ${marketUpdatedAt}</div>
-          </div>
-        </div>
-        <div class="us-price-chart-wrap">
-          <canvas data-market-relative="performance"></canvas>
-        </div>
+        ${renderYieldDecompositionPanel()}
       </section>
     </section>
   `;
-
-  usOverviewRoot.querySelectorAll("[data-market-range]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.marketPriceRange = button.dataset.marketRange || marketPriceData.defaultRange || "max";
-      render();
-    });
-  });
 
   usOverviewRoot.querySelectorAll("[data-total-range]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -19579,9 +19689,18 @@ function renderMarketOverview() {
     });
   });
 
-  const relativeCanvas = usOverviewRoot.querySelector('[data-market-relative="performance"]');
-  if (relativeCanvas) {
-    createMarketRelativeChart(relativeCanvas, state.marketPriceRange);
+  usOverviewRoot.querySelectorAll("[data-yield-range], [data-yield-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.yieldRange) state.yieldDecompositionRange = button.dataset.yieldRange;
+      if (button.dataset.yieldMode) state.yieldDecompositionMode = button.dataset.yieldMode;
+      const position = { left: window.scrollX, top: window.scrollY };
+      render();
+      window.scrollTo({ ...position, behavior: "instant" });
+    });
+  });
+  const decompositionCanvas = usOverviewRoot.querySelector('[data-yield-decomposition="10y"]');
+  if (decompositionCanvas) {
+    createYieldDecompositionChart(decompositionCanvas);
   }
 }
 

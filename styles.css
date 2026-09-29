@@ -4193,6 +4193,40 @@ h1 {
 
 .total-curve-basis a { margin-left: 6px; }
 
+.yield-decomposition-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.yield-decomposition-controls .total-curve-window button { padding-inline: 12px; }
+.yield-decomposition-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  padding: 14px 0;
+  border-block: 1px solid #e4e4de;
+}
+.yield-decomposition-metrics dt { font-size: 0.78rem; color: #66665f; line-height: 1.5; }
+.yield-decomposition-metrics dd { margin: 6px 0 0; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.yield-decomposition-chart { position: relative; height: 340px; margin-top: 12px; }
+.yield-decomposition-chart canvas { display: block; width: 100%; height: 100%; }
+.yield-decomposition-notes { margin-top: 12px; color: #66665f; font-size: 0.78rem; line-height: 1.65; }
+.yield-decomposition-notes summary { cursor: pointer; font-weight: 600; }
+.yield-decomposition-notes p { margin: 8px 0; }
+.yield-decomposition-notes a + a { margin-left: 16px; }
+
+@media (max-width: 760px) {
+  .yield-decomposition-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .yield-decomposition-controls { justify-content: flex-start; }
+  .yield-decomposition-controls .m7-range-row { flex-wrap: wrap; }
+  .yield-decomposition-chart { height: 290px; }
+}
+
 @media (max-width: 640px) {
   .total-curve-summary { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .total-curve-metrics { gap: 8px; }

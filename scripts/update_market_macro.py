@@ -11,6 +11,8 @@ from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from update_yield_decomposition import fetch_yield_decomposition
+
 
 START_DATE = "1965-01-01"
 GDP_START_DATE = "1981-01-01"
@@ -935,6 +937,7 @@ def main() -> None:
             },
         },
         "panels": panels,
+        "yieldDecomposition": fetch_yield_decomposition(read_existing_payload().get("yieldDecomposition")),
     }
 
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-macro-data.js"
