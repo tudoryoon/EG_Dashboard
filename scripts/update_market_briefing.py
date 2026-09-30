@@ -452,6 +452,17 @@ SECTOR_GROUPS = [
         ],
     },
     {
+        "key": "refining",
+        "label": "정유",
+        "items": [
+            {"ticker": "VLO", "label": "VLO US", "name": "Valero Energy", "query": "Valero Energy stock"},
+            {"ticker": "MPC", "label": "MPC US", "name": "Marathon Petroleum", "query": "Marathon Petroleum stock"},
+            {"ticker": "PSX", "label": "PSX US", "name": "Phillips 66", "query": "Phillips 66 stock"},
+            {"ticker": "DINO", "label": "DINO US", "name": "HF Sinclair", "query": "HF Sinclair stock"},
+            {"ticker": "PBF", "label": "PBF US", "name": "PBF Energy", "query": "PBF Energy stock"},
+        ],
+    },
+    {
         "key": "materials",
         "label": "원자재",
         "items": [

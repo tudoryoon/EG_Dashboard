@@ -342,6 +342,17 @@
       "sharesOutstanding": 50059303
     },
     {
+      "ticker": "DINO",
+      "name": "HF Sinclair Corporation",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 177783849
+    },
+    {
       "ticker": "DIVO",
       "name": "Amplify CWP Enhanced Dividend Income ETF",
       "memberships": {

@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
         default="all",
         help="Refresh the full RS universe or only Daily Briefing tickers while preserving all other profiles.",
     )
+    parser.add_argument("--tickers", nargs="+", help="Refresh only these universe tickers, preserving all other profiles.")
     return parser.parse_args()
 
 
@@ -222,6 +223,11 @@ def main() -> None:
     russell2000_tickers = load_market_rs_universe_tickers("russell2000")
     tickers = merge_ticker_lists(briefing_tickers, nasdaq100_tickers, sp500_tickers, russell2000_tickers) or FALLBACK_TICKERS
     refresh_tickers = briefing_tickers if args.scope == "daily-briefing" else tickers
+    if args.tickers:
+        refresh_tickers = list(dict.fromkeys(ticker.strip().upper() for ticker in args.tickers))
+        unknown = set(refresh_tickers) - set(tickers)
+        if unknown:
+            raise ValueError(f"Tickers not in the earnings universe: {', '.join(sorted(unknown))}")
     existing_profiles = load_existing_profiles()
     refreshed_profiles: dict[str, object] = {}
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -237,7 +243,7 @@ def main() -> None:
                 profile["fallback"] = True
             refreshed_profiles[ticker] = profile
 
-    if args.scope == "daily-briefing":
+    if args.scope == "daily-briefing" or args.tickers:
         profiles = dict(existing_profiles)
         profiles.update(refreshed_profiles)
     else:
@@ -250,7 +256,7 @@ def main() -> None:
             "source": "Yahoo Finance via yfinance earnings_dates",
             "tickerCount": len(tickers),
             "coveredCount": covered_count,
-            "refreshMode": args.scope,
+            "refreshMode": "selected-tickers" if args.tickers else args.scope,
             "refreshedTickerCount": len(refresh_tickers),
             "sources": {
                 "dailyBriefing": len(briefing_tickers),
