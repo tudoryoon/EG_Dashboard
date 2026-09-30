@@ -1,6 +1,6 @@
 ﻿const companies = window.dashboardCompanies ?? [];
 const usOverviewData = window.usOverviewData ?? { quarterLabels: [], m7Quarterly: [] };
-const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, scaleSpeed: null, openAiUsers: null, openAiAgentUsers: null, anthropicAdoption: null, methodology: [], sources: [] };
+const llmDashboardData = window.llmDashboardData ?? { updatedAt: "", colors: {}, snapshots: [], revenue: null, methodology: [], sources: [] };
 const cloudDashboardData = window.cloudDashboardData ?? { labels: [], colors: {}, yoyGrowth: null, margin: null, revenue: null };
 const capexDashboardData = window.capexDashboardData ?? {
   quarterLabels: [],
@@ -7250,6 +7250,7 @@ function createLlmRevenueChart(canvas) {
   const datasets = (panel.series ?? []).map((series) => ({
     label: series.name,
     data: series.values,
+    mode: series.mode,
     sourceLabels: series.sourceLabels,
     observations: series.observations,
     borderColor: llmDashboardData.colors?.[series.key] ?? "#111827",
@@ -7282,12 +7283,15 @@ function createLlmRevenueChart(canvas) {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => {
               const point = context.dataset.observations?.[panel.labels[context.dataIndex]];
-              return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 1)}B${point?.qualifier === "more-than" ? " 초과" : ""}`;
+              return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 2)}B${point?.qualifier === "more-than" ? " 초과" : ""}`;
             },
             afterLabel: (context) => {
               const source = context.dataset.sourceLabels?.[context.dataIndex];
               const point = context.dataset.observations?.[panel.labels[context.dataIndex]];
               if (!point) return source ? `출처: ${source}` : "";
+              if (point.status === "tracking") {
+                return [`출처: ${source}`, point.asOf ? `기준일: ${point.asOf} · 게시일: ${point.publishedAt}` : `게시일: ${point.publishedAt} · 별도 관측일 미공개`, "구분: TickerTrends 추정치 (회사 발표 아님)", point.sourceUrl];
+              }
               return [`출처: ${source}`, `기준일: ${point.asOf} · 보도일: ${point.reportedAt}`, `구분: 언론 보도값 (공식 공시 아님)`, point.note];
             },
           },
@@ -7313,345 +7317,16 @@ function createLlmRevenueChart(canvas) {
   charts.push(chart);
 }
 
-function createLlmScaleSpeedChart(canvas) {
-  const panel = llmDashboardData.scaleSpeed;
-  const companies = panel?.companies ?? [];
-  if (typeof Chart === "undefined" || !companies.length) {
-    return;
-  }
-
-  const milestoneStyles = {
-    10: { color: "#16a34a", pointStyle: "circle" },
-    50: { color: "#2563eb", pointStyle: "rectRot" },
-    100: { color: "#7c3aed", pointStyle: "triangle" },
-    latest: { color: "#d97706", pointStyle: "circle" },
-  };
-
-  const datasets = companies.map((company, companyIndex) => {
-    const points = [
-      ...(company.milestones ?? []).map((milestone) => ({
-        x: milestone.years,
-        y: companyIndex,
-        kind: "milestone",
-        ...milestone,
-      })),
-      ...(company.latest ? [{ x: company.latest.years, y: companyIndex, kind: "latest", ...company.latest }] : []),
-    ].sort((left, right) => left.x - right.x);
-
-    return {
-      label: company.name,
-      company,
-      data: points,
-      showLine: true,
-      borderColor: company.color,
-      borderWidth: 2,
-      tension: 0,
-      pointRadius: points.map((point) => (point.amount === 100 ? 7.5 : 6.5)),
-      pointHoverRadius: points.map((point) => (point.amount === 100 ? 9.5 : 8.5)),
-      pointHitRadius: 14,
-      pointStyle: points.map((point) => milestoneStyles[point.kind === "latest" ? "latest" : point.amount]?.pointStyle ?? "circle"),
-      pointBackgroundColor: points.map((point) =>
-        point.status === "tracking" ? "#ffffff" : milestoneStyles[point.kind === "latest" ? "latest" : point.amount]?.color ?? company.color,
-      ),
-      pointBorderColor: points.map((point) => milestoneStyles[point.kind === "latest" ? "latest" : point.amount]?.color ?? company.color),
-      pointBorderWidth: points.map((point) => (point.status === "tracking" ? 3 : 2)),
-    };
-  });
-
-  const maxYears = Math.max(...datasets.flatMap((dataset) => dataset.data.map((point) => point.x)), 20);
-  const chart = new Chart(canvas, {
-    type: "scatter",
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: "nearest", intersect: true },
-      layout: { padding: { right: 12 } },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (items) => items?.[0]?.dataset?.label ?? "",
-            label: (context) => {
-              const point = context.raw;
-              return point.kind === "latest"
-                ? `최근 ${point.status === "reported" ? "보도값" : "추적치"}: $${Number(point.amount).toFixed(1)}B${point.qualifier === "more-than" ? " 초과" : ""} · ${Number(point.years).toFixed(2)}년차`
-                : `$${Number(point.amount).toFixed(0)}B 도달: ${Number(point.years).toFixed(2)}년`;
-            },
-            afterLabel: (context) => {
-              const point = context.raw;
-              const status = point.status === "tracking" ? "추정치" : point.status === "reported" ? "언론 보도 (공식 공시 아님)" : "공식 발표·공시";
-              return [`기준일: ${point.date}`, `구분: ${status}`, `근거: ${point.sourceLabel}`, `산식: ${context.dataset.company?.basis ?? ""}`];
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          min: 0,
-          suggestedMax: Math.ceil(maxYears + 1),
-          title: { display: true, text: "상용화·사업 시작 후 경과연수", color: "#66665f", font: { weight: "700" } },
-          ticks: { color: "#8d8d86", callback: (value) => `${value}년`, maxTicksLimit: 8 },
-          grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-        y: {
-          min: -0.5,
-          max: companies.length - 0.5,
-          reverse: true,
-          ticks: {
-            stepSize: 1,
-            color: "#4c4c47",
-            font: { weight: "700" },
-            callback: (value) => companies[Math.round(Number(value))]?.name ?? "",
-          },
-          grid: { color: "rgba(70, 70, 66, 0.08)" },
-          border: { color: "#d8d8d2" },
-        },
-      },
-    },
-  });
-
-  charts.push(chart);
-}
-
-function createLlmOpenAiUsersChart(canvas) {
-  const panel = llmDashboardData.openAiUsers;
-  if (typeof Chart === "undefined" || !panel) {
-    return;
-  }
-
-  const color = llmDashboardData.colors?.openai ?? "#111827";
-  const chart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels: panel.labels,
-      datasets: [
-        {
-          label: "ChatGPT WAU",
-          data: panel.values,
-          sourceLabels: panel.sourceLabels,
-          borderColor: color,
-          backgroundColor: "rgba(17, 24, 39, 0.10)",
-          fill: true,
-          borderWidth: 3,
-          tension: 0.22,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointHitRadius: 12,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: "nearest", intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (items) => items?.[0]?.label ?? "",
-            label: (context) => `주간 활성 사용자: ${Number(context.parsed.y).toFixed(0)}M`,
-            afterLabel: (context) => `출처: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 6, maxRotation: 0 },
-          border: { color: "#d8d8d2" },
-        },
-        y: {
-          beginAtZero: true,
-          suggestedMax: 1000,
-          ticks: { color: "#8d8d86", callback: (value) => `${value}M`, maxTicksLimit: 6 },
-          grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-      },
-    },
-  });
-
-  charts.push(chart);
-}
-
-function createLlmOpenAiAgentUsersChart(canvas) {
-  const panel = llmDashboardData.openAiAgentUsers;
-  if (typeof Chart === "undefined" || !panel) {
-    return;
-  }
-
-  const color = "#2563eb";
-  const chart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels: panel.labels,
-      datasets: [
-        {
-          label: "OpenAI Agent WAU",
-          data: panel.values,
-          sourceLabels: panel.sourceLabels,
-          borderColor: color,
-          backgroundColor: "rgba(37, 99, 235, 0.10)",
-          fill: true,
-          borderWidth: 3,
-          tension: 0.16,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointHitRadius: 14,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: "nearest", intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (items) => items?.[0]?.label ?? "",
-            label: (context) => `주간 활성 사용자: ${Number(context.parsed.y).toFixed(0)}M`,
-            afterLabel: (context) => `기준: ${context.dataset.sourceLabels?.[context.dataIndex] ?? "OpenAI"}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 6, maxRotation: 0 },
-          border: { color: "#d8d8d2" },
-        },
-        y: {
-          beginAtZero: true,
-          suggestedMax: 11,
-          ticks: { color: "#8d8d86", callback: (value) => `${value}M`, maxTicksLimit: 6 },
-          grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-      },
-    },
-  });
-
-  charts.push(chart);
-}
-
-function createLlmAnthropicAdoptionChart(canvas) {
-  const panel = llmDashboardData.anthropicAdoption;
-  if (typeof Chart === "undefined" || !panel) {
-    return;
-  }
-
-  const color = llmDashboardData.colors?.anthropic ?? "#d97745";
-  const chart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels: panel.labels,
-      datasets: [
-        {
-          label: panel.totalCustomersLabel,
-          data: panel.totalCustomersK,
-          yAxisID: "yCustomers",
-          borderColor: color,
-          backgroundColor: color,
-          borderWidth: 3,
-          tension: 0.18,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointHitRadius: 12,
-          spanGaps: true,
-        },
-        {
-          label: panel.millionDollarLabel,
-          data: panel.millionDollarAccounts,
-          yAxisID: "yLarge",
-          borderColor: "#2563eb",
-          backgroundColor: "#2563eb",
-          borderWidth: 2.5,
-          borderDash: [7, 5],
-          tension: 0.18,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          pointHitRadius: 12,
-          spanGaps: true,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: "nearest", intersect: false },
-      plugins: {
-        legend: {
-          position: "top",
-          align: "start",
-          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
-        },
-        tooltip: {
-          callbacks: {
-            title: (items) => items?.[0]?.label ?? "",
-            label: (context) => {
-              if (context.dataset.yAxisID === "yCustomers") {
-                const prefix = context.dataIndex === 0 ? "<" : "";
-                return `${context.dataset.label}: ${prefix}${Number(context.parsed.y).toFixed(0)}K`;
-              }
-              return `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString()} accounts`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 5, maxRotation: 0 },
-          border: { color: "#d8d8d2" },
-        },
-        yCustomers: {
-          position: "left",
-          beginAtZero: true,
-          suggestedMax: 330,
-          ticks: { color: "#8d8d86", callback: (value) => `${value}K`, maxTicksLimit: 6 },
-          grid: { color: "rgba(70, 70, 66, 0.10)" },
-          border: { color: "#d8d8d2" },
-        },
-        yLarge: {
-          position: "right",
-          beginAtZero: true,
-          suggestedMax: 1100,
-          ticks: { color: "#8d8d86", callback: (value) => Number(value).toLocaleString(), maxTicksLimit: 6 },
-          grid: { drawOnChartArea: false },
-          border: { color: "#d8d8d2" },
-        },
-      },
-    },
-  });
-
-  charts.push(chart);
-}
-
 function renderLlmOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
-  const scaleSpeed = llmDashboardData.scaleSpeed;
-  const formatScaleMilestone = (company, amount) => {
-    const milestone = (company.milestones ?? []).find((item) => item.amount === amount);
-    if (!milestone) return '<span class="llm-scale-empty">미도달</span>';
-    const estimateLabel = milestone.status === "tracking" ? " · 추정" : "";
-    return `<strong>${Number(milestone.years).toFixed(2)}년${estimateLabel}</strong><small>${milestone.date}</small>`;
-  };
-
   usOverviewRoot.innerHTML = `
     <section class="llm-overview">
       <div class="us-section-head llm-section-head">
         <div>
           <h2>프론티어 모델 대시보드</h2>
-          <p>OpenAI와 Anthropic의 매출 런레이트 및 사용자·기업 도입 추이</p>
+          <p>OpenAI와 Anthropic의 연환산 매출 런레이트</p>
         </div>
         <span class="llm-updated">Updated ${llmDashboardData.updatedAt}</span>
       </div>
@@ -7681,89 +7356,6 @@ function renderLlmOverview() {
           </div>
           <p class="llm-chart-note">연환산 런레이트는 최근 월 매출을 12배한 속도 지표입니다. 감사된 연간 매출이나 계약 잔고 기준 SaaS ARR과는 다릅니다.</p>
         </article>
-        <article class="llm-panel llm-panel-wide">
-          <div class="us-panel-head llm-scale-head">
-            <div>
-              <h3>${scaleSpeed?.title ?? "ARR Scale-Up Speed"}</h3>
-              <p>${scaleSpeed?.subtitle ?? ""}</p>
-            </div>
-            <div class="llm-scale-legend" aria-label="차트 범례">
-              <span><i class="is-10"></i>$10B</span>
-              <span><i class="is-50"></i>$50B</span>
-              <span><i class="is-100"></i>$100B</span>
-              <span><i class="is-tracking"></i>최근 보도·추정치</span>
-            </div>
-          </div>
-          <div class="llm-chart-wrap llm-scale-chart-wrap">
-            <canvas data-llm-chart="scale-speed"></canvas>
-          </div>
-          <div class="llm-scale-table-wrap">
-            <table class="llm-scale-table">
-              <thead>
-                <tr>
-                  <th>기업·사업</th>
-                  <th>속도 측정 시작</th>
-                  <th>$10B</th>
-                  <th>$50B</th>
-                  <th>$100B</th>
-                  <th>최근 확인 규모</th>
-                  <th>지표 기준</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(scaleSpeed?.companies ?? [])
-                  .map(
-                    (company) => `
-                      <tr>
-                        <th>${company.name}</th>
-                        <td><a href="${company.startUrl}" target="_blank" rel="noopener noreferrer">${company.startLabel}</a><small>${company.startDate}</small></td>
-                        <td>${formatScaleMilestone(company, 10)}</td>
-                        <td>${formatScaleMilestone(company, 50)}</td>
-                        <td>${formatScaleMilestone(company, 100)}</td>
-                        <td>${company.latest ? `<strong>$${Number(company.latest.amount).toFixed(1)}B${company.latest.qualifier === "more-than" ? " 초과" : ""} · ${Number(company.latest.years).toFixed(2)}년차</strong><small>${company.latest.date} · ${company.latest.status === "reported" ? "언론 보도" : company.latest.status === "tracking" ? "추정" : "공식 발표"}</small>` : '<span class="llm-scale-empty">—</span>'}</td>
-                        <td>${company.basis}</td>
-                      </tr>`,
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          </div>
-          <p class="llm-chart-note">${scaleSpeed?.note ?? ""}</p>
-        </article>
-        <article class="llm-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${llmDashboardData.openAiUsers?.title ?? "OpenAI Adoption"}</h3>
-              <p>${llmDashboardData.openAiUsers?.subtitle ?? ""}</p>
-            </div>
-          </div>
-          <div class="llm-chart-wrap">
-            <canvas data-llm-chart="openai-users"></canvas>
-          </div>
-        </article>
-        <article class="llm-panel">
-          <div class="us-panel-head">
-            <div>
-              <h3>${llmDashboardData.openAiAgentUsers?.title ?? "OpenAI Agent Adoption"}</h3>
-              <p>${llmDashboardData.openAiAgentUsers?.subtitle ?? ""}</p>
-            </div>
-          </div>
-          <div class="llm-chart-wrap">
-            <canvas data-llm-chart="openai-agent-users"></canvas>
-          </div>
-          <p class="llm-chart-note">6월 5M은 Codex 단독, 7월은 Codex + ChatGPT Work 합산이므로 두 시계열의 기준이 완전히 같지는 않습니다.</p>
-        </article>
-        <article class="llm-panel llm-panel-wide">
-          <div class="us-panel-head">
-            <div>
-              <h3>${llmDashboardData.anthropicAdoption?.title ?? "Anthropic Adoption"}</h3>
-              <p>${llmDashboardData.anthropicAdoption?.subtitle ?? ""}</p>
-            </div>
-          </div>
-          <div class="llm-chart-wrap">
-            <canvas data-llm-chart="anthropic-adoption"></canvas>
-          </div>
-        </article>
         <article class="llm-panel llm-panel-wide llm-method-panel">
           <div>
             <h3>지표 해석</h3>
@@ -7775,7 +7367,7 @@ function renderLlmOverview() {
             <h3>출처</h3>
             <div class="llm-source-list">
               ${(llmDashboardData.sources ?? [])
-                .map((source) => `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.label}</a>`)
+                .map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.label)}</a>`)
                 .join("")}
             </div>
           </div>
@@ -7785,15 +7377,7 @@ function renderLlmOverview() {
   `;
 
   const revenueCanvas = usOverviewRoot.querySelector('[data-llm-chart="revenue"]');
-  const scaleSpeedCanvas = usOverviewRoot.querySelector('[data-llm-chart="scale-speed"]');
-  const openAiUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-users"]');
-  const openAiAgentUsersCanvas = usOverviewRoot.querySelector('[data-llm-chart="openai-agent-users"]');
-  const anthropicAdoptionCanvas = usOverviewRoot.querySelector('[data-llm-chart="anthropic-adoption"]');
   if (revenueCanvas) createLlmRevenueChart(revenueCanvas);
-  if (scaleSpeedCanvas) createLlmScaleSpeedChart(scaleSpeedCanvas);
-  if (openAiUsersCanvas) createLlmOpenAiUsersChart(openAiUsersCanvas);
-  if (openAiAgentUsersCanvas) createLlmOpenAiAgentUsersChart(openAiAgentUsersCanvas);
-  if (anthropicAdoptionCanvas) createLlmAnthropicAdoptionChart(anthropicAdoptionCanvas);
 }
 
 function renderCloudOverview() {
@@ -22044,7 +21628,7 @@ function renderSummary(list) {
     if (state.techView === "Cloud") {
       summaryText.textContent = "Cloud revenue, growth, margin, RPO, ARR, and hyperscaler GPU pricing";
     } else if (state.techView === "LLM") {
-      summaryText.textContent = "OpenAI와 Anthropic 프론티어 모델의 매출 런레이트와 도입 추이";
+      summaryText.textContent = "OpenAI와 Anthropic의 ARR: 회사 발표·보도와 TickerTrends 추정치";
     } else if (state.techView === "BigTech") {
       summaryText.textContent = "Big tech capex & cash flow dashboard";
     }

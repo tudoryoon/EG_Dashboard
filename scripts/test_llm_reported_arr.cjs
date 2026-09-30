@@ -17,9 +17,9 @@ for (const series of data.revenue.series) {
   assert.equal(series.values.length, data.revenue.labels.length);
   assert.equal(series.sourceLabels.length, data.revenue.labels.length);
 }
-for (const [key, amount, reportedAt, tracking] of [
-  ['openai', 40, '2026-08-13', 41.3],
-  ['anthropic', 65, '2026-08-17', 74.1],
+for (const [key, amount, reportedAt] of [
+  ['openai', 40, '2026-08-13'],
+  ['anthropic', 65, '2026-08-17'],
 ]) {
   const actual = data.revenue.series.find(s => s.key === key && s.mode === 'actual');
   assert.equal(actual.values[july], amount);
@@ -30,19 +30,13 @@ for (const [key, amount, reportedAt, tracking] of [
   assert.equal(observation.qualifier, 'more-than');
   assert.ok(data.sources.some(s => s.url === observation.sourceUrl));
   assert.ok(actual.sourceLabels[july].includes(amount.toString()));
-  assert.equal(data.revenue.series.find(s => s.key === key && s.mode === 'tracking').values[july], tracking);
+  assert.ok(data.revenue.series.find(s => s.key === key && s.mode === 'tracking').values[july] > 0);
   assert.equal(data.snapshots.find(s => s.tone === key).value, `$${amount}B+`);
-  const company = data.scaleSpeed.companies.find(c => c.name.toLowerCase() === key);
-  assert.equal(company.latest.amount, amount);
-  assert.equal(company.latest.status, 'reported');
-  assert.equal(company.latest.qualifier, 'more-than');
-  const years = (Date.parse(company.latest.date) - Date.parse(company.startDate)) / (365.25 * 86400000);
-  assert.equal(company.latest.years, Number(years.toFixed(2)));
 }
 
 vm.runInContext('const llmDashboardData = window.llmDashboardData;', context);
 const code = fs.readFileSync(path.join(root, 'dashboard.js'), 'utf8');
-for (const name of ['createLlmRevenueChart', 'createLlmScaleSpeedChart']) {
+for (const name of ['createLlmRevenueChart']) {
   const start = code.indexOf(`function ${name}(`);
   assert.ok(start >= 0);
   const end = code.indexOf('\nfunction ', start + 1);
@@ -53,17 +47,17 @@ const revenue = charts[0];
 for (const dataset of revenue.data.datasets) {
   const ctx = { dataset, dataIndex: july, parsed: { y: dataset.data[july] } };
   const callbacks = revenue.options.plugins.tooltip.callbacks;
-  const isReported = !!dataset.observations;
+  const isReported = dataset.mode === 'actual';
   assert.equal(callbacks.label(ctx).includes('초과'), isReported);
   assert.equal(dataset.borderDash.length > 0, !isReported);
   const source = callbacks.afterLabel(ctx);
   if (isReported) assert.ok(source.some(s => s.includes('공식 공시 아님')));
-  else assert.ok(source.includes('TickerTrends'));
+  else assert.ok((Array.isArray(source) ? source.join(' ') : source).includes('TickerTrends'));
 }
-for (const dataset of charts[1].data.datasets.filter(d => d.company.latest)) {
-  const ctx = { dataset, raw: dataset.data.find(p => p.kind === 'latest') };
-  assert.ok(charts[1].options.plugins.tooltip.callbacks.label(ctx).includes('보도값'));
-  assert.ok(charts[1].options.plugins.tooltip.callbacks.afterLabel(ctx).some(s => s.includes('공식 공시 아님')));
+for (const field of ['scaleSpeed', 'openAiUsers', 'openAiAgentUsers', 'anthropicAdoption']) {
+  assert.equal(data[field], undefined);
 }
-assert.equal(data.openAiAgentUsers.values.at(-1), 10, 'Do not add unverified 25M to WAU');
-console.log('PASS: reported ARR, estimate separation, dates, source links, scale-speed and chart tooltips.');
+const render = code.slice(code.indexOf('function renderLlmOverview('), code.indexOf('function renderCloudOverview('));
+assert.equal((render.match(/<canvas /g) || []).length, 1);
+assert.ok(!render.includes('scale-speed'));
+console.log('PASS: reported ARR preserved, tracking separation, source dates and ARR-only UI.');

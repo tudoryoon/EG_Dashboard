@@ -1,0 +1,55 @@
+{
+  "source": "https://blog.tickertrends.io/feed",
+  "observations": [
+    {
+      "provider": "anthropic",
+      "value": 74.1,
+      "date": "2026-07-23",
+      "asOf": null,
+      "publishedAt": "2026-07-23",
+      "dateBasis": "publication",
+      "sourceUrl": "https://blog.tickertrends.io/p/anthropic-vs-openai-arr-tracking",
+      "sourceTitle": "Anthropic Is Tracking Above OpenAI in ARR, but Its Growth Is Beginning to Decelerate"
+    },
+    {
+      "provider": "openai",
+      "value": 42.6,
+      "date": "2026-07-29",
+      "asOf": "2026-07-29",
+      "publishedAt": "2026-07-30",
+      "dateBasis": "observation",
+      "sourceUrl": "https://blog.tickertrends.io/p/openai-arr-growth-accelerated-july-2026",
+      "sourceTitle": "OpenAI ARR Growth Accelerated Into July"
+    },
+    {
+      "provider": "openai",
+      "value": 44.3,
+      "date": "2026-08-12",
+      "asOf": "2026-08-12",
+      "publishedAt": "2026-08-14",
+      "dateBasis": "observation",
+      "sourceUrl": "https://blog.tickertrends.io/p/openai-arr-tracking-44-3b-bloomberg-40b-run-rate",
+      "sourceTitle": "OpenAI ARR Tracking Reached $44.3B as Bloomberg Reported $40B Run Rate"
+    },
+    {
+      "provider": "anthropic",
+      "value": 76.8,
+      "date": "2026-09-29",
+      "asOf": null,
+      "publishedAt": "2026-09-29",
+      "dateBasis": "publication",
+      "sourceUrl": "https://blog.tickertrends.io/p/openai-and-anthropic-arr-tracking",
+      "sourceTitle": "OpenAI and Anthropic ARR Tracking"
+    },
+    {
+      "provider": "openai",
+      "value": 50.44,
+      "date": "2026-09-29",
+      "asOf": null,
+      "publishedAt": "2026-09-29",
+      "dateBasis": "publication",
+      "sourceUrl": "https://blog.tickertrends.io/p/openai-and-anthropic-arr-tracking",
+      "sourceTitle": "OpenAI and Anthropic ARR Tracking"
+    }
+  ]
+}
