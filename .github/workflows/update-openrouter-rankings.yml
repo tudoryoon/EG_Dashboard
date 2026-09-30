@@ -61,7 +61,19 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Update AI data, public ARR and research calendar"
           for attempt in 1 2 3; do
-            git pull --rebase origin main
+            if ! git pull --rebase origin main; then
+              conflicts=$(git diff --name-only --diff-filter=U)
+              if [[ "$conflicts" != "index.html" ]]; then
+                echo "::error::Data conflict requires review; refusing to overwrite newer data."
+                exit 1
+              fi
+              # During rebase, stage 2 is the latest upstream page. Retain all
+              # other collectors' cache versions, then bump only our outputs.
+              git show :2:index.html > index.html
+              python scripts/bump_data_cache_versions.py "${files[@]}"
+              git add index.html
+              GIT_EDITOR=true git rebase --continue
+            fi
             if git push origin HEAD:main; then exit 0; fi
             sleep 5
           done
