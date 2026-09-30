@@ -254,7 +254,7 @@ INDICATORS: list[dict[str, Any]] = [
         "series": [
             SeriesConfig("job_openings", "Job Openings", "JTSJOL", "thousands", "#111827", True, "https://www.moneycontrol.com/economic-calendar/jolts-job-openings/4770591", "millions"),
             SeriesConfig("quits_rate", "Quits Rate", "JTSQUR", "percent", "#d93025", False, "https://www.moneycontrol.com/economic-calendar/jolts-job-quits/13516226", "millions"),
-            SeriesConfig("hires", "Hires", "JTSHIR", "thousands", "#2563eb"),
+            SeriesConfig("hires", "Hires Rate", "JTSHIR", "percent", "#2563eb"),
         ],
     },
     {
