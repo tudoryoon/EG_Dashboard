@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import math
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -93,8 +94,8 @@ def yahoo_chart_url(symbol: str) -> str:
 
 def fred_csv_urls(series_id: str) -> list[str]:
     return [
-        f"{FRED_GATEWAY_BASE}{series_id}",
         f"{FRED_GRAPH_BASE}{series_id}&cosd={START_DATE}",
+        f"{FRED_GATEWAY_BASE}{series_id}",
     ]
 
 
@@ -194,52 +195,77 @@ def parse_yahoo_history_item(meta: dict[str, str]) -> dict[str, object]:
     }
 
 
-def parse_fred_history_item(meta: dict[str, str]) -> dict[str, object]:
+def parse_fred_csv(text: str, series_id: str) -> dict[str, float]:
+    reader = csv.DictReader(io.StringIO(text.lstrip("\ufeff")))
+    headers = {str(key).strip().lower() for key in (reader.fieldnames or [])}
+    if not headers.intersection({"date", "observation_date", "yyyymmdd"}) or series_id.lower() not in headers:
+        raise ValueError(f"Invalid FRED CSV headers for {series_id}")
+    by_date: dict[str, float] = {}
+    today = datetime.now(timezone.utc).date().isoformat()
+    for row in reader:
+        fields = {str(key).strip().lower(): (value or "").strip() for key, value in row.items()}
+        raw_date = fields.get("observation_date") or fields.get("date") or fields.get("yyyymmdd")
+        raw_value = fields.get(series_id.lower())
+        if not raw_date or raw_value in {None, "", "."}:
+            continue
+        day = datetime.strptime(raw_date, "%Y%m%d").date() if len(raw_date) == 8 and raw_date.isdigit() else date.fromisoformat(raw_date)
+        date_key = day.isoformat()
+        value = float(raw_value)
+        if not math.isfinite(value):
+            raise ValueError(f"Non-finite FRED value at {date_key}")
+        if START_DATE <= date_key <= today:
+            by_date[date_key] = round(value, 4)
+    if not by_date:
+        raise ValueError(f"No FRED observations returned for {series_id}")
+    return by_date
+
+
+def load_existing_fixed_income_item(key: str) -> dict:
+    output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
+    if not output_path.exists():
+        return {}
+    text = output_path.read_text(encoding="utf-8").strip()
+    return json.loads(text[len("window.marketVixData = ") : -1]).get("fixedIncome", {}).get(key, {})
+
+
+def parse_fred_history_item(meta: dict[str, str], existing: dict | None = None) -> dict[str, object]:
     series_id = meta["fredId"]
-    last_error: Exception | None = None
+    existing = load_existing_fixed_income_item(meta["key"]) if existing is None else existing
+    by_date = dict(zip(existing.get("dates", []), existing.get("values", [])))
+    saved_latest = max(by_date, default="")
+    candidates = []
     for url in fred_csv_urls(series_id):
         try:
-            reader = csv.DictReader(fetch_text(url).splitlines())
-            by_date: dict[str, float] = {}
-            for row in reader:
-                lower_row = {str(key).lower(): value for key, value in row.items()}
-                raw_date = (row.get("DATE") or lower_row.get("yyyymmdd") or "").strip()
-                raw_value = (row.get(series_id) or lower_row.get(series_id.lower()) or "").strip()
-                if not raw_date or raw_value in {"", "."}:
-                    continue
-                if len(raw_date) == 8 and raw_date.isdigit():
-                    date_key = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
-                else:
-                    date_key = raw_date[:10]
-                if date_key < START_DATE:
-                    continue
-                by_date[date_key] = round(float(raw_value), 4)
-            if by_date:
-                dates = sorted(by_date)
-                values = [by_date[day] for day in dates]
-                latest = values[-1] if values else None
-                previous = values[-2] if len(values) > 1 else None
-                delta = round(latest - previous, 4) if latest is not None and previous is not None else None
-                pct = round((delta / previous) * 100, 2) if previous not in {None, 0} and delta is not None else None
-                return {
-                    "label": meta["label"],
-                    "fredId": series_id,
-                    "source": meta["source"],
-                    "color": meta["color"],
-                    "unit": meta["unit"],
-                    "dates": dates,
-                    "values": values,
-                    "latestDate": dates[-1] if dates else "",
-                    "latestValue": latest,
-                    "previousValue": previous,
-                    "change": delta,
-                    "changePct": pct,
-                }
+            points = parse_fred_csv(fetch_text(url), series_id)
+            latest_date = max(points)
+            if latest_date < saved_latest:
+                print(f"::warning::{series_id}: {url} ends at {latest_date}; retaining saved {saved_latest}")
+                continue
+            candidates.append((url, points))
         except Exception as error:  # pragma: no cover - network variability
-            last_error = error
-    if last_error:
-        raise last_error
-    raise RuntimeError(f"No FRED observations returned for {series_id}")
+            print(f"::warning::{series_id}: {url}: {error}")
+    if not candidates:
+        if by_date:
+            print(f"::warning::{series_id}: refresh unavailable; preserving {saved_latest}")
+            return {**existing, "fetchStatus": "stale"}
+        raise RuntimeError(f"No FRED observations or saved history for {series_id}")
+    # Retain the archive outside FRED's rolling window; official values win on overlapping dates.
+    for _, points in reversed(candidates):
+        by_date.update(points)
+    dates = sorted(by_date)
+    values = [by_date[day] for day in dates]
+    latest, previous = values[-1], values[-2] if len(values) > 1 else None
+    delta = round(latest - previous, 4) if previous is not None else None
+    pct = round(delta / previous * 100, 2) if previous not in {None, 0} else None
+    source_url = next(url for url, points in candidates if dates[-1] in points)
+    print(f"{series_id}: latest {dates[-1]} = {latest}, source {source_url}")
+    return {
+        "label": meta["label"], "fredId": series_id, "source": meta["source"],
+        "color": meta["color"], "unit": meta["unit"],
+        "dates": dates, "values": values, "latestDate": dates[-1],
+        "latestValue": latest, "previousValue": previous, "change": delta, "changePct": pct,
+        "latestSourceUrl": source_url,
+    }
 
 
 def parse_fixed_income_item(meta: dict[str, str]) -> dict[str, object]:
