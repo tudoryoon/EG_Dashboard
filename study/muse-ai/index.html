@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muse AI 스터디 | EG Dashboard</title>
+  <link rel="stylesheet" href="./style.css?v=20260930-1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+  <script src="./model.js?v=20260930-1" defer></script>
+  <script src="./app.js?v=20260930-1" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div><span class="eyebrow">EG RESEARCH / AI ECONOMICS</span><h1>Muse AI 스터디</h1>
+      <p>무료 에이전트 AI의 추론비용 · 서버 수요 · 사용자당 수익성</p></div>
+      <div class="actions"><a href="https://muse-cost-calculator.vercel.app/" target="_blank" rel="noopener noreferrer">원본 계산기 / GDP</a><button id="reset" type="button">기본값 복원</button></div>
+    </header>
+    <div class="basis">원본 산식·기본값: 2026-09-30 확인 · 시나리오 추정치이며 Meta 공식 Muse 비용 가이던스가 아닙니다.</div>
+    <p id="error" role="alert" hidden></p>
+    <div class="metrics" id="metrics" aria-live="polite"></div>
+    <div class="workspace">
+      <aside><form id="inputs" autocomplete="off"></form></aside>
+      <div class="results">
+        <section><h2>사용자당 연간 수익성</h2>
+          <div id="revenue-summary" class="revenue-summary"></div>
+          <div class="chart-wrap revenue-chart"><canvas id="revenue" aria-label="시나리오별 사용자당 매출과 비용" role="img"></canvas></div>
+          <div class="legend"><span class="expenses">기존 비용</span><span class="gpu">GPU 추론</span><span class="cpu">CPU 에이전트</span><span class="profit">이익</span></div>
+          <p id="free-profit" class="note"></p>
+        </section>
+        <section><h2>연간 비용 구성</h2><div class="chart-wrap cost-chart"><canvas id="cost" aria-label="GPU와 CPU 연간 비용 비교" role="img"></canvas></div></section>
+        <section><h2>메모리·스토리지 수요</h2><div class="chart-wrap memory-chart"><canvas id="memory" aria-label="메모리 및 스토리지 규모" role="img"></canvas></div><div id="memory-table"></div></section>
+        <section><h2>GPU 비용 교차 검산</h2><div id="reconciliation" class="reconciliation"></div></section>
+        <details open><summary>GPU · CPU 산출 내역</summary><div class="two-col"><div id="gpu-table"></div><div id="cpu-table"></div></div></details>
+        <details open><summary>MicroVM 배치와 병목</summary><div id="limit-table"></div><div id="vm-table"></div></details>
+        <details><summary>사용자당 손익 상세</summary><div id="user-table"></div></details>
+        <details><summary>계산식 전체</summary><div id="formulas"></div></details>
+      </div>
+    </div>
+    <footer>
+      <h2>출처와 해석상 한계</h2>
+      <p>계산 구조·기본 가정: <a href="https://muse-cost-calculator.vercel.app/" target="_blank" rel="noopener noreferrer">Muse Free-Tier Economics</a>, 제작자 <a href="https://x.com/bookwormengr" target="_blank" rel="noopener noreferrer">GDP (@bookwormengr)</a>. EG Dashboard는 해당 수학적 모델을 재구현했습니다. 입력 가정은 자동 최신화되지 않습니다.</p>
+      <ul>
+        <li>Prefill 비중은 토큰 구분에만 사용됩니다. GPU 비용은 통합 tokens/$ 효율로 결정되며 Prefill 비중만 바꾸어도 비용은 변하지 않습니다.</li>
+        <li>tokens/$를 고정하면 GPU 시간당 TCO를 바꿔도 총 GPU 비용은 일정하고, 역산한 GPU 수·전력이 달라집니다. 원본의 같은 가정입니다.</li>
+        <li>원본의 Break-even은 적자 탈출선이 아니라 기존 사용자당 이익액을 유지하는 데 필요한 추가 매출입니다. 이익률 유지 기준과 구분했습니다.</li>
+        <li>1.70kW/GPU와 Prefill 97%는 원본의 역산·추정값입니다. CPU 전력, 세션 수, 할인율 등도 가정이며 검증된 실측값으로 간주하면 안 됩니다.</li>
+        <li>벤치마크 수준의 캐시 재사용을 가정합니다. 네트워킹·모델 학습·인건비는 제외하며 Muse 이용자와 Meta 일간 이용자를 같은 모집단으로 취급합니다.</li>
+        <li>물리 자원보다 많은 vCPU·RAM을 할당할 수 있다고 가정하며, 5가지 제약 중 최솟값으로 서버당 VM 수를 결정합니다. 실제 배치 보장이나 운영 권고는 아닙니다.</li>
+      </ul>
+      <nav aria-label="원본이 인용한 참고자료">
+        <a href="https://newsletter.semianalysis.com/p/engrams-embedding-entendre-codesign" target="_blank" rel="noopener noreferrer">SemiAnalysis</a>
+        <a href="https://inferencex.semianalysis.com/profit-estimator-per-gigawatt/deepseek-v41-flash" target="_blank" rel="noopener noreferrer">InferenceX</a>
+        <a href="https://arxiv.org/abs/2609.22978" target="_blank" rel="noopener noreferrer">DeepSeek DSec 논문</a>
+        <a href="https://www.nvidia.com/en-us/data-center/dgx-b200/" target="_blank" rel="noopener noreferrer">NVIDIA DGX B200</a>
+        <a href="https://aws.amazon.com/ec2/pricing/on-demand/" target="_blank" rel="noopener noreferrer">AWS 가격</a>
+        <a href="https://www.prnewswire.com/news-releases/meta-reports-second-quarter-2026-results-302838214.html" target="_blank" rel="noopener noreferrer">원본 인용 Meta 2Q26 실적</a>
+      </nav>
+    </footer>
+  </main>
+</body>
+</html>

@@ -149,6 +149,7 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
+  MuseAI: { label: "Muse AI 스터디" },
   BriefingPrint: { label: "브리핑 PDF" },
   MemoryCapa: { label: "Memory CAPA" },
   Comparisons: { label: "NVDA vs Memory" },
@@ -600,6 +601,7 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
+      MuseAI: "muse-ai",
       BriefingPrint: "briefing-pdf",
       MemoryCapa: "memory-capa",
       Comparisons: "nvda-vs-memory",
@@ -17790,6 +17792,27 @@ function renderStudyBriefingPrintOverview() {
   }, {once: true});
 }
 
+function renderStudyMuseAIOverview() {
+  destroyCharts();
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+  usOverviewRoot.innerHTML = `<iframe title="Muse AI 스터디 비용 시뮬레이터"
+    src="./study/muse-ai/index.html?v=20260930-1"
+    style="display:block;width:100%;height:760px;border:0;background:#fff"
+  ></iframe>`;
+  const frame = usOverviewRoot.querySelector("iframe");
+  frame.addEventListener("load", () => {
+    const body = frame.contentDocument.body;
+    const resize = () => {
+      frame.style.height = `${Math.ceil(body.getBoundingClientRect().height)}px`;
+    };
+    const observer = new frame.contentWindow.ResizeObserver(resize);
+    observer.observe(body);
+    resize();
+  }, { once: true });
+}
+
 function renderStudyCalendarOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -22055,6 +22078,8 @@ function renderSummary(list) {
   if (state.tab === "Research") {
     if (state.researchView === "DataCenter") {
       summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
+    } else if (state.researchView === "MuseAI") {
+      summaryText.textContent = "";
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
     } else if (state.researchView === "M7") {
@@ -22741,6 +22766,10 @@ function render() {
     renderSummary([]);
     if (state.researchView === "BriefingPrint") {
       renderStudyBriefingPrintOverview();
+      return;
+    }
+    if (state.researchView === "MuseAI") {
+      renderStudyMuseAIOverview();
       return;
     }
     if (state.researchView === "DataCenter") {
