@@ -471,6 +471,7 @@ SECTOR_GROUPS = [
         "key": "healthcare",
         "label": "바이오",
         "items": [
+            {"ticker": "MRNA", "label": "MRNA US", "name": "Moderna", "query": "Moderna stock"},
             {"ticker": "AMGN", "label": "AMGN US", "name": "Amgen", "query": "Amgen stock"},
             {"ticker": "LLY", "label": "LLY US", "name": "Eli Lilly", "query": "Eli Lilly stock"},
             {"ticker": "NVO", "label": "NVO US", "name": "Novo Nordisk", "query": "Novo Nordisk stock"},
