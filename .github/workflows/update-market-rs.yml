@@ -131,6 +131,11 @@ jobs:
         if: steps.refresh-guard.outputs.should_run == 'true'
         run: python scripts/update_market_trend_score.py
 
+      - name: Refresh closing-price new high and low breadth
+        if: steps.refresh-guard.outputs.should_run == 'true'
+        continue-on-error: true
+        run: python scripts/update_market_breadth.py
+
       - name: Refresh market RS financials
         if: steps.refresh-guard.outputs.should_run == 'true'
         env:
@@ -144,19 +149,19 @@ jobs:
 
       - name: Commit updated market RS history
         run: |
-          if git diff --quiet -- data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json data/sec-company-tickers-cache.json data/market-rs-financial-adjustments.json; then
+          if git diff --quiet -- data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json data/sec-company-tickers-cache.json data/market-rs-financial-adjustments.json data/market-breadth-data.js data/market-breadth-warmup.json.gz; then
             echo "No market RS changes detected."
             exit 0
           fi
           # Refreshes can take a while. Rebase generated files onto the latest
           # main before changing index.html cache keys to avoid cross-job races.
-          git stash push -- data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json data/sec-company-tickers-cache.json data/market-rs-financial-adjustments.json
+          git stash push -- data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json data/sec-company-tickers-cache.json data/market-rs-financial-adjustments.json data/market-breadth-data.js data/market-breadth-warmup.json.gz
           git pull --rebase origin main
           git stash pop
-          python scripts/bump_data_cache_versions.py data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js
+          python scripts/bump_data_cache_versions.py data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-breadth-data.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json data/sec-company-tickers-cache.json data/market-rs-financial-adjustments.json index.html
+          git add data/market-rs-data.js data/market-trend-score-data.js data/market-rs-financials-data.js data/market-canslim-earnings-data.js data/market-rs-nasdaq100-snapshot.json data/sec-company-tickers-cache.json data/market-rs-financial-adjustments.json data/market-breadth-data.js data/market-breadth-warmup.json.gz index.html
           git commit -m "Update market RS history" || exit 0
           git pull --rebase origin main
           git push
@@ -168,4 +173,5 @@ jobs:
         continue-on-error: true
         run: |
           python scripts/test_rs_maturity_ramp.py
+          python -m unittest discover -s scripts -p "test_market_breadth.py"
           python scripts/validate_market_rs_pipeline.py

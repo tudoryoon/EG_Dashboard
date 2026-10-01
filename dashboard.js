@@ -31,6 +31,7 @@ const studyCalendarData = window.studyCalendarData ?? {
   fallbackSources: [],
 };
 const marketMacroData = window.marketMacroData ?? { updatedAt: "", startDate: "2017-01-01", defaultRange: "max", ranges: [], panels: {} };
+const marketBreadthData = window.marketBreadthData ?? { updatedAt: "", dates: [], series: {}, universeCount: 0 };
 const marketValuationData = window.marketValuationData ?? { updatedAt: "", startDate: "1981-01-01", defaultRange: "max", ranges: [], series: {} };
 const marketVixData = window.marketVixData ?? {
   updatedAt: "",
@@ -404,6 +405,8 @@ const state = {
   dailyYieldHidden: [],
   acmYieldHidden: ["expectedRate", "modelYield"],
   yieldDkwOpen: false,
+  breadthRange: "max",
+  breadthHidden: [],
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendChartType: "candle",
@@ -8140,12 +8143,90 @@ function renderInfraOverview() {
   bindInfraControls(panelKeys);
 }
 
+function buildMarketBreadthPayload() {
+  const dates = marketBreadthData.dates ?? [];
+  const range = state.breadthRange;
+  const start = dates.length ? shiftDateByRange(dates.at(-1), range, dates[0], dates) : "";
+  const rows = dates.flatMap((date, index) => {
+    const high = marketBreadthData.series?.newHigh?.[index];
+    const low = marketBreadthData.series?.newLow?.[index];
+    const eligible = marketBreadthData.series?.eligible?.[index];
+    return date >= start && [high, low, eligible].every(Number.isFinite) ? [{ date, high, low, eligible }] : [];
+  });
+  const datasets = [
+    { key: "high", label: "52주 종가 신고가", color: "#15803d" },
+    { key: "low", label: "52주 종가 신저가", color: "#dc2626" },
+  ].map((item) => ({
+    label: item.label, componentKey: item.key, data: rows.map((row) => row[item.key]),
+    hidden: (state.breadthHidden ?? []).includes(item.key),
+    borderColor: item.color, backgroundColor: item.color, borderWidth: 1.8,
+    fill: false, tension: 0, pointRadius: 0, pointHoverRadius: 3, spanGaps: false,
+  }));
+  return { rows, labels: rows.map((row) => row.date), datasets };
+}
+
+function renderMarketBreadthChartPanel() {
+  const payload = buildMarketBreadthPayload();
+  const latest = payload.rows.at(-1);
+  const ranges = [{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" },
+    { key: "ytd", label: "YTD" }, { key: "1y", label: "1Y" }, { key: "max", label: "Since 2025" }];
+  return `<section class="market-breadth-counts">
+    <div class="total-spread-head">
+      <div><h2>52주 종가 신고가 · 신저가</h2>
+        <p>RS ALL ${Number(marketBreadthData.universeCount || 0).toLocaleString()}종목 · 기준 ${marketBreadthData.updatedAt || "-"}</p></div>
+      <div class="m7-range-row" role="group" aria-label="Breadth 기간">${ranges.map((range) => `<button type="button" class="m7-range-chip${state.breadthRange === range.key ? " active" : ""}" data-breadth-range="${range.key}" aria-pressed="${state.breadthRange === range.key}">${range.label}</button>`).join("")}</div>
+    </div>
+    ${latest ? `<dl class="breadth-count-metrics">
+      <div><dt>신고가</dt><dd class="breadth-high">${latest.high.toLocaleString()}</dd></div>
+      <div><dt>신저가</dt><dd class="breadth-low">${latest.low.toLocaleString()}</dd></div>
+      <div><dt>집계 대상</dt><dd>${latest.eligible.toLocaleString()}</dd></div>
+    </dl>
+    <div class="total-curve-legend" role="group" aria-label="Breadth 지표">${payload.datasets.map((item) => `<label><input type="checkbox" data-breadth-component="${item.componentKey}" style="accent-color:${item.borderColor}" ${item.hidden ? "" : "checked"}><i style="background:${item.borderColor}"></i>${item.label}</label>`).join("")}</div>
+    <div class="breadth-count-chart"><canvas data-breadth-counts role="img" aria-label="2025년부터 일별 52주 종가 신고가 및 신저가 종목 수"></canvas></div>`
+    : `<p class="empty-state">신고가·신저가 집계 데이터 수신 대기</p>`}
+    <details class="yield-decomposition-notes"><summary>집계 기준 · 출처</summary>
+      <p>당일 포함 최근 252거래일의 최고 종가와 같은 종가를 신고가, 최저 종가와 같은 종가를 신저가로 집계합니다. 동일 최고·최저가 재도달도 포함합니다. 252거래일 종가가 모두 갖춰진 종목만 포함하며, 장중 고가·저가는 사용하지 않습니다.</p>
+      <p>현재 RS ALL 유니버스 기준으로 과거를 재계산하며 ETF도 포함합니다. 별도로 추가한 지수는 제외합니다. 당시 시장 전체나 당시 편입 종목을 복원한 통계는 아닙니다.</p>
+      <p>2024년 Yahoo Finance 종가를 비교 이력으로 사용하고, 2025년부터는 저장된 RS 종가를 사용합니다. 신규 상장·누락 이력에 따라 날짜별 집계 대상 수가 달라질 수 있습니다.</p>
+    </details>
+  </section>`;
+}
+
+function createMarketBreadthChart(canvas) {
+  if (typeof Chart === "undefined") return;
+  const payload = buildMarketBreadthPayload();
+  const range = state.breadthRange;
+  const chart = new Chart(canvas, {
+    type: "line", data: { labels: payload.labels, datasets: payload.datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: (context) => `${context.dataset.label}: ${Number(context.parsed.y).toLocaleString()}개`,
+        afterBody: (items) => {
+          const row = payload.rows[items[0]?.dataIndex];
+          return row ? [`집계 대상: ${row.eligible.toLocaleString()}개`, `신고가−신저가: ${(row.high - row.low).toLocaleString()}개`] : [];
+        },
+      } } },
+      scales: {
+        x: { grid: { display: false }, afterBuildTicks: (axis) => {
+          axis.ticks = fitTotalDashboardDateTicks(buildRegularDateTickIndexes(payload.labels, range), axis.chart.width).map((index) => ({ value: index }));
+        }, ticks: { autoSkip: false, maxRotation: 0, color: "#77776f", callback: (value) => formatRangeAxisDate(payload.labels[value], range) } },
+        y: { beginAtZero: true, title: { display: true, text: "종목 수", color: "#77776f" },
+          ticks: { precision: 0, maxTicksLimit: 7, color: "#77776f" }, grid: { color: "rgba(70,70,66,0.10)" } },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
 function renderMarketBreadthOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
   usOverviewRoot.innerHTML = `
     <section class="market-breadth-overview">
+      ${renderMarketBreadthChartPanel()}
       <article class="us-panel">
         <div class="us-section-head">
           <div>
@@ -8168,6 +8249,26 @@ function renderMarketBreadthOverview() {
       </article>
     </section>
   `;
+  const canvas = usOverviewRoot.querySelector("[data-breadth-counts]");
+  if (canvas) createMarketBreadthChart(canvas);
+  usOverviewRoot.querySelectorAll("[data-breadth-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.breadthRange = button.dataset.breadthRange;
+      const position = { left: window.scrollX, top: window.scrollY };
+      render();
+      window.scrollTo({ ...position, behavior: "instant" });
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-breadth-component]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const key = input.dataset.breadthComponent;
+      state.breadthHidden = (state.breadthHidden ?? []).filter((item) => item !== key);
+      if (!input.checked) state.breadthHidden.push(key);
+      const chart = Chart.getChart(canvas);
+      const index = chart?.data.datasets.findIndex((dataset) => dataset.componentKey === key);
+      if (index >= 0) { chart.setDatasetVisibility(index, input.checked); chart.update("none"); }
+    });
+  });
 }
 function formatBriefingTimestamp(value) {
   if (!value) {
