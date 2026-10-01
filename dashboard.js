@@ -20753,7 +20753,7 @@ function renderMarketVixOverview() {
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${fixedIncomeRangeMarkup}</div>
-            <div class="us-price-updated">${marketVixData.source?.fixedIncome ?? ""}</div>
+            <div class="us-price-updated">${marketVixData.source?.fixedIncome ?? ""} · MOVE ${marketVixData.fixedIncome?.move?.latestDate || "-"} · HY ${marketVixData.fixedIncome?.hySpread?.latestDate || "-"}</div>
           </div>
         </div>
         <div class="total-date-row">

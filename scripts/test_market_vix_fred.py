@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import update_market_vix as vix
 
@@ -13,6 +13,22 @@ def csv(rows, header='observation_date'):
 
 
 class FredFreshnessTests(unittest.TestCase):
+    def test_official_transport_uses_curl_and_checks_response(self):
+        url = vix.fred_csv_urls(ID)[0]
+        response = Mock(content=b'\xef\xbb\xbfobservation_date,BAMLH0A0HYM2\n2026-09-29,3.08\n')
+        with patch.object(vix.curl_requests, 'get', return_value=response) as get, patch.object(vix, 'urlopen') as urllib:
+            points = vix.parse_fred_csv(vix.fetch_text(url), ID)
+        get.assert_called_once_with(url, impersonate='chrome', timeout=20)
+        response.raise_for_status.assert_called_once_with()
+        urllib.assert_not_called()
+        self.assertEqual(points, {'2026-09-29': 3.08})
+
+    def test_official_transport_does_not_accept_http_error_body(self):
+        response = Mock(content=b'error')
+        response.raise_for_status.side_effect = RuntimeError('HTTP error')
+        with patch.object(vix.curl_requests, 'get', return_value=response), self.assertRaises(RuntimeError):
+            vix.fetch_text(vix.fred_csv_urls(ID)[0])
+
     def refresh(self, official, gateway, saved=None):
         with patch.object(vix, 'fetch_text', side_effect=[official, gateway]) as fetch:
             result = vix.parse_fred_history_item(META, saved or {})

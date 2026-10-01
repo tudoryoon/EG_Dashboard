@@ -8,8 +8,10 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from urllib.request import Request, urlopen
+
+from curl_cffi import requests as curl_requests
 
 
 START_DATE = "2018-01-01"
@@ -73,6 +75,10 @@ class CurveSnapshot:
 
 
 def fetch_text(url: str) -> str:
+    if urlsplit(url).hostname == "fred.stlouisfed.org":
+        response = curl_requests.get(url, impersonate="chrome", timeout=20)
+        response.raise_for_status()
+        return response.content.decode("utf-8-sig")
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urlopen(request, timeout=8) as response:  # nosec B310 - fixed public endpoints
         return response.read().decode("utf-8-sig")

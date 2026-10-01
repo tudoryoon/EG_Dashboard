@@ -30,6 +30,7 @@ jobs:
       - name: Refresh market price history
         run: |
           python scripts/test_index_price_history.py
+          python scripts/test_market_vix_fred.py
           python scripts/update_market_prices.py
           python scripts/update_market_vix.py
           python scripts/update_market_valuation.py
