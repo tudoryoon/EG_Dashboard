@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: python -m pip install pandas yfinance requests lxml html5lib openpyxl xlrd
 
+      - name: Validate daily yield collectors
+        run: python -m unittest discover -s scripts -p "test_daily_yields.py"
+
       - name: Refresh market macro dashboard
         run: |
           for attempt in 1 2 3; do

@@ -4223,6 +4223,10 @@ h1 {
 .yield-decomposition-notes summary { cursor: pointer; font-weight: 600; }
 .yield-decomposition-notes p { margin: 8px 0; }
 .yield-decomposition-notes a + a { margin-left: 16px; }
+.yield-decomposition-reference { margin-top: 20px; }
+.daily-yield-panel .yield-decomposition-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.daily-yield-panel .yield-decomposition-metrics > div { display: flex; flex-direction: column; justify-content: space-between; }
+.yield-decomposition-reference > summary { cursor: pointer; padding: 12px 0; font-weight: 600; color: #66665f; }
 
 @media (max-width: 760px) {
   .yield-decomposition-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }

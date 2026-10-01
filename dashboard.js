@@ -399,6 +399,11 @@ const state = {
   yieldDecompositionRange: "3y",
   yieldDecompositionMode: "stacked",
   yieldDecompositionHidden: [],
+  dailyYieldRange: "3y",
+  dailyYieldMode: "stacked",
+  dailyYieldHidden: [],
+  acmYieldHidden: ["expectedRate", "modelYield"],
+  yieldDkwOpen: false,
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendChartType: "candle",
@@ -4043,6 +4048,108 @@ function fitTotalDashboardDateTicks(indexes, width) {
   const count = Math.min(indexes.length, Math.max(2, Math.floor((width - 100) / 70)));
   if (indexes.length <= count) return indexes;
   return Array.from({ length: count }, (_, index) => indexes[Math.round(index * (indexes.length - 1) / (count - 1))]);
+}
+
+function buildDailyYieldPayload(kind) {
+  const acm = kind === "acm";
+  const data = marketMacroData?.[acm ? "acmTermPremium" : "dailyYieldDecomposition"];
+  const components = acm ? [
+    { key: "termPremium", label: "ACM 기간 프리미엄", color: "#d97706" },
+    { key: "expectedRate", label: "기대 단기금리 평균", color: "#2563eb" },
+    { key: "modelYield", label: "ACM 모형 금리", color: "#171717" },
+  ] : [
+    { key: "real", label: "TIPS 실질금리", color: "#0f766e" },
+    { key: "bei", label: "BEI 인플레이션 보상", color: "#2563eb" },
+    { key: "nominal", label: "10Y 명목금리", color: "#171717" },
+  ];
+  const allRows = (data?.dates ?? []).flatMap((date, index) => {
+    const values = components.map(({ key }) => data.series?.[key]?.[index]);
+    if (!values.every((value) => typeof value === "number" && Number.isFinite(value))) return [];
+    return [{ date, ...Object.fromEntries(components.map(({ key }, i) => [key, values[i]])) }];
+  });
+  const dates = allRows.map((row) => row.date);
+  const start = dates.length ? shiftDateByRange(dates.at(-1), state.dailyYieldRange, dates[0], dates) : "";
+  const rows = allRows.filter((row) => row.date >= start);
+  const stacked = !acm && state.dailyYieldMode === "stacked";
+  const hidden = acm ? state.acmYieldHidden : state.dailyYieldHidden;
+  const datasets = components.map((item, index) => ({
+    label: item.label, componentKey: item.key,
+    hidden: !stacked && (hidden ?? []).includes(item.key),
+    rawValues: rows.map((row) => row[item.key]),
+    data: rows.map((row) => stacked && index === 1 ? row.real + row.bei : row[item.key]),
+    borderColor: item.color, backgroundColor: `${item.color}55`,
+    borderWidth: index === 2 ? 2 : 1.7,
+    fill: stacked && index < 2 ? (index === 0 ? "origin" : 0) : false,
+    pointRadius: 0, pointHoverRadius: 3, tension: 0, spanGaps: false,
+    order: index === 2 ? 0 : index + 1,
+  }));
+  return { data, rows, labels: rows.map((row) => row.date), datasets, stacked };
+}
+
+function renderDailyYieldPanels() {
+  const rangeButtons = (marketMacroData.ranges ?? []).map((range) => `<button type="button" class="m7-range-chip${state.dailyYieldRange === range.key ? " active" : ""}" data-daily-yield-range="${range.key}" aria-pressed="${state.dailyYieldRange === range.key}">${range.label}</button>`).join("");
+  return ["daily", "acm"].map((kind) => {
+    const acm = kind === "acm";
+    const { data, rows, datasets, stacked } = buildDailyYieldPayload(kind);
+    const latest = rows.at(-1);
+    return `<section class="total-spread-panel yield-decomposition-panel daily-yield-panel">
+      <div class="total-spread-head">
+        <div><h3>${acm ? "10Y 기간 프리미엄 · ACM" : "10Y 명목금리 · 실질금리 + BEI"}</h3>
+          <p>${acm ? "뉴욕 연준 ACM · 일별 추정" : "FRED · 동일 날짜 일별 관측"} · 기준 ${latest?.date || "-"}</p></div>
+        <div class="yield-decomposition-controls">
+          <div class="m7-range-row" role="group" aria-label="일별 금리 기간">${rangeButtons}</div>
+          ${acm ? "" : `<div class="total-curve-window" role="group" aria-label="일별 금리 표시 방식">
+            <button type="button" data-daily-yield-mode="stacked" aria-pressed="${stacked}">누적 분해</button>
+            <button type="button" data-daily-yield-mode="lines" aria-pressed="${!stacked}">개별 추이</button></div>`}
+        </div>
+      </div>
+      ${latest ? `<dl class="yield-decomposition-metrics">${datasets.map((item) => `<div><dt>${item.label}</dt><dd style="color:${item.borderColor}">${latest[item.componentKey].toFixed(2)}%</dd></div>`).join("")}</dl>
+        <div class="total-curve-legend yield-decomposition-legend" role="group" aria-label="${acm ? "ACM" : "일별 금리"} 요소">${datasets.map((item) => stacked
+          ? `<span><i style="background:${item.borderColor}"></i>${item.label}</span>`
+          : `<label><input type="checkbox" data-daily-yield-component="${item.componentKey}" data-yield-kind="${kind}" style="accent-color:${item.borderColor}" ${item.hidden ? "" : "checked"}><i style="background:${item.borderColor}"></i>${item.label}</label>`).join("")}</div>
+        <div class="yield-decomposition-chart"><canvas data-daily-yield="${kind}" role="img" aria-label="${acm ? "10년 ACM 기간 프리미엄 일별 추이" : "10년 명목금리 실질금리와 인플레이션 보상 분해"}"></canvas></div>`
+        : `<p class="empty-state">원천 데이터 수신 대기</p>`}
+      <details class="yield-decomposition-notes"><summary>산식 · 출처 · 한계</summary>
+        ${acm ? `<p>ACM 모형 금리 = 향후 10년 기대 단기금리 평균 + 기간 프리미엄. 기간 프리미엄은 관측값이 아닌 모형 추정치이며 음수가 될 수 있습니다. 과거 값도 재추정될 수 있습니다.</p>
+          <p>위의 TIPS + BEI 분해와 독립적인 모형입니다. ACM 기간 프리미엄을 위 구성요소에 다시 더하지 않습니다. ACM 제로쿠폰 모형 금리는 Treasury 파 수익률과 기준이 다릅니다.</p>
+          <a href="https://www.newyorkfed.org/research/data_indicators/term-premia-tabs" target="_blank" rel="noopener noreferrer">뉴욕 연준 · ACM</a>
+          <a href="https://www.newyorkfed.org/medialibrary/media/research/data_indicators/ACMTermPremium.xls" target="_blank" rel="noopener noreferrer">원본 Excel · ACM Daily</a>`
+        : `<p>10Y 명목금리(DGS10) = TIPS 실질금리(DFII10) + BEI(T10YIE). BEI는 순수 기대인플레이션이 아니라 인플레이션 위험·유동성 프리미엄 등이 포함된 인플레이션 보상입니다. TIPS 실질금리도 DKW의 기대 실질금리와 다릅니다.</p>
+          <p>원천 최신일: 명목 ${data?.sourceDates?.nominal || "-"} · 실질 ${data?.sourceDates?.real || "-"} · BEI ${data?.sourceDates?.bei || "-"}. 세 수치가 모두 공개된 동일 날짜만 합산합니다. 원천 반올림에 따른 미세한 차이는 유지합니다.</p>
+          <a href="https://fred.stlouisfed.org/series/DGS10" target="_blank" rel="noopener noreferrer">FRED · 명목금리</a>
+          <a href="https://fred.stlouisfed.org/series/DFII10" target="_blank" rel="noopener noreferrer">FRED · TIPS 실질금리</a>
+          <a href="https://fred.stlouisfed.org/series/T10YIE" target="_blank" rel="noopener noreferrer">FRED · BEI</a>`}
+        <p>미국 영업일 데이터이며 발표 지연·휴일의 미공개 구간은 임의 연장하지 않습니다. 수집 실패 시 마지막 정상 관측일을 유지합니다.</p>
+      </details>
+    </section>`;
+  }).join("");
+}
+
+function createDailyYieldChart(canvas) {
+  if (typeof Chart === "undefined") return;
+  const payload = buildDailyYieldPayload(canvas.dataset.dailyYield);
+  const range = state.dailyYieldRange;
+  const chart = new Chart(canvas, {
+    type: "line", data: { labels: payload.labels, datasets: payload.datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: (context) => `${context.dataset.label}: ${context.dataset.rawValues[context.dataIndex].toFixed(3)}%`,
+      } } },
+      scales: {
+        x: {
+          grid: { display: false },
+          afterBuildTicks: (axis) => {
+            axis.ticks = fitTotalDashboardDateTicks(buildRegularDateTickIndexes(payload.labels, range), axis.chart.width).map((index) => ({ value: index }));
+          },
+          ticks: { autoSkip: false, maxRotation: 0, color: "#77776f", callback: (value) => formatRangeAxisDate(payload.labels[value], range) },
+        },
+        y: { beginAtZero: true, ticks: { maxTicksLimit: 7, callback: (value) => `${Number(value).toFixed(1)}%`, color: "#77776f" }, grid: { color: "rgba(70,70,66,0.10)" } },
+      },
+    },
+  });
+  charts.push(chart);
 }
 
 function getYieldDecompositionRows(data = marketMacroData?.yieldDecomposition) {
@@ -19221,7 +19328,10 @@ function renderMarketOverview() {
               </section>`
             : ""
         }
-        ${renderYieldDecompositionPanel()}
+        ${renderDailyYieldPanels()}
+        <details class="yield-decomposition-reference" ${state.yieldDkwOpen ? "open" : ""}><summary>DKW 상세 분해 · 월간 공개 참고</summary>
+          ${renderYieldDecompositionPanel()}
+        </details>
       </section>
     </section>
   `;
@@ -19302,6 +19412,28 @@ function renderMarketOverview() {
     });
   });
 
+  usOverviewRoot.querySelectorAll("[data-daily-yield-range], [data-daily-yield-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.dailyYieldRange) state.dailyYieldRange = button.dataset.dailyYieldRange;
+      if (button.dataset.dailyYieldMode) state.dailyYieldMode = button.dataset.dailyYieldMode;
+      const position = { left: window.scrollX, top: window.scrollY };
+      render();
+      window.scrollTo({ ...position, behavior: "instant" });
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-daily-yield]").forEach(createDailyYieldChart);
+  usOverviewRoot.querySelectorAll("[data-daily-yield-component]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const kind = input.dataset.yieldKind;
+      const key = input.dataset.dailyYieldComponent;
+      const stateKey = kind === "acm" ? "acmYieldHidden" : "dailyYieldHidden";
+      state[stateKey] = (state[stateKey] ?? []).filter((item) => item !== key);
+      if (!input.checked) state[stateKey].push(key);
+      const chart = Chart.getChart(usOverviewRoot.querySelector(`[data-daily-yield="${kind}"]`));
+      const index = chart?.data.datasets.findIndex((dataset) => dataset.componentKey === key);
+      if (index >= 0) { chart.setDatasetVisibility(index, input.checked); chart.update("none"); }
+    });
+  });
   usOverviewRoot.querySelectorAll("[data-yield-range], [data-yield-mode]").forEach((button) => {
     button.addEventListener("click", () => {
       if (button.dataset.yieldRange) state.yieldDecompositionRange = button.dataset.yieldRange;
@@ -19315,6 +19447,10 @@ function renderMarketOverview() {
   if (decompositionCanvas) {
     createYieldDecompositionChart(decompositionCanvas);
   }
+  usOverviewRoot.querySelector(".yield-decomposition-reference")?.addEventListener("toggle", (event) => {
+    state.yieldDkwOpen = event.currentTarget.open;
+    if (state.yieldDkwOpen && typeof Chart !== "undefined") Chart.getChart(decompositionCanvas)?.resize();
+  });
   usOverviewRoot.querySelectorAll("[data-yield-component]").forEach((input) => {
     input.addEventListener("change", () => {
       const key = input.dataset.yieldComponent;
