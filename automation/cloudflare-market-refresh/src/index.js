@@ -1,19 +1,19 @@
 const NEW_YORK = "America/New_York";
 
 const DISPATCHES = {
-  "16:12": {
+  "16:42": {
     workflow: "update-market-critical-morning.yml",
     label: "daily-briefing-primary",
   },
-  "16:27": {
+  "16:57": {
     workflow: "update-market-rs.yml",
     label: "market-rs-primary",
   },
-  "16:42": {
+  "17:12": {
     workflow: "update-market-critical-morning.yml",
     label: "daily-briefing-freshness-retry",
   },
-  "16:55": {
+  "17:25": {
     workflow: "update-market-rs.yml",
     label: "market-rs-freshness-retry",
   },

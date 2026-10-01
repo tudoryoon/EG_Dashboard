@@ -40,10 +40,9 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - sources: Yahoo Finance
 
 - `/.github/workflows/update-market-critical-morning.yml`
-  - runs daily, with one backup run for GitHub schedule delays
-  - scheduled at `20:25 UTC` / `05:25 KST` and `21:15 UTC` / `06:15 KST`
-  - updates `data/market-briefing-data.js`, `data/market-rs-data.js`, `data/market-price-data.js`, `data/market-macro-data.js`, `data/market-vix-data.js`, and `data/market-valuation-data.js`
-  - covers the pre-07:00 KST market dashboards, including Daily Briefing, Market RS, Market Prices, Macro/Liquidity, VIX, and Valuation
+  - runs daily at `20:21 UTC` / `05:21 KST` and `20:35 UTC` / `05:35 KST`
+  - updates `data/market-briefing-data.js` and `data/market-price-data.js`
+  - Cloudflare Worker also dispatches this workflow at 16:42 and 17:12 New York time
 
 - `/.github/workflows/update-market-briefing.yml`
   - manual fallback via `workflow_dispatch`
@@ -51,8 +50,9 @@ GitHub Pages dashboard for market, macro, M7, Taiwan revenue, memory spot, cloud
   - sources: Yahoo Finance and Google News/public news feeds used by the briefing script
 
 - `/.github/workflows/update-market-rs.yml`
-  - manual fallback via `workflow_dispatch`
-  - updates `data/market-rs-data.js`
+  - runs daily at `20:27 UTC` / `05:27 KST` and `20:45 UTC` / `05:45 KST`
+  - Cloudflare Worker also dispatches this workflow at 16:57 and 17:25 New York time
+  - updates `data/market-rs-data.js` and `data/market-trend-score-data.js`
   - sources: Yahoo Finance and constituent tables used by the RS pipeline
 
 - `/.github/workflows/update-market-prices.yml`

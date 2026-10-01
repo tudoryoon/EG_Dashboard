@@ -18,10 +18,10 @@ US daylight saving time without manually changing cron expressions.
 
 | New York time | Workflow | Purpose |
 | --- | --- | --- |
-| 16:12 | `update-market-critical-morning.yml` | Daily Briefing primary |
-| 16:27 | `update-market-rs.yml` | RS, Trend Score, CANSLIM primary |
-| 16:42 | `update-market-critical-morning.yml` | Daily Briefing freshness retry |
-| 16:55 | `update-market-rs.yml` | RS, Trend Score, CANSLIM freshness retry |
+| 16:42 | `update-market-critical-morning.yml` | Daily Briefing primary |
+| 16:57 | `update-market-rs.yml` | RS, Trend Score, CANSLIM primary |
+| 17:12 | `update-market-critical-morning.yml` | Daily Briefing freshness retry |
+| 17:25 | `update-market-rs.yml` | RS, Trend Score, CANSLIM freshness retry |
 
 The retry dispatches use `refresh_if_stale=true`. The workflow exits before
 dependency installation when the latest completed QQQ session is already in
