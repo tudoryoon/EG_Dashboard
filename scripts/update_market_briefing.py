@@ -2107,7 +2107,7 @@ def build_fedwatch_snapshot() -> dict[str, object]:
     try:
         return build_official_fedwatch_snapshot()
     except Exception as error:
-        print(f"Official FedWatch EOD update failed; preserving previous snapshot: {error}", flush=True)
+        print(f"Official FedWatch table update failed; preserving previous snapshot: {error}", flush=True)
         if OUTPUT_PATH.exists():
             try:
                 text = OUTPUT_PATH.read_text(encoding="utf-8").strip()

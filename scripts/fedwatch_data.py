@@ -1,270 +1,165 @@
 from __future__ import annotations
 
-import calendar
-import csv
-import io
 import math
-from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+import re
+from datetime import date, datetime, timezone
+from urllib.parse import urljoin, urlsplit, urlunsplit
+from zoneinfo import ZoneInfo
 
-import requests
+from bs4 import BeautifulSoup
 from curl_cffi import requests as curl_requests
 
 
 CME_FEDWATCH_URL = "https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html"
-CME_SETTLEMENTS_URL = (
-    "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/305/FUT"
-)
-FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARL,DFEDTARU,DFF"
-DISPLAY_COLUMNS = [
-    "250-275",
-    "275-300",
-    "300-325",
-    "325-350",
-    "350-375",
-    "375-400",
-    "400-425",
-    "425-450",
-    "450-475",
-    "475-500",
-]
-MONTH_NUMBERS = {
-    "JAN": 1,
-    "FEB": 2,
-    "MAR": 3,
-    "APR": 4,
-    "MAY": 5,
-    "JUN": 6,
-    "JUL": 7,
-    "AUG": 8,
-    "SEP": 9,
-    "OCT": 10,
-    "NOV": 11,
-    "DEC": 12,
-}
-
-# Officially scheduled FOMC decision dates. Extend when the Federal Reserve
-# publishes the next calendar; keeping the dates explicit makes changes auditable.
-FOMC_MEETING_DATES = [
-    date(2026, 9, 16),
-    date(2026, 10, 28),
-    date(2026, 12, 9),
-    date(2027, 1, 27),
-    date(2027, 3, 17),
-    date(2027, 4, 28),
-    date(2027, 6, 9),
-    date(2027, 7, 28),
-    date(2027, 9, 15),
-    date(2027, 10, 27),
-    date(2027, 12, 8),
-]
+CME_TOOL_HOST = "cmegroup-tools.quikstrike.net"
 
 
-def _parse_contract_month(value: str) -> tuple[int, int]:
-    month_name, year_text = value.strip().upper().split()[:2]
-    return (2000 + int(year_text), MONTH_NUMBERS[month_name])
+def _tool_url(base: str, value: str) -> str:
+    result = urljoin(base, value)
+    parsed = urlsplit(result)
+    if parsed.scheme != "https" or parsed.hostname != CME_TOOL_HOST:
+        raise ValueError("Unexpected CME FedWatch tool URL")
+    return result
 
 
-def _month_sequence(start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
-    output: list[tuple[int, int]] = []
-    year, month = start
-    while (year, month) <= end:
-        output.append((year, month))
-        if month == 12:
-            year, month = year + 1, 1
-        else:
-            month += 1
-    return output
+def _cells(row) -> list[str]:
+    cells = []
+    for cell in row.find_all(["td", "th"], recursive=False):
+        text = cell.get_text(" ", strip=True)
+        span = int(cell.get("colspan", 1))
+        if span < 1 or span > 100:
+            raise ValueError("Invalid FedWatch table column span")
+        cells.append(text)
+        cells.extend([""] * (span - 1))
+    return cells
 
 
-def _next_month(value: tuple[int, int]) -> tuple[int, int]:
-    year, month = value
-    return (year + 1, 1) if month == 12 else (year, month + 1)
-
-
-def _fetch_latest_settlements() -> tuple[dict[tuple[int, int], float], dict[str, object]]:
-    today = datetime.now(timezone.utc).date()
-    last_error: Exception | None = None
-    for offset in range(0, 11):
-        candidate = today - timedelta(days=offset)
-        if candidate.weekday() >= 5:
-            continue
+def _meeting_date(value: str) -> str:
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%d %b %Y"):
         try:
-            response = curl_requests.get(
-                CME_SETTLEMENTS_URL,
-                params={"tradeDate": candidate.strftime("%m/%d/%Y")},
-                impersonate="chrome",
-                timeout=30,
-            )
-            response.raise_for_status()
-            payload = response.json()
-            if payload.get("empty") or not payload.get("settlements"):
-                continue
-            if str(payload.get("reportType") or "").lower() != "final":
-                continue
-            settlements: dict[tuple[int, int], float] = {}
-            for row in payload["settlements"]:
-                settle_text = str(row.get("settle") or "").replace("B", "").strip()
-                if not settle_text or settle_text == "-":
-                    continue
-                try:
-                    settlements[_parse_contract_month(str(row["month"]))] = float(settle_text)
-                except (KeyError, ValueError):
-                    continue
-            if settlements:
-                return settlements, payload
-        except Exception as error:
-            last_error = error
-    raise RuntimeError(f"No recent final CME Fed Funds settlement was available: {last_error}")
+            return datetime.strptime(value, fmt).date().isoformat()
+        except ValueError:
+            pass
+    raise ValueError(f"Invalid FedWatch meeting date: {value!r}")
 
 
-def _fetch_fred_policy_rates() -> tuple[float, float, float | None]:
-    response = requests.get(FRED_CSV_URL, timeout=30)
-    response.raise_for_status()
-    rows = list(csv.DictReader(io.StringIO(response.text)))
-    target_lower = target_upper = effective_rate = None
-    for row in reversed(rows):
-        if target_lower is None and row.get("DFEDTARL") not in {None, "", "."}:
-            target_lower = float(row["DFEDTARL"])
-        if target_upper is None and row.get("DFEDTARU") not in {None, "", "."}:
-            target_upper = float(row["DFEDTARU"])
-        if effective_rate is None and row.get("DFF") not in {None, "", "."}:
-            effective_rate = float(row["DFF"])
-        if target_lower is not None and target_upper is not None and effective_rate is not None:
-            break
-    if target_lower is None or target_upper is None:
-        raise RuntimeError("FRED did not return the current federal funds target range")
-    return target_lower, target_upper, effective_rate
-
-
-def _binary_meeting_moves(
-    settlements: dict[tuple[int, int], float],
-    meeting_dates: list[date],
-    effective_rate: float | None,
-) -> list[tuple[date, tuple[int, int], tuple[float, float]]]:
-    meeting_by_month = {(item.year, item.month): item for item in meeting_dates}
-    first_month = min(settlements)
-    final_meeting_month = (meeting_dates[-1].year, meeting_dates[-1].month)
-    end_month = _next_month(final_meeting_month)
-    while end_month in meeting_by_month:
-        end_month = _next_month(end_month)
-    months = _month_sequence(first_month, end_month)
-    missing = [month for month in months if month not in settlements]
-    if missing:
-        raise RuntimeError(f"CME settlements are missing required contracts: {missing}")
-
-    p_avg = [settlements[month] for month in months]
-    p_start = [0.0 if month in meeting_by_month else p_avg[index] for index, month in enumerate(months)]
-    p_end = list(p_start)
-    if months[0] in meeting_by_month and effective_rate is not None:
-        p_start[0] = 100.0 - effective_rate
-
-    for index in range(1, len(months) - 1):
-        if p_start[index] == 0.0 and p_end[index - 1] != 0.0:
-            p_start[index] = p_end[index - 1]
-        if p_end[index] == 0.0 and p_start[index + 1] != 0.0:
-            p_end[index] = p_start[index + 1]
-
-    for index in range(len(months) - 2, -1, -1):
-        if months[index] not in meeting_by_month:
+def parse_probability_table(html: str) -> tuple[list[str], list[dict[str, object]]]:
+    soup = BeautifulSoup(html, "html.parser")
+    for table in soup.find_all("table"):
+        table_rows = [_cells(row) for row in table.find_all("tr") if row.find_parent("table") is table]
+        header_index = next(
+            (index for index, cells in enumerate(table_rows)
+             if cells and cells[0].strip().upper() == "MEETING DATE"),
+            None,
+        )
+        if header_index is None:
             continue
-        if p_end[index] == 0.0:
-            p_end[index] = p_start[index + 1]
-        if p_start[index] == 0.0:
-            meeting_date = meeting_by_month[months[index]]
-            days_in_month = calendar.monthrange(meeting_date.year, meeting_date.month)[1]
-            post_meeting_days = days_in_month - meeting_date.day + 1
-            pre_meeting_days = days_in_month - post_meeting_days
-            if pre_meeting_days <= 0:
-                raise RuntimeError(f"Cannot split the meeting month for {meeting_date}")
-            p_start[index] = (
-                p_avg[index] - (post_meeting_days / days_in_month) * p_end[index]
-            ) / (pre_meeting_days / days_in_month)
+        columns = [re.sub(r"\s+", "", value) for value in table_rows[header_index][1:]]
+        if not columns or any(not re.fullmatch(r"\d+-\d+", column) for column in columns):
+            continue
+        bounds = [tuple(map(int, column.split("-"))) for column in columns]
+        if len(set(columns)) != len(columns) or bounds != sorted(bounds) or any(hi - lo != 25 for lo, hi in bounds):
+            raise ValueError("Invalid FedWatch target-rate columns")
 
-    output: list[tuple[date, tuple[int, int], tuple[float, float]]] = []
-    for meeting_date in meeting_dates:
-        index = months.index((meeting_date.year, meeting_date.month))
-        change_steps = ((100.0 - p_end[index]) - (100.0 - p_start[index])) / 0.25
-        base_steps = math.trunc(change_steps)
-        next_steps = base_steps + (1 if change_steps > 0 else -1 if change_steps < 0 else 0)
-        fraction = abs(change_steps) - math.trunc(abs(change_steps))
-        probabilities = (1.0 - fraction, fraction)
-        output.append((meeting_date, (base_steps * 25, next_steps * 25), probabilities))
-    return output
+        rows = []
+        for cells in table_rows[header_index + 1:]:
+            if not cells or not cells[0]:
+                continue
+            meeting_date = _meeting_date(cells[0])
+            if len(cells) != len(columns) + 1:
+                raise ValueError(f"FedWatch probability columns do not align for {meeting_date}")
+            probabilities = []
+            for value in cells[1:]:
+                # CME leaves unreachable outcomes blank, including merged trailing cells.
+                if not value.strip():
+                    probability = 0.0
+                elif re.fullmatch(r"\d+(?:\.\d+)?\s*%", value):
+                    probability = float(value.replace("%", "").strip())
+                else:
+                    raise ValueError(f"Invalid FedWatch probability: {value!r}")
+                if not math.isfinite(probability) or not 0 <= probability <= 100:
+                    raise ValueError("FedWatch probability is outside 0-100")
+                probabilities.append(probability)
+            if abs(sum(probabilities) - 100.0) > 0.05 * len(columns) + 0.051:
+                raise ValueError(f"FedWatch probabilities do not sum to 100 for {meeting_date}")
+            max_index = max(range(len(probabilities)), key=probabilities.__getitem__)
+            rows.append({"meetingDate": meeting_date, "probabilities": probabilities,
+                         "maxProbability": probabilities[max_index], "maxRange": columns[max_index]})
+        if not rows or [row["meetingDate"] for row in rows] != sorted({row["meetingDate"] for row in rows}):
+            raise ValueError("FedWatch meeting dates are empty, duplicated, or out of order")
+        return columns, rows
+    raise RuntimeError("CME official FedWatch probability table was not found")
 
 
-def _rounded_percentages(values: list[float]) -> list[float]:
-    rounded = [round(max(0.0, value) * 100.0, 1) for value in values]
-    if rounded:
-        difference = round(100.0 - sum(rounded), 1)
-        largest_index = max(range(len(rounded)), key=rounded.__getitem__)
-        rounded[largest_index] = round(rounded[largest_index] + difference, 1)
-    return rounded
+def fetch_probability_html(session) -> tuple[str, str]:
+    response = session.get(CME_FEDWATCH_URL, timeout=30)
+    response.raise_for_status()
+    page = BeautifulSoup(response.text, "html.parser")
+    iframe = next((frame for frame in page.find_all("iframe")
+                   if urlsplit(urljoin(CME_FEDWATCH_URL, frame.get("src", ""))).hostname == CME_TOOL_HOST), None)
+    if iframe is None:
+        raise RuntimeError("CME official FedWatch iframe was not found")
+
+    response = session.get(_tool_url(CME_FEDWATCH_URL, iframe["src"]),
+                           headers={"Referer": CME_FEDWATCH_URL}, timeout=30)
+    response.raise_for_status()
+    tool_url = _tool_url(CME_FEDWATCH_URL, response.url)
+    # The public iframe initializes a session in Tools, then renders the View page.
+    parsed = urlsplit(tool_url)
+    if parsed.path.endswith("/QuikStrikeTools.aspx"):
+        view_url = urlunsplit(parsed._replace(path=parsed.path.replace("QuikStrikeTools.aspx", "QuikStrikeView.aspx")))
+        response = session.get(view_url, headers={"Referer": tool_url}, timeout=30)
+        response.raise_for_status()
+        tool_url = _tool_url(tool_url, response.url)
+
+    page = BeautifulSoup(response.text, "html.parser")
+    current_match = re.search(r"(\d+\s*-\s*\d+)\s*\(Current\)", page.get_text(" ", strip=True))
+    current_range = re.sub(r"\s+", "", current_match.group(1)) if current_match else ""
+    link = next((link for link in page.find_all("a") if link.get_text(strip=True) == "Probabilities"), None)
+    event = re.fullmatch(r"javascript:__doPostBack\('([^']+)',''\)", link.get("href", "")) if link else None
+    form = link.find_parent("form") if link else None
+    if event is None or form is None:
+        raise RuntimeError("CME official probability-tab form was not found")
+    fields = {item["name"]: item.get("value", "") for item in form.find_all("input", type="hidden") if item.get("name")}
+    if not fields.get("__VIEWSTATE"):
+        raise RuntimeError("CME official probability-tab form state was missing")
+    fields.update({"__EVENTTARGET": event.group(1), "__EVENTARGUMENT": ""})
+    response = session.post(_tool_url(tool_url, form.get("action", tool_url)), data=fields,
+                            headers={"Referer": tool_url}, timeout=30)
+    response.raise_for_status()
+    _tool_url(tool_url, response.url)
+    return response.text, current_range
 
 
 def build_fedwatch_snapshot() -> dict[str, object]:
-    settlements, metadata = _fetch_latest_settlements()
-    trade_date = datetime.strptime(str(metadata["tradeDate"]), "%m/%d/%Y").date()
-    meeting_dates = [item for item in FOMC_MEETING_DATES if item > trade_date]
-    if not meeting_dates:
-        raise RuntimeError("No upcoming FOMC meetings are configured")
-    target_lower, target_upper, effective_rate = _fetch_fred_policy_rates()
-    binary_moves = _binary_meeting_moves(settlements, meeting_dates, effective_rate)
-
-    cumulative: dict[int, float] = {0: 1.0}
-    row_distributions: list[tuple[date, dict[str, float]]] = []
-    all_columns = set(DISPLAY_COLUMNS)
-    lower_bps = round(target_lower * 100)
-    upper_bps = round(target_upper * 100)
-    for meeting_date, moves, probabilities in binary_moves:
-        next_distribution: defaultdict[int, float] = defaultdict(float)
-        for cumulative_move, cumulative_probability in cumulative.items():
-            for move, probability in zip(moves, probabilities):
-                if probability > 0:
-                    next_distribution[cumulative_move + move] += cumulative_probability * probability
-        cumulative = dict(next_distribution)
-        by_range = {
-            f"{lower_bps + move}-{upper_bps + move}": probability
-            for move, probability in cumulative.items()
-        }
-        all_columns.update(
-            range_label for range_label, probability in by_range.items() if probability >= 0.0005
-        )
-        row_distributions.append((meeting_date, by_range))
-
-    columns = sorted(all_columns, key=lambda value: int(value.split("-", 1)[0]))
-    rows = []
-    for meeting_date, by_range in row_distributions:
-        probabilities = _rounded_percentages([by_range.get(column, 0.0) for column in columns])
-        max_probability = max(probabilities)
-        max_index = probabilities.index(max_probability)
-        rows.append(
-            {
-                "meetingDate": meeting_date.isoformat(),
-                "probabilities": probabilities,
-                "maxProbability": max_probability,
-                "maxRange": columns[max_index],
+    last_error = None
+    for attempt in range(2):
+        try:
+            with curl_requests.Session(impersonate="chrome") as session:
+                html, current_range = fetch_probability_html(session)
+            columns, rows = parse_probability_table(html)
+            now = datetime.now(timezone.utc)
+            as_of = now.astimezone(ZoneInfo("America/Chicago")).date()
+            if date.fromisoformat(str(rows[0]["meetingDate"])) < as_of:
+                raise ValueError("CME FedWatch table starts with a past meeting")
+            return {
+                "source": "CME FedWatch 공식 확률표",
+                "sourceUrl": CME_FEDWATCH_URL,
+                "asOf": as_of.isoformat(),
+                "asOfBasis": "retrieval-date-america-chicago",
+                "refreshedAt": now.isoformat(),
+                "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
+                "sourceNote": (
+                    "CME 공식 FedWatch의 Probabilities 표를 직접 수집한 값입니다. "
+                    "자체 재계산하지 않으며, 조회일과 수집 시각 기준 스냅샷이므로 이후 장중 CME 화면과는 달라질 수 있습니다."
+                ),
+                "columns": columns,
+                "rows": rows,
+                "currentTargetRange": current_range,
+                "method": "official-probability-table",
+                "isFallback": False,
             }
-        )
-
-    now = datetime.now(timezone.utc)
-    return {
-        "source": "CME 공식 EOD 결제값 기반 FedWatch 재산출",
-        "sourceUrl": CME_FEDWATCH_URL,
-        "settlementSourceUrl": CME_SETTLEMENTS_URL,
-        "asOf": trade_date.isoformat(),
-        "sourceUpdatedAt": metadata.get("updateTime"),
-        "refreshedAt": now.isoformat(),
-        "title": "CME FedWatch Tool - Conditional Meeting Probabilities",
-        "sourceNote": (
-            "CME 30-Day Fed Funds 선물의 최신 Final 결제값과 FRED 기준금리 범위를 "
-            "CME FedWatch 방법론으로 재산출한 EOD 확률입니다. 장중 CME 화면과는 변동분만큼 차이가 날 수 있습니다."
-        ),
-        "columns": columns,
-        "rows": rows,
-        "currentTargetRange": f"{lower_bps}-{upper_bps}",
-        "effectiveRate": effective_rate,
-        "settlementReportType": metadata.get("reportType"),
-        "method": "official-eod-reconstruction",
-        "isFallback": False,
-    }
+        except Exception as error:
+            last_error = error
+            print(f"CME FedWatch official table attempt {attempt + 1} failed: {error}", flush=True)
+    raise RuntimeError(f"CME official FedWatch table could not be refreshed: {last_error}")
