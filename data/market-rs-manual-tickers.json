@@ -100,6 +100,17 @@
       "sharesOutstanding": 1064053821
     },
     {
+      "ticker": "ARTY",
+      "name": "iShares Future AI & Tech ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 50601624
+    },
+    {
       "ticker": "ASHR",
       "name": "Xtrackers Harvest CSI 300 China A-Shares ETF",
       "memberships": {
@@ -342,6 +353,17 @@
       "sharesOutstanding": 50059303
     },
     {
+      "ticker": "DFLV",
+      "name": "Dimensional US Large Cap Value ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 174970101
+    },
+    {
       "ticker": "DINO",
       "name": "HF Sinclair Corporation",
       "memberships": {
@@ -373,6 +395,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 228148921
+    },
+    {
+      "ticker": "EEM",
+      "name": "iShares MSCI Emerging Markets ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 752400000
     },
     {
       "ticker": "ELF",
@@ -582,6 +615,18 @@
         "russell2000": false
       },
       "sharesOutstanding": 80431927
+    },
+    {
+      "ticker": "MINV",
+      "name": "Matthews Asia Innovators Active ETF",
+      "minMarketCapExempt": true,
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 3424184
     },
     {
       "ticker": "MP",
@@ -835,6 +880,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 834325691
+    },
+    {
+      "ticker": "SCHD",
+      "name": "Schwab U.S. Dividend Equity ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 3420744216
     },
     {
       "ticker": "SHOP",

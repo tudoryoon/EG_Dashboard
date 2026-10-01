@@ -202,6 +202,20 @@ def load_manual_config() -> dict[str, object]:
         return {}
 
 
+def get_manual_market_cap_exemptions() -> set[str]:
+    # Explicitly requested small funds must survive both manual and scheduled refreshes.
+    return {
+        normalize_ticker(member["ticker"])
+        for member in load_manual_config().get("members", [])
+        if isinstance(member, dict) and member.get("ticker") and member.get("minMarketCapExempt") is True
+    }
+
+
+def passes_market_cap_filter(ticker: str, market_cap: int | None, exemptions: set[str]) -> bool:
+    return bool(market_cap is not None and market_cap > 0
+                and (market_cap > MIN_MARKET_CAP_USD or normalize_ticker(ticker) in exemptions))
+
+
 def get_manual_universe_members() -> list[dict[str, object]]:
     members = [dict(member) for member in MANUAL_UNIVERSE_MEMBERS]
     seen = {normalize_ticker(member.get("ticker")) for member in members}
@@ -1412,6 +1426,7 @@ def build_payload(
         for member in get_manual_universe_members()
         if normalize_ticker(member.get("ticker"))
     }
+    cap_exemptions = get_manual_market_cap_exemptions()
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_open = open_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
@@ -1432,7 +1447,7 @@ def build_payload(
         if not math.isfinite(latest_price) or latest_price <= 0:
             continue
         market_cap = round(latest_price * int(shares_outstanding))
-        if market_cap <= MIN_MARKET_CAP_USD:
+        if not passes_market_cap_filter(ticker, market_cap, cap_exemptions):
             continue
         market_caps[ticker] = market_cap
         eligible_tickers.append(ticker)
@@ -1511,7 +1526,7 @@ def build_payload(
             except Exception:
                 shares_outstanding = None
         market_cap = market_caps.get(ticker)
-        if market_cap is None or market_cap <= MIN_MARKET_CAP_USD:
+        if not passes_market_cap_filter(ticker, market_cap, cap_exemptions):
             continue
         rs_rating_sp500_frame = rs_ratings_by_universe.get("sp500", pd.DataFrame())
         rs_rating_nasdaq100_frame = rs_ratings_by_universe.get("nasdaq100", pd.DataFrame())

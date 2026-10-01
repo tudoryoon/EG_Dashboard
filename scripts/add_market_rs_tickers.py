@@ -288,7 +288,7 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
     if current_price is None:
         raise RuntimeError(f"No current price available for {ticker}.")
     market_cap = None if is_index else round(current_price * shares)
-    if not is_index and market_cap <= rs.MIN_MARKET_CAP_USD:
+    if not is_index and not rs.passes_market_cap_filter(ticker, market_cap, rs.get_manual_market_cap_exemptions()):
         raise RuntimeError(f"{ticker} market cap is below the RS minimum.")
 
     high = frame["high"].dropna()
