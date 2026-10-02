@@ -265,6 +265,17 @@
       "sharesOutstanding": 91614649
     },
     {
+      "ticker": "CALF",
+      "name": "Pacer US Small Cap Cash Cows 100 ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 74088110
+    },
+    {
       "ticker": "CCJ",
       "name": "Cameco Corporation",
       "memberships": {
@@ -362,6 +373,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 174970101
+    },
+    {
+      "ticker": "DFUV",
+      "name": "Dimensional US Marketwide Value ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 286103696
     },
     {
       "ticker": "DINO",
@@ -560,6 +582,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 281049984
+    },
+    {
+      "ticker": "IWN",
+      "name": "iShares Russell 2000 Value ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 73500000
     },
     {
       "ticker": "JQUA",
@@ -902,6 +935,24 @@
         "russell2000": false
       },
       "sharesOutstanding": 1297654610
+    },
+    {
+      "ticker": "SMH",
+      "name": "VanEck Semiconductor ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 123093109,
+      "sharesOutstandingBasis": {
+        "method": "Estimated units from rounded official net assets / NAV",
+        "asOfDate": "2026-09-30",
+        "netAssetsUsd": 74880000000,
+        "navUsd": 608.32,
+        "source": "https://www.vaneck.com/us/en/investments/semiconductor-etf-smh/?audience=retail&country=us"
+      }
     },
     {
       "ticker": "SNOW",
