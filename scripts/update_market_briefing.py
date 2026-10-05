@@ -6,7 +6,7 @@ import math
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, time as datetime_time, timezone
+from datetime import datetime, time as datetime_time, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 from pathlib import Path
@@ -15,6 +15,7 @@ from xml.etree import ElementTree as ET
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import pandas_market_calendars as mcal
 import requests
 import yfinance as yf
 
@@ -1251,6 +1252,20 @@ def is_same_price_date(left: pd.Timestamp | None, right: pd.Timestamp | None) ->
     return pd.Timestamp(left).date() == pd.Timestamp(right).date()
 
 
+def latest_completed_krx_session(now_utc: datetime | None = None) -> pd.Timestamp:
+    now_utc = now_utc or datetime.now(timezone.utc)
+    if now_utc.tzinfo is None:
+        raise ValueError("KRX session check requires a timezone-aware timestamp")
+    korea_today = now_utc.astimezone(ZoneInfo("Asia/Seoul")).date()
+    schedule = mcal.get_calendar("XKRX").schedule(
+        start_date=korea_today - timedelta(days=21), end_date=korea_today
+    )
+    completed = schedule[schedule["market_close"] <= now_utc]
+    if completed.empty:
+        raise RuntimeError("No completed KRX session found for Daily Briefing")
+    return pd.Timestamp(completed.index[-1])
+
+
 def us_session_dates(close_frame: pd.DataFrame) -> pd.DatetimeIndex:
     sessions = close_frame.attrs.get("usSessionDates")
     if sessions is None:
@@ -1313,6 +1328,9 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
     if latest_timestamp is None:
         raise RuntimeError("No completed market session found for Daily Briefing.")
     latest_date = latest_timestamp.strftime("%Y-%m-%d")
+    latest_krx_timestamp = latest_completed_krx_session() if any(
+        symbol.endswith(".KS") for symbol in symbols
+    ) else None
     rotation_benchmark = build_rotation_benchmark(close_frame)
 
     fx_usd_per_krw = None
@@ -1330,7 +1348,8 @@ def build_company_snapshots() -> tuple[list[dict[str, object]], dict[str, dict[s
         series = session_aligned_close(close_frame, symbol).loc[:latest_timestamp] if symbol in close_frame.columns else pd.Series(dtype=float)
         price = previous_close = day_change_pct = None
         price_date = series.last_valid_index()
-        is_current_price = is_same_price_date(price_date, latest_timestamp)
+        expected_timestamp = latest_krx_timestamp if symbol.endswith(".KS") else latest_timestamp
+        is_current_price = is_same_price_date(price_date, expected_timestamp)
         if not is_current_price:
             series = series.loc[:price_date] if price_date is not None else pd.Series(dtype=float)
         range_returns = {key: None for key in MAP_RANGE_LABELS}

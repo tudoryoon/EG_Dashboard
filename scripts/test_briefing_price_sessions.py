@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pandas as pd
@@ -10,6 +11,33 @@ import update_market_briefing as briefing
 
 
 class BriefingSessionTests(unittest.TestCase):
+    def test_krx_holiday_uses_last_completed_exchange_session(self):
+        morning = datetime(2026, 10, 5, 22, 20, tzinfo=timezone.utc)
+        afternoon = datetime(2026, 10, 6, 7, 0, tzinfo=timezone.utc)
+        self.assertEqual(briefing.latest_completed_krx_session(morning).date().isoformat(), "2026-10-02")
+        self.assertEqual(briefing.latest_completed_krx_session(afternoon).date().isoformat(), "2026-10-06")
+
+    def test_korean_close_is_current_on_krx_holiday_even_after_us_close(self):
+        dates = pd.to_datetime(["2026-10-01", "2026-10-02", "2026-10-05"])
+        frame = pd.DataFrame({"QQQ": [100, 101, 102], "005930.KS": [200, 210, None]}, index=dates)
+        sectors = [{"key": "test", "label": "test", "items": [
+            {"ticker": "QQQ", "name": "QQQ"}, {"ticker": "005930.KS", "name": "Samsung"},
+        ]}]
+        with patch.object(briefing, "SECTOR_GROUPS", sectors), \
+             patch.object(briefing, "fetch_price_frame", return_value=frame), \
+             patch.object(briefing, "latest_completed_market_timestamp", return_value=dates[-1]), \
+             patch.object(briefing, "latest_completed_krx_session", return_value=dates[1]), \
+             patch.object(briefing, "build_rotation_benchmark", return_value={}), \
+             patch.object(briefing, "load_previous_market_meta", return_value={}), \
+             patch.object(briefing, "fetch_meta", return_value={}):
+            _, by_ticker, _, _, _ = briefing.build_company_snapshots()
+        korean = by_ticker["005930.KS"]
+        self.assertEqual(korean["priceDate"], "2026-10-02")
+        self.assertFalse(korean["isStalePrice"])
+        self.assertEqual(korean["dayChangePct"], 5)
+        self.assertEqual(by_ticker["QQQ"]["priceDate"], "2026-10-05")
+        self.assertFalse(by_ticker["QQQ"]["isStalePrice"])
+
     def test_individual_gap_is_repaired_when_qqq_is_complete(self):
         dates = pd.to_datetime(["2026-09-21", "2026-09-22", "2026-09-23"])
         closes = {"QQQ": pd.Series([740, 747, 741], index=dates),

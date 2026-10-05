@@ -20,7 +20,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install briefing dependencies
-        run: python -m pip install pandas yfinance requests curl_cffi beautifulsoup4 tzdata
+        run: python -m pip install pandas pandas_market_calendars yfinance requests curl_cffi beautifulsoup4 tzdata
 
       - name: Refresh market briefing
         run: |

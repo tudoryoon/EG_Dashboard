@@ -138,7 +138,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.backup-guard.outputs.should_run == 'true'
-        run: python -m pip install pandas yfinance requests curl_cffi beautifulsoup4 tzdata
+        run: python -m pip install pandas pandas_market_calendars yfinance requests curl_cffi beautifulsoup4 tzdata
 
       - name: Refresh market prices and briefing
         if: steps.backup-guard.outputs.should_run == 'true'
