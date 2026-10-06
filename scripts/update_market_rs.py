@@ -143,6 +143,9 @@ TERMINAL_SKIP_TICKERS = {
     "PDLI",
     "SBT",
     "THRD",
+    # Nasdaq Corporate Actions Alert #2026-710: WBD last traded 2026-10-05;
+    # halted on 2026-10-06 for its completed merger, then suspended.
+    "WBD",
 }
 SOURCE_PLACEHOLDER_TICKERS = {"", "NAN", "-", "--"}
 MANUAL_UNIVERSE_MEMBERS = [

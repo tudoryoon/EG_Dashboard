@@ -281,7 +281,6 @@ SECTOR_GROUPS = [
             {"ticker": "NFLX", "label": "NFLX US", "name": "Netflix", "query": "Netflix stock"},
             {"ticker": "SPOT", "label": "SPOT US", "name": "Spotify", "query": "Spotify stock"},
             {"ticker": "DIS", "label": "DIS US", "name": "Disney", "query": "Disney stock"},
-            {"ticker": "WBD", "label": "WBD US", "name": "Warner Bros. Discovery", "query": "Warner Bros Discovery stock"},
             {"ticker": "U", "label": "U US", "name": "Unity", "query": "Unity Software stock"},
             {"ticker": "RBLX", "label": "RBLX US", "name": "Roblox", "query": "Roblox stock"},
         ],
