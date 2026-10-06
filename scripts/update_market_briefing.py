@@ -176,6 +176,7 @@ SECTOR_GROUPS = [
         "key": "semi_equipment",
         "label": "반도체 장비/후공정",
         "items": [
+            {"ticker": "TSM", "label": "TSM US", "name": "TSMC ADR", "query": "TSMC stock"},
             {"ticker": "ASML", "label": "ASML US", "name": "ASML", "query": "ASML stock"},
             {"ticker": "LRCX", "label": "LRCX US", "name": "Lam Research", "query": "Lam Research stock"},
             {"ticker": "AMAT", "label": "AMAT US", "name": "Applied Materials", "query": "Applied Materials stock"},
