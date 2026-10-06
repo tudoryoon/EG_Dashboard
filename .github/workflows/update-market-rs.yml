@@ -11,6 +11,14 @@ on:
         options:
           - "false"
           - "true"
+      prices_only:
+        description: "Refresh RS and Trend prices without unrelated breadth, financials, or earnings collection"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
       dispatch_source:
         description: "Optional dispatcher label for audit visibility"
         required: false
@@ -42,6 +50,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Queued push runs must start from the newest main, including data
+          # published by an earlier run in this concurrency group.
+          ref: main
 
       - name: Check whether refresh is needed
         id: refresh-guard
@@ -132,19 +144,19 @@ jobs:
         run: python scripts/update_market_trend_score.py
 
       - name: Refresh closing-price new high and low breadth
-        if: steps.refresh-guard.outputs.should_run == 'true'
+        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
         continue-on-error: true
         run: python scripts/update_market_breadth.py
 
       - name: Refresh market RS financials
-        if: steps.refresh-guard.outputs.should_run == 'true'
+        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
         env:
           MARKET_RS_FINANCIALS_MAX_COMPANIES: "35"
           MARKET_RS_FINANCIALS_STALE_DAYS: "14"
         run: python scripts/update_market_rs_financials.py
 
       - name: Refresh full CANSLIM EPS surprise history
-        if: steps.refresh-guard.outputs.should_run == 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '45 20 * * *')
+        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '45 20 * * *')
         run: python scripts/update_market_canslim_earnings.py --scope all
 
       - name: Commit updated market RS history
