@@ -11,13 +11,25 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: market-prices-vix-valuation
+  cancel-in-progress: false
+
 jobs:
   update-market-prices:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node for data validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,26 +37,50 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install pandas yfinance requests curl_cffi lxml html5lib openpyxl xlrd
+        run: python -m pip install pandas pandas_market_calendars yfinance requests curl_cffi lxml html5lib openpyxl xlrd
 
-      - name: Refresh market price history
+      - name: Test market collectors
         run: |
           python scripts/test_index_price_history.py
           python scripts/test_market_vix_fred.py
-          python scripts/update_market_prices.py
-          python scripts/update_market_vix.py
-          python scripts/update_market_valuation.py
+          python scripts/test_market_data_batch.py
+
+      - name: Refresh each market dataset independently
+        id: collect
+        run: python scripts/update_market_data_batch.py
 
       - name: Commit updated market price history
+        if: steps.collect.outputs.changed_files != ''
+        env:
+          CHANGED_FILES: ${{ steps.collect.outputs.changed_files }}
         run: |
-          if git diff --quiet -- data/market-price-data.js data/market-vix-data.js data/market-valuation-data.js; then
-            echo "No market price, VIX, or valuation changes detected."
-            exit 0
-          fi
-          python scripts/bump_data_cache_versions.py data/market-price-data.js data/market-vix-data.js data/market-valuation-data.js
+          read -r -a files <<< "$CHANGED_FILES"
+          python scripts/bump_data_cache_versions.py "${files[@]}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-price-data.js data/market-vix-data.js data/market-valuation-data.js index.html
-          git commit -m "Update market price, VIX, and valuation history" || exit 0
-          git pull --rebase origin main
-          git push
+          git add -- "${files[@]}" index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update market price, VIX, and valuation history"
+          for attempt in 1 2 3; do
+            if ! git pull --rebase origin main; then
+              conflicts=$(git diff --name-only --diff-filter=U)
+              if [[ "$conflicts" != "index.html" ]]; then
+                echo "::error::Data conflict requires review; refusing to overwrite newer data."
+                exit 1
+              fi
+              # Retain upstream cache versions, then bump only this batch's outputs.
+              git show :2:index.html > index.html
+              python scripts/bump_data_cache_versions.py "${files[@]}"
+              git add index.html
+              GIT_EDITOR=true git rebase --continue
+            fi
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Report failures after publishing successful datasets
+        if: always() && steps.collect.outputs.failed_count != '' && steps.collect.outputs.failed_count != '0'
+        run: |
+          echo "::error::Some collectors failed; see collection summary and publish result."
+          exit 1

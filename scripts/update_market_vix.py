@@ -544,12 +544,45 @@ def build_snapshot_cards(vix_family: dict[str, dict[str, object]], curve_payload
     return cards
 
 
+def refresh_series(items, parser, existing):
+    refreshed = {}
+    for meta in items:
+        key = meta["key"]
+        saved = existing.get(key, {})
+        try:
+            item = parser(meta)
+            dates, values = item.get("dates", []), item.get("values", [])
+            if not dates or len(dates) != len(values) or not all(math.isfinite(value) for value in values):
+                raise ValueError("Empty or invalid history")
+            if item.get("latestDate", "") < saved.get("latestDate", ""):
+                raise ValueError("Source history regressed")
+            refreshed[key] = item
+        except Exception as error:
+            if not saved.get("dates"):
+                raise RuntimeError(f"No usable history for {key}") from error
+            print(f"::warning::{key}: {error}; preserving {saved.get('latestDate')}")
+            refreshed[key] = {**saved, "fetchStatus": "stale"}
+    return refreshed
+
+
 def main() -> None:
-    vix_family = {meta["key"]: parse_vix_family_item(meta) for meta in VIX_FAMILY}
-    fixed_income = {meta["key"]: parse_fixed_income_item(meta) for meta in FIXED_INCOME_SERIES}
+    output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
+    existing = {}
+    if output_path.exists():
+        text = output_path.read_text(encoding="utf-8").strip()
+        existing = json.loads(text[len("window.marketVixData = ") : -1])
+    # Independent sources must not prevent the credit spread from refreshing.
+    fixed_income = refresh_series(FIXED_INCOME_SERIES, parse_fixed_income_item, existing.get("fixedIncome", {}))
+    vix_family = refresh_series(VIX_FAMILY, parse_vix_family_item, existing.get("family", {}))
     existing_curves = load_existing_curve_history()
-    merged_curves = fetch_curve_history(existing_curves)
-    curve_payload = build_curve_payload(merged_curves, vix_family["vix"])
+    try:
+        merged_curves = fetch_curve_history(existing_curves)
+        curve_payload = build_curve_payload(merged_curves, vix_family["vix"])
+    except Exception as error:
+        if not existing.get("curve"):
+            raise
+        print(f"::warning::VIX curve: {error}; preserving saved curve")
+        curve_payload = {**existing["curve"], "fetchStatus": "stale"}
 
     latest_dates = [item.get("latestDate") for item in vix_family.values() if item.get("latestDate")]
     latest_dates.extend(item.get("latestDate") for item in fixed_income.values() if item.get("latestDate"))
@@ -573,7 +606,6 @@ def main() -> None:
         "snapshots": build_snapshot_cards(vix_family, curve_payload),
     }
 
-    output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
     output_path.write_text(
         "window.marketVixData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",

@@ -81,5 +81,35 @@ class FredFreshnessTests(unittest.TestCase):
         self.assertEqual(vix.parse_fred_csv(csv([('2026-05-31', 3)]), ID), {'2026-05-31': 3})
 
 
+class IsolatedSeriesTests(unittest.TestCase):
+    def saved(self):
+        return {'dates': ['2026-10-01'], 'values': [3.24], 'latestDate': '2026-10-01', 'latestValue': 3.24}
+
+    def test_move_failure_does_not_block_credit_spread(self):
+        fresh = {'dates': ['2026-10-02'], 'values': [3.10], 'latestDate': '2026-10-02'}
+        parser = Mock(side_effect=[TimeoutError('offline'), fresh])
+        result = vix.refresh_series(vix.FIXED_INCOME_SERIES, parser, {'move': self.saved()})
+        self.assertEqual(parser.call_count, 2)
+        self.assertEqual(result['move']['latestDate'], '2026-10-01')
+        self.assertEqual(result['move']['fetchStatus'], 'stale')
+        self.assertEqual(result['hySpread'], fresh)
+
+    def test_bad_or_regressing_source_preserves_observation_date(self):
+        invalid = [
+            {'dates': [], 'values': []},
+            {'dates': ['2026-09-30'], 'values': [3.12], 'latestDate': '2026-09-30'},
+            {'dates': ['2026-10-02'], 'values': [float('nan')], 'latestDate': '2026-10-02'},
+        ]
+        for item in invalid:
+            result = vix.refresh_series([META], Mock(return_value=item), {'hySpread': self.saved()})['hySpread']
+            self.assertEqual(result['latestDate'], '2026-10-01')
+            self.assertEqual(result['latestValue'], 3.24)
+            self.assertEqual(result['fetchStatus'], 'stale')
+
+    def test_no_saved_history_is_not_silently_accepted(self):
+        with self.assertRaises(RuntimeError):
+            vix.refresh_series([META], Mock(side_effect=TimeoutError('offline')), {})
+
+
 if __name__ == '__main__':
     unittest.main()
