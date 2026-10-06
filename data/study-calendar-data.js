@@ -2,7 +2,7 @@ window.studyCalendarData = {
   "updatedAt": "2026-10-06",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-10-05",
+  "calendarToday": "2026-10-06",
   "coverage": {
     "dailyBriefingUniverse": 219,
     "matchedEarnings": 112,
@@ -646,7 +646,7 @@ window.studyCalendarData = {
         "name": "EchoStar",
         "date": "2026-11-05",
         "status": "outside-window",
-        "verificationStatus": "single-source",
+        "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-05"
         ]
@@ -2178,21 +2178,19 @@ window.studyCalendarData = {
       "Nasdaq": {
         "successfulChecks": 39,
         "failedChecks": 1,
-        "lastSuccessAt": "2026-10-06T10:48:05+09:00",
+        "lastSuccessAt": "2026-10-06T17:18:05+09:00",
         "warnings": [
           "2026-11-26: RuntimeError: Nasdaq earnings request failed for 2026-11-26: Nasdaq missing rows; not a verified empty day"
         ]
       },
       "Yahoo": {
-        "successfulChecks": 217,
-        "failedChecks": 1,
-        "lastSuccessAt": "2026-10-06T10:48:05+09:00",
-        "warnings": [
-          "ECHO: HTTPError: 500 Server Error: INKApi Error for url: https://finance.yahoo.com/quote/ECHO/"
-        ]
+        "successfulChecks": 218,
+        "failedChecks": 0,
+        "lastSuccessAt": "2026-10-06T17:18:05+09:00",
+        "warnings": []
       }
     },
-    "checkedAt": "2026-10-06T10:48:05+09:00",
+    "checkedAt": "2026-10-06T17:18:05+09:00",
     "counts": {
       "cross-checked": 90,
       "outside-window": 98,
@@ -2243,14 +2241,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Aug/2026 · ($0.25)",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Aug/2026 · EPS 컨센서스 ($0.25)",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-07",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-07",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2259,7 +2257,7 @@ window.studyCalendarData = {
               "date": "2026-10-07",
               "session": "",
               "url": "https://finance.yahoo.com/quote/APLD/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2281,14 +2279,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.96",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.96",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-09",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-09",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2297,7 +2295,7 @@ window.studyCalendarData = {
               "date": "2026-10-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DAL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2327,14 +2325,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.66",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.66",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-13",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2343,7 +2341,7 @@ window.studyCalendarData = {
               "date": "2026-10-13",
               "session": "",
               "url": "https://finance.yahoo.com/quote/C/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2365,14 +2363,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $14.05",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $14.05",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-13",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2381,7 +2379,7 @@ window.studyCalendarData = {
               "date": "2026-10-13",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2403,14 +2401,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.90",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.90",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-13",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2419,7 +2417,7 @@ window.studyCalendarData = {
               "date": "2026-10-13",
               "session": "",
               "url": "https://finance.yahoo.com/quote/JNJ/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2441,14 +2439,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $5.88",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $5.88",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-13",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2457,7 +2455,7 @@ window.studyCalendarData = {
               "date": "2026-10-13",
               "session": "",
               "url": "https://finance.yahoo.com/quote/JPM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2479,14 +2477,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.12",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.12",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-13",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2495,7 +2493,7 @@ window.studyCalendarData = {
               "date": "2026-10-13",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UNH/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2528,14 +2526,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $12.54",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $12.54",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-14",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2544,7 +2542,7 @@ window.studyCalendarData = {
               "date": "2026-10-14",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ASML/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2566,14 +2564,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.13",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.13",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-14",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2582,7 +2580,7 @@ window.studyCalendarData = {
               "date": "2026-10-14",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BAC/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2604,14 +2602,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $14.19",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $14.19",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-14",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2620,7 +2618,7 @@ window.studyCalendarData = {
               "date": "2026-10-14",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BLK/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2642,14 +2640,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.97",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.97",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-14",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2658,7 +2656,7 @@ window.studyCalendarData = {
               "date": "2026-10-14",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2680,14 +2678,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-13, Nasdaq 2026-10-14 · Sep/2026 · $1.85",
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-13, Nasdaq 2026-10-14 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.85",
           "evidence": [
             {
               "source": "Yahoo",
               "date": "2026-10-13",
               "session": "",
               "url": "https://finance.yahoo.com/quote/WFC/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -2696,7 +2694,7 @@ window.studyCalendarData = {
               "date": "2026-10-14",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -2718,14 +2716,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.58",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.58",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-15",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2734,7 +2732,7 @@ window.studyCalendarData = {
               "date": "2026-10-15",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AA/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2778,14 +2776,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.67",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.67",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-15",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2794,7 +2792,7 @@ window.studyCalendarData = {
               "date": "2026-10-15",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SCHW/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2816,14 +2814,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.45",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.45",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-15",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2832,7 +2830,7 @@ window.studyCalendarData = {
               "date": "2026-10-15",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TSM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2862,14 +2860,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.13",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.13",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2878,7 +2876,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ISRG/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2900,14 +2898,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.82",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.82",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2916,7 +2914,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NFLX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2938,14 +2936,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.03",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.03",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2954,7 +2952,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UAL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2987,14 +2985,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.01",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.01",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3003,7 +3001,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GE/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3025,14 +3023,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.41",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.41",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3041,7 +3039,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3063,14 +3061,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $7.26",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $7.26",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3079,7 +3077,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NOC/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3101,14 +3099,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.75",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.75",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3117,7 +3115,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RTX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3139,14 +3137,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.43",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.43",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3155,7 +3153,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/EQT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3177,14 +3175,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · ($0.12)",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.12)",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3193,7 +3191,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GLXY/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3215,14 +3213,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.38",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.38",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-20",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3231,7 +3229,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VICR/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3253,14 +3251,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.90",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.90",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3269,7 +3267,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/IBM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3291,14 +3289,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.17",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.17",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3307,7 +3305,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LRCX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3329,14 +3327,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.62",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.62",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3345,7 +3343,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LUV/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3367,14 +3365,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.39",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.39",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3383,7 +3381,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TXN/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3405,14 +3403,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.61",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.61",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-21",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3421,7 +3419,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/T/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3443,14 +3441,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.92",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.92",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3459,7 +3457,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NEM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3481,14 +3479,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.94",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.94",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3497,7 +3495,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CRS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3519,14 +3517,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $7.25",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $7.25",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3535,7 +3533,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LMT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3557,14 +3555,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.89",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.89",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3573,7 +3571,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PG/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3595,14 +3593,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.12",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.12",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3611,7 +3609,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SPOT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3633,14 +3631,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.43",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.43",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3649,7 +3647,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UNP/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3671,14 +3669,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $18.09",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $18.09",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3687,7 +3685,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VLO/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3709,14 +3707,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.82",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.82",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3725,7 +3723,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DECK/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -3747,14 +3745,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-22, Yahoo 2026-10-28 · Sep/2026 · $0.41",
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-22, Yahoo 2026-10-28 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.41",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3763,7 +3761,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/F/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3785,14 +3783,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-22, Yahoo 2026-10-27 · Sep/2026 · $0.73",
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-22, Yahoo 2026-10-27 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.73",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3801,7 +3799,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FCX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3823,14 +3821,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $12.42",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $12.42",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3839,7 +3837,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FIX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3861,14 +3859,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.27",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.27",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3877,7 +3875,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/INTC/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -3899,14 +3897,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-22, Yahoo 2026-10-28 · Sep/2026 · $0.87",
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-22, Yahoo 2026-10-28 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.87",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3915,7 +3913,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NXT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3937,14 +3935,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.62",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.62",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-23",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-23",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3953,7 +3951,7 @@ window.studyCalendarData = {
               "date": "2026-10-23",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SLB/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3975,14 +3973,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-23, Yahoo 2026-10-28 · Sep/2026 · $4.14",
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-23, Yahoo 2026-10-28 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.14",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-23",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-23",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3991,7 +3989,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GD/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -4021,14 +4019,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.79",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.79",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-26",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4037,7 +4035,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMKR/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4059,14 +4057,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.60",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.60",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-26",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4075,7 +4073,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CDNS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4097,14 +4095,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.88",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.88",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-26",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4113,7 +4111,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CLS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4135,14 +4133,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.31",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.31",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-26",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4151,7 +4149,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FTAI/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -4173,14 +4171,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.52",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.52",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4189,7 +4187,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HOOD/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4211,14 +4209,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.77",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.77",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4227,7 +4225,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NXPI/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4260,14 +4258,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · ($0.15)",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.15)",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4276,7 +4274,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BA/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4298,14 +4296,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.88",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.88",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4314,7 +4312,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GLW/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4336,14 +4334,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.87",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.87",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4352,7 +4350,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KO/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4374,14 +4372,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.24",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.24",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4390,7 +4388,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4412,14 +4410,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.63",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.63",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4428,7 +4426,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UPS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4450,14 +4448,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.35",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.35",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4466,7 +4464,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ATI/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -4488,14 +4486,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.57",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.57",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4504,7 +4502,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BE/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -4526,14 +4524,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.20",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.20",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4542,8 +4540,8 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NEE/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
-              "providerEstimate": false,
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
+              "providerEstimate": true,
               "dateRange": null
             }
           ]
@@ -4564,14 +4562,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $6.36",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $6.36",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4580,7 +4578,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RCL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4602,14 +4600,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-22, Nasdaq 2026-10-27 · Sep/2026 · $2",
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-22, Nasdaq 2026-10-27 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2",
           "evidence": [
             {
               "source": "Yahoo",
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SCCO/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -4618,7 +4616,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -4640,14 +4638,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $7.11",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $7.11",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4656,7 +4654,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/STX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4678,14 +4676,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-27 · Sep/2026 · $2.04",
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-27 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.04",
           "evidence": [
             {
               "source": "Yahoo",
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TER/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -4694,7 +4692,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -4716,14 +4714,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.43",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.43",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4732,7 +4730,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/V/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -4767,14 +4765,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.77",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.77",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4783,7 +4781,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FTNT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4805,14 +4803,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.72",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.72",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4821,7 +4819,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/APH/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4843,14 +4841,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $7.18",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $7.18",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4859,7 +4857,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DINO/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4881,14 +4879,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $10.41",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $10.41",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4897,7 +4895,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PSX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4926,7 +4924,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FDX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4948,14 +4946,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.09",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.09",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-28",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4964,7 +4962,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GEV/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4993,7 +4991,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GH/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -5002,7 +5000,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5031,7 +5029,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GOOGL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -5040,7 +5038,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5069,7 +5067,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KLAC/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -5078,7 +5076,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5100,14 +5098,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.33",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.33",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-28",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5116,7 +5114,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KMI/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -5138,14 +5136,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-28 · Sep/2026 · $0.77",
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-28 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.77",
           "evidence": [
             {
               "source": "Yahoo",
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LVS/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -5154,7 +5152,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5183,7 +5181,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/META/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -5192,7 +5190,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5221,7 +5219,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MSFT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -5230,7 +5228,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5259,7 +5257,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NOW/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -5268,7 +5266,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5297,7 +5295,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SBUX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -5306,7 +5304,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5328,14 +5326,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-28 · Sep/2026 · $0.24",
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-28 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.24",
           "evidence": [
             {
               "source": "Yahoo",
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TSLA/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -5344,7 +5342,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5366,14 +5364,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-28 · Sep/2026 · $1.83",
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-10-21, Nasdaq 2026-10-28 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.83",
           "evidence": [
             {
               "source": "Yahoo",
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VRT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -5382,7 +5380,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5404,14 +5402,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.30",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.30",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5420,7 +5418,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AXTI/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5442,14 +5440,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $45.22",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $45.22",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5458,7 +5456,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SNDK/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5502,14 +5500,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.36",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.36",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5518,7 +5516,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HWM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5540,14 +5538,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $9.83",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $9.83",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5556,7 +5554,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LLY/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5578,14 +5576,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.25",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.25",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5594,7 +5592,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MRK/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5616,14 +5614,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.23",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.23",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5632,7 +5630,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/OWL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5654,14 +5652,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $10.08",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $10.08",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5670,7 +5668,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PBF/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5692,14 +5690,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.40",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.40",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5708,7 +5706,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/STM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5730,14 +5728,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.98",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.98",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5746,7 +5744,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AAPL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5768,14 +5766,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $2.02",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.02",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5784,7 +5782,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMZN/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -5806,14 +5804,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.34",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.34",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5822,7 +5820,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ASX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5851,7 +5849,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CAT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -5860,7 +5858,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5882,14 +5880,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · ($0.22)",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.22)",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5898,7 +5896,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/COIN/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -5920,14 +5918,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-29, Yahoo 2026-11-02 · Sep/2026 · $0.51",
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-29, Yahoo 2026-11-02 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.51",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5936,7 +5934,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/EL/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5958,14 +5956,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.57",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.57",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5974,7 +5972,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FSLR/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -5996,14 +5994,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.44",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.44",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6012,7 +6010,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HII/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6034,14 +6032,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.36",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.36",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6050,7 +6048,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ILMN/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6072,14 +6070,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.06",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.06",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6088,7 +6086,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LHX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6110,14 +6108,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $5.13",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $5.13",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6126,7 +6124,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MA/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6148,14 +6146,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $21.50",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $21.50",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6164,7 +6162,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MSTR/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6186,14 +6184,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.02",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.02",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6202,7 +6200,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NET/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6224,14 +6222,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.68",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.68",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6240,7 +6238,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PWR/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6262,14 +6260,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · ($0.41)",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.41)",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6278,7 +6276,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RBLX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6300,14 +6298,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.30",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.30",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6316,7 +6314,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RDDT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6338,14 +6336,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $0.73",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.73",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6354,7 +6352,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TWLO/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6376,14 +6374,14 @@ window.studyCalendarData = {
           "verificationStatus": "conflict",
           "verificationLabel": "날짜 불일치·재확인",
           "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-29, Yahoo 2026-11-05 · Sep/2026 · $3.97",
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-10-29, Yahoo 2026-11-05 · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.97",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6392,7 +6390,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/WDC/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6426,14 +6424,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.85",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.85",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-30",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6442,7 +6440,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ABBV/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6464,14 +6462,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $4.89",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.89",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-30",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6480,7 +6478,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CVX/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6509,7 +6507,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CCJ/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -6518,7 +6516,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -6540,14 +6538,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $1.39",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.39",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-30",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6556,7 +6554,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVT/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6578,14 +6576,14 @@ window.studyCalendarData = {
           "verificationStatus": "cross-checked",
           "verificationLabel": "예상·교차 확인",
           "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · Sep/2026 · $3.93",
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.93",
           "evidence": [
             {
               "source": "Nasdaq",
               "date": "2026-10-30",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6594,7 +6592,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/XOM/",
-              "fetchedAt": "2026-10-06T10:48:05+09:00",
+              "fetchedAt": "2026-10-06T17:18:05+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
