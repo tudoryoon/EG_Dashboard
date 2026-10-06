@@ -287,6 +287,17 @@
       "sharesOutstanding": 435532978
     },
     {
+      "ticker": "CIBR",
+      "name": "First Trust NASDAQ Cybersecurity ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 153926033
+    },
+    {
       "ticker": "CLS",
       "name": "Celestica Inc.",
       "memberships": {
