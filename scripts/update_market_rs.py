@@ -137,11 +137,16 @@ SYMBOL_ALIASES = {
 TERMINAL_SKIP_TICKERS = {
     "ADRO",
     "AKE",
+    # Nasdaq alerts #2026-716 and #2026-706: both last traded 2026-10-05.
+    "BLFS",
     "GTXI",
     "INH",
     "P5N994",
     "PDLI",
+    # Paramount transferred to NYSE as SKYD on 2026-10-06; PSKY stopped trading.
+    "PSKY",
     "SBT",
+    "SLP",
     "THRD",
     # Nasdaq Corporate Actions Alert #2026-710: WBD last traded 2026-10-05;
     # halted on 2026-10-06 for its completed merger, then suspended.
