@@ -48,6 +48,7 @@ class MarketBatchTests(unittest.TestCase):
         workflow = (root / '.github/workflows/update-market-prices.yml').read_text()
         install = next(line for line in workflow.splitlines() if 'pip install' in line)
         self.assertIn('pandas_market_calendars', install)
+        self.assertIn('fetch-depth: 1', workflow)
         self.assertIn('python scripts/test_market_data_batch.py', workflow)
 
 
