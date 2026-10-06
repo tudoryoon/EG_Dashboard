@@ -4,6 +4,7 @@ import argparse
 import ast
 import html
 import json
+import os
 import re
 import time
 from datetime import date, datetime, time as datetime_time, timedelta
@@ -13,11 +14,13 @@ from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
+from calendar_earnings_sources import collect_sources, reconcile
 
 
 ROOT = Path(__file__).resolve().parents[1]
 BRIEFING_SCRIPT = ROOT / "scripts" / "update_market_briefing.py"
 OUTPUT_PATH = ROOT / "data" / "study-calendar-data.js"
+EARNINGS_CACHE_PATH = ROOT / "data" / "calendar-earnings-cache.json"
 
 KST = ZoneInfo("Asia/Seoul")
 NEW_YORK = ZoneInfo("America/New_York")
@@ -593,16 +596,23 @@ def week_bounds(today: date) -> list[tuple[str, date, date]]:
 
 def request_rows(session: requests.Session, target_date: date) -> list[dict]:
     last_error: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(2):
         try:
-            response = session.get(NASDAQ_API, params={"date": target_date.isoformat()}, timeout=25)
+            response = session.get(NASDAQ_API, params={"date": target_date.isoformat()}, timeout=10)
             response.raise_for_status()
             payload = response.json()
-            data = payload.get("data") or {}
-            return data.get("rows") or []
-        except (requests.RequestException, ValueError, TypeError) as error:
+            if (payload.get("status") or {}).get("rCode", 200) != 200:
+                raise ValueError("Nasdaq returned an error status")
+            data = payload.get("data")
+            if not isinstance(data, dict) or not isinstance(data.get("rows"), list):
+                raise ValueError("Nasdaq missing rows; not a verified empty day")
+            actual_date = datetime.strptime(data["asOf"], "%a, %b %d, %Y").date()
+            if actual_date != target_date:
+                raise ValueError("Nasdaq response date differs from requested date")
+            return data["rows"]
+        except (requests.RequestException, ValueError, TypeError, KeyError) as error:
             last_error = error
-            if attempt < 2:
+            if attempt < 1:
                 time.sleep(0.8 * (attempt + 1))
     raise RuntimeError(f"Nasdaq earnings request failed for {target_date}: {last_error}")
 
@@ -750,9 +760,55 @@ def week_status(today: date, start: date, end: date) -> str:
     return "진행 중"
 
 
+def collect_earnings_with_fallback(universe, start, end, use_cache=False):
+    now = datetime.now(KST).isoformat(timespec="seconds")
+    previous = []
+    previous_date = None
+    if OUTPUT_PATH.exists():
+        raw = OUTPUT_PATH.read_text(encoding="utf-8").strip()
+        payload = json.loads(raw.removeprefix("window.studyCalendarData = ").removesuffix(";"))
+        previous_date = payload.get("updatedAt")
+        previous = [e for week in payload.get("weeks", []) for e in week.get("events", [])
+                    if e.get("kind") == "earnings"]
+    cache = json.loads(EARNINGS_CACHE_PATH.read_text(encoding="utf-8")) if EARNINGS_CACHE_PATH.exists() else {
+        "sources": {"Nasdaq": {"checks": {}, "events": [
+            {"ticker": e["ticker"], "date": e["date"], "session": e.get("session", ""),
+             "sourceUrl": e["sourceUrl"], "fetchedAt": previous_date}
+            for e in previous if not e.get("confirmed")
+        ]}}
+    }
+    previous = [*previous, *cache.get("resolvedEvents", [])]
+    collection_end = start + timedelta(days=55)
+    if use_cache:
+        if not EARNINGS_CACHE_PATH.exists():
+            raise RuntimeError("No earnings source cache is available")
+        now = cache["updatedAt"]
+    else:
+        cache = collect_sources(universe, start, collection_end, cache, request_rows, now)
+    events, audit = reconcile(universe, start, end, collection_end, cache, previous, localize_event)
+    events = apply_confirmed_earnings(events, universe, start, collection_end)
+    confirmed = {e["ticker"]: e for e in events if e.get("confirmed")}
+    for status in audit["symbols"]:
+        if status["ticker"] in confirmed:
+            event = confirmed[status["ticker"]]
+            status.update({"date": event["date"], "status": "confirmed" if event["date"] <= end.isoformat() else "outside-window"})
+    cache["resolvedEvents"] = events
+    audit["checkedAt"] = now
+    if not events and not any(s["successfulChecks"] for s in audit["sources"].values()):
+        raise RuntimeError("All earnings sources failed and no previous schedule is available")
+    for source, result in audit["sources"].items():
+        print(f"Earnings {source}: {result['successfulChecks']} successful / {result['failedChecks']} failed checks")
+    counts = {}
+    for item in audit["symbols"]:
+        counts[item["status"]] = counts.get(item["status"], 0) + 1
+    audit["counts"] = counts
+    return [e for e in events if e["date"] <= end.isoformat()], audit, cache
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--policy-only", action="store_true", help="Refresh FOMC/BOJ without refetching earnings")
+    parser.add_argument("--cached-earnings", action="store_true", help="Reconcile cached earnings responses and retain macro data without network requests")
     args = parser.parse_args()
     if args.policy_only:
         refresh_policy_only()
@@ -763,8 +819,8 @@ def main() -> None:
     bounds = week_bounds(today_us)
     start = bounds[0][1]
     end = bounds[-1][2]
-    earnings = build_earnings_events(universe, start, end)
-    macro_events, macro_failures = build_macro_events(start, end)
+    earnings, earnings_audit, earnings_cache = collect_earnings_with_fallback(universe, start, end, args.cached_earnings)
+    macro_events, macro_failures = (load_existing_macro_events(start, end), []) if args.cached_earnings else build_macro_events(start, end)
 
     weeks = []
     week_labels = {
@@ -801,12 +857,14 @@ def main() -> None:
             "matchedMacro": len(macro_events),
             "windowStart": start.isoformat(),
             "windowEnd": end.isoformat(),
+            "earningsEligible": len(universe) - earnings_audit["counts"].get("excluded-etf", 0),
         },
+        "earningsAudit": earnings_audit,
         "methodology": {
             "macro": "미국 Macro·FOMC 및 일본 BOJ 금리 결정은 각 공식 기관 일정에서 매일 갱신",
-            "earnings": "기업 IR 공식 공지를 우선 적용하고 나머지는 Daily Briefing 미국 종목을 Nasdaq Earnings Calendar와 자동 대조",
+            "earnings": "Daily Briefing 미국 기업을 Nasdaq·Yahoo 기업별 일정과 대조. 수집 8주·표시 4주, 등록된 기업 IR 확정 일정 우선. ETF 제외",
             "timing": "실적·미국 Macro·FOMC는 미국 날짜, BOJ는 일본 날짜에 배치. KST 날짜·시각 병기, BOJ 발표 시각은 미정",
-            "warning": "공식 확정 배지가 없는 일정은 Nasdaq/Zacks 예상일을 포함하므로 기업 IR 공지에 따라 변경될 수 있음",
+            "warning": "교차 확인도 공식 확정은 아님. 날짜 불일치는 재확인 표시, 수집 실패 시 직전 일정 보존. Yahoo 날짜 범위는 단일 날짜로 임의 배정하지 않음",
             "macroWarning": "공식 기관 일정에 일시적 접속 문제가 생기면 직전 저장 일정만 유지하며, 다음 실행에서 재확인",
         },
         "weeks": weeks,
@@ -817,12 +875,24 @@ def main() -> None:
     }
 
     serialized = json.dumps(payload, ensure_ascii=False, indent=2)
+    EARNINGS_CACHE_PATH.write_text(json.dumps(earnings_cache, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     OUTPUT_PATH.write_text(f"window.studyCalendarData = {serialized};\n", encoding="utf-8")
     print(
         f"Updated {OUTPUT_PATH.relative_to(ROOT)}: "
         f"{len(universe)} Daily Briefing tickers, {len(earnings)} earnings events, "
         f"{len(macro_events)} macro/policy events"
     )
+    for source, result in earnings_audit["sources"].items():
+        if result["failedChecks"]:
+            print(f"::warning::Calendar {source}: {result['failedChecks']} checks failed; cached schedules retained")
+    if os.getenv("GITHUB_STEP_SUMMARY"):
+        with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+            summary.write("## Earnings calendar coverage\n\n")
+            summary.write(f"Display: {start} to {end}; collection through {earnings_audit['collectionEnd']}.\n\n")
+            summary.write("| Source | Successful checks | Failed checks | Last successful check |\n| --- | --- | --- | --- |\n")
+            for source, result in earnings_audit["sources"].items():
+                summary.write(f"| {source} | {result['successfulChecks']} | {result['failedChecks']} | {result['lastSuccessAt'] or '-'} |\n")
+            summary.write("\nSymbol states: " + json.dumps(earnings_audit["counts"], ensure_ascii=False) + "\n")
     if macro_failures:
         print(f"Macro source warnings: {', '.join(macro_failures)}")
 

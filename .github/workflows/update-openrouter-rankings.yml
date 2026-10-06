@@ -16,7 +16,7 @@ concurrency:
 jobs:
   update-openrouter-rankings:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,6 +41,11 @@ jobs:
         run: |
           python -m unittest discover -s scripts -p test_llm_arr_update.py
           node scripts/test_llm_reported_arr.cjs
+
+      - name: Test earnings fallback and calendar dates
+        run: |
+          python -m unittest discover -s scripts -p 'test_study_calendar*.py'
+          node scripts/test_study_calendar_view.cjs
 
       - name: Refresh each dataset independently
         id: collect

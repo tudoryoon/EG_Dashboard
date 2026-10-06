@@ -17663,7 +17663,7 @@ function renderStudyCalendarOverview() {
               const timingMarkup =
                 isEarnings
                   ? `<small class="study-calendar-chip-timing${event.confirmed ? " is-confirmed" : ""}">
-                      <span>${event.confirmed ? "공식 확정" : "예상"}</span> ${escapeHtml(kstTimingLabel)}
+                      <span>${escapeHtml(event.confirmed ? "공식 확정" : event.verificationLabel || "예상")}</span> ${escapeHtml(kstTimingLabel)}
                     </small>`
                   : kstDateValue !== event.date
                     ? `<small class="study-calendar-chip-timing">${escapeHtml(`KST ${kstDateLabel} ${event.time || "시간 미정"}`)}</small>`
@@ -17742,6 +17742,14 @@ function renderStudyCalendarOverview() {
         <footer class="study-calendar-notes">
           <p><strong>기준</strong> ${escapeHtml(studyCalendarData.methodology?.macro || "")} · ${escapeHtml(studyCalendarData.methodology?.earnings || "")}</p>
           <p>${escapeHtml(studyCalendarData.methodology?.warning || "")}</p>
+          ${studyCalendarData.earningsAudit ? `<details><summary>실적 일정 점검 · 미확인 ${escapeHtml(studyCalendarData.earningsAudit.counts?.unconfirmed || 0)} · 날짜 불일치 ${escapeHtml(studyCalendarData.earningsAudit.counts?.conflict || 0)}</summary>
+            <p>${Object.entries(studyCalendarData.earningsAudit.sources || {}).map(([name, source]) => `${escapeHtml(name)}: 성공 ${escapeHtml(source.successfulChecks)} / 실패 ${escapeHtml(source.failedChecks)} · 마지막 성공 ${escapeHtml(source.lastSuccessAt || "없음")}`).join("<br>")}</p>
+            <p>${(studyCalendarData.earningsAudit.symbols || []).filter(item => ["unconfirmed", "date-range", "conflict", "cached"].includes(item.status)).map(item => {
+              const event = allEvents.find(event => event.ticker === item.ticker);
+              const evidence = (event?.evidence || []).map(source => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.source)} ${escapeHtml(source.date)}</a>`).join(" / ");
+              return `${escapeHtml(item.ticker)}: ${escapeHtml({unconfirmed: "일정 미확인", "date-range": "날짜 범위만 확인", conflict: "날짜 불일치", cached: "이전 일정·재확인"}[item.status])}${evidence ? ` (${evidence})` : ""}`;
+            }).join(" · ") || "재확인 대상 없음"}</p>
+          </details>` : ""}
           <div>${fallbackMarkup}</div>
         </footer>
       </section>

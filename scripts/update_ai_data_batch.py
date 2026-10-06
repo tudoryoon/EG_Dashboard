@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TASKS = [
     ("OpenRouter", "update_openrouter_rankings.py", ["data/openrouter-rankings-data.js"], 180),
     ("Token price", "update_token_price_index.py", ["data/token-price-index-data.js"], 180),
-    ("Calendar", "update_study_calendar.py", ["data/study-calendar-data.js"], 300),
+    ("Calendar", "update_study_calendar.py", ["data/study-calendar-data.js", "data/calendar-earnings-cache.json"], 900),
     ("Public ARR", "update_llm_arr.py", ["data/llm-data.js", "data/llm-arr-public-history.json"], 120),
 ]
 
