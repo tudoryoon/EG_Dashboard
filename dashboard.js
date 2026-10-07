@@ -346,6 +346,19 @@ const BRIEFING_ROTATION_DISTRIBUTION_CORR_WINDOWS = [
   { key: "2m", label: "2M", sessions: 42, description: "최근 42거래일 기준입니다. 단기 노이즈와 추세의 균형을 봅니다." },
   { key: "3m", label: "3M", sessions: 63, description: "최근 63거래일 기준입니다. 기본값이며 3개월 동행성을 봅니다." },
 ];
+const BRIEFING_CORRELATION_WINDOWS = [
+  { key: "1m", label: "1M", sessions: 21 },
+  { key: "2m", label: "2M", sessions: 42 },
+  { key: "3m", label: "3M", sessions: 63 },
+  { key: "6m", label: "6M", sessions: 126 },
+];
+const BRIEFING_CORRELATION_INDEXES = [
+  { key: "dowjones", label: "다우존스", symbol: "^DJI" },
+  { key: "nasdaq", label: "나스닥 종합", symbol: "^IXIC" },
+  { key: "nasdaq100", label: "나스닥100", symbol: "^NDX" },
+  { key: "sp500", label: "S&P500", symbol: "^GSPC" },
+  { key: "russell2000", label: "러셀2000", symbol: "^RUT" },
+];
 const MARKET_RS_CAP_RANGES = [
   { key: "all", label: "All", min: 0, max: Number.POSITIVE_INFINITY },
   { key: "200m-1b", label: "$200M-$1B", min: 200_000_000, max: 1_000_000_000 },
@@ -455,6 +468,9 @@ const state = {
   briefingRotationDistributionBenchmark: "qqq",
   briefingRotationDistributionXAxis: "score",
   briefingRotationDistributionCorrWindow: "3m",
+  briefingCorrelationSector: "memory",
+  briefingCorrelationPeer: "sector:neo_cloud",
+  briefingCorrelationWindow: "3m",
   rsUniverse: "all",
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
@@ -8757,6 +8773,226 @@ function calculatePearsonCorrelation(leftValues, rightValues) {
   return numerator / denominator;
 }
 
+function getBriefingCorrelationIndexHistory(item, sessionDates) {
+  const dates = item?.dates ?? [];
+  const values = item?.values ?? [];
+  const positions = new Map(dates.map((date, index) => [date, index]));
+  return sessionDates.map((date, sessionIndex) => {
+    const index = positions.get(date);
+    const current = values[index];
+    const previous = values[index - 1];
+    // A missing session must not turn a multi-day index return into a daily one.
+    const aligned = sessionIndex === 0 || dates[index - 1] === sessionDates[sessionIndex - 1];
+    const dailyReturn = aligned && Number.isFinite(current) && Number.isFinite(previous) && previous > 0 && current > 0
+      ? (current / previous - 1) * 100
+      : null;
+    return { date, returns: { "1d": dailyReturn } };
+  });
+}
+
+function buildBriefingCorrelationModel(leftHistory, rightHistory, sessions) {
+  const left = new Map(leftHistory.filter((item) => item.date).map((item) => [item.date, item.returns?.["1d"]]));
+  const right = new Map(rightHistory.filter((item) => item.date).map((item) => [item.date, item.returns?.["1d"]]));
+  const dates = [...new Set([...left.keys(), ...right.keys()])].sort();
+  const rows = dates.map((date) => ({ date, x: left.get(date), y: right.get(date) }));
+  const rolling = rows.map((row, index) => {
+    const windowRows = rows.slice(Math.max(0, index - sessions + 1), index + 1);
+    const pairs = windowRows.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    const value = pairs.length === sessions
+      ? calculatePearsonCorrelation(pairs.map((point) => point.x), pairs.map((point) => point.y))
+      : null;
+    return {
+      date: row.date,
+      start: windowRows[0].date,
+      sampleSize: pairs.length,
+      correlation: Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : null,
+    };
+  });
+  return {
+    rolling: rolling.slice(Math.min(sessions - 1, Math.max(0, rolling.length - 1))),
+    latest: rolling.at(-1) ?? { date: null, start: null, sampleSize: 0, correlation: null },
+    pairs: rows.slice(-sessions).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y)),
+  };
+}
+
+function createBriefingCorrelationCharts(root, model, leftLabel, rightLabel, windowMeta) {
+  const chartBase = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false } },
+  };
+  const axisBase = {
+    border: { color: "#d8d8d2" },
+    grid: { color: (context) => context.tick.value === 0 ? "#92958d" : "rgba(70, 70, 66, 0.10)" },
+    ticks: { color: "#74746e", font: { size: 11 } },
+  };
+  const line = new Chart(root.querySelector("[data-briefing-correlation-line]"), {
+    type: "line",
+    data: {
+      labels: model.rolling.map((point) => point.date),
+      datasets: [{
+        label: `${windowMeta.label} 상관계수`,
+        data: model.rolling.map((point) => point.correlation),
+        borderColor: "#087f8c",
+        backgroundColor: "rgba(8, 127, 140, 0.08)",
+        borderWidth: 2,
+        pointRadius: model.rolling.length === 1 ? 3 : 0,
+        pointHoverRadius: 4,
+        fill: { target: "origin" },
+        tension: 0,
+        spanGaps: false,
+      }],
+    },
+    options: {
+      ...chartBase,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        ...chartBase.plugins,
+        tooltip: { callbacks: {
+          title: (items) => formatFullIsoDate(items[0]?.label),
+          label: (context) => `상관계수 r ${context.parsed.y.toFixed(3)}`,
+          afterLabel: (context) => {
+            const row = model.rolling[context.dataIndex];
+            return `${row.start} ~ ${row.date} · ${row.sampleSize}거래일`;
+          },
+        } },
+      },
+      scales: {
+        x: {
+          ...axisBase, grid: { display: false },
+          afterBuildTicks: (axis) => {
+            const last = model.rolling.length - 1;
+            const count = Math.min(6, Math.max(2, Math.floor(axis.chart.width / 100)));
+            axis.ticks = last < 0 ? [] : [...new Set(Array.from({ length: count }, (_, i) => Math.round(i * last / (count - 1))))]
+              .map((value) => ({ value }));
+          },
+          ticks: {
+            ...axisBase.ticks, autoSkip: false, maxRotation: 0,
+            callback: (value) => formatShortIsoDate(model.rolling[value]?.date),
+          },
+        },
+        y: { ...axisBase, min: -1, max: 1, ticks: {
+          ...axisBase.ticks, stepSize: 0.5, callback: (value) => Number(value).toFixed(1),
+        } },
+      },
+    },
+  });
+  const scatter = new Chart(root.querySelector("[data-briefing-correlation-scatter]"), {
+    type: "scatter",
+    data: { datasets: [{
+      label: "일간수익률",
+      data: model.pairs,
+      backgroundColor: "rgba(210, 125, 37, 0.65)",
+      borderColor: "#bd721f",
+      pointRadius: 3,
+      pointHoverRadius: 5,
+    }] },
+    options: {
+      ...chartBase,
+      plugins: {
+        ...chartBase.plugins,
+        tooltip: { callbacks: {
+          title: (items) => formatFullIsoDate(items[0]?.raw?.date),
+          label: (context) => [
+            `${leftLabel} ${formatSignedPercent(context.raw.x)}`,
+            `${rightLabel} ${formatSignedPercent(context.raw.y)}`,
+          ],
+        } },
+      },
+      scales: Object.fromEntries(["x", "y"].map((axis, index) => [axis, {
+        ...axisBase,
+        title: { display: true, text: `${index ? rightLabel : leftLabel} (%)`, color: "#74746e", font: { size: 11 } },
+        ticks: { ...axisBase.ticks, maxTicksLimit: 5, callback: (value) => `${Number(value).toFixed(1)}%` },
+      }])),
+    },
+  });
+  charts.push(line, scatter);
+}
+
+function renderBriefingCorrelation(root, sectors, history) {
+  if (!root || sectors.length < 1) return;
+  root.querySelectorAll("canvas").forEach((canvas) => {
+    const chart = Chart.getChart(canvas);
+    if (!chart) return;
+    const index = charts.indexOf(chart);
+    if (index >= 0) charts.splice(index, 1);
+    chart.destroy();
+  });
+  const sector = sectors.find((item) => item.key === state.briefingCorrelationSector) ?? sectors[0];
+  const peers = [
+    ...sectors.filter((item) => item.key !== sector.key).map((item) => ({ ...item, value: `sector:${item.key}`, kind: "sector" })),
+    ...BRIEFING_CORRELATION_INDEXES.map((item) => ({ ...item, value: `index:${item.key}`, kind: "index" })),
+  ];
+  const peer = peers.find((item) => item.value === state.briefingCorrelationPeer) ?? peers[0];
+  const windowMeta = BRIEFING_CORRELATION_WINDOWS.find((item) => item.key === state.briefingCorrelationWindow)
+    ?? BRIEFING_CORRELATION_WINDOWS[2];
+  state.briefingCorrelationSector = sector.key;
+  state.briefingCorrelationPeer = peer.value;
+  state.briefingCorrelationWindow = windowMeta.key;
+  const leftHistory = history[sector.key] ?? [];
+  const rightHistory = peer.kind === "sector" ? history[peer.key] ?? []
+    : getBriefingCorrelationIndexHistory(window.marketPriceData?.items?.[peer.key], leftHistory.map((item) => item.date));
+  const model = buildBriefingCorrelationModel(leftHistory, rightHistory, windowMeta.sessions);
+  const latest = model.latest;
+  const correlationText = Number.isFinite(latest.correlation) ? latest.correlation.toFixed(3) : "-";
+  const availability = Number.isFinite(latest.correlation) ? ""
+    : latest.sampleSize < windowMeta.sessions ? "표본 부족" : "수익률 변동 없음";
+  const panels = window.marketBriefingData?.sectorPanels ?? [];
+  const members = (key) => {
+    const panel = panels.find((item) => item.key === key);
+    return panel?.scoreTickers?.length ? panel.scoreTickers : (panel?.items ?? []).map((item) => item.ticker);
+  };
+  const rightMembers = new Set(peer.kind === "sector" ? members(peer.key) : []);
+  const overlap = members(sector.key).filter((ticker) => rightMembers.has(ticker));
+  root.innerHTML = `
+    <div class="briefing-correlation-head">
+      <div><h3>섹터 상관관계</h3><span>일간수익률 · Pearson r · ${windowMeta.sessions}거래일</span></div>
+      <div class="briefing-correlation-value" aria-live="polite">
+        <span>상관계수 r</span><strong>${correlationText}</strong>
+        <span>${availability || `${latest.sampleSize}거래일 · ${escapeHtml(latest.date ?? "-")}`}</span>
+      </div>
+    </div>
+    <div class="briefing-correlation-controls">
+      <label>기준 섹터<select data-briefing-correlation-sector>
+        ${sectors.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === sector.key ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
+      </select></label>
+      <label>비교 대상<select data-briefing-correlation-peer>
+        ${["sector", "index"].map((kind) => `<optgroup label="${kind === "sector" ? "섹터" : "주요 지수"}">${peers.filter((item) => item.kind === kind).map((item) => `<option value="${escapeHtml(item.value)}"${item.value === peer.value ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}</optgroup>`).join("")}
+      </select></label>
+      <div class="briefing-correlation-window"><span>상관기간</span><div role="group" aria-label="상관기간">
+        ${BRIEFING_CORRELATION_WINDOWS.map((item) => `<button type="button" data-briefing-correlation-window="${item.key}" aria-pressed="${item.key === windowMeta.key}">${item.label}</button>`).join("")}
+      </div></div>
+    </div>
+    <div class="briefing-correlation-plots">
+      <div><h4>${windowMeta.label} 롤링 상관계수</h4><div class="briefing-correlation-canvas"><canvas data-briefing-correlation-line role="img" aria-label="${escapeHtml(`${sector.label}와 ${peer.label}의 롤링 상관계수`)}"></canvas></div></div>
+      <div><h4>일간수익률 분포 <small>${latest.sampleSize} / ${windowMeta.sessions}거래일</small></h4><div class="briefing-correlation-canvas"><canvas data-briefing-correlation-scatter role="img" aria-label="두 비교 대상의 일간수익률 산점도"></canvas></div></div>
+    </div>
+    <div class="briefing-correlation-meta">
+      <span>산출 기간 ${escapeHtml(latest.start ?? "-")} ~ ${escapeHtml(latest.date ?? "-")}${availability ? ` · ${availability}` : ""}</span>
+      ${peer.kind === "sector" ? `<span title="${escapeHtml(overlap.join(", ") || "없음")}">중복 구성 ${overlap.length}종목</span>` : `<span>${escapeHtml(peer.label)} (${escapeHtml(peer.symbol)})</span>`}
+    </div>
+    <details class="briefing-correlation-basis"><summary>산출 기준</summary>
+      <p>섹터 일간수익률은 시총가중 50% + 동일가중 50%이며 기존 Rotation 집계 대상과 같습니다. 지수는 Index Trend 종가의 전일 대비 수익률입니다. 현재 구성종목·시총 가중치로 재계산한 이력이며 당시 구성 기준은 아닙니다. 두 대상의 같은 날짜 수익률만 사용하며, 누락값을 0으로 채우지 않습니다. 전체 기간의 유효 표본이 확보된 경우에만 상관계수를 산출합니다. 중복 종목은 양쪽 섹터에 유지됩니다.</p>
+    </details>
+  `;
+  root.querySelector("[data-briefing-correlation-sector]").addEventListener("change", (event) => {
+    state.briefingCorrelationSector = event.target.value;
+    renderBriefingCorrelation(root, sectors, history);
+  });
+  root.querySelector("[data-briefing-correlation-peer]").addEventListener("change", (event) => {
+    state.briefingCorrelationPeer = event.target.value;
+    renderBriefingCorrelation(root, sectors, history);
+  });
+  root.querySelectorAll("[data-briefing-correlation-window]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingCorrelationWindow = button.dataset.briefingCorrelationWindow;
+      renderBriefingCorrelation(root, sectors, history);
+    });
+  });
+  createBriefingCorrelationCharts(root, model, sector.label, peer.label, windowMeta);
+}
+
 function getBriefingDistributionBenchmarkMeta(benchmarkKey = state.briefingRotationDistributionBenchmark) {
   return (
     BRIEFING_ROTATION_DISTRIBUTION_BENCHMARKS.find((item) => item.key === benchmarkKey) ??
@@ -10100,6 +10336,7 @@ function renderMarketBriefingOverview() {
           <div class="briefing-rotation-improver-grid">${rotationClassImproverMarkup || '<p class="market-rs-empty">No sectors improved classification versus the previous trading day.</p>'}</div>        </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
         ${rotationDistributionMarkup}
+        <section class="briefing-correlation" data-briefing-correlation></section>
         ${rotationHistoryMarkup}
         <div class="briefing-rotation-bottom">
           <div class="briefing-rotation-quadrants">${rotationQuadrantMarkup}</div>
@@ -10194,6 +10431,7 @@ function renderMarketBriefingOverview() {
     });
   });
   const rotationHistoryCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-history]");
+  renderBriefingCorrelation(usOverviewRoot.querySelector("[data-briefing-correlation]"), allRotationSectors, rotationHistory);
   if (rotationHistoryCanvas && selectedRotationSector && selectedRotationHistory.length) {
     createBriefingRotationHistoryChart(rotationHistoryCanvas, selectedRotationSector, selectedRotationHistory);
   }
