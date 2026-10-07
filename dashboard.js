@@ -469,6 +469,8 @@ const state = {
   briefingRotationDistributionXAxis: "score",
   briefingRotationDistributionCorrWindow: "3m",
   briefingRotationChartMode: "rotation",
+  briefingCorrelationMode: "sector",
+  briefingCorrelationStock: "NVDA",
   briefingCorrelationSector: "memory",
   briefingCorrelationPeer: "sector:neo_cloud",
   briefingCorrelationWindow: "3m",
@@ -8792,21 +8794,45 @@ function getBriefingCorrelationIndexHistory(item, sessionDates) {
   });
 }
 
-function buildBriefingCorrelationModel(leftHistory, rightHistory, sessions) {
+function getBriefingCorrelationStocks(panels) {
+  const stocks = new Map();
+  panels.forEach((panel) => (panel.items ?? []).forEach((item) => {
+    if (!item.ticker || item.ticker.endsWith(".KS") || (item.currency && item.currency !== "USD")) return;
+    if (!stocks.has(item.ticker)) stocks.set(item.ticker, {
+      key: item.ticker, label: item.label || `${item.ticker} US`, name: item.name || item.ticker,
+    });
+  }));
+  return [...stocks.values()].sort((a, b) => a.key.localeCompare(b.key, "en"));
+}
+
+function getBriefingCorrelationStockHistories(data, stocks) {
+  const dates = data?.dates ?? [];
+  return Object.fromEntries(stocks.map((stock) => [stock.key, dates.map((date, index) => {
+    const value = data?.returns?.[stock.key]?.[index];
+    return { date, returns: { "1d": Number.isFinite(value) ? value : null } };
+  })]));
+}
+
+function buildBriefingCorrelationModel(leftHistory, rightHistory, sessions, allowShortHistory = false) {
   const left = new Map(leftHistory.filter((item) => item.date).map((item) => [item.date, item.returns?.["1d"]]));
   const right = new Map(rightHistory.filter((item) => item.date).map((item) => [item.date, item.returns?.["1d"]]));
   const dates = [...new Set([...left.keys(), ...right.keys()])].sort();
   const rows = dates.map((date) => ({ date, x: left.get(date), y: right.get(date) }));
+  const firstAvailable = rows.findIndex((row) => Number.isFinite(row.x));
   const rolling = rows.map((row, index) => {
-    const windowRows = rows.slice(Math.max(0, index - sessions + 1), index + 1);
+    const startIndex = Math.max(0, index - sessions + 1, allowShortHistory ? firstAvailable : 0);
+    const windowRows = rows.slice(startIndex, index + 1);
     const pairs = windowRows.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
-    const value = pairs.length === sessions
+    // Short listing histories may use fewer sessions; internal gaps may not.
+    const required = allowShortHistory ? windowRows.length : sessions;
+    const value = pairs.length >= 10 && pairs.length === required
       ? calculatePearsonCorrelation(pairs.map((point) => point.x), pairs.map((point) => point.y))
       : null;
     return {
       date: row.date,
-      start: windowRows[0].date,
+      start: windowRows[0]?.date ?? null,
       sampleSize: pairs.length,
+      isPartial: allowShortHistory && required < sessions,
       correlation: Number.isFinite(value) ? Math.max(-1, Math.min(1, value)) : null,
     };
   });
@@ -8824,13 +8850,13 @@ function getBriefingCorrelationPeerHistory(peer, history, indexItems) {
   return dates.map((date) => byDate.get(date) ?? { date, returns: { "1d": null } });
 }
 
-function buildBriefingCorrelationRanking(sectors, history, peer, rightHistory, sessions) {
-  // All sectors use the same reference dates and window, independent of the selected left sector.
-  const reference = rightHistory.slice(-sessions);
+function buildBriefingCorrelationRanking(sectors, history, peer, rightHistory, sessions, allowShortHistory = false) {
+  // All candidates use the same reference dates and window, independent of the left selection.
+  const reference = allowShortHistory ? rightHistory : rightHistory.slice(-sessions);
   return sectors.filter((sector) => peer.kind !== "sector" || sector.key !== peer.key).map((sector) => {
     const rows = new Map((history[sector.key] ?? []).map((row) => [row.date, row]));
     const left = reference.map((row) => rows.get(row.date) ?? { date: row.date });
-    return { key: sector.key, label: sector.label, ...buildBriefingCorrelationModel(left, reference, sessions).latest };
+    return { key: sector.key, label: sector.label, ...buildBriefingCorrelationModel(left, reference, sessions, allowShortHistory).latest };
   }).sort((a, b) => {
     const leftValid = Number.isFinite(a.correlation);
     const rightValid = Number.isFinite(b.correlation);
@@ -8946,21 +8972,28 @@ function renderBriefingCorrelation(root, sectors, history) {
     if (index >= 0) charts.splice(index, 1);
     chart.destroy();
   });
-  const sector = sectors.find((item) => item.key === state.briefingCorrelationSector) ?? sectors[0];
+  const panels = window.marketBriefingData?.sectorPanels ?? [];
+  const stockMode = state.briefingCorrelationMode === "stock";
+  const stocks = getBriefingCorrelationStocks(panels);
+  const candidates = stockMode ? stocks : sectors;
+  const candidateHistory = stockMode ? getBriefingCorrelationStockHistories(window.marketBriefingData?.stockCorrelation, stocks) : history;
+  const selectionKey = stockMode ? "briefingCorrelationStock" : "briefingCorrelationSector";
+  const sector = candidates.find((item) => item.key === state[selectionKey]) ?? candidates[0];
+  if (!sector) return;
   const peers = [
-    ...sectors.filter((item) => item.key !== sector.key).map((item) => ({ ...item, value: `sector:${item.key}`, kind: "sector" })),
+    ...sectors.filter((item) => stockMode || item.key !== sector.key).map((item) => ({ ...item, value: `sector:${item.key}`, kind: "sector" })),
     ...BRIEFING_CORRELATION_INDEXES.map((item) => ({ ...item, value: `index:${item.key}`, kind: "index" })),
   ];
   const peer = peers.find((item) => item.value === state.briefingCorrelationPeer) ?? peers[0];
   const windowMeta = BRIEFING_CORRELATION_WINDOWS.find((item) => item.key === state.briefingCorrelationWindow)
     ?? BRIEFING_CORRELATION_WINDOWS[2];
-  state.briefingCorrelationSector = sector.key;
+  state[selectionKey] = sector.key;
   state.briefingCorrelationPeer = peer.value;
   state.briefingCorrelationWindow = windowMeta.key;
-  const leftHistory = history[sector.key] ?? [];
+  const leftHistory = candidateHistory[sector.key] ?? [];
   const rightHistory = getBriefingCorrelationPeerHistory(peer, history, window.marketPriceData?.items);
-  const model = buildBriefingCorrelationModel(leftHistory, rightHistory, windowMeta.sessions);
-  const ranking = buildBriefingCorrelationRanking(sectors, history, peer, rightHistory, windowMeta.sessions);
+  const model = buildBriefingCorrelationModel(leftHistory, rightHistory, windowMeta.sessions, stockMode);
+  const ranking = buildBriefingCorrelationRanking(candidates, candidateHistory, peer, rightHistory, windowMeta.sessions, stockMode);
   const pageSize = 28;
   const pageCount = Math.max(1, Math.ceil(ranking.length / pageSize));
   const page = Math.max(0, Math.min(state.briefingCorrelationPage, pageCount - 1));
@@ -8971,24 +9004,26 @@ function renderBriefingCorrelation(root, sectors, history) {
   const correlationText = Number.isFinite(latest.correlation) ? latest.correlation.toFixed(3) : "-";
   const availability = Number.isFinite(latest.correlation) ? ""
     : latest.sampleSize < windowMeta.sessions ? "표본 부족" : "수익률 변동 없음";
-  const panels = window.marketBriefingData?.sectorPanels ?? [];
   const members = (key) => {
     const panel = panels.find((item) => item.key === key);
     return panel?.scoreTickers?.length ? panel.scoreTickers : (panel?.items ?? []).map((item) => item.ticker);
   };
   const rightMembers = new Set(peer.kind === "sector" ? members(peer.key) : []);
-  const overlap = members(sector.key).filter((ticker) => rightMembers.has(ticker));
+  const overlap = (stockMode ? [sector.key] : members(sector.key)).filter((ticker) => rightMembers.has(ticker));
   root.innerHTML = `
     <div class="briefing-correlation-head">
-      <div><h3>섹터 상관관계</h3><span>일간수익률 · Pearson r · ${windowMeta.sessions}거래일</span></div>
+      <div><h3>${stockMode ? "종목 · 섹터" : "섹터"} 상관관계</h3><span>일간수익률 · Pearson r · ${windowMeta.sessions}거래일</span></div>
       <div class="briefing-correlation-value" aria-live="polite">
         <span>상관계수 r</span><strong>${correlationText}</strong>
-        <span>${availability || `${latest.sampleSize}거래일 · ${escapeHtml(latest.date ?? "-")}`}</span>
+        <span>${availability ? `${availability} · ${latest.sampleSize}/${windowMeta.sessions}거래일` : `${latest.isPartial ? `보유 이력 ${latest.sampleSize}/${windowMeta.sessions}` : latest.sampleSize}거래일 · ${escapeHtml(latest.date ?? "-")}`}</span>
       </div>
     </div>
+    <div class="briefing-correlation-mode" role="group" aria-label="상관관계 기준 유형">
+      ${["sector", "stock"].map((mode) => `<button type="button" data-briefing-correlation-mode="${mode}" aria-pressed="${mode === state.briefingCorrelationMode}">${mode === "sector" ? "섹터" : "종목"}</button>`).join("")}
+    </div>
     <div class="briefing-correlation-controls">
-      <label>기준 섹터<select data-briefing-correlation-sector>
-        ${sectors.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === sector.key ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
+      <label>기준 ${stockMode ? "종목" : "섹터"}<select ${stockMode ? "data-briefing-correlation-stock" : "data-briefing-correlation-sector"} data-briefing-correlation-base>
+        ${candidates.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === sector.key ? " selected" : ""}>${escapeHtml(stockMode ? `${item.label} · ${item.name}` : item.label)}</option>`).join("")}
       </select></label>
       <label>비교 대상<select data-briefing-correlation-peer>
         ${["sector", "index"].map((kind) => `<optgroup label="${kind === "sector" ? "섹터" : "주요 지수"}">${peers.filter((item) => item.kind === kind).map((item) => `<option value="${escapeHtml(item.value)}"${item.value === peer.value ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}</optgroup>`).join("")}
@@ -9003,14 +9038,14 @@ function renderBriefingCorrelation(root, sectors, history) {
     </div>
     <div class="briefing-correlation-meta">
       <span>산출 기간 ${escapeHtml(latest.start ?? "-")} ~ ${escapeHtml(latest.date ?? "-")}${availability ? ` · ${availability}` : ""}</span>
-      ${peer.kind === "sector" ? `<span title="${escapeHtml(overlap.join(", ") || "없음")}">중복 구성 ${overlap.length}종목</span>` : `<span>${escapeHtml(peer.label)} (${escapeHtml(peer.symbol)})</span>`}
+      ${peer.kind === "sector" ? `<span title="${escapeHtml(overlap.join(", ") || "없음")}">${stockMode ? `비교 섹터에 ${overlap.length ? "포함" : "미포함"}` : `중복 구성 ${overlap.length}종목`}</span>` : `<span>${escapeHtml(peer.label)} (${escapeHtml(peer.symbol)})</span>`}
     </div>
     <details class="briefing-correlation-basis"><summary>산출 기준</summary>
-      <p>섹터 일간수익률은 시총가중 50% + 동일가중 50%이며 기존 Rotation 집계 대상과 같습니다. 지수는 Index Trend 종가의 전일 대비 수익률입니다. 현재 구성종목·시총 가중치로 재계산한 이력이며 당시 구성 기준은 아닙니다. 두 대상의 같은 날짜 수익률만 사용하며, 누락값을 0으로 채우지 않습니다. 전체 기간의 유효 표본이 확보된 경우에만 상관계수를 산출합니다. 중복 종목은 양쪽 섹터에 유지됩니다.</p>
+      <p>종목은 Daily Briefing 미국 상장 종목의 수정종가 기준 일간수익률입니다. 삼성전자·SK하이닉스는 제외합니다. 섹터 일간수익률은 시총가중 50% + 동일가중 50%이며 기존 Rotation 집계 대상과 같습니다. 지수는 Index Trend 종가의 전일 대비 수익률입니다. 현재 구성종목·시총 가중치로 재계산한 이력이며 당시 구성 기준은 아닙니다. 두 대상의 같은 날짜 수익률만 사용하며, 누락값을 0으로 채우지 않습니다. 종목 이력이 선택 기간보다 짧으면 최초 유효 수익률 이후 보유 기간만 사용합니다(최소 10거래일). 이력 이전과 중간 누락 구간은 비워둡니다. 표본 수가 다른 종목의 순위 비교에는 주의가 필요합니다. 비교 섹터에 포함된 종목도 구성에서 제거하지 않습니다.</p>
     </details>
     <section class="briefing-correlation-ranking-section">
       <div class="briefing-correlation-ranking-head">
-        <div><h4>섹터 상관관계 순위</h4><span>${escapeHtml(peer.label)} 기준 · ${windowMeta.label} · ${escapeHtml(latest.date ?? "-")}</span></div>
+        <div><h4>${stockMode ? "종목" : "섹터"} 상관관계 순위</h4><span>${escapeHtml(peer.label)} 기준 · ${windowMeta.label} · ${escapeHtml(latest.date ?? "-")}</span></div>
         <div class="briefing-correlation-pagination">
           <span>${ranking.length ? offset + 1 : 0}-${offset + visibleRanking.length} / ${ranking.length}</span>
           <button type="button" data-briefing-correlation-page="${page - 1}"${page === 0 ? " disabled" : ""} aria-label="상관관계 순위 이전 페이지">이전</button>
@@ -9025,15 +9060,22 @@ function renderBriefingCorrelation(root, sectors, history) {
           return `<button type="button" class="briefing-correlation-rank${item.key === sector.key ? " is-selected" : ""}" data-briefing-correlation-rank="${escapeHtml(item.key)}" aria-pressed="${item.key === sector.key}" title="${escapeHtml(title)}">
             <span class="briefing-correlation-rank-number">${offset + index + 1}</span>
             <span class="briefing-correlation-rank-name">${escapeHtml(item.label)}</span>
-            <strong class="${!valid ? "is-unavailable" : item.correlation < 0 ? "is-inverse" : "is-positive"}">${value}</strong>
+            <strong class="${!valid ? "is-unavailable" : item.correlation < 0 ? "is-inverse" : "is-positive"}">${value}${valid && item.isPartial ? `<small>${item.sampleSize}일</small>` : ""}</strong>
           </button>`;
         }).join("")}
       </div>
     </section>
   `;
-  root.querySelector("[data-briefing-correlation-sector]").addEventListener("change", (event) => {
-    state.briefingCorrelationSector = event.target.value;
+  root.querySelector("[data-briefing-correlation-base]").addEventListener("change", (event) => {
+    state[selectionKey] = event.target.value;
     renderBriefingCorrelation(root, sectors, history);
+  });
+  root.querySelectorAll("[data-briefing-correlation-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingCorrelationMode = button.dataset.briefingCorrelationMode;
+      state.briefingCorrelationPage = 0;
+      renderBriefingCorrelation(root, sectors, history);
+    });
   });
   root.querySelector("[data-briefing-correlation-peer]").addEventListener("change", (event) => {
     state.briefingCorrelationPeer = event.target.value;
@@ -9049,7 +9091,7 @@ function renderBriefingCorrelation(root, sectors, history) {
   });
   root.querySelectorAll("[data-briefing-correlation-rank]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.briefingCorrelationSector = button.dataset.briefingCorrelationRank;
+      state[selectionKey] = button.dataset.briefingCorrelationRank;
       renderBriefingCorrelation(root, sectors, history);
     });
   });

@@ -1685,6 +1685,55 @@ def build_rotation_history(
     return history
 
 
+def get_correlation_stock_tickers(sector_panels: list[dict[str, object]]) -> list[str]:
+    return sorted({
+        str(item["ticker"])
+        for panel in sector_panels
+        for item in panel.get("items", [])
+        if item.get("ticker") and not str(item["ticker"]).endswith(".KS")
+        and item.get("currency", "USD") == "USD"
+    })
+
+
+def build_stock_correlation_history(
+    close_frame: pd.DataFrame,
+    sector_panels: list[dict[str, object]],
+    sector_history: dict[str, list[dict[str, object]]],
+) -> dict[str, object]:
+    dates = sorted({row["date"] for rows in sector_history.values() for row in rows if row.get("date")})
+    # Keep the sector session calendar, including gaps, so a missing close never
+    # becomes a multi-session return. Retain the preceding close for day one.
+    sessions = us_session_dates(close_frame).union(pd.DatetimeIndex(pd.to_datetime(dates))).sort_values()
+    returns = {}
+    for ticker in get_correlation_stock_tickers(sector_panels):
+        series = close_frame[ticker] if ticker in close_frame else pd.Series(dtype=float)
+        series = series.reindex(sessions).where(lambda values: values > 0)
+        daily = series.pct_change(fill_method=None).mul(100).reindex(pd.to_datetime(dates))
+        returns[ticker] = [
+            round(value, 6) if (value := safe_float(raw)) is not None and abs(value) <= MAX_DAILY_RETURN_PCT else None
+            for raw in daily
+        ]
+    return {
+        "basis": "adjusted-close-daily-return-pct",
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "dates": dates,
+        "returns": returns,
+    }
+
+
+def refresh_stock_correlation_only(payload: dict[str, object]) -> None:
+    panels = payload.get("sectorPanels", [])
+    sector_history = payload.get("rotationSignal", {}).get("history", {})
+    if not sector_history:
+        raise RuntimeError("No sector return calendar available for stock correlations.")
+    symbols = sorted(set(get_correlation_stock_tickers(panels)) | {ROTATION_BENCHMARK_SYMBOL})
+    closes = fetch_price_frame(symbols)
+    history = build_stock_correlation_history(closes, panels, sector_history)
+    if not any(any(value is not None for value in rows) for rows in history["returns"].values()):
+        raise RuntimeError("No adjusted stock returns downloaded; preserving Daily Briefing.")
+    payload["stockCorrelation"] = history
+
+
 def build_rotation_signal(
     snapshots: list[dict[str, object]],
     sector_panels: list[dict[str, object]],
@@ -2158,6 +2207,7 @@ def build_payload() -> dict[str, object]:
         "indexCards": index_cards,
         "sectorPanels": sector_panels,
         "rotationSignal": rotation_signal,
+        "stockCorrelation": build_stock_correlation_history(close_frame, sector_panels, rotation_signal["history"]),
         "fedWatch": build_fedwatch_snapshot(),
         "majorNews": major_news,
         "movers": movers,
@@ -2166,9 +2216,14 @@ def build_payload() -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--indices-only", action="store_true", help="Refresh only index cards from the checked Index Trend history")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--indices-only", action="store_true", help="Refresh only index cards from the checked Index Trend history")
+    mode.add_argument("--correlation-only", action="store_true", help="Backfill adjusted stock returns without changing other briefing data")
     args = parser.parse_args()
-    if args.indices_only:
+    if args.correlation_only:
+        payload = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
+        refresh_stock_correlation_only(payload)
+    elif args.indices_only:
         payload = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
         prices = json.loads(OUTPUT_PATH.with_name("market-price-data.js").read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
         frames = {item["symbol"]: item_to_frame(item) for item in prices["items"].values() if item["symbol"] in {config["symbol"] for config in INDEX_CARD_CONFIGS}}

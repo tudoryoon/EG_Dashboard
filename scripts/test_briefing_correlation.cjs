@@ -10,6 +10,8 @@ const build = context.buildBriefingCorrelationModel;
 const indexHistory = context.getBriefingCorrelationIndexHistory;
 const peerHistory = context.getBriefingCorrelationPeerHistory;
 const rank = context.buildBriefingCorrelationRanking;
+const stocks = context.getBriefingCorrelationStocks;
+const stockHistory = context.getBriefingCorrelationStockHistories;
 const history = (values) => values.map((value, i) => ({
   date: new Date(Date.UTC(2026, 0, i + 1)).toISOString().slice(0, 10),
   returns: { '1d': value },
@@ -73,12 +75,69 @@ const stalePeer = peerHistory(peer, { ...sectorHistory, reference: left.slice(0,
 assert.equal(stalePeer.at(-1).returns['1d'], null);
 assert.ok(rank(sectors, sectorHistory, peer, stalePeer, 63).every(row => row.correlation === null));
 
+const stockList = stocks([{ items: [
+  { ticker: 'NVDA', label: 'NVDA US', name: 'NVIDIA', currency: 'USD' },
+  { ticker: '005930.KS' }, { ticker: '000660.KS' }, { ticker: 'DRAM' }, { ticker: 'IPO' },
+] }, { items: [{ ticker: 'NVDA' }] }]);
+assert.deepEqual(Array.from(stockList, row => row.key), ['DRAM', 'IPO', 'NVDA']);
+const stockRows = stockHistory({ dates: left.map(row => row.date), returns: {
+  NVDA: values, IPO: values.map((value, i) => i < 71 ? null : value),
+} }, stockList);
+assert.ok(stockRows.DRAM.every(row => row.returns['1d'] === null));
+const short = build(stockRows.IPO, left, 63);
+assert.equal(short.latest.correlation, 1);
+assert.ok(short.rolling.filter(row => row.date < left[133].date).every(row => row.correlation === null));
+assert.equal(short.rolling.find(row => row.date === left[133].date).correlation, 1);
+assert.equal(build(stockRows.IPO, left, 126).latest.sampleSize, 79);
+assert.equal(build(stockRows.IPO, left, 126).latest.correlation, null);
+const partial = build(stockRows.IPO, left, 126, true);
+assert.equal(partial.latest.correlation, 1);
+assert.equal(partial.latest.sampleSize, 79);
+assert.equal(partial.latest.isPartial, true);
+assert.equal(partial.latest.start, left[71].date);
+const partialEarly = build(stockRows.IPO, left, 21, true);
+assert.ok(partialEarly.rolling.filter(row => row.date < left[80].date).every(row => row.correlation === null));
+assert.equal(partialEarly.rolling.find(row => row.date === left[80].date).correlation, 1);
+assert.equal(build(left, missing, 126, true).latest.correlation, null);
+assert.equal(build(stockRows.IPO, missing, 126, true).latest.correlation, null);
+const internalGap = stockRows.IPO.map(row => ({ ...row, returns: { ...row.returns } }));
+internalGap[100].returns['1d'] = null;
+assert.equal(build(internalGap, left, 126, true).latest.correlation, null);
+assert.equal(build(stockRows.DRAM, left, 126, true).latest.correlation, null);
+const stockRanking = rank(stockList, stockRows, peer, reference, 63);
+assert.equal(stockRanking.length, 3);
+assert.equal(stockRanking.at(-1).key, 'DRAM');
+assert.ok(stockRanking.slice(0, 2).every(row => row.correlation === 1));
+const partialRanking = rank(stockList, stockRows, peer, reference, 126, true);
+assert.equal(partialRanking.find(row => row.key === 'IPO').correlation, partial.latest.correlation);
+assert.equal(partialRanking.find(row => row.key === 'IPO').sampleSize, 79);
+
 const actual = { window: {} };
 for (const file of ['market-briefing-data.js', 'market-price-data.js']) {
   vm.runInNewContext(fs.readFileSync(path.join(root, 'data', file), 'utf8'), actual);
 }
 const briefing = actual.window.marketBriefingData.rotationSignal;
 const memory = briefing.history.memory;
+const actualStocks = stocks(actual.window.marketBriefingData.sectorPanels);
+const actualStockRows = stockHistory(actual.window.marketBriefingData.stockCorrelation, actualStocks);
+assert.ok(actualStocks.length > 200);
+assert.equal(new Set(actualStocks.map(row => row.key)).size, actualStocks.length);
+assert.ok(actualStocks.every(row => !row.key.endsWith('.KS')));
+assert.equal(Object.keys(actual.window.marketBriefingData.stockCorrelation.returns).length, actualStocks.length);
+for (const stock of actualStocks) {
+  const result = build(actualStockRows[stock.key], memory, 21);
+  assert.equal(result.latest.sampleSize, 21, stock.key);
+  assert.ok(Number.isFinite(result.latest.correlation), stock.key);
+}
+for (const ticker of ['SPCX', 'XE']) {
+  const available = actualStockRows[ticker].slice(-126).filter(row => Number.isFinite(row.returns['1d'])).length;
+  const strict = build(actualStockRows[ticker], memory, 126).latest;
+  assert.equal(Number.isFinite(strict.correlation), available === 126);
+  const result = build(actualStockRows[ticker], memory, 126, true);
+  assert.ok(Number.isFinite(result.latest.correlation));
+  assert.equal(result.latest.isPartial, available < 126);
+  assert.equal(result.latest.sampleSize, available);
+}
 for (const sector of briefing.sectors) {
   const result = build(memory, briefing.history[sector.key], 63);
   assert.equal(result.latest.sampleSize, 63, sector.key);
@@ -99,4 +158,5 @@ for (const key of ['dowjones', 'nasdaq', 'nasdaq100', 'sp500', 'russell2000']) {
 }
 assert.ok(source.indexOf('${rotationDistributionMarkup}') < source.indexOf('data-briefing-correlation></section>'));
 assert.ok(source.includes('briefingRotationChartMode: "rotation"'));
-console.log('Sector correlation: aligned dates, nulls, daily-only inputs, descending ranking, self-exclusion, stale reference, 35 sectors and 5 indexes passed.');
+assert.ok(source.includes('briefingCorrelationMode: "sector"'));
+console.log(`Correlation: aligned dates, missing/short history, deduplicated ${actualStocks.length} US stocks, daily-only inputs, descending ranking, 35 sectors and 5 indexes passed.`);

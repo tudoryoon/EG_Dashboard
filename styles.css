@@ -1568,7 +1568,8 @@ h1 {
   text-overflow: ellipsis;
 }
 
-.briefing-correlation-window > div {
+.briefing-correlation-window > div,
+.briefing-correlation-mode {
   display: flex;
   height: 38px;
   padding: 3px;
@@ -1577,7 +1578,10 @@ h1 {
   gap: 3px;
 }
 
-.briefing-correlation-window button {
+.briefing-correlation-mode { width: fit-content; font-size: 0.78rem; font-weight: 700; }
+
+.briefing-correlation-window button,
+.briefing-correlation-mode button {
   border: 0;
   border-radius: 4px;
   padding: 0 12px;
@@ -1587,7 +1591,8 @@ h1 {
   font: inherit;
 }
 
-.briefing-correlation-window button[aria-pressed="true"] { background: #087f8c; color: #fff; }
+.briefing-correlation-window button[aria-pressed="true"],
+.briefing-correlation-mode button[aria-pressed="true"] { background: #087f8c; color: #fff; }
 .briefing-correlation :is(select, button, summary):focus-visible { outline: 2px solid #087f8c; outline-offset: 2px; }
 
 .briefing-correlation-plots {
@@ -1660,6 +1665,7 @@ h1 {
 .briefing-correlation-rank-number { color: #898c85; font-variant-numeric: tabular-nums; }
 .briefing-correlation-rank-name { line-height: 1.4; overflow-wrap: anywhere; }
 .briefing-correlation-rank strong { text-align: right; font-variant-numeric: tabular-nums; }
+.briefing-correlation-rank strong small { display: block; color: #74746e; font-size: 0.65rem; font-weight: 400; }
 .briefing-correlation-rank strong.is-positive { color: #087f8c; }
 .briefing-correlation-rank strong.is-inverse { color: #b65b2a; }
 .briefing-correlation-rank strong.is-unavailable { color: #8d8d86; font-weight: 400; }

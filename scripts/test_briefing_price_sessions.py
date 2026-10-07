@@ -11,6 +11,40 @@ import update_market_briefing as briefing
 
 
 class BriefingSessionTests(unittest.TestCase):
+    def test_stock_correlation_deduplicates_us_members_and_keeps_short_history(self):
+        dates = pd.bdate_range("2026-09-01", periods=6)
+        panels = [{"items": [{"ticker": ticker} for ticker in ["AAA", "IPO", "ETF", "MISSING", "005930.KS", "000660.KS"]]},
+                  {"items": [{"ticker": "AAA"}]}]
+        closes = pd.DataFrame({"QQQ": [100] * 6, "AAA": [50, 55, None, 66, 72.6, 72.6],
+                               "IPO": [None, None, None, 100, 105, 110], "ETF": [100, 101, 102, 103, 104, 105]}, index=dates)
+        history = {"test": [{"date": date.strftime("%Y-%m-%d")} for date in dates[1:]]}
+        result = briefing.build_stock_correlation_history(closes, panels, history)
+        self.assertEqual(set(result["returns"]), {"AAA", "IPO", "ETF", "MISSING"})
+        self.assertEqual(result["returns"]["AAA"], [10, None, None, 10, 0])
+        self.assertEqual(result["returns"]["IPO"], [None, None, None, 5, 4.761905])
+        self.assertEqual(result["returns"]["MISSING"], [None] * 5)
+        self.assertEqual(result["dates"], [row["date"] for row in history["test"]])
+        json.dumps(result, allow_nan=False)
+
+    def test_stock_correlation_missing_session_and_zero_are_not_forward_filled(self):
+        dates = pd.bdate_range("2026-09-01", periods=5)
+        closes = pd.DataFrame({"QQQ": [100] * 4, "AAA": [10, 20, 0, 25]}, index=dates[[0, 2, 3, 4]])
+        history = {"test": [{"date": date.strftime("%Y-%m-%d")} for date in dates[1:]]}
+        result = briefing.build_stock_correlation_history(closes, [{"items": [{"ticker": "AAA"}]}], history)
+        self.assertEqual(result["returns"]["AAA"], [None] * 4)
+
+    def test_correlation_only_preserves_existing_briefing_fields_and_cutoff(self):
+        dates = pd.bdate_range("2026-09-01", periods=5)
+        payload = {"updatedAt": "2026-09-04", "generatedAt": "unchanged", "indexCards": [1], "fedWatch": {"keep": True},
+                   "sectorPanels": [{"items": [{"ticker": "AAA"}]}],
+                   "rotationSignal": {"history": {"test": [{"date": date.strftime("%Y-%m-%d")} for date in dates[1:4]]}}}
+        before = json.loads(json.dumps(payload))
+        closes = pd.DataFrame({"QQQ": [100] * 5, "AAA": [100, 101, 102, 103, 104]}, index=dates)
+        with patch.object(briefing, "fetch_price_frame", return_value=closes):
+            briefing.refresh_stock_correlation_only(payload)
+        self.assertEqual(payload["stockCorrelation"]["dates"][-1], "2026-09-04")
+        self.assertEqual({key: value for key, value in payload.items() if key != "stockCorrelation"}, before)
+
     def test_krx_holiday_uses_last_completed_exchange_session(self):
         morning = datetime(2026, 10, 5, 22, 20, tzinfo=timezone.utc)
         afternoon = datetime(2026, 10, 6, 7, 0, tzinfo=timezone.utc)
