@@ -468,9 +468,11 @@ const state = {
   briefingRotationDistributionBenchmark: "qqq",
   briefingRotationDistributionXAxis: "score",
   briefingRotationDistributionCorrWindow: "3m",
+  briefingRotationChartMode: "rotation",
   briefingCorrelationSector: "memory",
   briefingCorrelationPeer: "sector:neo_cloud",
   briefingCorrelationWindow: "3m",
+  briefingCorrelationPage: 0,
   rsUniverse: "all",
   rsHistoryRange: "1y",
   rsSelectedTicker: "",
@@ -8815,6 +8817,28 @@ function buildBriefingCorrelationModel(leftHistory, rightHistory, sessions) {
   };
 }
 
+function getBriefingCorrelationPeerHistory(peer, history, indexItems) {
+  const dates = [...new Set(Object.values(history).flatMap((rows) => rows.map((row) => row.date)).filter(Boolean))].sort();
+  if (peer.kind === "index") return getBriefingCorrelationIndexHistory(indexItems?.[peer.key], dates);
+  const byDate = new Map((history[peer.key] ?? []).map((row) => [row.date, row]));
+  return dates.map((date) => byDate.get(date) ?? { date, returns: { "1d": null } });
+}
+
+function buildBriefingCorrelationRanking(sectors, history, peer, rightHistory, sessions) {
+  // All sectors use the same reference dates and window, independent of the selected left sector.
+  const reference = rightHistory.slice(-sessions);
+  return sectors.filter((sector) => peer.kind !== "sector" || sector.key !== peer.key).map((sector) => {
+    const rows = new Map((history[sector.key] ?? []).map((row) => [row.date, row]));
+    const left = reference.map((row) => rows.get(row.date) ?? { date: row.date });
+    return { key: sector.key, label: sector.label, ...buildBriefingCorrelationModel(left, reference, sessions).latest };
+  }).sort((a, b) => {
+    const leftValid = Number.isFinite(a.correlation);
+    const rightValid = Number.isFinite(b.correlation);
+    if (leftValid !== rightValid) return leftValid ? -1 : 1;
+    return (leftValid ? b.correlation - a.correlation : 0) || a.label.localeCompare(b.label, "ko");
+  });
+}
+
 function createBriefingCorrelationCharts(root, model, leftLabel, rightLabel, windowMeta) {
   const chartBase = {
     responsive: true,
@@ -8912,6 +8936,9 @@ function createBriefingCorrelationCharts(root, model, leftLabel, rightLabel, win
 
 function renderBriefingCorrelation(root, sectors, history) {
   if (!root || sectors.length < 1) return;
+  const previousGrid = root.querySelector("[data-briefing-correlation-ranking]");
+  const previousGridScroll = previousGrid?.scrollTop ?? 0;
+  const previousPage = previousGrid?.dataset.page;
   root.querySelectorAll("canvas").forEach((canvas) => {
     const chart = Chart.getChart(canvas);
     if (!chart) return;
@@ -8931,9 +8958,15 @@ function renderBriefingCorrelation(root, sectors, history) {
   state.briefingCorrelationPeer = peer.value;
   state.briefingCorrelationWindow = windowMeta.key;
   const leftHistory = history[sector.key] ?? [];
-  const rightHistory = peer.kind === "sector" ? history[peer.key] ?? []
-    : getBriefingCorrelationIndexHistory(window.marketPriceData?.items?.[peer.key], leftHistory.map((item) => item.date));
+  const rightHistory = getBriefingCorrelationPeerHistory(peer, history, window.marketPriceData?.items);
   const model = buildBriefingCorrelationModel(leftHistory, rightHistory, windowMeta.sessions);
+  const ranking = buildBriefingCorrelationRanking(sectors, history, peer, rightHistory, windowMeta.sessions);
+  const pageSize = 28;
+  const pageCount = Math.max(1, Math.ceil(ranking.length / pageSize));
+  const page = Math.max(0, Math.min(state.briefingCorrelationPage, pageCount - 1));
+  state.briefingCorrelationPage = page;
+  const offset = page * pageSize;
+  const visibleRanking = ranking.slice(offset, offset + pageSize);
   const latest = model.latest;
   const correlationText = Number.isFinite(latest.correlation) ? latest.correlation.toFixed(3) : "-";
   const availability = Number.isFinite(latest.correlation) ? ""
@@ -8975,6 +9008,28 @@ function renderBriefingCorrelation(root, sectors, history) {
     <details class="briefing-correlation-basis"><summary>산출 기준</summary>
       <p>섹터 일간수익률은 시총가중 50% + 동일가중 50%이며 기존 Rotation 집계 대상과 같습니다. 지수는 Index Trend 종가의 전일 대비 수익률입니다. 현재 구성종목·시총 가중치로 재계산한 이력이며 당시 구성 기준은 아닙니다. 두 대상의 같은 날짜 수익률만 사용하며, 누락값을 0으로 채우지 않습니다. 전체 기간의 유효 표본이 확보된 경우에만 상관계수를 산출합니다. 중복 종목은 양쪽 섹터에 유지됩니다.</p>
     </details>
+    <section class="briefing-correlation-ranking-section">
+      <div class="briefing-correlation-ranking-head">
+        <div><h4>섹터 상관관계 순위</h4><span>${escapeHtml(peer.label)} 기준 · ${windowMeta.label} · ${escapeHtml(latest.date ?? "-")}</span></div>
+        <div class="briefing-correlation-pagination">
+          <span>${ranking.length ? offset + 1 : 0}-${offset + visibleRanking.length} / ${ranking.length}</span>
+          <button type="button" data-briefing-correlation-page="${page - 1}"${page === 0 ? " disabled" : ""} aria-label="상관관계 순위 이전 페이지">이전</button>
+          <button type="button" data-briefing-correlation-page="${page + 1}"${page + 1 >= pageCount ? " disabled" : ""} aria-label="상관관계 순위 다음 페이지">다음</button>
+        </div>
+      </div>
+      <div class="briefing-correlation-ranking" data-briefing-correlation-ranking data-page="${page}">
+        ${visibleRanking.map((item, index) => {
+          const valid = Number.isFinite(item.correlation);
+          const value = valid ? `${item.correlation > 0 ? "+" : ""}${item.correlation.toFixed(3)}` : "미산출";
+          const title = `${item.label} / ${peer.label} · r ${value} · ${item.sampleSize}/${windowMeta.sessions}거래일`;
+          return `<button type="button" class="briefing-correlation-rank${item.key === sector.key ? " is-selected" : ""}" data-briefing-correlation-rank="${escapeHtml(item.key)}" aria-pressed="${item.key === sector.key}" title="${escapeHtml(title)}">
+            <span class="briefing-correlation-rank-number">${offset + index + 1}</span>
+            <span class="briefing-correlation-rank-name">${escapeHtml(item.label)}</span>
+            <strong class="${!valid ? "is-unavailable" : item.correlation < 0 ? "is-inverse" : "is-positive"}">${value}</strong>
+          </button>`;
+        }).join("")}
+      </div>
+    </section>
   `;
   root.querySelector("[data-briefing-correlation-sector]").addEventListener("change", (event) => {
     state.briefingCorrelationSector = event.target.value;
@@ -8982,14 +9037,29 @@ function renderBriefingCorrelation(root, sectors, history) {
   });
   root.querySelector("[data-briefing-correlation-peer]").addEventListener("change", (event) => {
     state.briefingCorrelationPeer = event.target.value;
+    state.briefingCorrelationPage = 0;
     renderBriefingCorrelation(root, sectors, history);
   });
   root.querySelectorAll("[data-briefing-correlation-window]").forEach((button) => {
     button.addEventListener("click", () => {
       state.briefingCorrelationWindow = button.dataset.briefingCorrelationWindow;
+      state.briefingCorrelationPage = 0;
       renderBriefingCorrelation(root, sectors, history);
     });
   });
+  root.querySelectorAll("[data-briefing-correlation-rank]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingCorrelationSector = button.dataset.briefingCorrelationRank;
+      renderBriefingCorrelation(root, sectors, history);
+    });
+  });
+  root.querySelectorAll("[data-briefing-correlation-page]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingCorrelationPage = Number(button.dataset.briefingCorrelationPage);
+      renderBriefingCorrelation(root, sectors, history);
+    });
+  });
+  if (previousPage === String(page)) root.querySelector("[data-briefing-correlation-ranking]").scrollTop = previousGridScroll;
   createBriefingCorrelationCharts(root, model, sector.label, peer.label, windowMeta);
 }
 
@@ -10335,8 +10405,14 @@ function renderMarketBriefingOverview() {
           </div>
           <div class="briefing-rotation-improver-grid">${rotationClassImproverMarkup || '<p class="market-rs-empty">No sectors improved classification versus the previous trading day.</p>'}</div>        </div>
         <div class="briefing-rotation-grid">${rotationSectorMarkup}</div>
-        ${rotationDistributionMarkup}
-        <section class="briefing-correlation" data-briefing-correlation></section>
+        <section class="briefing-rotation-analysis">
+          <div class="briefing-rotation-view-switch" role="group" aria-label="차트 선택">
+            <button type="button" data-briefing-rotation-view="rotation" aria-pressed="${state.briefingRotationChartMode !== "correlation"}">Rotation Score</button>
+            <button type="button" data-briefing-rotation-view="correlation" aria-pressed="${state.briefingRotationChartMode === "correlation"}">섹터 상관관계</button>
+          </div>
+          <div data-briefing-rotation-content="rotation" class="${state.briefingRotationChartMode === "correlation" ? "hidden" : ""}">${rotationDistributionMarkup}</div>
+          <section class="briefing-correlation${state.briefingRotationChartMode === "correlation" ? "" : " hidden"}" data-briefing-rotation-content="correlation" data-briefing-correlation></section>
+        </section>
         ${rotationHistoryMarkup}
         <div class="briefing-rotation-bottom">
           <div class="briefing-rotation-quadrants">${rotationQuadrantMarkup}</div>
@@ -10431,14 +10507,34 @@ function renderMarketBriefingOverview() {
     });
   });
   const rotationHistoryCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-history]");
-  renderBriefingCorrelation(usOverviewRoot.querySelector("[data-briefing-correlation]"), allRotationSectors, rotationHistory);
   if (rotationHistoryCanvas && selectedRotationSector && selectedRotationHistory.length) {
     createBriefingRotationHistoryChart(rotationHistoryCanvas, selectedRotationSector, selectedRotationHistory);
   }
   const rotationDistributionCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-distribution]");
-  if (rotationDistributionCanvas && rotationDistribution.points.length) {
-    createBriefingRotationDistributionChart(rotationDistributionCanvas, rotationDistribution);
-  }
+  const correlationRoot = usOverviewRoot.querySelector("[data-briefing-correlation]");
+  const updateRotationView = () => {
+    const mode = state.briefingRotationChartMode === "correlation" ? "correlation" : "rotation";
+    usOverviewRoot.querySelectorAll("[data-briefing-rotation-content]").forEach((panel) => {
+      panel.classList.toggle("hidden", panel.dataset.briefingRotationContent !== mode);
+    });
+    usOverviewRoot.querySelectorAll("[data-briefing-rotation-view]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.briefingRotationView === mode));
+    });
+    if (mode === "correlation") {
+      if (!correlationRoot.children.length) renderBriefingCorrelation(correlationRoot, allRotationSectors, rotationHistory);
+      correlationRoot.querySelectorAll("canvas").forEach((canvas) => Chart.getChart(canvas)?.resize());
+    } else if (rotationDistributionCanvas && rotationDistribution.points.length) {
+      if (!Chart.getChart(rotationDistributionCanvas)) createBriefingRotationDistributionChart(rotationDistributionCanvas, rotationDistribution);
+      else Chart.getChart(rotationDistributionCanvas).resize();
+    }
+  };
+  usOverviewRoot.querySelectorAll("[data-briefing-rotation-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.briefingRotationChartMode = button.dataset.briefingRotationView;
+      updateRotationView();
+    });
+  });
+  updateRotationView();
 }
 
 function formatRsNumber(value, digits = 0) {

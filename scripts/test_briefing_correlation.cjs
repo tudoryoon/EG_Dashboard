@@ -8,6 +8,8 @@ const context = vm.createContext({});
 vm.runInContext(source.slice(source.indexOf('function calculatePearsonCorrelation('), source.indexOf('function createBriefingCorrelationCharts(')), context);
 const build = context.buildBriefingCorrelationModel;
 const indexHistory = context.getBriefingCorrelationIndexHistory;
+const peerHistory = context.getBriefingCorrelationPeerHistory;
+const rank = context.buildBriefingCorrelationRanking;
 const history = (values) => values.map((value, i) => ({
   date: new Date(Date.UTC(2026, 0, i + 1)).toISOString().slice(0, 10),
   returns: { '1d': value },
@@ -50,6 +52,27 @@ assert.equal(missingIndex[2].returns['1d'], null);
 assert.equal(indexHistory({ ...index, values: [100, 102, null, 103] }, sessions)[2].returns['1d'], null);
 assert.ok(indexHistory(undefined, sessions).every(x => x.returns['1d'] === null));
 
+const sectors = ['reference', 'positive', 'negative', 'missing', 'flat'].map(key => ({ key, label: key }));
+const sectorHistory = {
+  reference: left,
+  positive: history(values.map(x => x * 2)),
+  negative: history(values.map(x => -x)),
+  missing: missing,
+  flat: history(values.map(() => 0)),
+};
+const peer = { key: 'reference', kind: 'sector' };
+const reference = peerHistory(peer, sectorHistory);
+const ranked = rank(sectors, sectorHistory, peer, reference, 63);
+assert.equal(ranked.length, 4);
+assert.equal(ranked[0].key, 'positive');
+assert.equal(ranked[1].key, 'negative');
+assert.equal(ranked[1].correlation, -1);
+assert.ok(ranked.slice(2).every(row => row.correlation === null));
+assert.ok(ranked.every(row => row.date === left.at(-1).date));
+const stalePeer = peerHistory(peer, { ...sectorHistory, reference: left.slice(0, -1) });
+assert.equal(stalePeer.at(-1).returns['1d'], null);
+assert.ok(rank(sectors, sectorHistory, peer, stalePeer, 63).every(row => row.correlation === null));
+
 const actual = { window: {} };
 for (const file of ['market-briefing-data.js', 'market-price-data.js']) {
   vm.runInNewContext(fs.readFileSync(path.join(root, 'data', file), 'utf8'), actual);
@@ -66,7 +89,14 @@ for (const key of ['dowjones', 'nasdaq', 'nasdaq100', 'sp500', 'russell2000']) {
   const result = build(memory, rows, 63);
   assert.equal(result.latest.sampleSize, 63, key);
   assert.ok(Number.isFinite(result.latest.correlation), key);
+  const peer = { key, kind: 'index' };
+  const reference = peerHistory(peer, briefing.history, actual.window.marketPriceData.items);
+  const ranking = rank(briefing.sectors, briefing.history, peer, reference, 63);
+  assert.equal(ranking.length, briefing.sectors.length);
+  assert.equal(ranking.find(row => row.key === 'memory').correlation, result.latest.correlation);
+  assert.ok(ranking.every((row, i) => i === 0 || ranking[i - 1].correlation >= row.correlation));
   console.log(`${key}: ${result.latest.correlation.toFixed(6)} (${result.latest.date})`);
 }
 assert.ok(source.indexOf('${rotationDistributionMarkup}') < source.indexOf('data-briefing-correlation></section>'));
-console.log('Sector correlation: dates, full windows, nulls, zero variance, daily-only data, missing index sessions, 35 sectors and 5 indexes passed.');
+assert.ok(source.includes('briefingRotationChartMode: "rotation"'));
+console.log('Sector correlation: aligned dates, nulls, daily-only inputs, descending ranking, self-exclusion, stale reference, 35 sectors and 5 indexes passed.');

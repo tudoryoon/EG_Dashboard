@@ -1464,8 +1464,31 @@ h1 {
 
 .briefing-rotation-panel { min-width: 0; }
 
+.briefing-rotation-analysis { min-width: 0; margin-top: 14px; }
+.briefing-rotation-view-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  max-width: 100%;
+}
+.briefing-rotation-view-switch button {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #62625b;
+  font: 700 0.78rem "Noto Sans KR", sans-serif;
+  cursor: pointer;
+}
+.briefing-rotation-view-switch button[aria-pressed="true"] { background: #20201d; color: #fff; }
+.briefing-rotation-view-switch button:focus-visible { outline: 2px solid #087f8c; outline-offset: 2px; }
+
 .briefing-correlation {
-  margin-top: 24px;
+  margin-top: 12px;
   padding: 20px 0 12px;
   border-top: 1px solid var(--border);
   display: grid;
@@ -1578,11 +1601,79 @@ h1 {
 .briefing-correlation-basis summary { cursor: pointer; width: fit-content; }
 .briefing-correlation-basis p { margin: 8px 0 0; line-height: 1.6; max-width: 1000px; }
 
+.briefing-correlation-ranking-section { min-width: 0; padding-top: 6px; }
+.briefing-correlation-ranking-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.briefing-correlation-ranking-head h4 { margin-bottom: 3px; }
+.briefing-correlation-ranking-head span { color: #74746e; font-size: 0.72rem; }
+.briefing-correlation-pagination { display: flex; align-items: center; gap: 6px; }
+.briefing-correlation-pagination span { font-variant-numeric: tabular-nums; margin-right: 4px; }
+.briefing-correlation-pagination button {
+  min-height: 30px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.briefing-correlation-pagination button:disabled { opacity: 0.4; cursor: default; }
+.briefing-correlation-ranking {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(7, 52px);
+  grid-auto-flow: column;
+  height: 366px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+.briefing-correlation-rank {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 60px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-right: 1px solid #e5e7e3;
+  border-bottom: 1px solid #e5e7e3;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  font: 500 0.75rem "Noto Sans KR", sans-serif;
+  color: var(--text);
+  cursor: pointer;
+}
+.briefing-correlation-rank:hover { background: #f2f7f7; }
+.briefing-correlation-rank.is-selected { background: #eaf5f4; box-shadow: inset 3px 0 #087f8c; }
+.briefing-correlation-rank:focus-visible { outline-offset: -3px; }
+.briefing-correlation-rank-number { color: #898c85; font-variant-numeric: tabular-nums; }
+.briefing-correlation-rank-name { line-height: 1.4; overflow-wrap: anywhere; }
+.briefing-correlation-rank strong { text-align: right; font-variant-numeric: tabular-nums; }
+.briefing-correlation-rank strong.is-positive { color: #087f8c; }
+.briefing-correlation-rank strong.is-inverse { color: #b65b2a; }
+.briefing-correlation-rank strong.is-unavailable { color: #8d8d86; font-weight: 400; }
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .briefing-correlation-ranking { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(14, 52px); overflow-y: auto; }
+}
+
 @media (max-width: 760px) {
   .briefing-correlation-controls { grid-template-columns: minmax(0, 1fr); }
   .briefing-correlation-window > div { width: fit-content; }
   .briefing-correlation-plots { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .briefing-correlation-canvas { height: 240px; }
+  .briefing-correlation-ranking { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; grid-auto-rows: 52px; overflow-y: auto; }
 }
 
 .briefing-rotation-quadrants,
