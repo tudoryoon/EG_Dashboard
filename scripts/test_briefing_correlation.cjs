@@ -12,6 +12,7 @@ const peerHistory = context.getBriefingCorrelationPeerHistory;
 const rank = context.buildBriefingCorrelationRanking;
 const stocks = context.getBriefingCorrelationStocks;
 const stockHistory = context.getBriefingCorrelationStockHistories;
+const riskMetrics = context.buildBriefingRiskMetrics;
 const history = (values) => values.map((value, i) => ({
   date: new Date(Date.UTC(2026, 0, i + 1)).toISOString().slice(0, 10),
   returns: { '1d': value },
@@ -19,6 +20,47 @@ const history = (values) => values.map((value, i) => ({
   excessReturns: { '1d': 999 },
 }));
 const values = Array.from({ length: 150 }, (_, i) => Math.sin(i) * 2 + (i % 7) / 10);
+const annual = history(Array.from({length: 252}, (_, i) => i % 2 ? 2 : -1));
+const cash = {dates: annual.map(row => row.date), dailyReturnPct: Array(252).fill(0.01)};
+const annualRisk = riskMetrics(annual, annual, cash);
+const expectedSharpe = Math.sqrt(252) * 0.49 / Math.sqrt(252 * 1.5 ** 2 / 251);
+assert.ok(Math.abs(annualRisk.sharpe - expectedSharpe) < 1e-12);
+assert.equal(annualRisk.downsideCapture, 100);
+assert.equal(annualRisk.downDays, 126);
+assert.equal(annualRisk.isPartial, false);
+const scaled = history(annual.map(row => row.returns['1d'] / 2));
+assert.equal(riskMetrics(scaled, annual, cash).downsideCapture, 50);
+const hedge = history(annual.map(row => -row.returns['1d']));
+assert.equal(riskMetrics(hedge, annual, cash).downsideCapture, -100);
+const nonUniform = history(annual.map((row, i) => i % 4 === 0 ? -3 : row.returns['1d']));
+assert.equal(riskMetrics(hedge, nonUniform, cash).downsideCapture, -50);
+assert.equal(riskMetrics(annual, nonUniform, cash).sharpe, annualRisk.sharpe);
+const flatAnnual = history(Array(252).fill(0.01));
+assert.equal(riskMetrics(flatAnnual, annual, cash).sharpe, null);
+assert.equal(riskMetrics(annual, flatAnnual, cash).downsideCapture, null);
+const shortAnnual = history(annual.map((row, i) => i < 173 ? null : row.returns['1d']));
+const shortRisk = riskMetrics(shortAnnual, annual, cash, true);
+assert.equal(shortRisk.sampleSize, 79);
+assert.equal(shortRisk.isPartial, true);
+assert.ok(Number.isFinite(shortRisk.sharpe));
+assert.equal(shortRisk.downsideCapture, 100);
+assert.equal(riskMetrics(shortAnnual, annual, cash).sharpe, null);
+const tooShort = history(annual.map((row, i) => i < 200 ? null : row.returns['1d']));
+assert.equal(riskMetrics(tooShort, annual, cash, true).sharpe, null);
+const gapAnnual = history(annual.map((row, i) => i === 210 ? null : row.returns['1d']));
+assert.equal(riskMetrics(gapAnnual, annual, cash, true).sharpe, null);
+assert.equal(riskMetrics(gapAnnual, annual, cash, true).downsideCapture, null);
+assert.equal(riskMetrics(annual.slice(0, -1), annual, cash, true).sharpe, null);
+assert.equal(riskMetrics(annual, gapAnnual, cash).downsideCapture, null);
+assert.equal(riskMetrics(annual, gapAnnual, cash).sharpe, annualRisk.sharpe);
+assert.equal(riskMetrics(annual, annual, undefined).sharpe, null);
+assert.equal(riskMetrics(annual, annual, undefined).downsideCapture, 100);
+assert.equal(riskMetrics([], [], cash, true).sharpe, null);
+const sparseDown = history(annual.map((row, i) => i < 9 ? -1 : 1));
+assert.equal(riskMetrics(annual, sparseDown, cash).downsideCapture, null);
+const missingCash = {...cash, dailyReturnPct: cash.dailyReturnPct.map((value, i) => i === 100 ? null : value)};
+assert.equal(riskMetrics(annual, annual, missingCash).sharpe, null);
+assert.equal(riskMetrics(annual, annual, missingCash).downsideCapture, 100);
 const left = history(values);
 for (const sessions of [21, 42, 63, 126]) {
   const same = build(left, history(values.map(x => 3 * x + 1)), sessions);
@@ -157,6 +199,23 @@ for (const key of ['dowjones', 'nasdaq', 'nasdaq100', 'sox', 'sp500', 'russell20
   console.log(`${key}: ${result.latest.correlation.toFixed(6)} (${result.latest.date})`);
 }
 const sox = peerHistory({ key: 'sox', kind: 'index' }, briefing.history, actual.window.marketPriceData.items);
+const actualCash = actual.window.marketBriefingData.correlationRiskFree;
+assert.equal(actualCash.dates.at(-1), memory.at(-1).date);
+assert.equal(actualCash.dailyReturnPct.filter(Number.isFinite).length, 252);
+for (const stock of actualStocks) {
+  const risk = riskMetrics(actualStockRows[stock.key], sox, actualCash, true);
+  assert.ok(Number.isFinite(risk.sharpe), stock.key);
+  assert.ok(Number.isFinite(risk.downsideCapture), stock.key);
+  const count = actualStockRows[stock.key].filter(row => Number.isFinite(row.returns['1d'])).length;
+  assert.equal(risk.sampleSize, count);
+  assert.equal(risk.isPartial, count < 252);
+}
+for (const sector of briefing.sectors) {
+  const risk = riskMetrics(briefing.history[sector.key], sox, actualCash);
+  assert.ok(Number.isFinite(risk.sharpe), sector.key);
+  assert.ok(Number.isFinite(risk.downsideCapture), sector.key);
+  assert.equal(risk.sampleSize, 252);
+}
 assert.equal(actual.window.marketPriceData.items.sox.symbol, '^SOX');
 for (const sessions of [21, 42, 63, 126]) {
   assert.equal(build(memory, sox, sessions).latest.sampleSize, sessions);

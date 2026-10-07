@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import math
 import re
@@ -1734,6 +1735,80 @@ def refresh_stock_correlation_only(payload: dict[str, object]) -> None:
     payload["stockCorrelation"] = history
 
 
+def fetch_correlation_risk_free_quotes(start: str, end: str) -> dict[str, float]:
+    response = requests.get(
+        "https://fred.stlouisfed.org/graph/fredgraph.csv",
+        params={"id": "DGS3MO"}, timeout=25,
+    )
+    response.raise_for_status()
+    frame = pd.read_csv(io.StringIO(response.text))
+    if "DGS3MO" not in frame:
+        raise ValueError("FRED response has no DGS3MO column")
+    quotes = {}
+    for date, raw in zip(frame.iloc[:, 0], frame["DGS3MO"]):
+        value = safe_float(raw)
+        stamp = pd.to_datetime(date, errors="coerce")
+        if pd.notna(stamp) and value is not None and -5 <= value <= 30:
+            key = stamp.strftime("%Y-%m-%d")
+            if start <= key <= end:
+                quotes[key] = value
+    if not quotes:
+        raise ValueError("No valid FRED DGS3MO observations")
+    return quotes
+
+
+def align_correlation_risk_free(dates: list[str], quotes: dict[str, float]) -> tuple[list, list]:
+    if not dates:
+        return [], []
+    calendar = mcal.get_calendar("NYSE").schedule(
+        start_date=pd.Timestamp(dates[0]) - pd.Timedelta(days=14), end_date=dates[-1],
+    ).index
+    sessions = [date.strftime("%Y-%m-%d") for date in calendar]
+    previous = dict(zip(sessions[1:], sessions[:-1]))
+    observations = sorted(quotes)
+    daily, used_dates = [], []
+    for date in dates:
+        prior = previous.get(date)
+        eligible = [quote for quote in observations if prior and quote <= prior]
+        quote_date = eligible[-1] if eligible else None
+        # Annual investment-basis yield is a cash proxy, accrued ACT/365.
+        # Never use the current/future close's quote or carry stale quotes indefinitely.
+        if quote_date and (pd.Timestamp(date) - pd.Timestamp(quote_date)).days <= 7:
+            days = (pd.Timestamp(date) - pd.Timestamp(prior)).days
+            daily.append(round(quotes[quote_date] * days / 365, 8))
+            used_dates.append(quote_date)
+        else:
+            daily.append(None)
+            used_dates.append(None)
+    return daily, used_dates
+
+
+def refresh_correlation_risk_free(payload: dict[str, object]) -> None:
+    dates = sorted({row["date"] for rows in payload.get("rotationSignal", {}).get("history", {}).values()
+                    for row in rows if row.get("date")})[-ROTATION_HISTORY_POINTS:]
+    if not dates:
+        return
+    previous = payload.get("correlationRiskFree", {})
+    start = (pd.Timestamp(dates[0]) - pd.Timedelta(days=14)).strftime("%Y-%m-%d")
+    quotes = {date: value for date, raw in previous.get("observations", {}).items()
+              if start <= date <= dates[-1] and (value := safe_float(raw)) is not None and -5 <= value <= 30}
+    status = "updated"
+    try:
+        quotes.update(fetch_correlation_risk_free_quotes(start, dates[-1]))
+    except Exception as error:
+        status = "cached" if quotes else "unavailable"
+        print(f"Correlation risk-free rate: {status}; {error}", flush=True)
+    daily, quote_dates = align_correlation_risk_free(dates, quotes)
+    payload["correlationRiskFree"] = {
+        "source": "FRED DGS3MO", "sourceUrl": "https://fred.stlouisfed.org/series/DGS3MO",
+        "method": "previous-session-yield-simple-act365", "status": status,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "latestObservationDate": max(quotes) if quotes else None,
+        "observations": dict(sorted(quotes.items())),
+        "dates": dates, "dailyReturnPct": daily, "quoteDates": quote_dates,
+    }
+
+
 def build_rotation_signal(
     snapshots: list[dict[str, object]],
     sector_panels: list[dict[str, object]],
@@ -2195,7 +2270,7 @@ def build_payload() -> dict[str, object]:
     movers = build_movers(snapshots)
     sector_panels = build_sector_panels(snapshots)
     rotation_signal = build_rotation_signal(snapshots, sector_panels, rotation_benchmark, close_frame)
-    return {
+    payload = {
         "updatedAt": latest_date,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "mapLegend": {
@@ -2212,6 +2287,13 @@ def build_payload() -> dict[str, object]:
         "majorNews": major_news,
         "movers": movers,
     }
+    try:
+        previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
+        payload["correlationRiskFree"] = previous.get("correlationRiskFree", {})
+    except (OSError, ValueError, IndexError):
+        pass
+    refresh_correlation_risk_free(payload)
+    return payload
 
 
 def main() -> None:
@@ -2219,8 +2301,12 @@ def main() -> None:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--indices-only", action="store_true", help="Refresh only index cards from the checked Index Trend history")
     mode.add_argument("--correlation-only", action="store_true", help="Backfill adjusted stock returns without changing other briefing data")
+    mode.add_argument("--risk-metrics-only", action="store_true", help="Refresh only the cash-rate history used by correlation-table Sharpe ratios")
     args = parser.parse_args()
-    if args.correlation_only:
+    if args.risk_metrics_only:
+        payload = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
+        refresh_correlation_risk_free(payload)
+    elif args.correlation_only:
         payload = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().rstrip(";"))
         refresh_stock_correlation_only(payload)
     elif args.indices_only:

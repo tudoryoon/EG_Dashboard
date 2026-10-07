@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 from datetime import datetime, timezone
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
@@ -11,6 +11,43 @@ import update_market_briefing as briefing
 
 
 class BriefingSessionTests(unittest.TestCase):
+    def test_cash_proxy_prior_quote_weekend_and_exchange_holiday(self):
+        dates = ["2026-09-04", "2026-09-08", "2026-09-09"]
+        daily, used = briefing.align_correlation_risk_free(dates, {
+            "2026-09-03": 3.65, "2026-09-04": 7.3, "2026-09-08": 10.95, "2026-09-09": 20,
+        })
+        self.assertEqual(daily, [0.01, 0.08, 0.03])
+        self.assertEqual(used, ["2026-09-03", "2026-09-04", "2026-09-08"])
+
+    def test_cash_proxy_no_future_or_stale_quote_and_accepts_zero(self):
+        dates = ["2026-09-08", "2026-09-09"]
+        self.assertEqual(briefing.align_correlation_risk_free(dates, {"2026-09-08": 0})[0], [None, 0])
+        self.assertEqual(briefing.align_correlation_risk_free(dates, {"2026-08-31": 4})[0], [None, None])
+        self.assertEqual(briefing.align_correlation_risk_free(dates, {})[0], [None, None])
+
+    def test_cash_proxy_csv_validation(self):
+        response = Mock(text="observation_date,DGS3MO\n2026-09-01,4.2\n2026-09-02,.\n2026-09-03,NaN\n2026-09-04,999\n2026-09-08,0\n2026-09-09,5\n")
+        with patch.object(briefing.requests, "get", return_value=response):
+            self.assertEqual(briefing.fetch_correlation_risk_free_quotes("2026-09-01", "2026-09-08"),
+                             {"2026-09-01": 4.2, "2026-09-08": 0})
+
+    def test_cash_proxy_failure_preserves_briefing_and_cached_rates(self):
+        payload = {"updatedAt": "2026-09-08", "indexCards": [1], "sectorPanels": [2],
+                   "rotationSignal": {"history": {"test": [{"date": "2026-09-08"}]}},
+                   "correlationRiskFree": {"observations": {"2026-09-04": 3.65}}}
+        before = json.loads(json.dumps(payload))
+        with patch.object(briefing, "fetch_correlation_risk_free_quotes", side_effect=RuntimeError("offline")):
+            briefing.refresh_correlation_risk_free(payload)
+            self.assertEqual(payload["correlationRiskFree"]["status"], "cached")
+            self.assertEqual(payload["correlationRiskFree"]["dailyReturnPct"], [0.04])
+            del payload["correlationRiskFree"]
+            briefing.refresh_correlation_risk_free(payload)
+            self.assertEqual(payload["correlationRiskFree"]["status"], "unavailable")
+            self.assertEqual(payload["correlationRiskFree"]["dailyReturnPct"], [None])
+        self.assertEqual({k: v for k, v in payload.items() if k != "correlationRiskFree"},
+                         {k: v for k, v in before.items() if k != "correlationRiskFree"})
+        json.dumps(payload, allow_nan=False)
+
     def test_stock_correlation_deduplicates_us_members_and_keeps_short_history(self):
         dates = pd.bdate_range("2026-09-01", periods=6)
         panels = [{"items": [{"ticker": ticker} for ticker in ["AAA", "IPO", "ETF", "MISSING", "005930.KS", "000660.KS"]]},

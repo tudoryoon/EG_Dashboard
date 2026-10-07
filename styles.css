@@ -1634,9 +1634,9 @@ h1 {
 .briefing-correlation-ranking {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(7, 52px);
+  grid-template-rows: repeat(7, 88px);
   grid-auto-flow: column;
-  height: 366px;
+  height: 618px;
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
@@ -1644,9 +1644,10 @@ h1 {
 }
 .briefing-correlation-rank {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 60px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: 24px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 2px 6px;
   min-width: 0;
   padding: 6px 10px;
   border: 0;
@@ -1663,15 +1664,19 @@ h1 {
 .briefing-correlation-rank.is-selected { background: #eaf5f4; box-shadow: inset 3px 0 #087f8c; }
 .briefing-correlation-rank:focus-visible { outline-offset: -3px; }
 .briefing-correlation-rank-number { color: #898c85; font-variant-numeric: tabular-nums; }
-.briefing-correlation-rank-name { line-height: 1.4; overflow-wrap: anywhere; }
-.briefing-correlation-rank strong { text-align: right; font-variant-numeric: tabular-nums; }
+.briefing-correlation-rank-name { line-height: 1.2; overflow-wrap: anywhere; font-weight: 700; }
+.briefing-correlation-rank-metrics { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.briefing-correlation-rank-metrics > span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.briefing-correlation-rank-metrics > span + span { border-left: 1px solid #e5e7e3; padding-left: 7px; }
+.briefing-correlation-rank-metrics small { color: #74746e; font-size: 0.61rem; line-height: 1.3; font-weight: 400; white-space: nowrap; }
+.briefing-correlation-rank strong { text-align: left; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
 .briefing-correlation-rank strong small { display: block; color: #74746e; font-size: 0.65rem; font-weight: 400; }
 .briefing-correlation-rank strong.is-positive { color: #087f8c; }
 .briefing-correlation-rank strong.is-inverse { color: #b65b2a; }
 .briefing-correlation-rank strong.is-unavailable { color: #8d8d86; font-weight: 400; }
 
 @media (min-width: 761px) and (max-width: 1100px) {
-  .briefing-correlation-ranking { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(14, 52px); overflow-y: auto; }
+  .briefing-correlation-ranking { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(14, 88px); overflow-y: auto; }
 }
 
 @media (max-width: 760px) {
@@ -1679,7 +1684,7 @@ h1 {
   .briefing-correlation-window > div { width: fit-content; }
   .briefing-correlation-plots { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .briefing-correlation-canvas { height: 240px; }
-  .briefing-correlation-ranking { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; grid-auto-rows: 52px; overflow-y: auto; }
+  .briefing-correlation-ranking { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; grid-auto-rows: 88px; overflow-y: auto; }
 }
 
 .briefing-rotation-quadrants,
