@@ -473,7 +473,7 @@ const state = {
   briefingCorrelationMode: "sector",
   briefingCorrelationStock: "NVDA",
   briefingCorrelationSector: "memory",
-  briefingCorrelationPeer: "sector:neo_cloud",
+  briefingCorrelationPeer: "index:nasdaq100",
   briefingCorrelationWindow: "3m",
   briefingCorrelationPage: 0,
   rsUniverse: "all",

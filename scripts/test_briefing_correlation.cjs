@@ -227,4 +227,5 @@ assert.ok(source.includes('{ key: "sox", label: "필라델피아 반도체(SOX)"
 assert.ok(source.indexOf('${rotationDistributionMarkup}') < source.indexOf('data-briefing-correlation></section>'));
 assert.ok(source.includes('briefingRotationChartMode: "rotation"'));
 assert.ok(source.includes('briefingCorrelationMode: "sector"'));
+assert.ok(source.includes('briefingCorrelationPeer: "index:nasdaq100"'));
 console.log(`Correlation: aligned dates, missing/short history, deduplicated ${actualStocks.length} US stocks, daily-only inputs, descending ranking, 35 sectors and 6 indexes passed.`);
