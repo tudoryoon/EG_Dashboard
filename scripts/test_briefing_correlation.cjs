@@ -143,7 +143,7 @@ for (const sector of briefing.sectors) {
   assert.equal(result.latest.sampleSize, 63, sector.key);
   assert.ok(Number.isFinite(result.latest.correlation), sector.key);
 }
-for (const key of ['dowjones', 'nasdaq', 'nasdaq100', 'sp500', 'russell2000']) {
+for (const key of ['dowjones', 'nasdaq', 'nasdaq100', 'sox', 'sp500', 'russell2000']) {
   const rows = indexHistory(actual.window.marketPriceData.items[key], memory.map(x => x.date));
   const result = build(memory, rows, 63);
   assert.equal(result.latest.sampleSize, 63, key);
@@ -156,7 +156,16 @@ for (const key of ['dowjones', 'nasdaq', 'nasdaq100', 'sp500', 'russell2000']) {
   assert.ok(ranking.every((row, i) => i === 0 || ranking[i - 1].correlation >= row.correlation));
   console.log(`${key}: ${result.latest.correlation.toFixed(6)} (${result.latest.date})`);
 }
+const sox = peerHistory({ key: 'sox', kind: 'index' }, briefing.history, actual.window.marketPriceData.items);
+assert.equal(actual.window.marketPriceData.items.sox.symbol, '^SOX');
+for (const sessions of [21, 42, 63, 126]) {
+  assert.equal(build(memory, sox, sessions).latest.sampleSize, sessions);
+  for (const ticker of ['NVDA', 'MU', 'SPCX']) {
+    assert.ok(Number.isFinite(build(actualStockRows[ticker], sox, sessions, true).latest.correlation), `${ticker} vs SOX ${sessions}`);
+  }
+}
+assert.ok(source.includes('{ key: "sox", label: "필라델피아 반도체(SOX)", symbol: "^SOX" }'));
 assert.ok(source.indexOf('${rotationDistributionMarkup}') < source.indexOf('data-briefing-correlation></section>'));
 assert.ok(source.includes('briefingRotationChartMode: "rotation"'));
 assert.ok(source.includes('briefingCorrelationMode: "sector"'));
-console.log(`Correlation: aligned dates, missing/short history, deduplicated ${actualStocks.length} US stocks, daily-only inputs, descending ranking, 35 sectors and 5 indexes passed.`);
+console.log(`Correlation: aligned dates, missing/short history, deduplicated ${actualStocks.length} US stocks, daily-only inputs, descending ranking, 35 sectors and 6 indexes passed.`);

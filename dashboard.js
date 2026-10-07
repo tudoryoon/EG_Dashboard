@@ -356,6 +356,7 @@ const BRIEFING_CORRELATION_INDEXES = [
   { key: "dowjones", label: "다우존스", symbol: "^DJI" },
   { key: "nasdaq", label: "나스닥 종합", symbol: "^IXIC" },
   { key: "nasdaq100", label: "나스닥100", symbol: "^NDX" },
+  { key: "sox", label: "필라델피아 반도체(SOX)", symbol: "^SOX" },
   { key: "sp500", label: "S&P500", symbol: "^GSPC" },
   { key: "russell2000", label: "러셀2000", symbol: "^RUT" },
 ];
