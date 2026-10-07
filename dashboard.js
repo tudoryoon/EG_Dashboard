@@ -10308,7 +10308,7 @@ function renderMarketBriefingOverview() {
     .join("");
   const rotationHistoryMarkup = selectedRotationSector && selectedRotationHistory.length
     ? `
-      <article class="briefing-rotation-history-panel">
+      <article class="briefing-rotation-history-panel${state.briefingRotationChartMode === "correlation" ? " hidden" : ""}" data-briefing-rotation-content="rotation">
         <div class="briefing-rotation-history-head">
           <div>
             <strong>${selectedRotationSector.label}</strong>
@@ -10326,7 +10326,7 @@ function renderMarketBriefingOverview() {
       </article>
     `
     : `
-      <article class="briefing-rotation-history-panel">
+      <article class="briefing-rotation-history-panel${state.briefingRotationChartMode === "correlation" ? " hidden" : ""}" data-briefing-rotation-content="rotation">
         <p class="market-rs-empty">선택한 섹터의 Rotation Score 히스토리가 아직 없습니다.</p>
       </article>
     `;
@@ -10575,7 +10575,7 @@ function renderMarketBriefingOverview() {
       state.briefingRotationSectorKey = button.dataset.rotationSector || "";
       const shouldScrollHistory = button.dataset.rotationScrollHistory === "true";
       render();
-      if (shouldScrollHistory) {
+      if (shouldScrollHistory && state.briefingRotationChartMode !== "correlation") {
         requestAnimationFrame(() => {
           document.querySelector(".briefing-rotation-history-panel")?.scrollIntoView({
             behavior: "smooth",
@@ -10604,9 +10604,6 @@ function renderMarketBriefingOverview() {
     });
   });
   const rotationHistoryCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-history]");
-  if (rotationHistoryCanvas && selectedRotationSector && selectedRotationHistory.length) {
-    createBriefingRotationHistoryChart(rotationHistoryCanvas, selectedRotationSector, selectedRotationHistory);
-  }
   const rotationDistributionCanvas = usOverviewRoot.querySelector("canvas[data-briefing-rotation-distribution]");
   const correlationRoot = usOverviewRoot.querySelector("[data-briefing-correlation]");
   const updateRotationView = () => {
@@ -10620,9 +10617,15 @@ function renderMarketBriefingOverview() {
     if (mode === "correlation") {
       if (!correlationRoot.children.length) renderBriefingCorrelation(correlationRoot, allRotationSectors, rotationHistory);
       correlationRoot.querySelectorAll("canvas").forEach((canvas) => Chart.getChart(canvas)?.resize());
-    } else if (rotationDistributionCanvas && rotationDistribution.points.length) {
-      if (!Chart.getChart(rotationDistributionCanvas)) createBriefingRotationDistributionChart(rotationDistributionCanvas, rotationDistribution);
-      else Chart.getChart(rotationDistributionCanvas).resize();
+    } else {
+      if (rotationHistoryCanvas && selectedRotationSector && selectedRotationHistory.length) {
+        if (!Chart.getChart(rotationHistoryCanvas)) createBriefingRotationHistoryChart(rotationHistoryCanvas, selectedRotationSector, selectedRotationHistory);
+        else Chart.getChart(rotationHistoryCanvas).resize();
+      }
+      if (rotationDistributionCanvas && rotationDistribution.points.length) {
+        if (!Chart.getChart(rotationDistributionCanvas)) createBriefingRotationDistributionChart(rotationDistributionCanvas, rotationDistribution);
+        else Chart.getChart(rotationDistributionCanvas).resize();
+      }
     }
   };
   usOverviewRoot.querySelectorAll("[data-briefing-rotation-view]").forEach((button) => {
