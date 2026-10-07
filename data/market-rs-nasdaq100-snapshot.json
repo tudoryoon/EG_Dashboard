@@ -1,5 +1,5 @@
 {
-  "updatedAt": "Oct 6, 2026",
+  "updatedAt": "Oct 7, 2026",
   "source": "https://api.nasdaq.com/api/quote/list-type/nasdaq100",
   "rows": [
     {
@@ -385,10 +385,6 @@
     {
       "Ticker": "VRTX",
       "Name": "Vertex Pharmaceuticals Incorporated Common Stock"
-    },
-    {
-      "Ticker": "WBD",
-      "Name": "Warner Bros. Discovery, Inc. Series A Common Stock "
     },
     {
       "Ticker": "WDAY",
