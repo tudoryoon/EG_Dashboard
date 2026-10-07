@@ -130,6 +130,8 @@ MANUAL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-m
 yf.set_tz_cache_location(str(OUTPUT_PATH.parent.parent / ".yfinance-cache"))
 NASDAQ100_SNAPSHOT_PATH = Path(__file__).resolve().parents[1] / "data" / "market-rs-nasdaq100-snapshot.json"
 SYMBOL_ALIASES = {
+    # Same Class B security transferred to NYSE on 2026-10-06.
+    "PSKY": "SKYD",
     "CRDA": "CRD-A",
     "GEFB": "GEF-B",
     "MOGA": "MOG-A",
@@ -143,8 +145,6 @@ TERMINAL_SKIP_TICKERS = {
     "INH",
     "P5N994",
     "PDLI",
-    # Paramount transferred to NYSE as SKYD on 2026-10-06; PSKY stopped trading.
-    "PSKY",
     "SBT",
     "SLP",
     "THRD",
@@ -220,8 +220,17 @@ def get_manual_market_cap_exemptions() -> set[str]:
 
 
 def passes_market_cap_filter(ticker: str, market_cap: int | None, exemptions: set[str]) -> bool:
-    return bool(market_cap is not None and market_cap > 0
+    return bool(not is_terminal_symbol(ticker) and market_cap is not None and market_cap > 0
                 and (market_cap > MIN_MARKET_CAP_USD or normalize_ticker(ticker) in exemptions))
+
+
+def get_market_cap_exemptions(existing_rows: dict[str, dict] | None = None) -> set[str]:
+    # The cap floor controls admission, not removal of an already tracked security.
+    rows = load_existing_rows() if existing_rows is None else existing_rows
+    return get_manual_market_cap_exemptions() | {
+        normalize_ticker(ticker) for ticker in rows
+        if ticker and not is_terminal_symbol(ticker)
+    }
 
 
 def get_manual_universe_members() -> list[dict[str, object]]:
@@ -1434,7 +1443,7 @@ def build_payload(
         for member in get_manual_universe_members()
         if normalize_ticker(member.get("ticker"))
     }
-    cap_exemptions = get_manual_market_cap_exemptions()
+    cap_exemptions = get_market_cap_exemptions()
     stock_adjusted_close = adjusted_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_raw_close = raw_close_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
     stock_open = open_frame.drop(columns=[BENCHMARK_SYMBOL], errors="ignore")
@@ -1685,7 +1694,7 @@ def build_payload(
         },
         "scoring": {
             "label": "StockEasy-style RS Rating",
-            "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. For newly listed names, each newly available period weight ramps in over 21 trading sessions. Names with market cap at or below $200M are excluded.",
+            "description": "Weighted average of period RS ranks using RS_1M 20%, RS_3M 40%, RS_6M 20%, and RS_12M 20%. Each period RS is a daily 1-99 percentile rank. For newly listed names, each newly available period weight ramps in over 21 trading sessions. New admissions require market cap above $200M; existing tracked names are retained below that floor unless trading has terminated.",
             "minMarketCapUsd": MIN_MARKET_CAP_USD,
             "weights": RS_WEIGHTS,
             "maturityRampSessions": RS_MATURITY_RAMP_SESSIONS,

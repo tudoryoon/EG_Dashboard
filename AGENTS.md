@@ -8,6 +8,8 @@
 
 ## Daily Briefing ticker additions
 
+- The $200M market-cap floor applies to new RS admissions only. Continue collecting existing RS members after their cap falls below the floor; confirmed trading termination still takes precedence.
+
 - Whenever a ticker is added to a Daily Briefing sector, it must also be available in the RS, Trend Score, and CANSLIM tabs.
 - First check `data/market-rs-data.js`. Index constituents already in the RS universe must not be duplicated in `data/market-rs-manual-tickers.json`.
 - If the ticker is absent from the RS universe, add it through `scripts/add_market_rs_tickers.py` so the manual universe, RS history, and Trend Score data stay synchronized.

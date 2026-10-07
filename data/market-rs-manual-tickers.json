@@ -210,6 +210,18 @@
       "sharesOutstanding": 284443868
     },
     {
+      "ticker": "BGS",
+      "name": "B&G Foods, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": true
+      },
+      "sharesOutstanding": 80411079,
+      "minMarketCapExempt": true
+    },
+    {
       "ticker": "BHP",
       "name": "BHP Group Limited",
       "memberships": {
@@ -946,6 +958,24 @@
         "russell2000": false
       },
       "sharesOutstanding": 1297654610
+    },
+    {
+      "ticker": "SKYD",
+      "name": "Skydance Corporation",
+      "memberships": {
+        "sp500": true,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 5042178087,
+      "sharesAsOf": "2026-10-06",
+      "sharesNote": "Class B 1,093,020,754 at 2026-10-02 + Class A 31,500,087 + 3,917,657,246 PIPE shares issued at closing. Unexercised warrants excluded.",
+      "sharesSources": [
+        "https://ir.paramount.com/node/73416/html",
+        "https://ir.paramount.com/node/73166/html",
+        "https://ir.paramount.com/static-files/6af929e3-2b7a-43d0-a097-faf343b093df"
+      ]
     },
     {
       "ticker": "SMH",

@@ -288,7 +288,8 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
     if current_price is None:
         raise RuntimeError(f"No current price available for {ticker}.")
     market_cap = None if is_index else round(current_price * shares)
-    if not is_index and not rs.passes_market_cap_filter(ticker, market_cap, rs.get_manual_market_cap_exemptions()):
+    existing_rows = {row["ticker"]: row for row in payload.get("rows", []) if row.get("ticker")}
+    if not is_index and not rs.passes_market_cap_filter(ticker, market_cap, rs.get_market_cap_exemptions(existing_rows)):
         raise RuntimeError(f"{ticker} market cap is below the RS minimum.")
 
     high = frame["high"].dropna()
@@ -311,6 +312,7 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
         and history_sessions < rs.LOOKBACKS["12m"] + rs.RS_MATURITY_RAMP_SESSIONS
     )
     latest_rating = None
+    manual_member = manual_members_by_ticker().get(ticker, {})
     row = {
         "ticker": ticker,
         "name": name,
@@ -348,7 +350,7 @@ def build_new_row_and_history(payload: dict, ticker: str, frame: pd.DataFrame, n
         "priceNewHigh": rs.compute_price_new_high(raw_close, rs.LOOKBACKS["12m"]),
         "priceNewHigh1y": rs.compute_price_new_high(raw_close, rs.LOOKBACKS["12m"]),
         "priceNewHigh3m": rs.compute_price_new_high(raw_close, rs.LOOKBACKS["3m"]),
-        "memberships": {"sp500": False, "nasdaq100": False, "dowjones": False, "russell2000": False},
+        "memberships": {key: bool(manual_member.get(f"member_{key}")) for key in rs.UNIVERSES},
     }
 
     history = {
