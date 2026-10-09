@@ -1,5 +1,5 @@
 {
-  "updatedAt": "Oct 8, 2026",
+  "updatedAt": "Oct 9, 2026",
   "source": "https://api.nasdaq.com/api/quote/list-type/nasdaq100",
   "rows": [
     {
@@ -245,6 +245,10 @@
     {
       "Ticker": "MPWR",
       "Name": "Monolithic Power Systems, Inc. Common Stock"
+    },
+    {
+      "Ticker": "MRNA",
+      "Name": "Moderna, Inc. Common Stock"
     },
     {
       "Ticker": "MRVL",
