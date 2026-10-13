@@ -1607,6 +1607,9 @@ h1 {
 .briefing-correlation-basis p { margin: 8px 0 0; line-height: 1.6; max-width: 1000px; }
 
 .briefing-correlation-ranking-section { min-width: 0; padding-top: 6px; }
+.briefing-correlation-risk-guide { margin-bottom: 12px; color: #50564f; font-size: 0.74rem; line-height: 1.6; }
+.briefing-correlation-risk-guide p { margin: 4px 0; }
+.briefing-correlation-risk-guide strong { color: var(--text); }
 .briefing-correlation-ranking-head {
   display: flex;
   justify-content: space-between;
