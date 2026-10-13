@@ -9015,6 +9015,29 @@ function createBriefingCorrelationCharts(root, model, leftLabel, rightLabel, win
   charts.push(line, scatter);
 }
 
+function renderBriefingCorrelationMetrics(item, peer, windowMeta) {
+  const valid = Number.isFinite(item.correlation);
+  const value = valid ? `${item.correlation > 0 ? "+" : ""}${item.correlation.toFixed(3)}` : "미산출";
+  const risk = item.risk;
+  const sharpeValid = Number.isFinite(risk.sharpe);
+  const captureValid = Number.isFinite(risk.downsideCapture);
+  const riskPeriod = `${risk.start ?? "-"} ~ ${risk.end ?? "-"} · ${risk.sampleSize}/252거래일${risk.isPartial ? " · 부분 이력" : ""}`;
+  const capturePeriod = `${risk.captureStart ?? "-"} ~ ${risk.captureEnd ?? "-"} · ${risk.captureSampleSize}/${risk.captureSessions}거래일${risk.captureIsPartial ? " · 부분 이력" : ""}`;
+  const sharpeText = sharpeValid ? risk.sharpe.toFixed(2) : "-";
+  const captureText = captureValid ? `${risk.downsideCapture.toFixed(1)}%` : "-";
+  const captureMeaning = !captureValid ? risk.captureReason : risk.downsideCapture < 0
+    ? "비교 대상 하락일에 평균적으로 상승"
+    : risk.downsideCapture === 0 ? "비교 대상 하락일에 평균적으로 보합"
+    : risk.downsideCapture < 100 ? "비교 대상보다 평균 낙폭이 작음"
+    : risk.downsideCapture === 100 ? "비교 대상과 평균 낙폭이 같음"
+    : "비교 대상보다 평균 낙폭이 큼";
+  return `<span class="briefing-correlation-rank-metrics">
+    <span><small>${windowMeta.label} 상관계수</small><strong data-risk-correlation class="${!valid ? "is-unavailable" : item.correlation < 0 ? "is-inverse" : "is-positive"}">${value}</strong><small>${item.sampleSize}거래일${item.isPartial ? " · 부분" : ""}</small></span>
+    <span title="${escapeHtml(`${riskPeriod} · ${risk.sharpeReason || "현금수익률 차감 · 연율화"}`)}"><small>${risk.isPartial ? `샤프 · ${risk.sampleSize}일` : "1Y 샤프"}</small><strong data-risk-sharpe class="${!sharpeValid ? "is-unavailable" : risk.sharpe < 0 ? "is-inverse" : "is-positive"}">${sharpeText}</strong><small>${risk.isPartial ? "부분 추정" : "연율화"}</small></span>
+    <span title="${escapeHtml(`${captureMeaning} · ${peer.label} 하락일의 평균수익률 비율 · ${capturePeriod} · 하락일 ${risk.downDays}개${risk.captureLowSample ? " · 표본 적음" : ""}`)}"><small>하락참여율</small><strong data-risk-capture class="${!captureValid ? "is-unavailable" : risk.downsideCapture > 100 ? "is-inverse" : "is-positive"}">${captureText}</strong><small class="${risk.captureLowSample ? "is-caution" : ""}">${risk.captureLowSample ? `표본 적음 · ${risk.downDays}일` : `${risk.downDays} 하락일 · ${risk.captureIsPartial ? "부분" : windowMeta.label}`}</small></span>
+  </span>`;
+}
+
 function renderBriefingCorrelation(root, sectors, history) {
   if (!root || sectors.length < 1) return;
   const previousGrid = root.querySelector("[data-briefing-correlation-ranking]");
@@ -9058,6 +9081,8 @@ function renderBriefingCorrelation(root, sectors, history) {
   const offset = page * pageSize;
   const visibleRanking = ranking.slice(offset, offset + pageSize);
   const latest = model.latest;
+  const selectedMetrics = ranking.find((item) => item.key === sector.key)
+    ?? { ...latest, risk: buildBriefingRiskMetrics(leftHistory, rightHistory, riskFree, stockMode, windowMeta.sessions) };
   const correlationText = Number.isFinite(latest.correlation) ? latest.correlation.toFixed(3) : "-";
   const availability = Number.isFinite(latest.correlation) ? ""
     : latest.sampleSize < windowMeta.sessions ? "표본 부족" : "수익률 변동 없음";
@@ -9097,6 +9122,14 @@ function renderBriefingCorrelation(root, sectors, history) {
       <span>산출 기간 ${escapeHtml(latest.start ?? "-")} ~ ${escapeHtml(latest.date ?? "-")}${availability ? ` · ${availability}` : ""}</span>
       ${peer.kind === "sector" ? `<span title="${escapeHtml(overlap.join(", ") || "없음")}">${stockMode ? `비교 섹터에 ${overlap.length ? "포함" : "미포함"}` : `중복 구성 ${overlap.length}종목`}</span>` : `<span>${escapeHtml(peer.label)} (${escapeHtml(peer.symbol)})</span>`}
     </div>
+    <section class="briefing-correlation-selected" data-briefing-correlation-selected aria-label="선택한 기준 요약">
+      <div class="briefing-correlation-selected-name">
+        <span>선택한 기준 ${stockMode ? "종목" : "섹터"}</span>
+        <h4>${escapeHtml(sector.label)}${stockMode ? ` <small>${escapeHtml(sector.name)}</small>` : ""}</h4>
+        <span>비교 대상 ${escapeHtml(peer.label)} · ${windowMeta.label}</span>
+      </div>
+      ${renderBriefingCorrelationMetrics(selectedMetrics, peer, windowMeta)}
+    </section>
     <details class="briefing-correlation-basis"><summary>산출 기준</summary>
       <p>종목은 Daily Briefing 미국 상장 종목의 수정종가 기준 일간수익률입니다. 삼성전자·SK하이닉스는 제외합니다. 섹터 일간수익률은 시총가중 50% + 동일가중 50%이며 기존 Rotation 집계 대상과 같습니다. 지수는 Index Trend 종가의 전일 대비 수익률입니다. 현재 구성종목·시총 가중치로 재계산한 이력이며 당시 구성 기준은 아닙니다. 두 대상의 같은 날짜 수익률만 사용하며, 누락값을 0으로 채우지 않습니다. 종목 이력이 선택 기간보다 짧으면 최초 유효 수익률 이후 보유 기간만 사용합니다(최소 10거래일). 이력 이전과 중간 누락 구간은 비워둡니다. 표본 수가 다른 종목의 순위 비교에는 주의가 필요합니다. 비교 섹터에 포함된 종목도 구성에서 제거하지 않습니다.</p>
       <p>상관계수와 일간 하락참여율은 선택한 비교 기간을 사용하고, 샤프비율은 최근 252거래일(1Y)을 사용합니다. 샤프 = 일간 초과수익률 평균 / 표본 표준편차 × √252. 무위험금리는 <a href="https://fred.stlouisfed.org/series/DGS3MO" target="_blank" rel="noopener noreferrer">FRED DGS3MO 미국 3개월 국채금리</a>이며, 전 거래일 이하의 마지막 관측치를 실제 경과일수/365로 단리 환산한 현금수익률 근사치입니다. 7일 넘게 오래된 금리는 사용하지 않습니다. 금리 최종 관측 ${escapeHtml(riskFree?.latestObservationDate ?? "미수집")}${riskFree?.status === "cached" ? " · 수집 실패로 저장 이력 사용" : ""}. 지연 공표·수정치는 사후 반영되므로 실시간 투자 백테스트는 아닙니다.</p>
@@ -9121,27 +9154,12 @@ function renderBriefingCorrelation(root, sectors, history) {
           const valid = Number.isFinite(item.correlation);
           const value = valid ? `${item.correlation > 0 ? "+" : ""}${item.correlation.toFixed(3)}` : "미산출";
           const risk = item.risk;
-          const sharpeValid = Number.isFinite(risk.sharpe);
-          const captureValid = Number.isFinite(risk.downsideCapture);
           const riskPeriod = `${risk.start ?? "-"} ~ ${risk.end ?? "-"} · ${risk.sampleSize}/252거래일${risk.isPartial ? " · 부분 이력" : ""}`;
-          const capturePeriod = `${risk.captureStart ?? "-"} ~ ${risk.captureEnd ?? "-"} · ${risk.captureSampleSize}/${risk.captureSessions}거래일${risk.captureIsPartial ? " · 부분 이력" : ""}`;
-          const sharpeText = sharpeValid ? risk.sharpe.toFixed(2) : "-";
-          const captureText = captureValid ? `${risk.downsideCapture.toFixed(1)}%` : "-";
-          const captureMeaning = !captureValid ? risk.captureReason : risk.downsideCapture < 0
-            ? "비교 대상 하락일에 평균적으로 상승"
-            : risk.downsideCapture === 0 ? "비교 대상 하락일에 평균적으로 보합"
-            : risk.downsideCapture < 100 ? "비교 대상보다 평균 낙폭이 작음"
-            : risk.downsideCapture === 100 ? "비교 대상과 평균 낙폭이 같음"
-            : "비교 대상보다 평균 낙폭이 큼";
           const title = `${item.label} / ${peer.label} · r ${value} · ${item.sampleSize}/${windowMeta.sessions}거래일 · ${riskPeriod}`;
           return `<button type="button" class="briefing-correlation-rank${item.key === sector.key ? " is-selected" : ""}" data-briefing-correlation-rank="${escapeHtml(item.key)}" aria-pressed="${item.key === sector.key}" title="${escapeHtml(title)}">
             <span class="briefing-correlation-rank-number">${offset + index + 1}</span>
             <span class="briefing-correlation-rank-name">${escapeHtml(item.label)}</span>
-            <span class="briefing-correlation-rank-metrics">
-              <span><small>${windowMeta.label} 상관계수</small><strong data-risk-correlation class="${!valid ? "is-unavailable" : item.correlation < 0 ? "is-inverse" : "is-positive"}">${value}</strong><small>${item.sampleSize}거래일${item.isPartial ? " · 부분" : ""}</small></span>
-              <span title="${escapeHtml(`${riskPeriod} · ${risk.sharpeReason || "현금수익률 차감 · 연율화"}`)}"><small>${risk.isPartial ? `샤프 · ${risk.sampleSize}일` : "1Y 샤프"}</small><strong data-risk-sharpe class="${!sharpeValid ? "is-unavailable" : risk.sharpe < 0 ? "is-inverse" : "is-positive"}">${sharpeText}</strong><small>${risk.isPartial ? "부분 추정" : "연율화"}</small></span>
-              <span title="${escapeHtml(`${captureMeaning} · ${peer.label} 하락일의 평균수익률 비율 · ${capturePeriod} · 하락일 ${risk.downDays}개${risk.captureLowSample ? " · 표본 적음" : ""}`)}"><small>하락참여율</small><strong data-risk-capture class="${!captureValid ? "is-unavailable" : risk.downsideCapture > 100 ? "is-inverse" : "is-positive"}">${captureText}</strong><small class="${risk.captureLowSample ? "is-caution" : ""}">${risk.captureLowSample ? `표본 적음 · ${risk.downDays}일` : `${risk.downDays} 하락일 · ${risk.captureIsPartial ? "부분" : windowMeta.label}`}</small></span>
-            </span>
+            ${renderBriefingCorrelationMetrics(item, peer, windowMeta)}
           </button>`;
         }).join("")}
       </div>
