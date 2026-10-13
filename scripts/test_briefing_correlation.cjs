@@ -57,10 +57,50 @@ assert.equal(riskMetrics(annual, annual, undefined).sharpe, null);
 assert.equal(riskMetrics(annual, annual, undefined).downsideCapture, 100);
 assert.equal(riskMetrics([], [], cash, true).sharpe, null);
 const sparseDown = history(annual.map((row, i) => i < 9 ? -1 : 1));
-assert.equal(riskMetrics(annual, sparseDown, cash).downsideCapture, null);
+assert.ok(Number.isFinite(riskMetrics(annual, sparseDown, cash).downsideCapture));
+assert.equal(riskMetrics(annual, sparseDown, cash).captureLowSample, true);
+for (const downCount of [4, 5, 9, 10]) {
+  const peer = history(annual.map((row, i) => i < downCount ? -1 : 1));
+  const result = riskMetrics(annual, peer, cash);
+  assert.equal(Number.isFinite(result.downsideCapture), downCount >= 5);
+  assert.equal(result.captureLowSample, downCount >= 5 && downCount < 10);
+}
+const decliningBenchmark = history(Array(252).fill(-1));
+const changingDefense = history(Array.from({length:252}, (_, i) => i >= 231 ? -0.5 : i >= 210 ? -1 : i >= 189 ? -1.5 : i >= 126 ? -2 : -3));
+const fixedSharpe = riskMetrics(changingDefense, decliningBenchmark, cash).sharpe;
+for (const [sessions, expectedCapture] of [[21,50], [42,75], [63,100], [126,150], [252,225]]) {
+  const result = riskMetrics(changingDefense, decliningBenchmark, cash, false, sessions);
+  assert.equal(result.downsideCapture, expectedCapture);
+  assert.equal(result.sharpe, fixedSharpe);
+  assert.equal(result.captureSampleSize, sessions);
+  assert.equal(result.downDays, sessions);
+  assert.equal(result.captureStart, annual.at(-sessions).date);
+  assert.equal(result.captureEnd, annual.at(-1).date);
+  assert.equal(result.captureIsPartial, false);
+}
+const shortMonthlyRisk = riskMetrics(shortAnnual, annual, cash, true, 21);
+assert.equal(shortMonthlyRisk.isPartial, true);
+assert.equal(shortMonthlyRisk.captureIsPartial, false);
+assert.equal(shortMonthlyRisk.captureSampleSize, 21);
+assert.equal(shortMonthlyRisk.downsideCapture, 100);
+const shortSixMonthRisk = riskMetrics(shortAnnual, annual, cash, true, 126);
+assert.equal(shortSixMonthRisk.captureIsPartial, true);
+assert.equal(shortSixMonthRisk.captureSampleSize, 79);
+assert.equal(shortSixMonthRisk.downsideCapture, 100);
+const recentAfterOldGap = riskMetrics(gapAnnual, annual, cash, true, 21);
+assert.equal(recentAfterOldGap.sharpe, null);
+assert.equal(recentAfterOldGap.downsideCapture, 100);
+const recentBenchmarkAfterOldGap = riskMetrics(annual, gapAnnual, cash, false, 21);
+assert.equal(recentBenchmarkAfterOldGap.downsideCapture, 100);
+const recentGap = history(annual.map((row, i) => i === 240 ? null : row.returns['1d']));
+assert.equal(riskMetrics(recentGap, annual, cash, true, 21).downsideCapture, null);
 const missingCash = {...cash, dailyReturnPct: cash.dailyReturnPct.map((value, i) => i === 100 ? null : value)};
 assert.equal(riskMetrics(annual, annual, missingCash).sharpe, null);
 assert.equal(riskMetrics(annual, annual, missingCash).downsideCapture, 100);
+const annualCorrelation = build(annual, history(annual.map(row => row.returns['1d'] * 2)), 252);
+assert.equal(annualCorrelation.latest.correlation, 1);
+assert.equal(annualCorrelation.latest.sampleSize, 252);
+assert.equal(annualCorrelation.rolling.length, 1);
 const left = history(values);
 for (const sessions of [21, 42, 63, 126]) {
   const same = build(left, history(values.map(x => 3 * x + 1)), sessions);
@@ -217,15 +257,31 @@ for (const sector of briefing.sectors) {
   assert.equal(risk.sampleSize, 252);
 }
 assert.equal(actual.window.marketPriceData.items.sox.symbol, '^SOX');
-for (const sessions of [21, 42, 63, 126]) {
+for (const sessions of [21, 42, 63, 126, 252]) {
   assert.equal(build(memory, sox, sessions).latest.sampleSize, sessions);
   for (const ticker of ['NVDA', 'MU', 'SPCX']) {
     assert.ok(Number.isFinite(build(actualStockRows[ticker], sox, sessions, true).latest.correlation), `${ticker} vs SOX ${sessions}`);
+    const risk = riskMetrics(actualStockRows[ticker], sox, actualCash, true, sessions);
+    assert.ok(Number.isFinite(risk.downsideCapture), `${ticker} downside capture ${sessions}`);
+    const samples = actualStockRows[ticker].slice(-sessions).filter(row => Number.isFinite(row.returns['1d'])).length;
+    assert.equal(risk.captureSampleSize, samples);
+    assert.equal(risk.captureIsPartial, samples < sessions);
+    assert.equal(risk.sharpe, riskMetrics(actualStockRows[ticker], sox, actualCash, true).sharpe);
   }
+}
+const nasdaq = peerHistory({key:'nasdaq100', kind:'index'}, briefing.history, actual.window.marketPriceData.items);
+for (const sessions of [21, 42, 63, 126, 252]) {
+  const risk = riskMetrics(memory, nasdaq, actualCash, false, sessions);
+  const down = nasdaq.slice(-sessions).filter(row => row.returns['1d'] < 0).length;
+  assert.equal(risk.downDays, down);
+  assert.equal(Number.isFinite(risk.downsideCapture), down >= 5);
+  assert.equal(risk.captureLowSample, down >= 5 && down < 10);
+  console.log(`${sessions} sessions: ${risk.downsideCapture?.toFixed(3)}% capture (${down} down days); 1Y Sharpe ${risk.sharpe?.toFixed(3)}`);
 }
 assert.ok(source.includes('{ key: "sox", label: "필라델피아 반도체(SOX)", symbol: "^SOX" }'));
 assert.ok(source.indexOf('${rotationDistributionMarkup}') < source.indexOf('data-briefing-correlation></section>'));
 assert.ok(source.includes('briefingRotationChartMode: "rotation"'));
 assert.ok(source.includes('briefingCorrelationMode: "sector"'));
 assert.ok(source.includes('briefingCorrelationPeer: "index:nasdaq100"'));
+assert.ok(source.includes('briefingCorrelationWindow: "3m"'));
 console.log(`Correlation: aligned dates, missing/short history, deduplicated ${actualStocks.length} US stocks, daily-only inputs, descending ranking, 35 sectors and 6 indexes passed.`);
