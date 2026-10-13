@@ -94,6 +94,14 @@ const recentBenchmarkAfterOldGap = riskMetrics(annual, gapAnnual, cash, false, 2
 assert.equal(recentBenchmarkAfterOldGap.downsideCapture, 100);
 const recentGap = history(annual.map((row, i) => i === 240 ? null : row.returns['1d']));
 assert.equal(riskMetrics(recentGap, annual, cash, true, 21).downsideCapture, null);
+for (const sessions of [21, 42, 63, 126, 252]) {
+  for (const candidate of [annual, shortAnnual, gapAnnual, recentGap, flatAnnual, []]) {
+    for (const allowShort of [false, true]) {
+      assert.deepEqual(build(candidate, annual, sessions, allowShort, true).latest,
+                       build(candidate, annual, sessions, allowShort).latest);
+    }
+  }
+}
 const missingCash = {...cash, dailyReturnPct: cash.dailyReturnPct.map((value, i) => i === 100 ? null : value)};
 assert.equal(riskMetrics(annual, annual, missingCash).sharpe, null);
 assert.equal(riskMetrics(annual, annual, missingCash).downsideCapture, 100);

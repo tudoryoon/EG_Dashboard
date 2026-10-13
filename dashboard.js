@@ -8815,13 +8815,16 @@ function getBriefingCorrelationStockHistories(data, stocks) {
   })]));
 }
 
-function buildBriefingCorrelationModel(leftHistory, rightHistory, sessions, allowShortHistory = false) {
+function buildBriefingCorrelationModel(leftHistory, rightHistory, sessions, allowShortHistory = false, latestOnly = false) {
   const left = new Map(leftHistory.filter((item) => item.date).map((item) => [item.date, item.returns?.["1d"]]));
   const right = new Map(rightHistory.filter((item) => item.date).map((item) => [item.date, item.returns?.["1d"]]));
   const dates = [...new Set([...left.keys(), ...right.keys()])].sort();
   const rows = dates.map((date) => ({ date, x: left.get(date), y: right.get(date) }));
   const firstAvailable = rows.findIndex((row) => Number.isFinite(row.x));
-  const rolling = rows.map((row, index) => {
+  // Rankings need only the final window; the selected chart keeps the rolling history.
+  const rollingRows = latestOnly ? rows.slice(-1) : rows;
+  const rolling = rollingRows.map((row, offset) => {
+    const index = latestOnly ? rows.length - 1 : offset;
     const startIndex = Math.max(0, index - sessions + 1, allowShortHistory ? firstAvailable : 0);
     const windowRows = rows.slice(startIndex, index + 1);
     const pairs = windowRows.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
@@ -8858,7 +8861,7 @@ function buildBriefingCorrelationRanking(sectors, history, peer, rightHistory, s
   return sectors.filter((sector) => peer.kind !== "sector" || sector.key !== peer.key).map((sector) => {
     const rows = new Map((history[sector.key] ?? []).map((row) => [row.date, row]));
     const left = reference.map((row) => rows.get(row.date) ?? { date: row.date });
-    return { key: sector.key, label: sector.label, ...buildBriefingCorrelationModel(left, reference, sessions, allowShortHistory).latest };
+    return { key: sector.key, label: sector.label, ...buildBriefingCorrelationModel(left, reference, sessions, allowShortHistory, true).latest };
   }).sort((a, b) => {
     const leftValid = Number.isFinite(a.correlation);
     const rightValid = Number.isFinite(b.correlation);
