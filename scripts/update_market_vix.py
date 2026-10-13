@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import io
 import json
@@ -236,6 +237,7 @@ def load_existing_fixed_income_item(key: str) -> dict:
 
 def parse_fred_history_item(meta: dict[str, str], existing: dict | None = None) -> dict[str, object]:
     series_id = meta["fredId"]
+    checked_at = datetime.now(timezone.utc).isoformat()
     existing = load_existing_fixed_income_item(meta["key"]) if existing is None else existing
     by_date = dict(zip(existing.get("dates", []), existing.get("values", [])))
     saved_latest = max(by_date, default="")
@@ -253,7 +255,7 @@ def parse_fred_history_item(meta: dict[str, str], existing: dict | None = None) 
     if not candidates:
         if by_date:
             print(f"::warning::{series_id}: refresh unavailable; preserving {saved_latest}")
-            return {**existing, "fetchStatus": "stale"}
+            return {**existing, "fetchStatus": "stale", "lastCheckedAt": checked_at}
         raise RuntimeError(f"No FRED observations or saved history for {series_id}")
     # Retain the archive outside FRED's rolling window; official values win on overlapping dates.
     for _, points in reversed(candidates):
@@ -271,6 +273,7 @@ def parse_fred_history_item(meta: dict[str, str], existing: dict | None = None) 
         "dates": dates, "values": values, "latestDate": dates[-1],
         "latestValue": latest, "previousValue": previous, "change": delta, "changePct": pct,
         "latestSourceUrl": source_url,
+        "fetchStatus": "ok", "lastCheckedAt": checked_at, "lastSuccessfulFetchAt": checked_at,
     }
 
 
@@ -565,12 +568,35 @@ def refresh_series(items, parser, existing):
     return refreshed
 
 
+def refresh_credit_only(existing: dict) -> dict:
+    if not existing.get("fixedIncome"):
+        raise RuntimeError("Credit-only refresh requires an existing VIX payload")
+    meta = next(item for item in FIXED_INCOME_SERIES if item["key"] == "hySpread")
+    credit = parse_fred_history_item(meta, existing.get("fixedIncome", {}).get("hySpread", {}))
+    return {
+        **existing,
+        "fixedIncome": {**existing["fixedIncome"], "hySpread": credit},
+        "updatedAt": max(existing.get("updatedAt", ""), credit.get("latestDate", "")),
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--credit-only", action="store_true", help="Check only FRED high-yield OAS, preserving Yahoo and CBOE data")
+    args = parser.parse_args()
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
     existing = {}
     if output_path.exists():
         text = output_path.read_text(encoding="utf-8").strip()
         existing = json.loads(text[len("window.marketVixData = ") : -1])
+    if args.credit_only:
+        payload = refresh_credit_only(existing)
+        output_path.write_text(
+            "window.marketVixData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
+            encoding="utf-8", newline="\n",
+        )
+        return
     # Independent sources must not prevent the credit spread from refreshing.
     fixed_income = refresh_series(FIXED_INCOME_SERIES, parse_fixed_income_item, existing.get("fixedIncome", {}))
     vix_family = refresh_series(VIX_FAMILY, parse_vix_family_item, existing.get("family", {}))

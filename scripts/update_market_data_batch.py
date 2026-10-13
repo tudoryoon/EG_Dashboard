@@ -1,4 +1,5 @@
 """Publish valid market datasets even when another collector fails."""
+import argparse
 import os
 
 from update_ai_data_batch import run_task
@@ -11,8 +12,12 @@ TASKS = [
 ]
 
 
-def main():
-    results = [run_task(*task) for task in TASKS]
+def main(credit_only=False):
+    if credit_only:
+        results = [run_task("High Yield Spread", "update_market_vix.py", ["data/market-vix-data.js"], 120,
+                            script_args=["--credit-only"])]
+    else:
+        results = [run_task(*task) for task in TASKS]
     changed = [file for result in results for file in result["changed"]]
     failures = sum(result["status"] == "failed" for result in results)
     summary = "## Market data collection\n\n| Item | Result |\n| --- | --- |\n" + "".join(
@@ -28,4 +33,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--credit-only", action="store_true")
+    main(credit_only=parser.parse_args().credit_only)

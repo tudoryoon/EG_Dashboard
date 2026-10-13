@@ -21196,8 +21196,10 @@ function renderMarketVixOverview() {
           <div class="us-price-controls">
             <div class="m7-range-row">${fixedIncomeRangeMarkup}</div>
             <div class="us-price-updated">${marketVixData.source?.fixedIncome ?? ""} · MOVE ${marketVixData.fixedIncome?.move?.latestDate || "-"} · HY ${marketVixData.fixedIncome?.hySpread?.latestDate || "-"}</div>
+            <div class="us-price-updated" data-hy-collection-status>HY ${marketVixData.fixedIncome?.hySpread?.fetchStatus === "stale" ? "수집 실패 · 이전 값 유지" : "공개값 확인"} · 확인 ${formatKstDateTime(marketVixData.fixedIncome?.hySpread?.lastCheckedAt) || "-"} KST</div>
           </div>
         </div>
+        <p class="us-price-updated">HY는 원본 관측일 기준입니다. 주말·미국 채권시장 휴일과 공표 시차로 당일 날짜와 차이가 날 수 있습니다.</p>
         <div class="total-date-row">
           <label class="total-date-field">
             <span>Start</span>

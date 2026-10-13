@@ -13,6 +13,23 @@ def csv(rows, header='observation_date'):
 
 
 class FredFreshnessTests(unittest.TestCase):
+    def test_successful_recheck_records_check_time_without_advancing_observation(self):
+        result = self.refresh(csv([('2026-10-08', 3.15)]), csv([('2026-10-08', 3.15)]))
+        self.assertEqual(result['latestDate'], '2026-10-08')
+        self.assertEqual(result['dates'], ['2026-10-08'])
+        self.assertEqual(result['fetchStatus'], 'ok')
+        self.assertEqual(result['lastCheckedAt'], result['lastSuccessfulFetchAt'])
+        self.assertIn('T', result['lastCheckedAt'])
+
+    def test_failed_recheck_preserves_last_success_and_observation(self):
+        saved = {'dates': ['2026-10-08'], 'values': [3.15], 'latestDate': '2026-10-08',
+                 'lastSuccessfulFetchAt': '2026-10-09T13:08:00+00:00'}
+        result = self.refresh(TimeoutError('offline'), TimeoutError('offline'), saved)
+        self.assertEqual(result['latestDate'], saved['latestDate'])
+        self.assertEqual(result['lastSuccessfulFetchAt'], saved['lastSuccessfulFetchAt'])
+        self.assertEqual(result['fetchStatus'], 'stale')
+        self.assertGreater(result['lastCheckedAt'], saved['lastSuccessfulFetchAt'])
+
     def test_official_transport_uses_curl_and_checks_response(self):
         url = vix.fred_csv_urls(ID)[0]
         response = Mock(content=b'\xef\xbb\xbfobservation_date,BAMLH0A0HYM2\n2026-09-29,3.08\n')
@@ -82,6 +99,28 @@ class FredFreshnessTests(unittest.TestCase):
 
 
 class IsolatedSeriesTests(unittest.TestCase):
+    def test_credit_only_preserves_all_other_series_and_overall_latest_date(self):
+        saved = {'updatedAt': '2026-10-12', 'generatedAt': 'old', 'family': {'vix': [1]},
+                 'curve': {'contracts': [2]}, 'snapshots': [3], 'ranges': [4],
+                 'fixedIncome': {'move': {'latestDate': '2026-10-12', 'values': [98]}, 'hySpread': self.saved()}}
+        fresh = {'latestDate': '2026-10-09', 'dates': ['2026-10-09'], 'values': [3.2], 'fetchStatus': 'ok'}
+        with patch.object(vix, 'parse_fred_history_item', return_value=fresh) as fetch, \
+             patch.object(vix, 'fetch_json') as yahoo, patch.object(vix, 'fetch_curve_history') as cboe:
+            result = vix.refresh_credit_only(saved)
+        fetch.assert_called_once_with(META, saved['fixedIncome']['hySpread'])
+        yahoo.assert_not_called()
+        cboe.assert_not_called()
+        self.assertEqual(result['fixedIncome']['hySpread'], fresh)
+        self.assertEqual(saved['fixedIncome']['hySpread'], self.saved())
+        self.assertEqual(result['fixedIncome']['move'], saved['fixedIncome']['move'])
+        for key in ['updatedAt', 'family', 'curve', 'snapshots', 'ranges']:
+            self.assertEqual(result[key], saved[key])
+        self.assertNotEqual(result['generatedAt'], 'old')
+
+    def test_credit_only_rejects_missing_base_payload(self):
+        with self.assertRaises(RuntimeError):
+            vix.refresh_credit_only({})
+
     def saved(self):
         return {'dates': ['2026-10-01'], 'values': [3.24], 'latestDate': '2026-10-01', 'latestValue': 3.24}
 

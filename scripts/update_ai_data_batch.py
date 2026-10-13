@@ -24,10 +24,10 @@ def validate(path: Path) -> None:
         subprocess.run(["node", "-e", code, str(path)], check=True, timeout=20)
 
 
-def run_task(name, script, files, timeout, root=ROOT, execute=subprocess.run, validator=validate):
+def run_task(name, script, files, timeout, root=ROOT, execute=subprocess.run, validator=validate, script_args=()):
     before = {file: (root / file).read_bytes() if (root / file).exists() else None for file in files}
     try:
-        execute([sys.executable, "-u", str(root / "scripts" / script)], cwd=root, check=True, timeout=timeout)
+        execute([sys.executable, "-u", str(root / "scripts" / script), *script_args], cwd=root, check=True, timeout=timeout)
         changed = []
         for file in files:
             path = root / file

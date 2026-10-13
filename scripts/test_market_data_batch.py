@@ -9,6 +9,29 @@ from update_ai_data_batch import run_task
 
 
 class MarketBatchTests(unittest.TestCase):
+    def test_credit_only_skips_index_and_valuation_and_exports_only_vix(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder) / 'output'
+            with patch.object(batch, 'run_task', return_value={
+                'name': 'HY', 'status': 'updated', 'changed': ['data/market-vix-data.js'],
+            }) as collect, patch.dict(os.environ, {'GITHUB_OUTPUT': str(output), 'GITHUB_STEP_SUMMARY': ''}):
+                batch.main(credit_only=True)
+            collect.assert_called_once_with('High Yield Spread', 'update_market_vix.py',
+                                            ['data/market-vix-data.js'], 120, script_args=['--credit-only'])
+            self.assertEqual(output.read_text(), 'changed_files=data/market-vix-data.js\nfailed_count=0\n')
+
+    def test_collector_arguments_reach_subprocess_without_shell(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            path = root / 'saved.json'
+            path.write_text('{}')
+            execute = unittest.mock.Mock()
+            result = run_task('HY', 'update_market_vix.py', ['saved.json'], 120, root=root,
+                              execute=execute, script_args=['--credit-only'])
+            self.assertEqual(execute.call_args.args[0][-1], '--credit-only')
+            self.assertEqual(execute.call_args.kwargs['timeout'], 120)
+            self.assertEqual(result['status'], 'unchanged')
+
     def test_failed_price_collection_still_exports_vix_for_publish(self):
         results = [
             {'name': 'VIX', 'status': 'updated', 'changed': ['data/market-vix-data.js']},
