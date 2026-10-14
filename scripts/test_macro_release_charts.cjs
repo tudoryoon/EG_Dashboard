@@ -14,9 +14,8 @@ const marketPriceData = window.marketPriceData;
 const TOTAL_DASHBOARD_COLOR_BY_KEY = {};
 const yearColors = ['black'];
 const state = { macroDashboardSelection: [], totalDashboardSelection: [] };
-function toDateKey(date) { return date; }
-function shiftDateByRange() { return '2026-08-01'; }`, context);
-for (const name of ['getMacroDerivedValues', 'getMacroDashboardSeriesByKey', 'alignPublishedMacroSeries',
+function toDateKey(date) { return date; }`, context);
+for (const name of ['shiftDateByRange', 'getMacroDerivedValues', 'getMacroDashboardSeriesByKey', 'alignPublishedMacroSeries',
   'macroValueBefore', 'macroReleaseTooltip', 'buildMacroIndicatorDashboardItem', 'mergeSeriesPreferRecent',
   'scaleSeriesValues', 'getMacroDashboardItems', 'getYieldCurveRows', 'getTotalDashboardSeriesItems',
   'getTotalDashboardSelectedItems', 'buildMacroDashboardChartPayload', 'buildTotalDashboardPayload']) {
@@ -38,6 +37,33 @@ assert.ok(!cpi.dates.includes('2026-07-01'));
 assert.equal(run(`getMacroDerivedValues({dates:['2025-01','2026-01'], values:[100,110], yoyValues:[null,null]}, 'yoy')[1]`), 10);
 assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01'],values:[1]},'cpi').dates.length`), 0);
 assert.equal(run(`alignPublishedMacroSeries({dates:['2026-07'],values:[null]},'cpi').dates.length`), 0);
+const inflationStarts = {
+  'indicator:headline_cpi_yoy': '1957-01-01',
+  'indicator:core_cpi_yoy': '1958-01-01',
+  'indicator:headline_pce_yoy': '1960-01-01',
+  'indicator:core_pce_yoy': '1960-01-01',
+};
+for (const [key, start] of Object.entries(inflationStarts)) {
+  const restored = run(`getTotalDashboardSeriesItems().find(item => item.key === ${JSON.stringify(key)})`);
+  assert.equal(restored.dates[0], start, key);
+  assert.ok(restored.dates.length > 790, `${key}: preserve stored long history`);
+  assert.equal(restored.releasePoints[0].dateBasis, 'reference-month');
+  assert.equal(restored.releasePoints.at(-1).dateBasis, undefined, 'Recent points retain verified publication dates');
+  assert.match(run(`macroReleaseTooltip(${JSON.stringify(restored)}, ${JSON.stringify(start)})`), /대상월 기준\(발표일 미확인\)/);
+  assert.match(run(`macroReleaseTooltip(${JSON.stringify(restored)}, ${JSON.stringify(restored.dates.at(-1))})`), /발표 \d{4}-\d{2}-\d{2} \(미국\)/);
+  run(`state.totalDashboardSelection = [${JSON.stringify(key)}];`);
+  const full = run(`buildTotalDashboardPayload('max')`);
+  assert.equal(full.labels[0], start, 'Max must not clip inflation history at the market macro 1965 start');
+  assert.ok(full.datasets[0].data.every(Number.isFinite));
+}
+assert.equal(run(`getMacroDashboardItems().find(item => item.key === 'indicator:headline_cpi_yoy').dates[0]`), '2016-01-20', 'Do not change the separate Macro Dashboard date policy');
+const historyBoundary = run(`alignPublishedMacroSeries({dates:['2015-11','2016-01','2099-01'],values:[1,2,3]},'cpi',true)`);
+assert.equal(historyBoundary.dates.length, 2, 'No reference-month fallback for unverified recent/future publication dates');
+assert.equal(historyBoundary.dates[0], '2015-11-01');
+assert.equal(historyBoundary.dates[1], '2016-02-19');
+assert.equal(run(`alignPublishedMacroSeries({dates:['2015-11'],values:[null]},'cpi',true).dates.length`), 0);
+assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01'],values:[1]},'gdp',true).dates.length`), 0, 'Historical fallback is inflation-only');
+assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01'],values:[1]},'missing-calendar',true).dates.length`), 0, 'Unknown calendar has no reliable boundary');
 run(`state.macroDashboardSelection = ['market:sp500','indicator:headline_cpi_yoy'];
 state.totalDashboardSelection = ['market:sp500','indicator:headline_cpi_yoy'];
 state.macroDashboardCustomStart = state.totalDashboardCustomStart = '2026-08-03';

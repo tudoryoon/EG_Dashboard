@@ -3882,6 +3882,7 @@ function getTotalDashboardSeriesItems() {
       seriesKey: "headline_cpi",
       kind: "yoy",
       color: "#7c3aed",
+      historicalReference: true,
     }),
     buildMacroIndicatorDashboardItem({
       key: "indicator:core_cpi_yoy",
@@ -3889,6 +3890,7 @@ function getTotalDashboardSeriesItems() {
       seriesKey: "core_cpi",
       kind: "yoy",
       color: "#db2777",
+      historicalReference: true,
     }),
     buildMacroIndicatorDashboardItem({
       key: "indicator:headline_pce_yoy",
@@ -3896,6 +3898,7 @@ function getTotalDashboardSeriesItems() {
       seriesKey: "headline_pce",
       kind: "yoy",
       color: "#0f766e",
+      historicalReference: true,
     }),
     buildMacroIndicatorDashboardItem({
       key: "indicator:core_pce_yoy",
@@ -3903,6 +3906,7 @@ function getTotalDashboardSeriesItems() {
       seriesKey: "core_pce",
       kind: "yoy",
       color: "#14b8a6",
+      historicalReference: true,
     }),
     buildMacroIndicatorDashboardItem({
       key: "indicator:final_demand_ppi_yoy",
@@ -3964,7 +3968,7 @@ function buildTotalDashboardPayload(rangeKey) {
   }
 
   const latestDate = allDates[allDates.length - 1];
-  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, marketMacroData?.startDate ?? marketPriceData?.startDate ?? "2017-01-01", allDates);
+  const derivedStartDate = shiftDateByRange(latestDate, rangeKey, allDates[0], allDates);
   const customStart = state.totalDashboardCustomStart || derivedStartDate;
   const customEnd = state.totalDashboardCustomEnd || latestDate;
   const selectedLabels = allDates.filter((label) => label >= customStart && label <= customEnd);
@@ -5823,14 +5827,21 @@ function getMacroDashboardSeriesByKey(seriesKey) {
   return null;
 }
 
-function alignPublishedMacroSeries(series, group) {
+function alignPublishedMacroSeries(series, group, historicalReference = false) {
   const calendar = macroIndicatorsData.releaseCalendar?.groups?.[group] ?? {};
+  const firstReleaseReference = Object.keys(calendar).filter((key) => calendar[key]?.releaseDate).sort()[0];
   const points = [];
   (series.dates ?? []).forEach((reference, index) => {
     const value = series.values?.[index];
     const release = calendar[reference.slice(0, 7)];
-    if (!release?.releaseDate || value === null || value === undefined || !Number.isFinite(Number(value))) return;
-    points.push({ reference: reference.slice(0, 7), date: release.releaseDate, value: Number(value) });
+    if (value === null || value === undefined || !Number.isFinite(Number(value))) return;
+    if (release?.releaseDate) {
+      points.push({ reference: reference.slice(0, 7), date: release.releaseDate, value: Number(value) });
+    } else if (historicalReference && ["cpi", "pce"].includes(group)
+      && firstReleaseReference && reference.slice(0, 7) < firstReleaseReference) {
+      // Restore old observations without inventing publication dates or filling recent calendar gaps.
+      points.push({ reference: reference.slice(0, 7), date: `${reference.slice(0, 7)}-01`, value: Number(value), dateBasis: "reference-month" });
+    }
   });
   points.sort((a, b) => a.date.localeCompare(b.date) || a.reference.localeCompare(b.reference));
   // A delayed release may publish two months together. Only the latest month is current.
@@ -5855,10 +5866,11 @@ function macroValueBefore(item, startDate) {
 
 function macroReleaseTooltip(dataset, date) {
   const point = (dataset.releasePoints ?? []).filter((entry) => entry.date <= date).at(-1);
+  if (point?.dateBasis === "reference-month") return ` | 대상 ${point.reference} · 대상월 기준(발표일 미확인)`;
   return point ? ` | 대상 ${point.reference} · 발표 ${point.date} (미국)` : "";
 }
 
-function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, axis = "percent", formatter = null }) {
+function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, axis = "percent", formatter = null, historicalReference = false }) {
   const series = getMacroDashboardSeriesByKey(seriesKey);
   if (!series?.dates?.length) {
     return null;
@@ -5866,7 +5878,7 @@ function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, 
   const values = getMacroDerivedValues(series, kind);
   const group = (macroIndicatorsData.indicators ?? []).find((indicator) =>
     (indicator.series ?? []).some((entry) => entry.key === seriesKey))?.key;
-  const published = alignPublishedMacroSeries({ dates: series.dates, values }, group);
+  const published = alignPublishedMacroSeries({ dates: series.dates, values }, group, historicalReference);
   return {
     key,
     label,
@@ -19847,7 +19859,7 @@ function renderMarketOverview() {
           <div>
             <h2>Total Dashboard</h2>
             <p>Market series use Start = 100 normalized performance; YTD uses the final valid close of the prior calendar year. US and Japan yields stay on the right axis in raw percent terms.</p>
-            <p>월간 지표·GDP는 미국 발표일부터 적용합니다. 발표일 미확인 구간은 비교에서 제외하며, 값은 최신 수정치입니다.</p>
+            <p>월간 지표·GDP는 확인된 미국 발표일부터 적용합니다. CPI·Core CPI·PCE·Core PCE 중 발표일 기록이 시작되기 이전의 과거 구간은 대상월 기준으로 표시합니다. 값은 최신 수정치이며, 과거에 실제 공개된 시점·수치를 복원한 백테스트용 이력은 아닙니다.</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${totalRangeMarkup}</div>
