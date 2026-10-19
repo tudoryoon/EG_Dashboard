@@ -1,0 +1,2027 @@
+{
+  "checkedAt": "2026-10-19",
+  "dateBasis": "US publication date",
+  "cpiHeaderChecks": {
+    "matched": 262,
+    "corrected": {
+      "1998-01": {
+        "archiveDate": "1998-02-25",
+        "headerDate": "1998-02-24"
+      }
+    },
+    "confirmedBySchedule": {
+      "1996-12": "https://www.bls.gov/schedule/1997/home.htm"
+    },
+    "unparsed": []
+  },
+  "sources": [
+    "https://www.bls.gov/bls/news-release/cpi.htm",
+    "https://www.bea.gov/news/archive"
+  ],
+  "groups": {
+    "cpi": {
+      "1994-01": {
+        "releaseDate": "1994-02-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_021794.txt"
+      },
+      "1994-02": {
+        "releaseDate": "1994-03-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_031694.txt"
+      },
+      "1994-03": {
+        "releaseDate": "1994-04-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_041394.txt"
+      },
+      "1994-04": {
+        "releaseDate": "1994-05-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_051394.txt"
+      },
+      "1994-05": {
+        "releaseDate": "1994-06-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_061494.txt"
+      },
+      "1994-06": {
+        "releaseDate": "1994-07-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_071394.txt"
+      },
+      "1994-07": {
+        "releaseDate": "1994-08-12",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_081294.txt"
+      },
+      "1994-08": {
+        "releaseDate": "1994-09-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_091394.txt"
+      },
+      "1994-09": {
+        "releaseDate": "1994-10-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_101494.txt"
+      },
+      "1994-10": {
+        "releaseDate": "1994-11-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_111694.txt"
+      },
+      "1994-11": {
+        "releaseDate": "1994-12-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_121494.txt"
+      },
+      "1994-12": {
+        "releaseDate": "1995-01-11",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_011195.txt"
+      },
+      "1995-01": {
+        "releaseDate": "1995-02-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_021595.txt"
+      },
+      "1995-02": {
+        "releaseDate": "1995-03-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_031695.txt"
+      },
+      "1995-03": {
+        "releaseDate": "1995-04-12",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_041295.txt"
+      },
+      "1995-04": {
+        "releaseDate": "1995-05-12",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_051295.txt"
+      },
+      "1995-05": {
+        "releaseDate": "1995-06-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_061395.txt"
+      },
+      "1995-06": {
+        "releaseDate": "1995-07-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_071495.txt"
+      },
+      "1995-07": {
+        "releaseDate": "1995-08-11",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_081195.txt"
+      },
+      "1995-08": {
+        "releaseDate": "1995-09-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_091395.txt"
+      },
+      "1995-09": {
+        "releaseDate": "1995-10-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_101395.txt"
+      },
+      "1995-10": {
+        "releaseDate": "1995-11-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_111595.txt"
+      },
+      "1995-11": {
+        "releaseDate": "1995-12-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_121495.txt"
+      },
+      "1995-12": {
+        "releaseDate": "1996-02-01",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_020196.txt"
+      },
+      "1996-01": {
+        "releaseDate": "1996-02-28",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_022896.txt"
+      },
+      "1996-02": {
+        "releaseDate": "1996-03-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_031596.txt"
+      },
+      "1996-03": {
+        "releaseDate": "1996-04-12",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_041296.txt"
+      },
+      "1996-04": {
+        "releaseDate": "1996-05-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_051496.txt"
+      },
+      "1996-05": {
+        "releaseDate": "1996-06-12",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_061296.txt"
+      },
+      "1996-06": {
+        "releaseDate": "1996-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_071696.txt"
+      },
+      "1996-07": {
+        "releaseDate": "1996-08-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_081396.txt"
+      },
+      "1996-08": {
+        "releaseDate": "1996-09-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_091396.txt"
+      },
+      "1996-09": {
+        "releaseDate": "1996-10-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_101696.txt"
+      },
+      "1996-10": {
+        "releaseDate": "1996-11-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_111496.txt"
+      },
+      "1996-11": {
+        "releaseDate": "1996-12-12",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_121296.txt"
+      },
+      "1996-12": {
+        "releaseDate": "1997-01-14",
+        "sourceUrl": "https://www.bls.gov/schedule/1997/home.htm"
+      },
+      "1997-01": {
+        "releaseDate": "1997-02-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_021997.txt"
+      },
+      "1997-02": {
+        "releaseDate": "1997-03-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_031997.txt"
+      },
+      "1997-03": {
+        "releaseDate": "1997-04-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_041597.txt"
+      },
+      "1997-04": {
+        "releaseDate": "1997-05-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_051597.txt"
+      },
+      "1997-05": {
+        "releaseDate": "1997-06-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_061797.txt"
+      },
+      "1997-06": {
+        "releaseDate": "1997-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_071697.txt"
+      },
+      "1997-07": {
+        "releaseDate": "1997-08-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_081497.txt"
+      },
+      "1997-08": {
+        "releaseDate": "1997-09-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_091697.txt"
+      },
+      "1997-09": {
+        "releaseDate": "1997-10-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_101697.txt"
+      },
+      "1997-10": {
+        "releaseDate": "1997-11-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_111897.txt"
+      },
+      "1997-11": {
+        "releaseDate": "1997-12-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_121697.txt"
+      },
+      "1997-12": {
+        "releaseDate": "1998-01-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_011398.txt"
+      },
+      "1998-01": {
+        "releaseDate": "1998-02-24",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_022598.txt"
+      },
+      "1998-02": {
+        "releaseDate": "1998-03-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_031998.txt"
+      },
+      "1998-03": {
+        "releaseDate": "1998-04-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_041498.txt"
+      },
+      "1998-04": {
+        "releaseDate": "1998-05-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_051498.txt"
+      },
+      "1998-05": {
+        "releaseDate": "1998-06-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_061698.txt"
+      },
+      "1998-06": {
+        "releaseDate": "1998-07-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_071498.txt"
+      },
+      "1998-07": {
+        "releaseDate": "1998-08-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_081898.txt"
+      },
+      "1998-08": {
+        "releaseDate": "1998-09-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_091798.txt"
+      },
+      "1998-09": {
+        "releaseDate": "1998-10-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_101698.txt"
+      },
+      "1998-10": {
+        "releaseDate": "1998-11-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_111798.txt"
+      },
+      "1998-11": {
+        "releaseDate": "1998-12-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_121598.txt"
+      },
+      "1998-12": {
+        "releaseDate": "1999-01-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_011499.txt"
+      },
+      "1999-01": {
+        "releaseDate": "1999-02-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_021999.txt"
+      },
+      "1999-02": {
+        "releaseDate": "1999-03-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_031899.txt"
+      },
+      "1999-03": {
+        "releaseDate": "1999-04-13",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_041399.txt"
+      },
+      "1999-04": {
+        "releaseDate": "1999-05-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_051499.txt"
+      },
+      "1999-05": {
+        "releaseDate": "1999-06-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06161999.txt"
+      },
+      "1999-06": {
+        "releaseDate": "1999-07-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07151999.txt"
+      },
+      "1999-07": {
+        "releaseDate": "1999-08-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08171999.txt"
+      },
+      "1999-08": {
+        "releaseDate": "1999-09-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09151999.txt"
+      },
+      "1999-09": {
+        "releaseDate": "1999-10-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10191999.txt"
+      },
+      "1999-10": {
+        "releaseDate": "1999-11-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11171999.txt"
+      },
+      "1999-11": {
+        "releaseDate": "1999-12-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12141999.txt"
+      },
+      "1999-12": {
+        "releaseDate": "2000-01-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01142000.txt"
+      },
+      "2000-01": {
+        "releaseDate": "2000-02-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02182000.txt"
+      },
+      "2000-02": {
+        "releaseDate": "2000-03-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03172000.txt"
+      },
+      "2000-03": {
+        "releaseDate": "2000-04-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04142000.txt"
+      },
+      "2000-04": {
+        "releaseDate": "2000-05-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05162000.txt"
+      },
+      "2000-05": {
+        "releaseDate": "2000-06-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06142000.txt"
+      },
+      "2000-06": {
+        "releaseDate": "2000-07-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07182000.txt"
+      },
+      "2000-07": {
+        "releaseDate": "2000-08-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08162000.txt"
+      },
+      "2000-08": {
+        "releaseDate": "2000-09-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09152000.txt"
+      },
+      "2000-09": {
+        "releaseDate": "2000-10-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10182000.txt"
+      },
+      "2000-10": {
+        "releaseDate": "2000-11-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11162000.txt"
+      },
+      "2000-11": {
+        "releaseDate": "2000-12-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12152000.txt"
+      },
+      "2000-12": {
+        "releaseDate": "2001-01-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01172001.txt"
+      },
+      "2001-01": {
+        "releaseDate": "2001-02-21",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02212001.txt"
+      },
+      "2001-02": {
+        "releaseDate": "2001-03-21",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03212001.txt"
+      },
+      "2001-03": {
+        "releaseDate": "2001-04-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04172001.txt"
+      },
+      "2001-04": {
+        "releaseDate": "2001-05-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05162001.txt"
+      },
+      "2001-05": {
+        "releaseDate": "2001-06-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06152001.txt"
+      },
+      "2001-06": {
+        "releaseDate": "2001-07-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07182001.txt"
+      },
+      "2001-07": {
+        "releaseDate": "2001-08-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08162001.txt"
+      },
+      "2001-08": {
+        "releaseDate": "2001-09-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09182001.txt"
+      },
+      "2001-09": {
+        "releaseDate": "2001-10-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10192001.txt"
+      },
+      "2001-10": {
+        "releaseDate": "2001-11-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11162001.txt"
+      },
+      "2001-11": {
+        "releaseDate": "2001-12-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12142001.txt"
+      },
+      "2001-12": {
+        "releaseDate": "2002-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01162002.txt"
+      },
+      "2002-01": {
+        "releaseDate": "2002-02-20",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02202002.txt"
+      },
+      "2002-02": {
+        "releaseDate": "2002-03-21",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03212002.txt"
+      },
+      "2002-03": {
+        "releaseDate": "2002-04-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04162002.txt"
+      },
+      "2002-04": {
+        "releaseDate": "2002-05-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05152002.txt"
+      },
+      "2002-05": {
+        "releaseDate": "2002-06-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06182002.txt"
+      },
+      "2002-06": {
+        "releaseDate": "2002-07-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07192002.txt"
+      },
+      "2002-07": {
+        "releaseDate": "2002-08-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08162002.txt"
+      },
+      "2002-08": {
+        "releaseDate": "2002-09-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09182002.txt"
+      },
+      "2002-09": {
+        "releaseDate": "2002-10-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10182002.txt"
+      },
+      "2002-10": {
+        "releaseDate": "2002-11-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11192002.txt"
+      },
+      "2002-11": {
+        "releaseDate": "2002-12-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12172002.txt"
+      },
+      "2002-12": {
+        "releaseDate": "2003-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01162003.txt"
+      },
+      "2003-01": {
+        "releaseDate": "2003-02-21",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02212003.txt"
+      },
+      "2003-02": {
+        "releaseDate": "2003-03-21",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03212003.txt"
+      },
+      "2003-03": {
+        "releaseDate": "2003-04-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04162003.txt"
+      },
+      "2003-04": {
+        "releaseDate": "2003-05-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05162003.txt"
+      },
+      "2003-05": {
+        "releaseDate": "2003-06-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06172003.txt"
+      },
+      "2003-06": {
+        "releaseDate": "2003-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07162003.txt"
+      },
+      "2003-07": {
+        "releaseDate": "2003-08-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08152003.txt"
+      },
+      "2003-08": {
+        "releaseDate": "2003-09-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09162003.txt"
+      },
+      "2003-09": {
+        "releaseDate": "2003-10-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10162003.txt"
+      },
+      "2003-10": {
+        "releaseDate": "2003-11-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11182003.txt"
+      },
+      "2003-11": {
+        "releaseDate": "2003-12-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12162003.txt"
+      },
+      "2003-12": {
+        "releaseDate": "2004-01-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01152004.txt"
+      },
+      "2004-01": {
+        "releaseDate": "2004-02-20",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02202004.txt"
+      },
+      "2004-02": {
+        "releaseDate": "2004-03-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03172004.txt"
+      },
+      "2004-03": {
+        "releaseDate": "2004-04-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04142004.txt"
+      },
+      "2004-04": {
+        "releaseDate": "2004-05-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05142004.txt"
+      },
+      "2004-05": {
+        "releaseDate": "2004-06-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06152004.txt"
+      },
+      "2004-06": {
+        "releaseDate": "2004-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07162004.txt"
+      },
+      "2004-07": {
+        "releaseDate": "2004-08-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08172004.txt"
+      },
+      "2004-08": {
+        "releaseDate": "2004-09-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09162004.txt"
+      },
+      "2004-09": {
+        "releaseDate": "2004-10-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10192004.txt"
+      },
+      "2004-10": {
+        "releaseDate": "2004-11-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11172004.txt"
+      },
+      "2004-11": {
+        "releaseDate": "2004-12-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12172004.txt"
+      },
+      "2004-12": {
+        "releaseDate": "2005-01-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01192005.txt"
+      },
+      "2005-01": {
+        "releaseDate": "2005-02-23",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02232005.txt"
+      },
+      "2005-02": {
+        "releaseDate": "2005-03-23",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03232005.txt"
+      },
+      "2005-03": {
+        "releaseDate": "2005-04-20",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04202005.txt"
+      },
+      "2005-04": {
+        "releaseDate": "2005-05-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05182005.txt"
+      },
+      "2005-05": {
+        "releaseDate": "2005-06-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06152005.txt"
+      },
+      "2005-06": {
+        "releaseDate": "2005-07-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07142005.txt"
+      },
+      "2005-07": {
+        "releaseDate": "2005-08-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08162005.txt"
+      },
+      "2005-08": {
+        "releaseDate": "2005-09-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09152005.txt"
+      },
+      "2005-09": {
+        "releaseDate": "2005-10-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10142005.txt"
+      },
+      "2005-10": {
+        "releaseDate": "2005-11-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11162005.txt"
+      },
+      "2005-11": {
+        "releaseDate": "2005-12-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12152005.txt"
+      },
+      "2005-12": {
+        "releaseDate": "2006-01-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01182006.txt"
+      },
+      "2006-01": {
+        "releaseDate": "2006-02-22",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02222006.txt"
+      },
+      "2006-02": {
+        "releaseDate": "2006-03-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03162006.txt"
+      },
+      "2006-03": {
+        "releaseDate": "2006-04-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04192006.txt"
+      },
+      "2006-04": {
+        "releaseDate": "2006-05-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05172006.txt"
+      },
+      "2006-05": {
+        "releaseDate": "2006-06-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06142006.txt"
+      },
+      "2006-06": {
+        "releaseDate": "2006-07-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07192006.txt"
+      },
+      "2006-07": {
+        "releaseDate": "2006-08-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08162006.txt"
+      },
+      "2006-08": {
+        "releaseDate": "2006-09-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09152006.txt"
+      },
+      "2006-09": {
+        "releaseDate": "2006-10-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10182006.txt"
+      },
+      "2006-10": {
+        "releaseDate": "2006-11-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11162006.txt"
+      },
+      "2006-11": {
+        "releaseDate": "2006-12-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12152006.txt"
+      },
+      "2006-12": {
+        "releaseDate": "2007-01-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01182007.txt"
+      },
+      "2007-01": {
+        "releaseDate": "2007-02-21",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_02212007.txt"
+      },
+      "2007-02": {
+        "releaseDate": "2007-03-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_03162007.txt"
+      },
+      "2007-03": {
+        "releaseDate": "2007-04-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_04172007.txt"
+      },
+      "2007-04": {
+        "releaseDate": "2007-05-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_05152007.txt"
+      },
+      "2007-05": {
+        "releaseDate": "2007-06-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_06152007.txt"
+      },
+      "2007-06": {
+        "releaseDate": "2007-07-18",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_07182007.txt"
+      },
+      "2007-07": {
+        "releaseDate": "2007-08-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_08152007.txt"
+      },
+      "2007-08": {
+        "releaseDate": "2007-09-19",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_09192007.txt"
+      },
+      "2007-09": {
+        "releaseDate": "2007-10-17",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_10172007.txt"
+      },
+      "2007-10": {
+        "releaseDate": "2007-11-15",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_11152007.txt"
+      },
+      "2007-11": {
+        "releaseDate": "2007-12-14",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_12142007.txt"
+      },
+      "2007-12": {
+        "releaseDate": "2008-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/history/cpi_01162008.txt"
+      },
+      "2008-01": {
+        "releaseDate": "2008-02-20",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02202008.htm"
+      },
+      "2008-02": {
+        "releaseDate": "2008-03-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03142008.htm"
+      },
+      "2008-03": {
+        "releaseDate": "2008-04-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04162008.htm"
+      },
+      "2008-04": {
+        "releaseDate": "2008-05-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05142008.htm"
+      },
+      "2008-05": {
+        "releaseDate": "2008-06-13",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06132008.htm"
+      },
+      "2008-06": {
+        "releaseDate": "2008-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07162008.htm"
+      },
+      "2008-07": {
+        "releaseDate": "2008-08-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08142008.htm"
+      },
+      "2008-08": {
+        "releaseDate": "2008-09-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09162008.htm"
+      },
+      "2008-09": {
+        "releaseDate": "2008-10-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10162008.htm"
+      },
+      "2008-10": {
+        "releaseDate": "2008-11-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11192008.htm"
+      },
+      "2008-11": {
+        "releaseDate": "2008-12-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12162008.htm"
+      },
+      "2008-12": {
+        "releaseDate": "2009-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01162009.htm"
+      },
+      "2009-01": {
+        "releaseDate": "2009-02-20",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02202009.htm"
+      },
+      "2009-02": {
+        "releaseDate": "2009-03-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03182009.htm"
+      },
+      "2009-03": {
+        "releaseDate": "2009-04-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04152009.htm"
+      },
+      "2009-04": {
+        "releaseDate": "2009-05-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05152009.htm"
+      },
+      "2009-05": {
+        "releaseDate": "2009-06-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06172009.htm"
+      },
+      "2009-06": {
+        "releaseDate": "2009-07-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07152009.htm"
+      },
+      "2009-07": {
+        "releaseDate": "2009-08-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08142009.htm"
+      },
+      "2009-08": {
+        "releaseDate": "2009-09-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09162009.htm"
+      },
+      "2009-09": {
+        "releaseDate": "2009-10-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10152009.htm"
+      },
+      "2009-10": {
+        "releaseDate": "2009-11-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11182009.htm"
+      },
+      "2009-11": {
+        "releaseDate": "2009-12-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12162009.htm"
+      },
+      "2009-12": {
+        "releaseDate": "2010-01-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01152010.htm"
+      },
+      "2010-01": {
+        "releaseDate": "2010-02-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02192010.htm"
+      },
+      "2010-02": {
+        "releaseDate": "2010-03-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03182010.htm"
+      },
+      "2010-03": {
+        "releaseDate": "2010-04-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04142010.htm"
+      },
+      "2010-04": {
+        "releaseDate": "2010-05-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05192010.htm"
+      },
+      "2010-05": {
+        "releaseDate": "2010-06-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06172010.htm"
+      },
+      "2010-06": {
+        "releaseDate": "2010-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07162010.htm"
+      },
+      "2010-07": {
+        "releaseDate": "2010-08-13",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08132010.htm"
+      },
+      "2010-08": {
+        "releaseDate": "2010-09-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09172010.htm"
+      },
+      "2010-09": {
+        "releaseDate": "2010-10-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10152010.htm"
+      },
+      "2010-10": {
+        "releaseDate": "2010-11-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11172010.htm"
+      },
+      "2010-11": {
+        "releaseDate": "2010-12-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12152010.htm"
+      },
+      "2010-12": {
+        "releaseDate": "2011-01-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01142011.htm"
+      },
+      "2011-01": {
+        "releaseDate": "2011-02-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02172011.htm"
+      },
+      "2011-02": {
+        "releaseDate": "2011-03-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03172011.htm"
+      },
+      "2011-03": {
+        "releaseDate": "2011-04-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04152011.htm"
+      },
+      "2011-04": {
+        "releaseDate": "2011-05-13",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05132011.htm"
+      },
+      "2011-05": {
+        "releaseDate": "2011-06-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06152011.htm"
+      },
+      "2011-06": {
+        "releaseDate": "2011-07-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07152011.htm"
+      },
+      "2011-07": {
+        "releaseDate": "2011-08-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08182011.htm"
+      },
+      "2011-08": {
+        "releaseDate": "2011-09-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09152011.htm"
+      },
+      "2011-09": {
+        "releaseDate": "2011-10-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10192011.htm"
+      },
+      "2011-10": {
+        "releaseDate": "2011-11-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11162011.htm"
+      },
+      "2011-11": {
+        "releaseDate": "2011-12-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12162011.htm"
+      },
+      "2011-12": {
+        "releaseDate": "2012-01-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01192012.htm"
+      },
+      "2012-01": {
+        "releaseDate": "2012-02-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02172012.htm"
+      },
+      "2012-02": {
+        "releaseDate": "2012-03-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03162012.htm"
+      },
+      "2012-03": {
+        "releaseDate": "2012-04-13",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04132012.htm"
+      },
+      "2012-04": {
+        "releaseDate": "2012-05-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05152012.htm"
+      },
+      "2012-05": {
+        "releaseDate": "2012-06-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06142012.htm"
+      },
+      "2012-06": {
+        "releaseDate": "2012-07-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07172012.htm"
+      },
+      "2012-07": {
+        "releaseDate": "2012-08-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08152012.htm"
+      },
+      "2012-08": {
+        "releaseDate": "2012-09-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09142012.htm"
+      },
+      "2012-09": {
+        "releaseDate": "2012-10-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10162012.htm"
+      },
+      "2012-10": {
+        "releaseDate": "2012-11-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11152012.htm"
+      },
+      "2012-11": {
+        "releaseDate": "2012-12-14",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12142012.htm"
+      },
+      "2012-12": {
+        "releaseDate": "2013-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01162013.htm"
+      },
+      "2013-01": {
+        "releaseDate": "2013-02-21",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02212013.htm"
+      },
+      "2013-02": {
+        "releaseDate": "2013-03-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03152013.htm"
+      },
+      "2013-03": {
+        "releaseDate": "2013-04-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04162013.htm"
+      },
+      "2013-04": {
+        "releaseDate": "2013-05-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05162013.htm"
+      },
+      "2013-05": {
+        "releaseDate": "2013-06-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06182013.htm"
+      },
+      "2013-06": {
+        "releaseDate": "2013-07-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07162013.htm"
+      },
+      "2013-07": {
+        "releaseDate": "2013-08-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08152013.htm"
+      },
+      "2013-08": {
+        "releaseDate": "2013-09-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09172013.htm"
+      },
+      "2013-09": {
+        "releaseDate": "2013-10-30",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10302013.htm"
+      },
+      "2013-10": {
+        "releaseDate": "2013-11-20",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11202013.htm"
+      },
+      "2013-11": {
+        "releaseDate": "2013-12-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12172013.htm"
+      },
+      "2013-12": {
+        "releaseDate": "2014-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01162014.htm"
+      },
+      "2014-01": {
+        "releaseDate": "2014-02-20",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02202014.htm"
+      },
+      "2014-02": {
+        "releaseDate": "2014-03-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03182014.htm"
+      },
+      "2014-03": {
+        "releaseDate": "2014-04-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04152014.htm"
+      },
+      "2014-04": {
+        "releaseDate": "2014-05-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05152014.htm"
+      },
+      "2014-05": {
+        "releaseDate": "2014-06-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06172014.htm"
+      },
+      "2014-06": {
+        "releaseDate": "2014-07-22",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07222014.htm"
+      },
+      "2014-07": {
+        "releaseDate": "2014-08-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08192014.htm"
+      },
+      "2014-08": {
+        "releaseDate": "2014-09-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09172014.htm"
+      },
+      "2014-09": {
+        "releaseDate": "2014-10-22",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10222014.htm"
+      },
+      "2014-10": {
+        "releaseDate": "2014-11-20",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11202014.htm"
+      },
+      "2014-11": {
+        "releaseDate": "2014-12-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12172014.htm"
+      },
+      "2014-12": {
+        "releaseDate": "2015-01-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01162015.htm"
+      },
+      "2015-01": {
+        "releaseDate": "2015-02-26",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_02262015.htm"
+      },
+      "2015-02": {
+        "releaseDate": "2015-03-24",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_03242015.htm"
+      },
+      "2015-03": {
+        "releaseDate": "2015-04-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_04172015.htm"
+      },
+      "2015-04": {
+        "releaseDate": "2015-05-22",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_05222015.htm"
+      },
+      "2015-05": {
+        "releaseDate": "2015-06-18",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_06182015.htm"
+      },
+      "2015-06": {
+        "releaseDate": "2015-07-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_07172015.htm"
+      },
+      "2015-07": {
+        "releaseDate": "2015-08-19",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_08192015.htm"
+      },
+      "2015-08": {
+        "releaseDate": "2015-09-16",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_09162015.htm"
+      },
+      "2015-09": {
+        "releaseDate": "2015-10-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_10152015.htm"
+      },
+      "2015-10": {
+        "releaseDate": "2015-11-17",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11172015.htm"
+      },
+      "2015-11": {
+        "releaseDate": "2015-12-15",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_12152015.htm"
+      },
+      "2015-12": {
+        "releaseDate": "2016-01-20",
+        "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_01202016.htm"
+      }
+    },
+    "pce": {
+      "1996-05": {
+        "releaseDate": "1996-07-01",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-may-1996"
+      },
+      "1996-06": {
+        "releaseDate": "1996-08-02",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-june-1996"
+      },
+      "1996-07": {
+        "releaseDate": "1996-08-30",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-july-1996"
+      },
+      "1996-08": {
+        "releaseDate": "1996-09-30",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-august-1996"
+      },
+      "1996-09": {
+        "releaseDate": "1996-10-31",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-september-1996"
+      },
+      "1996-10": {
+        "releaseDate": "1996-11-29",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-october-1996"
+      },
+      "1996-11": {
+        "releaseDate": "1996-12-23",
+        "sourceUrl": "https://www.bea.gov/news/1996/personal-income-and-outlays-november-1996"
+      },
+      "1996-12": {
+        "releaseDate": "1997-02-03",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-december-1996"
+      },
+      "1997-01": {
+        "releaseDate": "1997-03-03",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-january-1997"
+      },
+      "1997-02": {
+        "releaseDate": "1997-03-31",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-february-1997"
+      },
+      "1997-03": {
+        "releaseDate": "1997-05-01",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-march-1997"
+      },
+      "1997-04": {
+        "releaseDate": "1997-06-02",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-april-1997"
+      },
+      "1997-05": {
+        "releaseDate": "1997-06-30",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-may-1997"
+      },
+      "1997-06": {
+        "releaseDate": "1997-08-01",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-june-1997"
+      },
+      "1997-07": {
+        "releaseDate": "1997-08-29",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-july-1997"
+      },
+      "1997-08": {
+        "releaseDate": "1997-09-29",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-august-1997"
+      },
+      "1997-09": {
+        "releaseDate": "1997-11-03",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-and-outlays-september-1997"
+      },
+      "1997-10": {
+        "releaseDate": "1997-11-28",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-october-1997"
+      },
+      "1997-11": {
+        "releaseDate": "1997-12-24",
+        "sourceUrl": "https://www.bea.gov/news/1997/personal-income-november-1997"
+      },
+      "1997-12": {
+        "releaseDate": "1998-02-02",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-december-1997"
+      },
+      "1998-01": {
+        "releaseDate": "1998-03-02",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-january-1998"
+      },
+      "1998-02": {
+        "releaseDate": "1998-03-27",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-february-1998"
+      },
+      "1998-03": {
+        "releaseDate": "1998-05-01",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-march-1998"
+      },
+      "1998-04": {
+        "releaseDate": "1998-05-29",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-april-1998"
+      },
+      "1998-05": {
+        "releaseDate": "1998-06-26",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-may-1998"
+      },
+      "1998-06": {
+        "releaseDate": "1998-08-03",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-june-1998"
+      },
+      "1998-07": {
+        "releaseDate": "1998-08-28",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-july-1998"
+      },
+      "1998-08": {
+        "releaseDate": "1998-09-25",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-august-1998"
+      },
+      "1998-09": {
+        "releaseDate": "1998-11-02",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-september-1998"
+      },
+      "1998-10": {
+        "releaseDate": "1998-11-25",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-october-1998"
+      },
+      "1998-11": {
+        "releaseDate": "1998-12-24",
+        "sourceUrl": "https://www.bea.gov/news/1998/personal-income-and-outlays-november-1998"
+      },
+      "1998-12": {
+        "releaseDate": "1999-02-01",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-december-1998"
+      },
+      "1999-01": {
+        "releaseDate": "1999-03-01",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-january-1999"
+      },
+      "1999-02": {
+        "releaseDate": "1999-04-01",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-february-1999"
+      },
+      "1999-03": {
+        "releaseDate": "1999-05-03",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-march-1999"
+      },
+      "1999-04": {
+        "releaseDate": "1999-05-28",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-april-1999"
+      },
+      "1999-05": {
+        "releaseDate": "1999-06-28",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-may-1999"
+      },
+      "1999-06": {
+        "releaseDate": "1999-07-30",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-june-1999"
+      },
+      "1999-07": {
+        "releaseDate": "1999-08-27",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-july-1999"
+      },
+      "1999-08": {
+        "releaseDate": "1999-10-01",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-august-1999"
+      },
+      "1999-09": {
+        "releaseDate": "1999-11-02",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-september-1999"
+      },
+      "1999-10": {
+        "releaseDate": "1999-11-26",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-october-1999"
+      },
+      "1999-11": {
+        "releaseDate": "1999-12-23",
+        "sourceUrl": "https://www.bea.gov/news/1999/personal-income-november-1999"
+      },
+      "1999-12": {
+        "releaseDate": "2000-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-december-1999"
+      },
+      "2000-01": {
+        "releaseDate": "2000-02-28",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-january-2000"
+      },
+      "2000-02": {
+        "releaseDate": "2000-03-31",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-february-2000"
+      },
+      "2000-03": {
+        "releaseDate": "2000-04-28",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-march-2000"
+      },
+      "2000-04": {
+        "releaseDate": "2000-05-26",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-april-2000"
+      },
+      "2000-05": {
+        "releaseDate": "2000-06-30",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-may-2000"
+      },
+      "2000-06": {
+        "releaseDate": "2000-08-01",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-june-2000"
+      },
+      "2000-07": {
+        "releaseDate": "2000-08-28",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-july-2000"
+      },
+      "2000-08": {
+        "releaseDate": "2000-09-29",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-august-2000"
+      },
+      "2000-09": {
+        "releaseDate": "2000-10-30",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-and-outlays-september-2000"
+      },
+      "2000-10": {
+        "releaseDate": "2000-11-30",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-and-outlays-october-2000"
+      },
+      "2000-11": {
+        "releaseDate": "2000-12-22",
+        "sourceUrl": "https://www.bea.gov/news/2000/personal-income-and-outlays-november-2000"
+      },
+      "2000-12": {
+        "releaseDate": "2001-02-01",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-december-2000"
+      },
+      "2001-01": {
+        "releaseDate": "2001-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-january-2001"
+      },
+      "2001-02": {
+        "releaseDate": "2001-03-30",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-february-2001"
+      },
+      "2001-03": {
+        "releaseDate": "2001-04-30",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-march-2001"
+      },
+      "2001-04": {
+        "releaseDate": "2001-05-29",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-april-2001"
+      },
+      "2001-05": {
+        "releaseDate": "2001-07-02",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-may-2001"
+      },
+      "2001-06": {
+        "releaseDate": "2001-07-31",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-june-2001"
+      },
+      "2001-07": {
+        "releaseDate": "2001-08-30",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-july-2001"
+      },
+      "2001-08": {
+        "releaseDate": "2001-10-01",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-august-2001"
+      },
+      "2001-09": {
+        "releaseDate": "2001-11-01",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-september-2001"
+      },
+      "2001-10": {
+        "releaseDate": "2001-12-03",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-and-outlays-october-2001"
+      },
+      "2001-11": {
+        "releaseDate": "2001-12-21",
+        "sourceUrl": "https://www.bea.gov/news/2001/personal-income-november-2001"
+      },
+      "2001-12": {
+        "releaseDate": "2002-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-december-2001"
+      },
+      "2002-01": {
+        "releaseDate": "2002-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-january-2002"
+      },
+      "2002-02": {
+        "releaseDate": "2002-03-29",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2002/personal-income-february-2002"
+      },
+      "2002-03": {
+        "releaseDate": "2002-04-29",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2002/personal-income-march-2002"
+      },
+      "2002-04": {
+        "releaseDate": "2002-05-28",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2002/personal-income-april-2002"
+      },
+      "2002-05": {
+        "releaseDate": "2002-06-28",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2002/personal-income-may-2002"
+      },
+      "2002-06": {
+        "releaseDate": "2002-08-02",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-june-2002-and-revised-january-1999-through-may-2002"
+      },
+      "2002-07": {
+        "releaseDate": "2002-08-30",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-july-2002"
+      },
+      "2002-08": {
+        "releaseDate": "2002-09-30",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-august-2002"
+      },
+      "2002-09": {
+        "releaseDate": "2002-11-01",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-september-2002"
+      },
+      "2002-10": {
+        "releaseDate": "2002-11-27",
+        "sourceUrl": "https://www.bea.gov/news/2002/personal-income-october-2002"
+      },
+      "2002-11": {
+        "releaseDate": "2002-12-23",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2002/personal-income-november-2002"
+      },
+      "2002-12": {
+        "releaseDate": "2003-01-31",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2003/personal-income-december-2002"
+      },
+      "2003-01": {
+        "releaseDate": "2003-03-03",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2003/personal-income-january-2003"
+      },
+      "2003-02": {
+        "releaseDate": "2003-03-28",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2003/personal-income-february-2003"
+      },
+      "2003-03": {
+        "releaseDate": "2003-04-28",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-march-2003"
+      },
+      "2003-04": {
+        "releaseDate": "2003-05-30",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-april-2003"
+      },
+      "2003-05": {
+        "releaseDate": "2003-06-27",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-may-2003"
+      },
+      "2003-06": {
+        "releaseDate": "2003-08-01",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-june-2003"
+      },
+      "2003-07": {
+        "releaseDate": "2003-08-29",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-july-2003"
+      },
+      "2003-08": {
+        "releaseDate": "2003-09-29",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-august-2003"
+      },
+      "2003-09": {
+        "releaseDate": "2003-10-31",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-september-2003"
+      },
+      "2003-10": {
+        "releaseDate": "2003-11-26",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-october-2003"
+      },
+      "2003-11": {
+        "releaseDate": "2003-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2003/personal-income-november-2003"
+      },
+      "2003-12": {
+        "releaseDate": "2004-02-02",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-and-outlays-december-2003"
+      },
+      "2004-01": {
+        "releaseDate": "2004-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-and-outlays-january-2004"
+      },
+      "2004-02": {
+        "releaseDate": "2004-03-26",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-and-outlays-february-2004"
+      },
+      "2004-03": {
+        "releaseDate": "2004-04-30",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-and-outlays-march-2004"
+      },
+      "2004-04": {
+        "releaseDate": "2004-05-28",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-april-2004"
+      },
+      "2004-05": {
+        "releaseDate": "2004-06-28",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-may-2004"
+      },
+      "2004-06": {
+        "releaseDate": "2004-08-03",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-june-2004"
+      },
+      "2004-07": {
+        "releaseDate": "2004-08-30",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-july-2004"
+      },
+      "2004-08": {
+        "releaseDate": "2004-09-30",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-august-2004"
+      },
+      "2004-09": {
+        "releaseDate": "2004-11-01",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-september-2004"
+      },
+      "2004-10": {
+        "releaseDate": "2004-12-01",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-october-2004-0"
+      },
+      "2004-11": {
+        "releaseDate": "2004-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2004/personal-income-november-2004"
+      },
+      "2004-12": {
+        "releaseDate": "2005-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-december-2004"
+      },
+      "2005-01": {
+        "releaseDate": "2005-02-28",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-january-2005"
+      },
+      "2005-02": {
+        "releaseDate": "2005-03-31",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-february-2005"
+      },
+      "2005-03": {
+        "releaseDate": "2005-04-29",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-march-2005"
+      },
+      "2005-04": {
+        "releaseDate": "2005-05-27",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-april-2005"
+      },
+      "2005-05": {
+        "releaseDate": "2005-06-30",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-may-2005"
+      },
+      "2005-06": {
+        "releaseDate": "2005-08-02",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-june-2005"
+      },
+      "2005-07": {
+        "releaseDate": "2005-09-01",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-july-2005"
+      },
+      "2005-08": {
+        "releaseDate": "2005-09-30",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-august-2005"
+      },
+      "2005-09": {
+        "releaseDate": "2005-10-31",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-september-2005"
+      },
+      "2005-10": {
+        "releaseDate": "2005-12-01",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-october-2005"
+      },
+      "2005-11": {
+        "releaseDate": "2005-12-22",
+        "sourceUrl": "https://www.bea.gov/news/2005/personal-income-and-outlays-november-2005"
+      },
+      "2005-12": {
+        "releaseDate": "2006-01-30",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-december-2005"
+      },
+      "2006-01": {
+        "releaseDate": "2006-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-january-2006"
+      },
+      "2006-02": {
+        "releaseDate": "2006-03-31",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-february-2006"
+      },
+      "2006-03": {
+        "releaseDate": "2006-05-01",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-march-2006"
+      },
+      "2006-04": {
+        "releaseDate": "2006-05-26",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2006/personal-income-and-outlays-april-2006"
+      },
+      "2006-05": {
+        "releaseDate": "2006-06-30",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2006/personal-income-and-outlays-may-2006"
+      },
+      "2006-06": {
+        "releaseDate": "2006-08-01",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2006/personal-income-and-outlays-june-2006"
+      },
+      "2006-07": {
+        "releaseDate": "2006-08-31",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2006/personal-income-and-outlays-july-2006"
+      },
+      "2006-08": {
+        "releaseDate": "2006-09-29",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-august-2006"
+      },
+      "2006-09": {
+        "releaseDate": "2006-10-30",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-september-2006"
+      },
+      "2006-10": {
+        "releaseDate": "2006-11-30",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-october-2006"
+      },
+      "2006-11": {
+        "releaseDate": "2006-12-22",
+        "sourceUrl": "https://www.bea.gov/news/2006/personal-income-and-outlays-november-2006"
+      },
+      "2006-12": {
+        "releaseDate": "2007-02-01",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-december-2006"
+      },
+      "2007-01": {
+        "releaseDate": "2007-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-january-2007"
+      },
+      "2007-02": {
+        "releaseDate": "2007-03-30",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-february-2007"
+      },
+      "2007-03": {
+        "releaseDate": "2007-04-30",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-march-2007"
+      },
+      "2007-04": {
+        "releaseDate": "2007-06-01",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-april-2007"
+      },
+      "2007-05": {
+        "releaseDate": "2007-06-29",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-may-2007"
+      },
+      "2007-06": {
+        "releaseDate": "2007-07-31",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-june-2007"
+      },
+      "2007-07": {
+        "releaseDate": "2007-08-31",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-july-2007"
+      },
+      "2007-08": {
+        "releaseDate": "2007-09-28",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-august-2007"
+      },
+      "2007-09": {
+        "releaseDate": "2007-11-01",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-september-2007"
+      },
+      "2007-10": {
+        "releaseDate": "2007-11-30",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-october-2007"
+      },
+      "2007-11": {
+        "releaseDate": "2007-12-21",
+        "sourceUrl": "https://www.bea.gov/news/2007/personal-income-and-outlays-november-2007"
+      },
+      "2007-12": {
+        "releaseDate": "2008-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-december-2007"
+      },
+      "2008-01": {
+        "releaseDate": "2008-02-29",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-january-2008"
+      },
+      "2008-02": {
+        "releaseDate": "2008-03-28",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-february-2008"
+      },
+      "2008-03": {
+        "releaseDate": "2008-05-01",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-march-2008"
+      },
+      "2008-04": {
+        "releaseDate": "2008-05-30",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-april-2008"
+      },
+      "2008-05": {
+        "releaseDate": "2008-06-27",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-may-2008"
+      },
+      "2008-06": {
+        "releaseDate": "2008-08-04",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-june-2008"
+      },
+      "2008-07": {
+        "releaseDate": "2008-08-29",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-july-2008"
+      },
+      "2008-08": {
+        "releaseDate": "2008-09-29",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-august-2008"
+      },
+      "2008-09": {
+        "releaseDate": "2008-10-31",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-september-2008"
+      },
+      "2008-10": {
+        "releaseDate": "2008-11-26",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-october-2008"
+      },
+      "2008-11": {
+        "releaseDate": "2008-12-24",
+        "sourceUrl": "https://www.bea.gov/news/2008/personal-income-and-outlays-november-2008"
+      },
+      "2008-12": {
+        "releaseDate": "2009-02-02",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-december-2008"
+      },
+      "2009-01": {
+        "releaseDate": "2009-03-02",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-january-2009"
+      },
+      "2009-02": {
+        "releaseDate": "2009-03-27",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-february-2009"
+      },
+      "2009-03": {
+        "releaseDate": "2009-04-30",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-march-2009"
+      },
+      "2009-04": {
+        "releaseDate": "2009-06-01",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-april-2009"
+      },
+      "2009-05": {
+        "releaseDate": "2009-06-26",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-may-2009"
+      },
+      "2009-06": {
+        "releaseDate": "2009-08-04",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-june-2009"
+      },
+      "2009-07": {
+        "releaseDate": "2009-08-28",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-july-2009"
+      },
+      "2009-08": {
+        "releaseDate": "2009-10-01",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-august-2009"
+      },
+      "2009-09": {
+        "releaseDate": "2009-10-30",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-september-2009"
+      },
+      "2009-10": {
+        "releaseDate": "2009-11-25",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-october-2009"
+      },
+      "2009-11": {
+        "releaseDate": "2009-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2009/personal-income-and-outlays-november-2009"
+      },
+      "2009-12": {
+        "releaseDate": "2010-02-01",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-december-2009"
+      },
+      "2010-01": {
+        "releaseDate": "2010-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-january-2010"
+      },
+      "2010-02": {
+        "releaseDate": "2010-03-29",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-february-2010"
+      },
+      "2010-03": {
+        "releaseDate": "2010-05-03",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-march-2010"
+      },
+      "2010-04": {
+        "releaseDate": "2010-05-28",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-april-2010"
+      },
+      "2010-05": {
+        "releaseDate": "2010-06-28",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-may-2010"
+      },
+      "2010-06": {
+        "releaseDate": "2010-08-03",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-june-2010"
+      },
+      "2010-07": {
+        "releaseDate": "2010-08-30",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-july-2010"
+      },
+      "2010-08": {
+        "releaseDate": "2010-10-01",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-august-2010"
+      },
+      "2010-09": {
+        "releaseDate": "2010-11-01",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-september-2010"
+      },
+      "2010-10": {
+        "releaseDate": "2010-11-24",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-october-2010"
+      },
+      "2010-11": {
+        "releaseDate": "2010-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2010/personal-income-and-outlays-november-2010"
+      },
+      "2010-12": {
+        "releaseDate": "2011-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-december-2010"
+      },
+      "2011-01": {
+        "releaseDate": "2011-02-28",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-january-2011"
+      },
+      "2011-02": {
+        "releaseDate": "2011-03-28",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-february-2011"
+      },
+      "2011-03": {
+        "releaseDate": "2011-04-29",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-march-2011"
+      },
+      "2011-04": {
+        "releaseDate": "2011-05-27",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-april-2011-0"
+      },
+      "2011-05": {
+        "releaseDate": "2011-06-27",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-may-2011"
+      },
+      "2011-06": {
+        "releaseDate": "2011-08-02",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-june-2011"
+      },
+      "2011-07": {
+        "releaseDate": "2011-08-29",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-july-2011"
+      },
+      "2011-08": {
+        "releaseDate": "2011-09-30",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-august-2011"
+      },
+      "2011-09": {
+        "releaseDate": "2011-10-28",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-september-2011"
+      },
+      "2011-10": {
+        "releaseDate": "2011-11-23",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-october-2011"
+      },
+      "2011-11": {
+        "releaseDate": "2011-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2011/personal-income-and-outlays-november-2011"
+      },
+      "2011-12": {
+        "releaseDate": "2012-01-30",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-december-2011"
+      },
+      "2012-01": {
+        "releaseDate": "2012-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-january-2012"
+      },
+      "2012-02": {
+        "releaseDate": "2012-03-30",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-february-2012"
+      },
+      "2012-03": {
+        "releaseDate": "2012-04-30",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-march-2012"
+      },
+      "2012-04": {
+        "releaseDate": "2012-06-01",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-april-2012"
+      },
+      "2012-05": {
+        "releaseDate": "2012-06-29",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2012/personal-income-and-outlays-may-2012"
+      },
+      "2012-06": {
+        "releaseDate": "2012-07-31",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2012/personal-income-and-outlays-june-2012-revised-estimates-2009-through-may-2012"
+      },
+      "2012-07": {
+        "releaseDate": "2012-08-30",
+        "sourceUrl": "https://www.bea.gov/index.php/news/2012/personal-income-and-outlays-july-2012"
+      },
+      "2012-08": {
+        "releaseDate": "2012-09-28",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-august-2012"
+      },
+      "2012-09": {
+        "releaseDate": "2012-10-29",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-september-2012"
+      },
+      "2012-10": {
+        "releaseDate": "2012-11-30",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-october-2012"
+      },
+      "2012-11": {
+        "releaseDate": "2012-12-21",
+        "sourceUrl": "https://www.bea.gov/news/2012/personal-income-and-outlays-november-2012"
+      },
+      "2012-12": {
+        "releaseDate": "2013-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-december-2012"
+      },
+      "2013-01": {
+        "releaseDate": "2013-03-01",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-january-2013"
+      },
+      "2013-02": {
+        "releaseDate": "2013-03-29",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-february-2013"
+      },
+      "2013-03": {
+        "releaseDate": "2013-04-29",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-march-2013"
+      },
+      "2013-04": {
+        "releaseDate": "2013-05-31",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-april-2013"
+      },
+      "2013-05": {
+        "releaseDate": "2013-06-27",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-may-2013"
+      },
+      "2013-06": {
+        "releaseDate": "2013-08-02",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-june-2013"
+      },
+      "2013-07": {
+        "releaseDate": "2013-08-30",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-july-2013"
+      },
+      "2013-08": {
+        "releaseDate": "2013-09-27",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-august-2013"
+      },
+      "2013-09": {
+        "releaseDate": "2013-11-08",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-september-2013"
+      },
+      "2013-10": {
+        "releaseDate": "2013-12-06",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-october-2013"
+      },
+      "2013-11": {
+        "releaseDate": "2013-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2013/personal-income-and-outlays-november-2013"
+      },
+      "2013-12": {
+        "releaseDate": "2014-01-31",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-december-2013"
+      },
+      "2014-01": {
+        "releaseDate": "2014-03-03",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-january-2014"
+      },
+      "2014-02": {
+        "releaseDate": "2014-03-28",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-february-2014"
+      },
+      "2014-03": {
+        "releaseDate": "2014-05-01",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-march-2014"
+      },
+      "2014-04": {
+        "releaseDate": "2014-05-30",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-april-2014"
+      },
+      "2014-05": {
+        "releaseDate": "2014-06-26",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-may-2014"
+      },
+      "2014-06": {
+        "releaseDate": "2014-08-01",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-june-2014-revised-estimates-1999-through-may-2014"
+      },
+      "2014-07": {
+        "releaseDate": "2014-08-29",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-july-2014"
+      },
+      "2014-08": {
+        "releaseDate": "2014-09-29",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-august-2014"
+      },
+      "2014-09": {
+        "releaseDate": "2014-10-31",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-september-2014"
+      },
+      "2014-10": {
+        "releaseDate": "2014-11-26",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-october-2014"
+      },
+      "2014-11": {
+        "releaseDate": "2014-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2014/personal-income-and-outlays-november-2014"
+      },
+      "2014-12": {
+        "releaseDate": "2015-02-02",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-december-2014"
+      },
+      "2015-01": {
+        "releaseDate": "2015-03-02",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-january-2015"
+      },
+      "2015-02": {
+        "releaseDate": "2015-03-30",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-february-2015"
+      },
+      "2015-03": {
+        "releaseDate": "2015-04-30",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-march-2015"
+      },
+      "2015-04": {
+        "releaseDate": "2015-06-01",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-april-2015"
+      },
+      "2015-05": {
+        "releaseDate": "2015-06-25",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-may-2015"
+      },
+      "2015-06": {
+        "releaseDate": "2015-08-03",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-june-2015-includes-historical-revisions"
+      },
+      "2015-07": {
+        "releaseDate": "2015-08-28",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-july-2015"
+      },
+      "2015-08": {
+        "releaseDate": "2015-09-28",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-august-2015"
+      },
+      "2015-09": {
+        "releaseDate": "2015-10-30",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-september-2015"
+      },
+      "2015-10": {
+        "releaseDate": "2015-11-25",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-october-2015"
+      },
+      "2015-11": {
+        "releaseDate": "2015-12-23",
+        "sourceUrl": "https://www.bea.gov/news/2015/personal-income-and-outlays-november-2015"
+      },
+      "2015-12": {
+        "releaseDate": "2016-02-01",
+        "sourceUrl": "https://www.bea.gov/news/2016/personal-income-and-outlays-december-2015"
+      }
+    }
+  }
+}

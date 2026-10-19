@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from datetime import date, datetime
+from pathlib import Path
 from urllib.parse import urlencode, urljoin
 
 from bs4 import BeautifulSoup
 from curl_cffi import requests
 
 ISM_URL = "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/"
+INFLATION_HISTORY_PATH = Path(__file__).resolve().parents[1] / "data" / "macro-release-history.json"
 # Transcribed from the official 2026 calendar; includes ISM-specific holidays.
 ISM_2026 = [(1, 5, 7), (2, 2, 4), (3, 2, 4), (4, 1, 6), (5, 1, 5),
             (6, 1, 3), (7, 1, 6), (8, 3, 5), (9, 1, 3), (10, 1, 5),
@@ -65,8 +68,39 @@ def parse_bls(soup, groups, url):
                 put(groups, group, reference, released, url)
 
 
+def parse_cpi_archive(soup, groups, url, end_reference="2015-12"):
+    for link in soup.select('a[href]'):
+        match = re.search(r"/cpi_(\d{8}|\d{6})\.(?:txt|htm|pdf)$", link["href"], re.I)
+        if not match:
+            continue
+        description = link.get("aria-label") or link.parent.get_text(" ", strip=True)
+        references = monthly_references(description)
+        if len(references) != 1 or references[0] > end_reference:
+            continue
+        released = datetime.strptime(match[1], "%m%d%Y" if len(match[1]) == 8 else "%m%d%y").date().isoformat()
+        put(groups, "cpi", references[0], released, urljoin(url, link["href"]))
+
+
+def cpi_header_release_date(soup, archive_date):
+    text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
+    identifier = re.search(r"USDL\s*[-:]?\s*\d{2}-\d+", text, re.I)
+    if not identifier:
+        return None
+    header = text[max(0, identifier.start() - 600):identifier.end() + 1600]
+    for match in re.finditer(r"\b([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})", header, re.I):
+        month = MONTHS.get(match[1].lower())
+        if not month:
+            continue
+        released = date(int(match[3]), month, int(match[2]))
+        # Do not mistake a next-release announcement for this report's header.
+        if abs((released - date.fromisoformat(archive_date)).days) <= 7:
+            return released.isoformat()
+    return None
+
+
 def parse_bea_entry(description, released, groups, url):
-    if description.lower().startswith("personal income and outlays"):
+    income = re.match(r"^personal income(?: and outlays)?(?:\s*[:,]\s*|\s+)([A-Za-z]+)", description, re.I)
+    if income and income[1].lower() in MONTHS:
         for reference in monthly_references(description):
             put(groups, "pce", reference, released, url)
     if ("gross domestic product" in description.lower() or description.startswith("GDP (")) and "advance" in description.lower():
@@ -112,7 +146,21 @@ def parse_ism(soup, groups, url):
                 put(groups, group, reference, date(year, month, int(day[0])).isoformat(), url)
 
 
+def merge_inflation_release_history(payload):
+    if not INFLATION_HISTORY_PATH.exists():
+        return
+    history = json.loads(INFLATION_HISTORY_PATH.read_text(encoding="utf-8"))
+    groups = payload.setdefault("releaseCalendar", {}).setdefault("groups", {})
+    for group in ("cpi", "pce"):
+        for reference, entry in history.get("groups", {}).get(group, {}).items():
+            verified = {}
+            put(verified, group, reference, entry["releaseDate"], entry["sourceUrl"])
+            if verified:
+                groups.setdefault(group, {})[reference] = verified[group][reference]
+
+
 def enrich_release_calendar(payload, backfill=False):
+    merge_inflation_release_history(payload)
     calendar = copy.deepcopy(payload.get("releaseCalendar", {}))
     groups = calendar.setdefault("groups", {})
     errors = []

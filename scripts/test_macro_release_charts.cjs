@@ -56,14 +56,42 @@ for (const [key, start] of Object.entries(inflationStarts)) {
   assert.equal(full.labels[0], start, 'Max must not clip inflation history at the market macro 1965 start');
   assert.ok(full.datasets[0].data.every(Number.isFinite));
 }
-assert.equal(run(`getMacroDashboardItems().find(item => item.key === 'indicator:headline_cpi_yoy').dates[0]`), '2016-01-20', 'Do not change the separate Macro Dashboard date policy');
-const historyBoundary = run(`alignPublishedMacroSeries({dates:['2015-11','2016-01','2099-01'],values:[1,2,3]},'cpi',true)`);
+assert.equal(run(`getMacroDashboardItems().find(item => item.key === 'indicator:headline_cpi_yoy').dates[0]`), '1994-02-17', 'Macro Dashboard uses the verified historical releases too');
+const historyBoundary = run(`alignPublishedMacroSeries({dates:['1900-01','2016-01','2099-01'],values:[1,2,3]},'cpi',true)`);
 assert.equal(historyBoundary.dates.length, 2, 'No reference-month fallback for unverified recent/future publication dates');
-assert.equal(historyBoundary.dates[0], '2015-11-01');
+assert.equal(historyBoundary.dates[0], '1900-01-01');
 assert.equal(historyBoundary.dates[1], '2016-02-19');
 assert.equal(run(`alignPublishedMacroSeries({dates:['2015-11'],values:[null]},'cpi',true).dates.length`), 0);
 assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01'],values:[1]},'gdp',true).dates.length`), 0, 'Historical fallback is inflation-only');
 assert.equal(run(`alignPublishedMacroSeries({dates:['1900-01'],values:[1]},'missing-calendar',true).dates.length`), 0, 'Unknown calendar has no reliable boundary');
+for (const [group, reference, released, before] of [
+  ['cpi', '1998-01', '1998-02-24', '1998-02-23'],
+  ['pce', '1999-01', '1999-03-01', '1999-02-26'],
+]) {
+  for (const prefix of ['headline', 'core']) {
+    const key = `indicator:${prefix}_${group}_yoy`;
+    const item = run(`getTotalDashboardSeriesItems().find(item => item.key === ${JSON.stringify(key)})`);
+    const point = item.releasePoints.findIndex(entry => entry.reference === reference);
+    assert.ok(point > 0);
+    assert.equal(item.dates[point], released);
+    assert.equal(item.releasePoints[point].dateBasis, undefined, 'Historical dates are verified, not reference-month fallbacks');
+    run(`state.totalDashboardSelection = ['market:sp500', ${JSON.stringify(key)}];
+      state.totalDashboardCustomStart = ${JSON.stringify(before)};
+      state.totalDashboardCustomEnd = ${JSON.stringify(released)};`);
+    const payload = run(`buildTotalDashboardPayload('max')`);
+    const values = payload.datasets.find(dataset => dataset.key === key).data;
+    assert.equal(values[payload.labels.indexOf(before)], item.values[point - 1], 'Carry the preceding release before the historical announcement');
+    assert.equal(values[payload.labels.indexOf(released)], item.values[point], 'Apply the new observation on its historical release date');
+  }
+}
+for (const group of ['cpi', 'pce']) {
+  const calendar = run(`macroIndicatorsData.releaseCalendar.groups[${JSON.stringify(group)}]`);
+  for (let year = 1998; year <= 2015; year++) for (let month = 1; month <= 12; month++) {
+    const reference = `${year}-${String(month).padStart(2, '0')}`;
+    assert.ok(calendar[reference]?.releaseDate, `${group} ${reference}: complete historical calendar`);
+    assert.ok(calendar[reference].releaseDate.slice(0, 7) > reference);
+  }
+}
 run(`state.macroDashboardSelection = ['market:sp500','indicator:headline_cpi_yoy'];
 state.totalDashboardSelection = ['market:sp500','indicator:headline_cpi_yoy'];
 state.macroDashboardCustomStart = state.totalDashboardCustomStart = '2026-08-03';
