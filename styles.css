@@ -3917,6 +3917,25 @@ h1 {
   margin: 6px 0 12px;
 }
 
+.vix-fixed-income-controls {
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.vix-fixed-income-controls .m7-range-row {
+  justify-content: flex-start;
+}
+
+.vix-fixed-income-controls .total-date-field {
+  min-width: 0;
+  flex: 0 1 150px;
+}
+
+.vix-fixed-income-controls .total-date-field input {
+  width: 100%;
+  min-width: 0;
+}
+
 .vix-credit-chart {
   position: relative;
   height: 260px;

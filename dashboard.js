@@ -434,9 +434,7 @@ const state = {
   marketVixFamilyRange: "3y",
   marketVixFamilyCustomStart: "",
   marketVixFamilyCustomEnd: "",
-  marketVixFixedIncomeRange: "3y",
-  marketVixFixedIncomeCustomStart: "",
-  marketVixFixedIncomeCustomEnd: "",
+  marketVixFixedIncomeWindows: {},
   marketMacroRanges: Object.fromEntries(
     Object.keys(marketMacroData?.panels ?? {}).map((key) => [key, key === "liquidity_net" ? "max" : "3y"]),
   ),
@@ -3294,6 +3292,42 @@ function buildMarketVixMetricsPayload(rangeKey) {
   return { labels: slicedLabels, datasets };
 }
 
+function getMarketVixFixedIncomeWindow(seriesKey) {
+  return { range: marketVixData.defaultRange || "3y", start: "", end: "",
+    ...state.marketVixFixedIncomeWindows[seriesKey] };
+}
+
+function setMarketVixFixedIncomeWindow(seriesKey, changes) {
+  state.marketVixFixedIncomeWindows = {
+    ...state.marketVixFixedIncomeWindows,
+    [seriesKey]: { ...getMarketVixFixedIncomeWindow(seriesKey), ...changes },
+  };
+}
+
+function renderVixFixedIncomeControls(seriesKey) {
+  const selected = getMarketVixFixedIncomeWindow(seriesKey);
+  const item = marketVixData.fixedIncome?.[seriesKey];
+  const label = item?.label || seriesKey;
+  const dates = item?.dates ?? [];
+  const ranges = (marketVixData.ranges ?? []).map((range) => `
+    <button type="button" class="m7-range-chip${!selected.start && !selected.end && selected.range === range.key ? " active" : ""}"
+      data-market-vix-fixed-income-range="${range.key}" data-vix-series="${seriesKey}"
+      aria-pressed="${!selected.start && !selected.end && selected.range === range.key}">${range.label}</button>`).join("");
+  return `<div class="vix-fixed-income-controls" data-vix-fixed-income-controls="${seriesKey}">
+    <div class="m7-range-row" role="group" aria-label="${label} 기간">${ranges}</div>
+    <div class="total-date-row">
+      <label class="total-date-field"><span>Start</span><input type="date" aria-label="${label} 시작일"
+        data-vix-fixed-income-start min="${dates[0] || ""}" max="${dates.at(-1) || ""}" value="${selected.start}" /></label>
+      <label class="total-date-field"><span>End</span><input type="date" aria-label="${label} 종료일"
+        data-vix-fixed-income-end min="${dates[0] || ""}" max="${dates.at(-1) || ""}" value="${selected.end}" /></label>
+      <div class="total-date-actions">
+        <button type="button" class="total-date-button" data-vix-fixed-income-apply>적용</button>
+        <button type="button" class="total-date-button total-date-button-secondary" data-vix-fixed-income-reset>초기화</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
   const sourceItem = marketVixData?.fixedIncome?.[seriesKey];
   const isCredit = Boolean(sourceItem?.fredId) && sourceItem?.unit === "%";
@@ -3306,12 +3340,13 @@ function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
   const labels = [...new Set(Object.values(marketVixData?.fixedIncome ?? {})
     .flatMap((series) => series?.dates ?? []).filter(Boolean))].sort();
 
+  const selected = getMarketVixFixedIncomeWindow(seriesKey);
   const selectedWindow = getMarketVixSelectedWindow(
     rangeKey,
     labels,
     labels[0],
-    state.marketVixFixedIncomeCustomStart,
-    state.marketVixFixedIncomeCustomEnd,
+    selected.start,
+    selected.end,
   );
   const selectedLabels = selectedWindow.labels;
   const dateIndex = new Map();
@@ -3360,7 +3395,7 @@ function formatFixedIncomeVixValue(value, unit) {
 
 function renderVixCreditPanel(seriesKey) {
   const source = marketVixData?.fixedIncome?.[seriesKey];
-  const payload = buildMarketVixFixedIncomePayload(seriesKey, state.marketVixFixedIncomeRange);
+  const payload = buildMarketVixFixedIncomePayload(seriesKey, getMarketVixFixedIncomeWindow(seriesKey).range);
   const values = payload.datasets.flatMap((dataset) => dataset.data.filter(Number.isFinite));
   const latest = source?.latestValue == null ? null : source.latestValue * 100;
   const status = source?.fetchStatus === "stale" ? "수집 실패 · 이전 값 유지"
@@ -3370,6 +3405,7 @@ function renderVixCreditPanel(seriesKey) {
       <h3 style="color:${source?.color ?? "#66665f"}">${source?.label ?? seriesKey}</h3>
       <strong>${formatFixedIncomeVixValue(latest, "bp")} <small>(${source?.latestDate || "-"})</small></strong>
     </div>
+    ${renderVixFixedIncomeControls(seriesKey)}
     <div class="vix-credit-range">선택 구간 ${values.length ? `${formatFixedIncomeVixValue(Math.min(...values), "bp")} ~ ${formatFixedIncomeVixValue(Math.max(...values), "bp")}` : "관측값 없음"}</div>
     <div class="vix-credit-chart">${values.length ? `<canvas data-vix-credit-chart="${seriesKey}"></canvas>` : '<p class="us-price-updated">해당 구간의 공개 데이터가 없습니다.</p>'}</div>
     <div class="vix-credit-source"><a href="https://fred.stlouisfed.org/series/${source?.fredId ?? ""}" target="_blank" rel="noopener noreferrer">ICE BofA / FRED · ${source?.fredId ?? "-"}</a>
@@ -21107,7 +21143,6 @@ function renderMarketVixOverview() {
   const vixUpdatedAt = getMarketVixUpdatedAt();
   const familyBounds = getMarketVixBounds("family");
   const metricsBounds = getMarketVixBounds("metrics");
-  const fixedIncomeBounds = getMarketVixBounds("fixedIncome");
   const metricsRangeMarkup = (marketVixData.ranges ?? [])
     .map(
       (range) => `
@@ -21127,18 +21162,6 @@ function renderMarketVixOverview() {
           type="button"
           class="m7-range-chip${state.marketVixFamilyRange === range.key ? " active" : ""}"
           data-market-vix-family-range="${range.key}"
-        >
-          ${range.label}
-        </button>`,
-    )
-    .join("");
-  const fixedIncomeRangeMarkup = (marketVixData.ranges ?? [])
-    .map(
-      (range) => `
-        <button
-          type="button"
-          class="m7-range-chip${state.marketVixFixedIncomeRange === range.key ? " active" : ""}"
-          data-market-vix-fixed-income-range="${range.key}"
         >
           ${range.label}
         </button>`,
@@ -21279,37 +21302,11 @@ function renderMarketVixOverview() {
             <p>MOVE 채권 변동성 · 미국 회사채 투자등급(IG), BBB, 하이일드(HY), CCC 이하 신용스프레드</p>
           </div>
           <div class="us-price-controls">
-            <div class="m7-range-row">${fixedIncomeRangeMarkup}</div>
             <div class="us-price-updated">MOVE · Yahoo Finance ^MOVE · ${marketVixData.fixedIncome?.move?.latestDate || "-"}</div>
           </div>
         </div>
         <p class="us-price-updated">스프레드는 국채 현물곡선 대비 옵션조정 가산금리(OAS)입니다. 100bp = 1%p. 실제 관측일을 표시하며 미국 채권시장 휴일과 공표 시차로 오늘 날짜와 다를 수 있습니다.</p>
-        <div class="total-date-row">
-          <label class="total-date-field">
-            <span>Start</span>
-            <input
-              type="date"
-              data-vix-fixed-income-start
-              min="${fixedIncomeBounds.min}"
-              max="${fixedIncomeBounds.max}"
-              value="${state.marketVixFixedIncomeCustomStart || ""}"
-            />
-          </label>
-          <label class="total-date-field">
-            <span>End</span>
-            <input
-              type="date"
-              data-vix-fixed-income-end
-              min="${fixedIncomeBounds.min}"
-              max="${fixedIncomeBounds.max}"
-              value="${state.marketVixFixedIncomeCustomEnd || ""}"
-            />
-          </label>
-          <div class="total-date-actions">
-            <button type="button" class="total-date-button" data-vix-fixed-income-apply>Apply</button>
-            <button type="button" class="total-date-button total-date-button-secondary" data-vix-fixed-income-reset>Reset</button>
-          </div>
-        </div>
+        ${renderVixFixedIncomeControls("move")}
         <div class="us-price-chart-wrap">
           <canvas data-market-vix="move"></canvas>
         </div>
@@ -21381,9 +21378,32 @@ function renderMarketVixOverview() {
 
   usOverviewRoot.querySelectorAll("[data-market-vix-fixed-income-range]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.marketVixFixedIncomeRange = button.dataset.marketVixFixedIncomeRange || marketVixData.defaultRange || "3y";
-      state.marketVixFixedIncomeCustomStart = "";
-      state.marketVixFixedIncomeCustomEnd = "";
+      setMarketVixFixedIncomeWindow(button.dataset.vixSeries, {
+        range: button.dataset.marketVixFixedIncomeRange || marketVixData.defaultRange || "3y",
+        start: "", end: "",
+      });
+      render();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-vix-fixed-income-controls]").forEach((controls) => {
+    const seriesKey = controls.dataset.vixFixedIncomeControls;
+    const startInput = controls.querySelector("[data-vix-fixed-income-start]");
+    const endInput = controls.querySelector("[data-vix-fixed-income-end]");
+    controls.querySelector("[data-vix-fixed-income-apply]").addEventListener("click", () => {
+      if (!startInput.checkValidity() || !endInput.checkValidity()) {
+        startInput.reportValidity();
+        endInput.reportValidity();
+        return;
+      }
+      const start = startInput.value || "";
+      const end = endInput.value || "";
+      if (start && end && start > end) return;
+      setMarketVixFixedIncomeWindow(seriesKey, { start, end });
+      render();
+    });
+    controls.querySelector("[data-vix-fixed-income-reset]").addEventListener("click", () => {
+      setMarketVixFixedIncomeWindow(seriesKey, { range: marketVixData.defaultRange || "3y", start: "", end: "" });
       render();
     });
   });
@@ -21392,10 +21412,6 @@ function renderMarketVixOverview() {
   const vixMetricsEndInput = usOverviewRoot.querySelector("[data-vix-metrics-end]");
   const vixMetricsApplyButton = usOverviewRoot.querySelector("[data-vix-metrics-apply]");
   const vixMetricsResetButton = usOverviewRoot.querySelector("[data-vix-metrics-reset]");
-  const vixFixedIncomeStartInput = usOverviewRoot.querySelector("[data-vix-fixed-income-start]");
-  const vixFixedIncomeEndInput = usOverviewRoot.querySelector("[data-vix-fixed-income-end]");
-  const vixFixedIncomeApplyButton = usOverviewRoot.querySelector("[data-vix-fixed-income-apply]");
-  const vixFixedIncomeResetButton = usOverviewRoot.querySelector("[data-vix-fixed-income-reset]");
   const vixFamilyStartInput = usOverviewRoot.querySelector("[data-vix-family-start]");
   const vixFamilyEndInput = usOverviewRoot.querySelector("[data-vix-family-end]");
   const vixFamilyApplyButton = usOverviewRoot.querySelector("[data-vix-family-apply]");
@@ -21418,27 +21434,6 @@ function renderMarketVixOverview() {
     vixMetricsResetButton.addEventListener("click", () => {
       state.marketVixMetricsCustomStart = "";
       state.marketVixMetricsCustomEnd = "";
-      render();
-    });
-  }
-
-  if (vixFixedIncomeApplyButton && vixFixedIncomeStartInput && vixFixedIncomeEndInput) {
-    vixFixedIncomeApplyButton.addEventListener("click", () => {
-      const startValue = vixFixedIncomeStartInput.value || "";
-      const endValue = vixFixedIncomeEndInput.value || "";
-      if (startValue && endValue && startValue > endValue) {
-        return;
-      }
-      state.marketVixFixedIncomeCustomStart = startValue;
-      state.marketVixFixedIncomeCustomEnd = endValue;
-      render();
-    });
-  }
-
-  if (vixFixedIncomeResetButton) {
-    vixFixedIncomeResetButton.addEventListener("click", () => {
-      state.marketVixFixedIncomeCustomStart = "";
-      state.marketVixFixedIncomeCustomEnd = "";
       render();
     });
   }
@@ -21476,11 +21471,12 @@ function renderMarketVixOverview() {
 
   const moveCanvas = usOverviewRoot.querySelector('[data-market-vix="move"]');
   if (moveCanvas) {
-    createMarketVixFixedIncomeChart(moveCanvas, "move", state.marketVixFixedIncomeRange);
+    createMarketVixFixedIncomeChart(moveCanvas, "move", getMarketVixFixedIncomeWindow("move").range);
   }
 
   usOverviewRoot.querySelectorAll('[data-vix-credit-chart]').forEach((canvas) => {
-    createMarketVixFixedIncomeChart(canvas, canvas.dataset.vixCreditChart, state.marketVixFixedIncomeRange);
+    const seriesKey = canvas.dataset.vixCreditChart;
+    createMarketVixFixedIncomeChart(canvas, seriesKey, getMarketVixFixedIncomeWindow(seriesKey).range);
   });
 
   const familyCanvas = usOverviewRoot.querySelector('[data-market-vix="family"]');
