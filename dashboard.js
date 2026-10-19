@@ -21185,7 +21185,7 @@ function renderMarketVixOverview() {
     .join("");
 
   usOverviewRoot.innerHTML = `
-    <section class="market-overview">
+    <section class="market-overview market-vix-overview">
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>

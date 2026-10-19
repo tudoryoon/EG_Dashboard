@@ -3862,6 +3862,25 @@ h1 {
   padding-top: 16px;
 }
 
+.market-vix-overview,
+.market-vix-overview > .us-panel,
+.market-vix-overview .us-price-chart-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  .market-vix-overview .us-section-head {
+    flex-wrap: wrap;
+  }
+
+  .market-vix-overview .us-price-controls {
+    min-width: 0;
+    max-width: 100%;
+    align-items: flex-start;
+  }
+}
+
 .vix-credit-heading {
   display: flex;
   justify-content: space-between;
