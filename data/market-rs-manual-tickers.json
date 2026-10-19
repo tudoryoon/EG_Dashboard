@@ -1227,6 +1227,17 @@
       "sharesOutstanding": 272056000
     },
     {
+      "ticker": "XLV",
+      "name": "State Street Health Care Select Sector SPDR ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 197415008
+    },
+    {
       "ticker": "XME",
       "name": "State Street SPDR S&P Metals & Mining ETF",
       "memberships": {
