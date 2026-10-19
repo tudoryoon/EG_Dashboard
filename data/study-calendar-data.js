@@ -1,28 +1,24 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-10-18",
+  "updatedAt": "2026-10-19",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-10-18",
+  "calendarToday": "2026-10-19",
   "coverage": {
     "dailyBriefingUniverse": 218,
     "matchedEarnings": 160,
-    "matchedMacro": 13,
-    "windowStart": "2026-10-12",
-    "windowEnd": "2026-11-08",
+    "matchedMacro": 12,
+    "windowStart": "2026-10-19",
+    "windowEnd": "2026-11-15",
     "earningsEligible": 217
   },
   "earningsAudit": {
-    "collectionEnd": "2026-12-06",
+    "collectionEnd": "2026-12-13",
     "symbols": [
       {
         "ticker": "AA",
         "name": "Alcoa",
-        "date": "2026-10-15",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-10-15"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "AAOI",
@@ -98,7 +94,7 @@ window.studyCalendarData = {
         "ticker": "AMAT",
         "name": "Applied Materials",
         "date": "2026-11-12",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-12"
@@ -206,18 +202,14 @@ window.studyCalendarData = {
       {
         "ticker": "ASML",
         "name": "ASML",
-        "date": "2026-10-14",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-10-14"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "ASTS",
         "name": "AST SpaceMobile",
         "date": "2026-11-09",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-09"
@@ -246,9 +238,12 @@ window.studyCalendarData = {
       {
         "ticker": "AVGO",
         "name": "Broadcom",
+        "date": "2026-12-10",
         "status": "outside-window",
-        "dateRange": [
-          "2026-12-09"
+        "verificationStatus": "conflict",
+        "candidateDates": [
+          "2026-12-09",
+          "2026-12-10"
         ]
       },
       {
@@ -265,7 +260,7 @@ window.studyCalendarData = {
         "ticker": "B",
         "name": "Barrick Mining",
         "date": "2026-11-09",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-09"
@@ -294,11 +289,9 @@ window.studyCalendarData = {
       {
         "ticker": "BAC",
         "name": "Bank of America",
-        "date": "2026-10-14",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-14"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-15"
         ]
       },
       {
@@ -335,11 +328,9 @@ window.studyCalendarData = {
       {
         "ticker": "BLK",
         "name": "BlackRock",
-        "date": "2026-10-14",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-14"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-14"
         ]
       },
       {
@@ -365,11 +356,9 @@ window.studyCalendarData = {
       {
         "ticker": "C",
         "name": "Citigroup",
-        "date": "2026-10-13",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-13"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-14"
         ]
       },
       {
@@ -424,8 +413,12 @@ window.studyCalendarData = {
       {
         "ticker": "CIEN",
         "name": "Ciena",
-        "status": "unconfirmed",
-        "dateRange": []
+        "date": "2026-12-10",
+        "status": "outside-window",
+        "verificationStatus": "single-source",
+        "candidateDates": [
+          "2026-12-10"
+        ]
       },
       {
         "ticker": "CLS",
@@ -470,8 +463,10 @@ window.studyCalendarData = {
       {
         "ticker": "COST",
         "name": "Costco",
+        "date": "2026-12-10",
         "status": "outside-window",
-        "dateRange": [
+        "verificationStatus": "cross-checked",
+        "candidateDates": [
           "2026-12-10"
         ]
       },
@@ -490,9 +485,10 @@ window.studyCalendarData = {
         "name": "Credo",
         "date": "2026-11-30",
         "status": "outside-window",
-        "verificationStatus": "single-source",
+        "verificationStatus": "conflict",
         "candidateDates": [
-          "2026-11-30"
+          "2026-11-30",
+          "2026-12-07"
         ]
       },
       {
@@ -529,7 +525,7 @@ window.studyCalendarData = {
         "ticker": "CRWV",
         "name": "CoreWeave",
         "date": "2026-11-09",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-09",
@@ -540,7 +536,7 @@ window.studyCalendarData = {
         "ticker": "CSCO",
         "name": "Cisco",
         "date": "2026-11-11",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-11",
@@ -872,12 +868,8 @@ window.studyCalendarData = {
       {
         "ticker": "GS",
         "name": "Goldman Sachs",
-        "date": "2026-10-13",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-10-13"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "HD",
@@ -992,21 +984,15 @@ window.studyCalendarData = {
       {
         "ticker": "JNJ",
         "name": "Johnson & Johnson",
-        "date": "2026-10-13",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-10-13"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "JPM",
         "name": "JPMorgan",
-        "date": "2026-10-13",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-13"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-14"
         ]
       },
       {
@@ -1124,7 +1110,7 @@ window.studyCalendarData = {
         "ticker": "LUNR",
         "name": "Intuitive Machines",
         "date": "2026-11-12",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-10",
@@ -1176,9 +1162,10 @@ window.studyCalendarData = {
         "name": "MongoDB",
         "date": "2026-12-01",
         "status": "outside-window",
-        "verificationStatus": "single-source",
+        "verificationStatus": "conflict",
         "candidateDates": [
-          "2026-12-01"
+          "2026-12-01",
+          "2026-12-07"
         ]
       },
       {
@@ -1254,11 +1241,9 @@ window.studyCalendarData = {
       {
         "ticker": "MS",
         "name": "Morgan Stanley",
-        "date": "2026-10-14",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-14"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-14"
         ]
       },
       {
@@ -1293,7 +1278,7 @@ window.studyCalendarData = {
         "ticker": "NBIS",
         "name": "Nebius",
         "date": "2026-11-10",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-10"
@@ -1463,7 +1448,7 @@ window.studyCalendarData = {
         "ticker": "OKLO",
         "name": "Oklo",
         "date": "2026-11-10",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-10"
@@ -1492,9 +1477,11 @@ window.studyCalendarData = {
       {
         "ticker": "ORCL",
         "name": "Oracle",
+        "date": "2026-12-09",
         "status": "outside-window",
-        "dateRange": [
-          "2026-12-14"
+        "verificationStatus": "single-source",
+        "candidateDates": [
+          "2026-12-09"
         ]
       },
       {
@@ -1551,8 +1538,12 @@ window.studyCalendarData = {
       {
         "ticker": "PL",
         "name": "Planet Labs",
-        "status": "unconfirmed",
-        "dateRange": []
+        "date": "2026-12-09",
+        "status": "outside-window",
+        "verificationStatus": "single-source",
+        "candidateDates": [
+          "2026-12-09"
+        ]
       },
       {
         "ticker": "PLTR",
@@ -1658,7 +1649,7 @@ window.studyCalendarData = {
         "ticker": "RGTI",
         "name": "Rigetti",
         "date": "2026-11-09",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-09",
@@ -1675,7 +1666,7 @@ window.studyCalendarData = {
         "ticker": "RKLB",
         "name": "Rocket Lab",
         "date": "2026-11-09",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-09"
@@ -1721,18 +1712,14 @@ window.studyCalendarData = {
       {
         "ticker": "SCHW",
         "name": "Charles Schwab",
-        "date": "2026-10-15",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-10-15"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "SERV",
         "name": "Serve Robotics",
         "date": "2026-11-11",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-11-11"
@@ -1801,8 +1788,12 @@ window.studyCalendarData = {
       {
         "ticker": "SNPS",
         "name": "Synopsys",
-        "status": "unconfirmed",
-        "dateRange": []
+        "date": "2026-12-09",
+        "status": "outside-window",
+        "verificationStatus": "single-source",
+        "candidateDates": [
+          "2026-12-09"
+        ]
       },
       {
         "ticker": "SPCX",
@@ -1920,11 +1911,9 @@ window.studyCalendarData = {
       {
         "ticker": "TSM",
         "name": "TSMC ADR",
-        "date": "2026-10-15",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-15"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-14"
         ]
       },
       {
@@ -1941,7 +1930,7 @@ window.studyCalendarData = {
         "ticker": "TWST",
         "name": "Twist Bioscience",
         "date": "2026-11-13",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-13",
@@ -1991,9 +1980,12 @@ window.studyCalendarData = {
       {
         "ticker": "UEC",
         "name": "Uranium Energy",
+        "date": "2026-12-09",
         "status": "outside-window",
-        "dateRange": [
-          "2026-12-08"
+        "verificationStatus": "conflict",
+        "candidateDates": [
+          "2026-12-08",
+          "2026-12-09"
         ]
       },
       {
@@ -2009,11 +2001,9 @@ window.studyCalendarData = {
       {
         "ticker": "UNH",
         "name": "UnitedHealth",
-        "date": "2026-10-13",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-13"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-12"
         ]
       },
       {
@@ -2119,11 +2109,9 @@ window.studyCalendarData = {
       {
         "ticker": "WFC",
         "name": "Wells Fargo",
-        "date": "2026-10-13",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-10-13"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-14"
         ]
       },
       {
@@ -2140,7 +2128,7 @@ window.studyCalendarData = {
         "ticker": "XE",
         "name": "Energy Fuels",
         "date": "2026-11-12",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-12",
@@ -2170,26 +2158,28 @@ window.studyCalendarData = {
     ],
     "sources": {
       "Nasdaq": {
-        "successfulChecks": 40,
-        "failedChecks": 0,
-        "lastSuccessAt": "2026-10-18T15:47:48+09:00",
-        "warnings": []
+        "successfulChecks": 39,
+        "failedChecks": 1,
+        "lastSuccessAt": "2026-10-19T16:05:57+09:00",
+        "warnings": [
+          "2026-12-11: RuntimeError: Nasdaq earnings request failed for 2026-12-11: Nasdaq missing rows; not a verified empty day"
+        ]
       },
       "Yahoo": {
         "successfulChecks": 217,
         "failedChecks": 0,
-        "lastSuccessAt": "2026-10-18T15:47:48+09:00",
+        "lastSuccessAt": "2026-10-19T16:05:57+09:00",
         "warnings": []
       }
     },
-    "checkedAt": "2026-10-18T15:47:48+09:00",
+    "checkedAt": "2026-10-19T16:05:57+09:00",
     "counts": {
-      "cross-checked": 146,
-      "outside-window": 51,
-      "single-source": 9,
-      "conflict": 5,
-      "unconfirmed": 6,
-      "excluded-etf": 1
+      "unconfirmed": 8,
+      "cross-checked": 148,
+      "outside-window": 49,
+      "conflict": 11,
+      "excluded-etf": 1,
+      "single-source": 1
     }
   },
   "methodology": {
@@ -2203,471 +2193,8 @@ window.studyCalendarData = {
     {
       "key": "this-week",
       "label": "이번 주",
-      "range": "2026.10.12 - 10.18",
-      "status": "진행 중",
-      "events": [
-        {
-          "ticker": "C",
-          "date": "2026-10-13",
-          "usDate": "2026-10-13",
-          "kstDate": "2026-10-13",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Citigroup (C) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.66",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "GS",
-          "date": "2026-10-13",
-          "usDate": "2026-10-13",
-          "kstDate": "2026-10-13",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Goldman Sachs (GS) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $12.90",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/GS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "JNJ",
-          "date": "2026-10-13",
-          "usDate": "2026-10-13",
-          "kstDate": "2026-10-13",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Johnson & Johnson (JNJ) 실적 발표",
-          "sector": "바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.53",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/JNJ/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "JPM",
-          "date": "2026-10-13",
-          "usDate": "2026-10-13",
-          "kstDate": "2026-10-13",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "JPMorgan (JPM) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $5.94",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "UNH",
-          "date": "2026-10-13",
-          "usDate": "2026-10-13",
-          "kstDate": "2026-10-13",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "UnitedHealth (UNH) 실적 발표",
-          "sector": "바이오",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.12",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "WFC",
-          "date": "2026-10-13",
-          "usDate": "2026-10-13",
-          "kstDate": "2026-10-13",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Wells Fargo (WFC) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.85",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-13",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-13",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "date": "2026-10-14",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "소비자물가 CPI",
-          "note": "Headline·Core CPI · September 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-10-14",
-          "kstDate": "2026-10-14"
-        },
-        {
-          "ticker": "ASML",
-          "date": "2026-10-14",
-          "usDate": "2026-10-14",
-          "kstDate": "2026-10-14",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "ASML (ASML) 실적 발표",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $12.47",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-14",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-10-14",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/ASML/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "BAC",
-          "date": "2026-10-14",
-          "usDate": "2026-10-14",
-          "kstDate": "2026-10-14",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Bank of America (BAC) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.11",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-14",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "BLK",
-          "date": "2026-10-14",
-          "usDate": "2026-10-14",
-          "kstDate": "2026-10-14",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "BlackRock (BLK) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $14.01",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-14",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "MS",
-          "date": "2026-10-14",
-          "usDate": "2026-10-14",
-          "kstDate": "2026-10-14",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Morgan Stanley (MS) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.83",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-14",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-14",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "date": "2026-10-15",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "미국 소매판매",
-          "note": "Retail Sales · September 2026 · 미국 08:30 ET",
-          "sourceLabel": "U.S. Census Bureau",
-          "sourceUrl": "https://www.census.gov/economic-indicators/calendar-listview.html",
-          "usDate": "2026-10-15",
-          "kstDate": "2026-10-15"
-        },
-        {
-          "date": "2026-10-15",
-          "time": "21:30",
-          "kind": "macro",
-          "title": "생산자물가 PPI",
-          "note": "Headline·Core PPI · September 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-10-15",
-          "kstDate": "2026-10-15"
-        },
-        {
-          "ticker": "AA",
-          "date": "2026-10-15",
-          "usDate": "2026-10-15",
-          "kstDate": "2026-10-15",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Alcoa (AA) 실적 발표",
-          "sector": "원자재",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.65",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-15",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-10-15",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/AA/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "SCHW",
-          "date": "2026-10-15",
-          "usDate": "2026-10-15",
-          "kstDate": "2026-10-15",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Charles Schwab (SCHW) 실적 발표",
-          "sector": "금융",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.66",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-15",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-10-15",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/SCHW/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "TSM",
-          "date": "2026-10-15",
-          "usDate": "2026-10-15",
-          "kstDate": "2026-10-15",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "TSMC ADR (TSM) 실적 발표",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $4.45",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-10-15",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-15",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "next-week",
-      "label": "다음 주",
       "range": "2026.10.19 - 10.25",
-      "status": "예정",
+      "status": "진행 중",
       "events": [
         {
           "ticker": "ISRG",
@@ -2692,7 +2219,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2701,7 +2228,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ISRG/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2730,7 +2257,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2739,7 +2266,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NFLX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2768,7 +2295,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2777,7 +2304,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UAL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2817,7 +2344,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2826,7 +2353,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GE/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2855,7 +2382,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2864,7 +2391,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2893,7 +2420,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2902,7 +2429,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NOC/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2931,7 +2458,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2940,7 +2467,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RTX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -2969,7 +2496,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-20",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -2978,7 +2505,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VICR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3007,7 +2534,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3016,7 +2543,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/IBM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3045,7 +2572,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3054,7 +2581,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KMI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3083,7 +2610,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3092,7 +2619,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LRCX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3121,7 +2648,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3130,7 +2657,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LUV/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3159,7 +2686,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3168,7 +2695,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LVS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3197,7 +2724,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3206,7 +2733,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/META/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3235,7 +2762,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3244,7 +2771,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TSLA/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3273,7 +2800,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3282,7 +2809,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TXN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3311,7 +2838,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3320,7 +2847,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NEE/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3349,7 +2876,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-21",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3358,7 +2885,7 @@ window.studyCalendarData = {
               "date": "2026-10-21",
               "session": "",
               "url": "https://finance.yahoo.com/quote/T/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3387,7 +2914,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3396,7 +2923,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BE/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3425,7 +2952,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3434,7 +2961,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DECK/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3463,7 +2990,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3472,7 +2999,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NEM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3501,7 +3028,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3510,7 +3037,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/WDC/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3539,7 +3066,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3548,7 +3075,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CRS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3577,7 +3104,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3586,7 +3113,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LMT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3615,7 +3142,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3624,7 +3151,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PG/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3653,7 +3180,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3662,7 +3189,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SPOT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3691,7 +3218,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3700,7 +3227,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UNP/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3729,7 +3256,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3738,7 +3265,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VLO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3767,7 +3294,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-22",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3776,7 +3303,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FIX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3805,7 +3332,7 @@ window.studyCalendarData = {
               "date": "2026-10-23",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-23",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3814,7 +3341,7 @@ window.studyCalendarData = {
               "date": "2026-10-23",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SLB/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3823,8 +3350,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-3",
-      "label": "3주차",
+      "key": "next-week",
+      "label": "다음 주",
       "range": "2026.10.26 - 11.01",
       "status": "예정",
       "events": [
@@ -3851,7 +3378,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3860,7 +3387,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMKR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3889,7 +3416,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3898,7 +3425,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CDNS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3927,7 +3454,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-26",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3936,7 +3463,7 @@ window.studyCalendarData = {
               "date": "2026-10-26",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CLS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -3965,7 +3492,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -3974,7 +3501,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/EQT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4003,7 +3530,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4012,7 +3539,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HOOD/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4041,7 +3568,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4050,7 +3577,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NXPI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4079,7 +3606,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4088,7 +3615,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/STX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4117,7 +3644,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4126,7 +3653,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TER/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4155,7 +3682,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4164,7 +3691,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/V/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4204,7 +3731,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4213,7 +3740,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BA/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4242,7 +3769,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4251,7 +3778,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FCX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4280,7 +3807,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4289,7 +3816,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GLW/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4318,7 +3845,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4327,7 +3854,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GLXY/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4356,7 +3883,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4365,7 +3892,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4394,7 +3921,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4403,7 +3930,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4432,7 +3959,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4441,7 +3968,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RCL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4470,7 +3997,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4479,7 +4006,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://finance.yahoo.com/quote/UPS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4508,7 +4035,7 @@ window.studyCalendarData = {
               "date": "2026-10-22",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SCCO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             },
@@ -4517,7 +4044,7 @@ window.studyCalendarData = {
               "date": "2026-10-27",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-27",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -4559,7 +4086,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4568,7 +4095,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/F/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4597,7 +4124,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4606,7 +4133,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FDX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4635,7 +4162,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4644,7 +4171,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FTNT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4673,7 +4200,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4682,7 +4209,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GOOGL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4711,7 +4238,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4720,7 +4247,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MSFT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4749,7 +4276,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4758,7 +4285,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NOW/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4787,7 +4314,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4796,7 +4323,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NXT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4825,7 +4352,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4834,7 +4361,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/APH/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4863,7 +4390,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4872,7 +4399,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DINO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4901,7 +4428,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4910,7 +4437,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GEV/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4939,7 +4466,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4948,7 +4475,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PSX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4977,7 +4504,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-28",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4986,7 +4513,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VRT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5015,7 +4542,7 @@ window.studyCalendarData = {
               "date": "2026-10-28",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KLAC/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -5024,7 +4551,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -5053,7 +4580,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5062,7 +4589,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AXTI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5091,7 +4618,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5100,7 +4627,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/COIN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5129,7 +4656,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5138,7 +4665,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FSLR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5167,7 +4694,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5176,7 +4703,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ILMN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5205,7 +4732,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5214,7 +4741,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/INTC/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5243,7 +4770,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5252,7 +4779,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MSTR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5281,7 +4808,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5290,7 +4817,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RBLX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5319,7 +4846,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5328,7 +4855,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SBUX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5357,7 +4884,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5366,7 +4893,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SNDK/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5395,7 +4922,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5404,7 +4931,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TWLO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5455,7 +4982,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5464,7 +4991,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ASX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5493,7 +5020,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5502,7 +5029,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ATI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5531,7 +5058,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5540,7 +5067,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CAT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5569,7 +5096,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5578,7 +5105,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FTAI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5607,7 +5134,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5616,7 +5143,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HII/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5645,7 +5172,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5654,7 +5181,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HWM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5683,7 +5210,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5692,7 +5219,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LHX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5721,7 +5248,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5730,7 +5257,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LLY/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5759,7 +5286,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5768,7 +5295,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MA/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5797,7 +5324,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5806,7 +5333,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MRK/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5835,7 +5362,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5844,7 +5371,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/OWL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5873,7 +5400,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5882,7 +5409,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PBF/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5911,7 +5438,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5920,7 +5447,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PWR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5949,7 +5476,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5958,7 +5485,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/STM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5987,7 +5514,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5996,7 +5523,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMZN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6025,7 +5552,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-29",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6034,7 +5561,7 @@ window.studyCalendarData = {
               "date": "2026-10-29",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RDDT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6075,7 +5602,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6084,7 +5611,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ABBV/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6113,7 +5640,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6122,7 +5649,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CCJ/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6151,7 +5678,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6160,7 +5687,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CVX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6189,7 +5716,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6198,7 +5725,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GD/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6227,7 +5754,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6236,7 +5763,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6265,7 +5792,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-10-30",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6274,7 +5801,7 @@ window.studyCalendarData = {
               "date": "2026-10-30",
               "session": "",
               "url": "https://finance.yahoo.com/quote/XOM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6283,8 +5810,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-4",
-      "label": "4주차",
+      "key": "week-3",
+      "label": "3주차",
       "range": "2026.11.02 - 11.08",
       "status": "예정",
       "events": [
@@ -6322,7 +5849,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6331,7 +5858,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AAPL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6360,7 +5887,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6369,7 +5896,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BWXT/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6398,7 +5925,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6407,7 +5934,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PLTR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6436,7 +5963,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6445,7 +5972,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/EL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6474,7 +6001,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6483,7 +6010,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ON/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6523,7 +6050,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6532,7 +6059,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ALAB/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6561,7 +6088,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6570,7 +6097,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMD/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6599,7 +6126,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6608,7 +6135,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMGN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6637,7 +6164,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6646,7 +6173,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ANET/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6675,7 +6202,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6684,7 +6211,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVTS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6713,7 +6240,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6722,7 +6249,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MPC/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6751,7 +6278,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6760,7 +6287,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SHOP/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6789,7 +6316,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6798,7 +6325,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TLN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -6827,7 +6354,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6836,7 +6363,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ETN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6865,7 +6392,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KTOS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6894,7 +6421,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -6903,7 +6430,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SMCI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -6932,7 +6459,7 @@ window.studyCalendarData = {
               "date": "2026-10-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SPCX/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -6941,7 +6468,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -6970,7 +6497,7 @@ window.studyCalendarData = {
               "date": "2026-11-02",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TEM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -6979,7 +6506,7 @@ window.studyCalendarData = {
               "date": "2026-11-03",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -7019,7 +6546,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7028,7 +6555,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/APP/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7057,7 +6584,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7066,7 +6593,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ARM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7095,7 +6622,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7104,7 +6631,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/COHR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7133,7 +6660,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7142,7 +6669,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DASH/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7171,7 +6698,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7180,7 +6707,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/EXPE/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7209,7 +6736,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7218,7 +6745,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CRCL/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7247,7 +6774,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7256,7 +6783,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CVS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7285,7 +6812,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7294,7 +6821,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DDOG/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7323,7 +6850,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7332,7 +6859,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ELF/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -7361,7 +6888,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7370,7 +6897,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/EOSE/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7399,7 +6926,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7408,7 +6935,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/IONQ/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7437,7 +6964,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7446,7 +6973,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LEU/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -7475,7 +7002,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7484,7 +7011,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MCD/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7513,7 +7040,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7522,7 +7049,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7551,7 +7078,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7560,7 +7087,7 @@ window.studyCalendarData = {
               "date": "2026-11-04",
               "session": "",
               "url": "https://finance.yahoo.com/quote/QCOM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7589,7 +7116,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7598,7 +7125,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ABNB/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7627,7 +7154,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7636,7 +7163,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AKAM/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7665,7 +7192,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7674,7 +7201,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GH/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7703,7 +7230,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7712,7 +7239,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LITE/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7741,7 +7268,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7750,7 +7277,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MP/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7779,7 +7306,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7788,7 +7315,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NET/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7817,7 +7344,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7826,7 +7353,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SMR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7855,7 +7382,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7864,7 +7391,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TXG/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7893,7 +7420,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7902,7 +7429,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/COP/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7931,7 +7458,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7940,7 +7467,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/U/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -7969,7 +7496,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -7978,7 +7505,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AAOI/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -8007,7 +7534,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8016,7 +7543,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ECHO/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -8045,7 +7572,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8054,7 +7581,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/IREN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -8083,7 +7610,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8092,7 +7619,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/KRMN/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -8121,7 +7648,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8130,7 +7657,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MNST/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -8159,7 +7686,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8168,7 +7695,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NTRA/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -8197,7 +7724,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8206,7 +7733,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/QBTS/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -8235,7 +7762,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8244,7 +7771,7 @@ window.studyCalendarData = {
               "date": "2026-11-05",
               "session": "",
               "url": "https://finance.yahoo.com/quote/USAR/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -8284,7 +7811,7 @@ window.studyCalendarData = {
               "date": "2026-11-06",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8293,7 +7820,7 @@ window.studyCalendarData = {
               "date": "2026-11-06",
               "session": "",
               "url": "https://finance.yahoo.com/quote/MRNA/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -8322,7 +7849,7 @@ window.studyCalendarData = {
               "date": "2026-11-06",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8331,7 +7858,7 @@ window.studyCalendarData = {
               "date": "2026-11-06",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VST/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -8360,7 +7887,7 @@ window.studyCalendarData = {
               "date": "2026-11-06",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -8369,8 +7896,532 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CEG/",
-              "fetchedAt": "2026-10-18T15:47:48+09:00",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
               "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "week-4",
+      "label": "4주차",
+      "range": "2026.11.09 - 11.15",
+      "status": "예정",
+      "events": [
+        {
+          "ticker": "B",
+          "date": "2026-11-09",
+          "usDate": "2026-11-09",
+          "kstDate": "2026-11-09",
+          "time": "23:30 이전",
+          "session": "B",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Barrick Mining (B) 실적 발표",
+          "sector": "원자재",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.79",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-09",
+              "session": "B",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/B/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "ASTS",
+          "date": "2026-11-09",
+          "usDate": "2026-11-09",
+          "kstDate": "2026-11-09",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "AST SpaceMobile (ASTS) 실적 발표",
+          "sector": "우주",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.39)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/ASTS/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "CRWV",
+          "date": "2026-11-09",
+          "usDate": "2026-11-09",
+          "kstDate": "2026-11-09",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "CoreWeave (CRWV) 실적 발표",
+          "sector": "네오클라우드",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-11-09, Yahoo 2026-11-11 · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($1.57)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-11",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/CRWV/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "RGTI",
+          "date": "2026-11-09",
+          "usDate": "2026-11-09",
+          "kstDate": "2026-11-09",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Rigetti (RGTI) 실적 발표",
+          "sector": "양자컴퓨터",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-11-09, Yahoo 2026-11-10 · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.07)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-10",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/RGTI/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "RKLB",
+          "date": "2026-11-09",
+          "usDate": "2026-11-09",
+          "kstDate": "2026-11-09",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Rocket Lab (RKLB) 실적 발표",
+          "sector": "우주",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.05)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-09",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/RKLB/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "date": "2026-11-10",
+          "time": "22:30",
+          "kind": "macro",
+          "title": "소비자물가 CPI",
+          "note": "Headline·Core CPI · October 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-11-10",
+          "kstDate": "2026-11-10"
+        },
+        {
+          "ticker": "NBIS",
+          "date": "2026-11-10",
+          "usDate": "2026-11-10",
+          "kstDate": "2026-11-10",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Nebius (NBIS) 실적 발표",
+          "sector": "네오클라우드",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.53)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-10",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-10",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/NBIS/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "OKLO",
+          "date": "2026-11-10",
+          "usDate": "2026-11-10",
+          "kstDate": "2026-11-10",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Oklo (OKLO) 실적 발표",
+          "sector": "원전, SMR",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.29)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-10",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-10",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/OKLO/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "CSCO",
+          "date": "2026-11-11",
+          "usDate": "2026-11-11",
+          "kstDate": "2026-11-11",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Cisco (CSCO) 실적 발표",
+          "sector": "통신 인프라",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-11",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-11-11, Yahoo 2026-11-12 · 회계분기 종료 Oct/2026 · EPS 컨센서스 $1.15",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-11",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-11",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-12",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/CSCO/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "SERV",
+          "date": "2026-11-11",
+          "usDate": "2026-11-11",
+          "kstDate": "2026-11-11",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Serve Robotics (SERV) 실적 발표",
+          "sector": "로봇",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-11",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.76)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-11",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-11",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-11",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/SERV/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "AMAT",
+          "date": "2026-11-12",
+          "usDate": "2026-11-12",
+          "kstDate": "2026-11-13",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Applied Materials (AMAT) 실적 발표",
+          "sector": "반도체(대형주)",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $4.06",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-12",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-12",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/AMAT/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "LUNR",
+          "date": "2026-11-12",
+          "usDate": "2026-11-12",
+          "kstDate": "2026-11-12",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Intuitive Machines (LUNR) 실적 발표",
+          "sector": "우주",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Nasdaq · Yahoo 2026-11-10, Nasdaq 2026-11-12 · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.12)",
+          "evidence": [
+            {
+              "source": "Yahoo",
+              "date": "2026-11-10",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/LUNR/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": true,
+              "dateRange": null
+            },
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-12",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "XE",
+          "date": "2026-11-12",
+          "usDate": "2026-11-12",
+          "kstDate": "2026-11-12",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Energy Fuels (XE) 실적 발표",
+          "sector": "원전, SMR",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-11-12, Yahoo 2026-11-16 · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.21)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-12",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-16",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/XE/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "date": "2026-11-13",
+          "time": "22:30",
+          "kind": "macro",
+          "title": "생산자물가 PPI",
+          "note": "Headline·Core PPI · October 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-11-13",
+          "kstDate": "2026-11-13"
+        },
+        {
+          "ticker": "TWST",
+          "date": "2026-11-13",
+          "usDate": "2026-11-13",
+          "kstDate": "2026-11-13",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Twist Bioscience (TWST) 실적 발표",
+          "sector": "AI바이오",
+          "sourceLabel": "Nasdaq",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-13",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Nasdaq · Nasdaq 2026-11-13, Yahoo 2026-11-16 · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.44)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-11-13",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-13",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-11-16",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/TWST/",
+              "fetchedAt": "2026-10-19T16:05:57+09:00",
+              "providerEstimate": true,
               "dateRange": null
             }
           ]
