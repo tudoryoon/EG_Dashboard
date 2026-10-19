@@ -3295,11 +3295,16 @@ function buildMarketVixMetricsPayload(rangeKey) {
 }
 
 function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
-  const item = marketVixData?.fixedIncome?.[seriesKey];
-  const labels = (item?.dates ?? []).filter(Boolean);
-  if (!labels.length) {
+  const sourceItem = marketVixData?.fixedIncome?.[seriesKey];
+  const isCredit = Boolean(sourceItem?.fredId) && sourceItem?.unit === "%";
+  const scale = isCredit ? 100 : 1;
+  const item = sourceItem ? { ...sourceItem, unit: isCredit ? "bp" : sourceItem.unit } : null;
+  const ownLabels = sourceItem?.dates ?? [];
+  if (!ownLabels.length) {
     return { item, labels: [], datasets: [] };
   }
+  const labels = [...new Set(Object.values(marketVixData?.fixedIncome ?? {})
+    .flatMap((series) => series?.dates ?? []).filter(Boolean))].sort();
 
   const selectedWindow = getMarketVixSelectedWindow(
     rangeKey,
@@ -3310,7 +3315,7 @@ function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
   );
   const selectedLabels = selectedWindow.labels;
   const dateIndex = new Map();
-  labels.forEach((date, index) => {
+  ownLabels.forEach((date, index) => {
     dateIndex.set(date, index);
   });
 
@@ -3323,7 +3328,8 @@ function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
         label: item.label,
         data: selectedLabels.map((label) => {
           const pointIndex = dateIndex.get(label);
-          return pointIndex === undefined ? null : item.values?.[pointIndex] ?? null;
+          const value = pointIndex === undefined ? null : sourceItem.values?.[pointIndex];
+          return value == null || !Number.isFinite(Number(value)) ? null : Number(value) * scale;
         }),
         borderColor: item.color ?? "#111827",
         backgroundColor: item.color ?? "#111827",
@@ -3339,14 +3345,36 @@ function buildMarketVixFixedIncomePayload(seriesKey, rangeKey) {
 }
 
 function formatFixedIncomeVixValue(value, unit) {
-  if (!Number.isFinite(Number(value))) {
+  if (value == null || !Number.isFinite(Number(value))) {
     return "-";
   }
   const numeric = Number(value);
+  if (unit === "bp") {
+    return `${numeric.toFixed(0)}bp`;
+  }
   if (unit === "%") {
     return `${numeric.toFixed(2)}%`;
   }
   return numeric.toFixed(2);
+}
+
+function renderVixCreditPanel(seriesKey) {
+  const source = marketVixData?.fixedIncome?.[seriesKey];
+  const payload = buildMarketVixFixedIncomePayload(seriesKey, state.marketVixFixedIncomeRange);
+  const values = payload.datasets.flatMap((dataset) => dataset.data.filter(Number.isFinite));
+  const latest = source?.latestValue == null ? null : source.latestValue * 100;
+  const status = source?.fetchStatus === "stale" ? "수집 실패 · 이전 값 유지"
+    : source?.fetchStatus === "error" || !source?.dates?.length ? "미수집" : "공개값 확인";
+  return `<div class="vix-credit-panel" data-vix-credit-panel="${seriesKey}">
+    <div class="vix-credit-heading">
+      <h3 style="color:${source?.color ?? "#66665f"}">${source?.label ?? seriesKey}</h3>
+      <strong>${formatFixedIncomeVixValue(latest, "bp")} <small>(${source?.latestDate || "-"})</small></strong>
+    </div>
+    <div class="vix-credit-range">선택 구간 ${values.length ? `${formatFixedIncomeVixValue(Math.min(...values), "bp")} ~ ${formatFixedIncomeVixValue(Math.max(...values), "bp")}` : "관측값 없음"}</div>
+    <div class="vix-credit-chart">${values.length ? `<canvas data-vix-credit-chart="${seriesKey}"></canvas>` : '<p class="us-price-updated">해당 구간의 공개 데이터가 없습니다.</p>'}</div>
+    <div class="vix-credit-source"><a href="https://fred.stlouisfed.org/series/${source?.fredId ?? ""}" target="_blank" rel="noopener noreferrer">ICE BofA / FRED · ${source?.fredId ?? "-"}</a>
+      <span>${status} · 확인 ${formatKstDateTime(source?.lastCheckedAt) || "-"} KST</span></div>
+  </div>`;
 }
 
 function createMarketVixFamilyChart(canvas, rangeKey) {
@@ -3481,8 +3509,8 @@ function createMarketVixFixedIncomeChart(canvas, seriesKey, rangeKey) {
   const payload = buildMarketVixFixedIncomePayload(seriesKey, rangeKey);
   const values = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = values.length ? Math.min(...values) : 0;
-  const maxValue = values.length ? Math.max(...values) : payload.item?.unit === "%" ? 5 : 100;
-  const minSpread = payload.item?.unit === "%" ? 0.5 : 5;
+  const maxValue = values.length ? Math.max(...values) : payload.item?.unit === "bp" ? 500 : 100;
+  const minSpread = payload.item?.unit === "bp" ? 50 : 5;
   const spread = Math.max(maxValue - minValue, minSpread);
   const yMin = Math.max(0, minValue - spread * 0.12);
   const yMax = maxValue + spread * 0.12;
@@ -3500,6 +3528,7 @@ function createMarketVixFixedIncomeChart(canvas, seriesKey, rangeKey) {
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: {
+          display: payload.item?.unit !== "bp",
           position: "top",
           align: "start",
           labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
@@ -3536,7 +3565,7 @@ function createMarketVixFixedIncomeChart(canvas, seriesKey, rangeKey) {
           },
           title: {
             display: true,
-            text: payload.item?.unit === "%" ? "Spread (%)" : "Index level",
+            text: payload.item?.unit === "bp" ? "Spread (bp)" : "Index level",
             color: "#8d8d86",
           },
           grid: { color: "rgba(70, 70, 66, 0.10)" },
@@ -21246,16 +21275,15 @@ function renderMarketVixOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>Bond Volatility & Credit Spread</h2>
-            <p>채권 변동성 MOVE Index와 High Yield Spread를 기존 VIX history와 같은 기간 선택 방식으로 표시합니다.</p>
+            <h2>Bond Volatility & Credit Spreads</h2>
+            <p>MOVE 채권 변동성 · 미국 회사채 투자등급(IG), BBB, 하이일드(HY), CCC 이하 신용스프레드</p>
           </div>
           <div class="us-price-controls">
             <div class="m7-range-row">${fixedIncomeRangeMarkup}</div>
-            <div class="us-price-updated">${marketVixData.source?.fixedIncome ?? ""} · MOVE ${marketVixData.fixedIncome?.move?.latestDate || "-"} · HY ${marketVixData.fixedIncome?.hySpread?.latestDate || "-"}</div>
-            <div class="us-price-updated" data-hy-collection-status>HY ${marketVixData.fixedIncome?.hySpread?.fetchStatus === "stale" ? "수집 실패 · 이전 값 유지" : "공개값 확인"} · 확인 ${formatKstDateTime(marketVixData.fixedIncome?.hySpread?.lastCheckedAt) || "-"} KST</div>
+            <div class="us-price-updated">MOVE · Yahoo Finance ^MOVE · ${marketVixData.fixedIncome?.move?.latestDate || "-"}</div>
           </div>
         </div>
-        <p class="us-price-updated">HY는 원본 관측일 기준입니다. 주말·미국 채권시장 휴일과 공표 시차로 당일 날짜와 차이가 날 수 있습니다.</p>
+        <p class="us-price-updated">스프레드는 국채 현물곡선 대비 옵션조정 가산금리(OAS)입니다. 100bp = 1%p. 실제 관측일을 표시하며 미국 채권시장 휴일과 공표 시차로 오늘 날짜와 다를 수 있습니다.</p>
         <div class="total-date-row">
           <label class="total-date-field">
             <span>Start</span>
@@ -21282,14 +21310,11 @@ function renderMarketVixOverview() {
             <button type="button" class="total-date-button total-date-button-secondary" data-vix-fixed-income-reset>Reset</button>
           </div>
         </div>
-        <div class="vix-fixed-income-grid">
-          <div class="us-price-chart-wrap">
-            <canvas data-market-vix="move"></canvas>
-          </div>
-          <div class="us-price-chart-wrap">
-            <canvas data-market-vix="hy-spread"></canvas>
-          </div>
+        <div class="us-price-chart-wrap">
+          <canvas data-market-vix="move"></canvas>
         </div>
+        <div class="vix-fixed-income-grid">${["igSpread", "bbbSpread", "hySpread", "cccSpread"].map(renderVixCreditPanel).join("")}</div>
+        <p class="us-price-updated">출처: ICE Data Indices / FRED. FRED 공개 원본은 최근 3년 구간을 제공하며, 이전에 저장한 자료는 보존합니다. ICE 데이터의 재배포·상업적 이용은 별도 이용조건 확인이 필요합니다.</p>
       </section>
 
       <section class="us-panel us-price-panel">
@@ -21454,10 +21479,9 @@ function renderMarketVixOverview() {
     createMarketVixFixedIncomeChart(moveCanvas, "move", state.marketVixFixedIncomeRange);
   }
 
-  const hySpreadCanvas = usOverviewRoot.querySelector('[data-market-vix="hy-spread"]');
-  if (hySpreadCanvas) {
-    createMarketVixFixedIncomeChart(hySpreadCanvas, "hySpread", state.marketVixFixedIncomeRange);
-  }
+  usOverviewRoot.querySelectorAll('[data-vix-credit-chart]').forEach((canvas) => {
+    createMarketVixFixedIncomeChart(canvas, canvas.dataset.vixCreditChart, state.marketVixFixedIncomeRange);
+  });
 
   const familyCanvas = usOverviewRoot.querySelector('[data-market-vix="family"]');
   if (familyCanvas) {

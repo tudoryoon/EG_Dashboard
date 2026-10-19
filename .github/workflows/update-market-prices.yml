@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       credit_only:
-        description: "Refresh only High Yield Spread from FRED"
+        description: "Refresh IG, BBB, HY and CCC credit spreads from FRED"
         type: boolean
         default: false
   schedule:
@@ -51,6 +51,7 @@ jobs:
           python scripts/test_index_price_history.py
           python scripts/test_market_vix_fred.py
           python scripts/test_market_data_batch.py
+          node scripts/test_vix_credit_charts.cjs
 
       - name: Refresh each market dataset independently
         id: collect

@@ -16,8 +16,8 @@ class MarketBatchTests(unittest.TestCase):
                 'name': 'HY', 'status': 'updated', 'changed': ['data/market-vix-data.js'],
             }) as collect, patch.dict(os.environ, {'GITHUB_OUTPUT': str(output), 'GITHUB_STEP_SUMMARY': ''}):
                 batch.main(credit_only=True)
-            collect.assert_called_once_with('High Yield Spread', 'update_market_vix.py',
-                                            ['data/market-vix-data.js'], 120, script_args=['--credit-only'])
+            collect.assert_called_once_with('Corporate Credit Spreads', 'update_market_vix.py',
+                                            ['data/market-vix-data.js'], 240, script_args=['--credit-only'])
             self.assertEqual(output.read_text(), 'changed_files=data/market-vix-data.js\nfailed_count=0\n')
 
     def test_collector_arguments_reach_subprocess_without_shell(self):

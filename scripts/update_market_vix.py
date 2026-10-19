@@ -41,6 +41,18 @@ VIX_FAMILY = [
     {"key": "vix1y", "symbol": "^VIX1Y", "label": "VIX 1Y", "color": "#0f766e"},
 ]
 
+CREDIT_SPREAD_SERIES = [
+    {"key": "igSpread", "label": "투자등급 (IG) 전체", "fredId": "BAMLC0A0CM",
+     "source": "FRED / ICE BofA US Corporate OAS", "color": "#2563eb", "unit": "%"},
+    {"key": "bbbSpread", "label": "BBB (투자등급 하단)", "fredId": "BAMLC0A4CBBB",
+     "source": "FRED / ICE BofA BBB US Corporate OAS", "color": "#15803d", "unit": "%"},
+    {"key": "hySpread", "label": "하이일드 (HY) 전체", "fredId": "BAMLH0A0HYM2",
+     "source": "FRED / ICE BofA US High Yield OAS", "color": "#8b5cf6", "unit": "%"},
+    {"key": "cccSpread", "label": "CCC 이하 (정크 최하단)", "fredId": "BAMLH0A3HYC",
+     "source": "FRED / ICE BofA CCC & Lower US High Yield OAS", "color": "#c24130", "unit": "%"},
+]
+FIXED_INCOME_SOURCE = "Yahoo Finance ^MOVE / FRED ICE BofA OAS (IG / BBB / HY / CCC)"
+
 FIXED_INCOME_SERIES = [
     {
         "key": "move",
@@ -50,14 +62,7 @@ FIXED_INCOME_SERIES = [
         "color": "#111827",
         "unit": "index",
     },
-    {
-        "key": "hySpread",
-        "label": "High Yield Spread",
-        "fredId": "BAMLH0A0HYM2",
-        "source": "FRED / ICE BofA US High Yield OAS",
-        "color": "#b91c1c",
-        "unit": "%",
-    },
+    *CREDIT_SPREAD_SERIES,
 ]
 
 
@@ -568,22 +573,39 @@ def refresh_series(items, parser, existing):
     return refreshed
 
 
+def refresh_credit_spreads(existing: dict) -> dict:
+    refreshed = {}
+    for meta in CREDIT_SPREAD_SERIES:
+        try:
+            refreshed[meta["key"]] = parse_fred_history_item(meta, existing.get(meta["key"], {}))
+        except Exception as error:
+            print(f"::warning::{meta['key']}: {error}")
+            saved = existing.get(meta["key"], {})
+            refreshed[meta["key"]] = {
+                **meta, "dates": [], "values": [], "latestDate": "", "latestValue": None,
+                **saved,
+                "fetchStatus": "stale" if saved.get("dates") else "error", "fetchError": str(error),
+                "lastCheckedAt": datetime.now(timezone.utc).isoformat(),
+            }
+    return refreshed
+
+
 def refresh_credit_only(existing: dict) -> dict:
     if not existing.get("fixedIncome"):
         raise RuntimeError("Credit-only refresh requires an existing VIX payload")
-    meta = next(item for item in FIXED_INCOME_SERIES if item["key"] == "hySpread")
-    credit = parse_fred_history_item(meta, existing.get("fixedIncome", {}).get("hySpread", {}))
+    credit = refresh_credit_spreads(existing.get("fixedIncome", {}))
     return {
         **existing,
-        "fixedIncome": {**existing["fixedIncome"], "hySpread": credit},
-        "updatedAt": max(existing.get("updatedAt", ""), credit.get("latestDate", "")),
+        "source": {**existing.get("source", {}), "fixedIncome": FIXED_INCOME_SOURCE},
+        "fixedIncome": {**existing["fixedIncome"], **credit},
+        "updatedAt": max([existing.get("updatedAt", ""), *[item.get("latestDate", "") for item in credit.values()]]),
         "generatedAt": datetime.now(timezone.utc).isoformat(),
     }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--credit-only", action="store_true", help="Check only FRED high-yield OAS, preserving Yahoo and CBOE data")
+    parser.add_argument("--credit-only", action="store_true", help="Check IG, BBB, HY and CCC FRED OAS, preserving Yahoo and CBOE data")
     args = parser.parse_args()
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-vix-data.js"
     existing = {}
@@ -598,7 +620,8 @@ def main() -> None:
         )
         return
     # Independent sources must not prevent the credit spread from refreshing.
-    fixed_income = refresh_series(FIXED_INCOME_SERIES, parse_fixed_income_item, existing.get("fixedIncome", {}))
+    fixed_income = refresh_credit_spreads(existing.get("fixedIncome", {}))
+    fixed_income.update(refresh_series([item for item in FIXED_INCOME_SERIES if item.get("symbol")], parse_fixed_income_item, existing.get("fixedIncome", {})))
     vix_family = refresh_series(VIX_FAMILY, parse_vix_family_item, existing.get("family", {}))
     existing_curves = load_existing_curve_history()
     try:
@@ -624,7 +647,7 @@ def main() -> None:
         "source": {
             "family": "Yahoo Finance delayed close",
             "futures": "CBOE delayed futures settlement CSV",
-            "fixedIncome": "Yahoo Finance ^MOVE / FRED BAMLH0A0HYM2",
+            "fixedIncome": FIXED_INCOME_SOURCE,
         },
         "family": vix_family,
         "fixedIncome": fixed_income,

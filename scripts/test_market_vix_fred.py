@@ -107,7 +107,10 @@ class IsolatedSeriesTests(unittest.TestCase):
         with patch.object(vix, 'parse_fred_history_item', return_value=fresh) as fetch, \
              patch.object(vix, 'fetch_json') as yahoo, patch.object(vix, 'fetch_curve_history') as cboe:
             result = vix.refresh_credit_only(saved)
-        fetch.assert_called_once_with(META, saved['fixedIncome']['hySpread'])
+        self.assertEqual(fetch.call_count, 4)
+        for call, meta in zip(fetch.call_args_list, vix.CREDIT_SPREAD_SERIES):
+            self.assertEqual(call.args, (meta, saved['fixedIncome'].get(meta['key'], {})))
+            self.assertEqual(result['fixedIncome'][meta['key']], fresh)
         yahoo.assert_not_called()
         cboe.assert_not_called()
         self.assertEqual(result['fixedIncome']['hySpread'], fresh)
@@ -127,7 +130,7 @@ class IsolatedSeriesTests(unittest.TestCase):
     def test_move_failure_does_not_block_credit_spread(self):
         fresh = {'dates': ['2026-10-02'], 'values': [3.10], 'latestDate': '2026-10-02'}
         parser = Mock(side_effect=[TimeoutError('offline'), fresh])
-        result = vix.refresh_series(vix.FIXED_INCOME_SERIES, parser, {'move': self.saved()})
+        result = vix.refresh_series([vix.FIXED_INCOME_SERIES[0], META], parser, {'move': self.saved()})
         self.assertEqual(parser.call_count, 2)
         self.assertEqual(result['move']['latestDate'], '2026-10-01')
         self.assertEqual(result['move']['fetchStatus'], 'stale')
@@ -148,6 +151,36 @@ class IsolatedSeriesTests(unittest.TestCase):
     def test_no_saved_history_is_not_silently_accepted(self):
         with self.assertRaises(RuntimeError):
             vix.refresh_series([META], Mock(side_effect=TimeoutError('offline')), {})
+
+    def test_four_credit_series_use_distinct_official_ids(self):
+        self.assertEqual({meta['key']: meta['fredId'] for meta in vix.CREDIT_SPREAD_SERIES}, {
+            'igSpread': 'BAMLC0A0CM', 'bbbSpread': 'BAMLC0A4CBBB',
+            'hySpread': 'BAMLH0A0HYM2', 'cccSpread': 'BAMLH0A3HYC',
+        })
+        def response(url):
+            meta = next(meta for meta in vix.CREDIT_SPREAD_SERIES if meta['fredId'] in url)
+            value = {'igSpread': .83, 'bbbSpread': 1.02, 'hySpread': 3.11, 'cccSpread': 12.53}[meta['key']]
+            return f"observation_date,{meta['fredId']}\n2026-10-12,{value}\n"
+        with patch.object(vix, 'fetch_text', side_effect=response):
+            result = vix.refresh_credit_spreads({})
+        self.assertEqual([item['latestValue'] for item in result.values()], [.83, 1.02, 3.11, 12.53])
+        self.assertTrue(all(item['unit'] == '%' for item in result.values()))
+
+    def test_partial_failure_preserves_saved_series_and_updates_others(self):
+        saved = self.saved()
+        def fetch(meta, existing):
+            if meta['key'] in ('igSpread', 'hySpread'):
+                raise TimeoutError('offline')
+            return {**meta, 'dates': ['2026-10-12'], 'values': [1], 'latestDate': '2026-10-12'}
+        with patch.object(vix, 'parse_fred_history_item', side_effect=fetch):
+            result = vix.refresh_credit_spreads({'hySpread': saved})
+        self.assertEqual(result['igSpread']['fetchStatus'], 'error')
+        self.assertIsNone(result['igSpread']['latestValue'])
+        self.assertEqual(result['hySpread']['fetchStatus'], 'stale')
+        self.assertEqual(result['hySpread']['latestDate'], saved['latestDate'])
+        self.assertEqual(result['hySpread']['values'], saved['values'])
+        self.assertEqual(result['bbbSpread']['latestDate'], '2026-10-12')
+        self.assertEqual(result['cccSpread']['latestDate'], '2026-10-12')
 
 
 if __name__ == '__main__':

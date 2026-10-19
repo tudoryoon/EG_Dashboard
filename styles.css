@@ -3856,6 +3856,55 @@ h1 {
   gap: 14px;
 }
 
+.vix-credit-panel {
+  min-width: 0;
+  border-top: 1px solid #deded8;
+  padding-top: 16px;
+}
+
+.vix-credit-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.vix-credit-heading h3,
+.vix-credit-heading strong {
+  margin: 0;
+  font-size: 16px;
+}
+
+.vix-credit-heading small {
+  font-size: 12px;
+  font-weight: 400;
+  color: #66665f;
+}
+
+.vix-credit-range,
+.vix-credit-source {
+  font-size: 12px;
+  color: #77776f;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.vix-credit-source span {
+  display: block;
+}
+
+.vix-credit-range {
+  margin: 6px 0 12px;
+}
+
+.vix-credit-chart {
+  position: relative;
+  height: 260px;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
 .vix-contract-panel {
   min-width: 0;
   padding: 12px;

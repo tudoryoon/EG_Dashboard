@@ -14,7 +14,7 @@ TASKS = [
 
 def main(credit_only=False):
     if credit_only:
-        results = [run_task("High Yield Spread", "update_market_vix.py", ["data/market-vix-data.js"], 120,
+        results = [run_task("Corporate Credit Spreads", "update_market_vix.py", ["data/market-vix-data.js"], 240,
                             script_args=["--credit-only"])]
     else:
         results = [run_task(*task) for task in TASKS]
