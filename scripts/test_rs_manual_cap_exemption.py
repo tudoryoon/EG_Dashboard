@@ -72,6 +72,11 @@ class ManualCapExemptionTests(unittest.TestCase):
         self.assertEqual(rs.normalize_ticker("WBD"), "WBD")
         self.assertTrue(rs.is_terminal_symbol("WBD"))
 
+    def test_completed_merger_tickers_leave_the_rs_universe(self):
+        for ticker in ("ACVA", "ATKR"):
+            self.assertTrue(rs.is_terminal_symbol(ticker))
+            self.assertFalse(rs.passes_market_cap_filter(ticker, 1_000_000_000, {ticker}))
+
     def test_fast_add_keeps_configured_index_membership(self):
         dates = pd.bdate_range("2025-01-02", periods=300)
         frame = pd.DataFrame({

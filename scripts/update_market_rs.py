@@ -137,8 +137,12 @@ SYMBOL_ALIASES = {
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # Copart completed the ACV merger on 2026-10-16; NYSE removed ACVA trading.
+    "ACVA",
     "ADRO",
     "AKE",
+    # Prysmian completed the Atkore merger on 2026-10-19; NYSE halted ATKR before open.
+    "ATKR",
     # Nasdaq alerts #2026-716 and #2026-706: both last traded 2026-10-05.
     "BLFS",
     "GTXI",
