@@ -143,6 +143,9 @@ TERMINAL_SKIP_TICKERS = {
     "AKE",
     # Prysmian completed the Atkore merger on 2026-10-19; NYSE halted ATKR before open.
     "ATKR",
+    # Dream Finders completed the Beazer merger on 2026-10-20 (SEC 8-K
+    # 0001104659-26-117198); BZH no longer has a NYSE regular-session close.
+    "BZH",
     # Nasdaq alerts #2026-716 and #2026-706: both last traded 2026-10-05.
     "BLFS",
     "GTXI",
