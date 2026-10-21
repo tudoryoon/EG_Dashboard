@@ -73,6 +73,12 @@ ISM_2026_FALLBACKS = (
 # Company IR confirmations override third-party estimated dates. Earnings are
 # placed on the U.S. market date, while kstDate/time preserve the local view.
 CONFIRMED_EARNINGS = {
+    "SPCX": {
+        "usDate": "2026-10-20",
+        "callKst": "10/21 05:30",
+        "sourceLabel": "SpaceX IR",
+        "sourceUrl": "https://ir.spacex.com/updates/releases-details/2026/SpaceX-to-Post-Third-Quarter-2026-Results-and-Host-Webcast-on-October-20-2026-2026-QssQGye3im/",
+    },
     "LITE": {
         "usDate": "2026-08-11",
         "callKst": "08/12 06:00",
@@ -658,6 +664,7 @@ def apply_confirmed_earnings(
 
     for ticker, confirmation, us_date, local_date, session_code, local_time in active_confirmations:
         match = universe[ticker]
+        prior = next((event for event in events if event.get("ticker") == ticker), {})
         retained.append(
             {
                 "date": us_date.isoformat(),
@@ -677,6 +684,14 @@ def apply_confirmed_earnings(
                 "kstDate": local_date.isoformat(),
                 "callKst": confirmation["callKst"],
                 "confirmed": True,
+                "verificationStatus": "confirmed",
+                "verificationLabel": "기업 IR 공식 확정",
+                "stale": False,
+                "evidence": [*[item for item in prior.get("evidence", [])
+                                if item.get("source") != confirmation["sourceLabel"]], {
+                    "source": confirmation["sourceLabel"], "date": us_date.isoformat(),
+                    "session": session_code, "url": confirmation["sourceUrl"],
+                }],
             }
         )
 

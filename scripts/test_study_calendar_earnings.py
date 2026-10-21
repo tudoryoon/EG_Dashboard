@@ -4,7 +4,7 @@ from datetime import date
 from unittest.mock import Mock, patch
 
 from calendar_earnings_sources import collect_sources, parse_yahoo_summary, reconcile
-from update_study_calendar import localize_event, request_rows
+from update_study_calendar import apply_confirmed_earnings, localize_event, request_rows
 
 START = date(2026, 10, 5)
 END = date(2026, 11, 1)
@@ -74,6 +74,53 @@ class EarningsCalendarTests(unittest.TestCase):
         self.assertEqual(events[0]["date"], "2026-10-29")
         self.assertEqual(events[0]["verificationStatus"], "conflict")
         self.assertEqual(len(events[0]["evidence"]), 2)
+
+    def test_fresh_non_estimated_date_overrides_previous_nasdaq_estimate(self):
+        data = cache("2026-10-29", ("2026-10-20",))
+        data["sources"]["Yahoo"]["records"]["MSFT"]["providerEstimate"] = False
+        old = {"ticker": "MSFT", "date": "2026-10-29", "confirmed": False}
+        for previous in [[], [old]]:
+            events, _ = resolve(data, previous)
+            event = events[0]
+            self.assertEqual(event["date"], "2026-10-20")
+            self.assertEqual(event["verificationStatus"], "conflict")
+            self.assertFalse(event["confirmed"])
+            self.assertEqual(len(event["evidence"]), 2)
+            self.assertIn("비추정", event["note"])
+            self.assertEqual(event["session"], "")  # Never borrow A/B from a different date.
+
+    def test_estimated_or_failed_yahoo_check_does_not_override_nasdaq(self):
+        for estimate, status in [(True, "success"), (None, "success"), (False, "failed")]:
+            data = cache("2026-10-29", ("2026-10-20",))
+            data["sources"]["Yahoo"]["records"]["MSFT"]["providerEstimate"] = estimate
+            data["sources"]["Yahoo"]["checks"]["MSFT"]["status"] = status
+            events, _ = resolve(data)
+            self.assertEqual(events[0]["date"], "2026-10-29")
+
+    def test_official_date_is_not_overridden_by_provider_flag(self):
+        data = cache("2026-10-29", ("2026-10-20",))
+        data["sources"]["Yahoo"]["records"]["MSFT"]["providerEstimate"] = False
+        old = {"ticker": "MSFT", "date": "2026-10-29", "confirmed": True}
+        events, _ = resolve(data, [old])
+        self.assertEqual(events[0]["date"], "2026-10-29")
+        self.assertTrue(events[0]["confirmed"])
+
+    def test_spcx_official_october_20_after_hours_replaces_november_estimate(self):
+        universe = {"SPCX": {"name": "SpaceX", "sector": "M7 빅테크"}}
+        old = [{"ticker": "SPCX", "date": "2026-11-03", "confirmed": False,
+                "evidence": [{"source": "Nasdaq", "date": "2026-11-03", "url": "nasdaq"}]}]
+        start, end = date(2026, 10, 19), date(2026, 11, 15)
+        events = apply_confirmed_earnings(old, universe, start, end)
+        self.assertEqual(len(events), 1)
+        self.assertEqual((events[0]["date"], events[0]["session"], events[0]["kstDate"]),
+                         ("2026-10-20", "A", "2026-10-21"))
+        self.assertEqual(events[0]["time"], "05:00 이후")
+        self.assertEqual(events[0]["callKst"], "10/21 05:30")
+        self.assertEqual(events[0]["verificationStatus"], "confirmed")
+        self.assertIn("ir.spacex.com", events[0]["sourceUrl"])
+        again = apply_confirmed_earnings(events, universe, start, end)
+        self.assertEqual(again, events)  # Daily checks must not append duplicate evidence.
+        self.assertEqual(apply_confirmed_earnings([], universe, date(2026, 11, 1), end), [])
 
     def test_official_confirmation_wins(self):
         old = {"ticker": "MSFT", "date": "2026-10-29", "confirmed": True}

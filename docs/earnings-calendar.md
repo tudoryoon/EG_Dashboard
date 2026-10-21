@@ -23,13 +23,19 @@ No additional workflow is required.
   not placed on an invented date.
 - Agreement is cross-checked, not officially confirmed. Yahoo's own estimated
   flag does not replace a company IR announcement.
-- Conflicting dates preserve the previous date if it remains a candidate;
+- When dates conflict, a successfully checked Yahoo single date explicitly marked
+  non-estimated takes priority over Nasdaq's inferred date and the previous
+  non-official selection. Keep the conflict warning and both source records;
+  a provider flag alone still does not constitute company confirmation. A failed
+  Yahoo check, missing estimate flag or date interval does not get this priority.
+- Other conflicts preserve the previous date if it remains a candidate;
   otherwise use Nasdaq, flag the conflict and retain both sources as evidence.
-- If that later candidate is outside the four-week display but another candidate
+- Without a fresh non-estimated single date, if the later candidate is outside
+  the four-week display but another candidate
   is inside it, show the earlier date with a conflict warning instead of hiding
   the company. This is not a claim that the earlier date is confirmed.
 - Registered company IR confirmations override provider estimates. Existing
-  LITE/COHR/CSCO confirmations remain supported; no universal IR crawler is claimed.
+  LITE/COHR/CSCO and SPCX confirmations remain supported; no universal IR crawler is claimed.
 - Investing remains a reference for later targeted/manual verification. It is
   not silently reported as an active collector, and blocked pages are not bypassed.
 

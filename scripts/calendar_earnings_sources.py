@@ -200,7 +200,14 @@ def reconcile(universe, start, display_end, collection_end, cache, previous_even
         selected = old["date"] if old and old["date"] in candidates else min(candidates)
         if not old or old["date"] not in candidates:
             selected = next((d for d in sorted(candidates) if any(i["source"] == "Nasdaq" for i in candidates[d])), selected)
-        if selected > display_end.isoformat() and any(d <= display_end.isoformat() for d in candidates):
+        # A fresh, single reporting date must not lose to an older algorithmic estimate.
+        # Provider-reported does not mean company-confirmed: retain the conflict warning.
+        reported_dates = [d for d, items in candidates.items() if any(
+            i["source"] == "Yahoo" and i.get("providerEstimate") is False and not i.get("dateRange")
+            and yahoo.get("checks", {}).get(ticker, {}).get("status") == "success" for i in items)]
+        if reported_dates:
+            selected = min(reported_dates)
+        elif selected > display_end.isoformat() and any(d <= display_end.isoformat() for d in candidates):
             # A conflicting later estimate must not hide an earlier candidate from the calendar.
             selected = min(candidates)
         evidence = candidates[selected]
@@ -224,6 +231,8 @@ def reconcile(universe, start, display_end, collection_end, cache, previous_even
                               for d, items in sorted(candidates.items()) for i in items]}
         if conflict:
             event["note"] += " · " + ", ".join(f"{i['source']} {d}" for d, items in sorted(candidates.items()) for i in items)
+            if reported_dates:
+                event["note"] += " · Yahoo 비추정 단일 날짜 우선 (기업 공식 확정은 아님)"
         for item in evidence:
             if item.get("note"):
                 event["note"] += " · " + item["note"]
