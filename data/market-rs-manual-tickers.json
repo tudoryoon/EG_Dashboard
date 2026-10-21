@@ -839,6 +839,17 @@
       "sharesOutstanding": 12054599
     },
     {
+      "ticker": "QQQM",
+      "name": "Invesco NASDAQ 100 ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 371289028
+    },
+    {
       "ticker": "QTEC",
       "name": "First Trust NASDAQ-100-Technology Sector Index Fund",
       "memberships": {
