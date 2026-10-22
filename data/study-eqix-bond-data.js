@@ -12,7 +12,7 @@ window.studyEqixBondData = {
     "name": "Equinix 2.500% Senior Unsecured Notes 2031"
   },
   "updatedAt": "2026-10-20",
-  "checkedAt": "2026-10-22T07:15:09+00:00",
+  "checkedAt": "2026-10-22T07:16:26+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -3190,7 +3190,7 @@ window.studyEqixBondData = {
       "yieldToWorstPct": 5.8,
       "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-10-22T07:08:08+00:00",
-      "lastCollectedAt": "2026-10-22T07:15:09+00:00"
+      "lastCollectedAt": "2026-10-22T07:16:26+00:00"
     }
   ]
 };

@@ -12,7 +12,7 @@ window.studyOrclBondData = {
     "name": "Oracle 4.950% Senior Unsecured Notes 2031"
   },
   "updatedAt": "2026-10-20",
-  "checkedAt": "2026-10-22T07:15:02+00:00",
+  "checkedAt": "2026-10-22T07:16:25+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -1850,7 +1850,7 @@ window.studyOrclBondData = {
       "yieldToWorstPct": 7.5,
       "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-10-22T07:14:02+00:00",
-      "lastCollectedAt": "2026-10-22T07:15:02+00:00"
+      "lastCollectedAt": "2026-10-22T07:16:25+00:00"
     }
   ]
 };
