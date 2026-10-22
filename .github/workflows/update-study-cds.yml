@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - scripts/update_study_cds.py
+      - scripts/update_study_crwv_bond.py
+      - scripts/update_study_credit_batch.py
+      - scripts/test_study_crwv_bond.py
+      - scripts/test_study_crwv_bond_view.cjs
       - .github/workflows/update-study-cds.yml
   workflow_dispatch:
     inputs:
@@ -32,31 +36,66 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Set up Node for data validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Refresh DTCC CDS data
+      - name: Test bond collection and presentation
+        run: |
+          python scripts/test_study_crwv_bond.py
+          node scripts/test_study_crwv_bond_view.cjs
+
+      - name: Refresh CDS and bond independently
+        id: collect
         shell: bash
         run: |
           if [[ "${{ inputs.backfill }}" == "true" ]]; then
-            python scripts/update_study_cds.py --backfill
+            python scripts/update_study_credit_batch.py --backfill
           else
-            python scripts/update_study_cds.py
+            python scripts/update_study_credit_batch.py
           fi
 
-      - name: Commit updated CDS data
+      - name: Publish successful CDS and bond datasets
+        if: steps.collect.outputs.changed_files != ''
+        env:
+          CHANGED_FILES: ${{ steps.collect.outputs.changed_files }}
         run: |
-          if git diff --quiet -- data/study-cds-data.js; then
-            echo "No CDS data changes detected."
-            exit 0
-          fi
-          python scripts/bump_data_cache_versions.py data/study-cds-data.js
+          read -r -a files <<< "$CHANGED_FILES"
+          python scripts/bump_data_cache_versions.py "${files[@]}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/study-cds-data.js index.html
-          git commit -m "Update Study CDS data" || exit 0
-          git pull --rebase origin main
-          git push
+          git add -- "${files[@]}" index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update CDS and CRWV bond data"
+          for attempt in 1 2 3; do
+            if ! git pull --rebase origin main; then
+              conflicts=$(git diff --name-only --diff-filter=U)
+              if [[ "$conflicts" != "index.html" ]]; then
+                echo "::error::Data conflict requires review; refusing to overwrite newer data."
+                exit 1
+              fi
+              git show :2:index.html > index.html
+              python scripts/bump_data_cache_versions.py "${files[@]}"
+              git add index.html
+              GIT_EDITOR=true git rebase --continue
+            fi
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Report failures after publishing successful datasets
+        if: always() && steps.collect.outputs.failed_count != '' && steps.collect.outputs.failed_count != '0'
+        run: |
+          echo "::error::Some collectors failed; previous data preserved. See collection summary."
+          exit 1

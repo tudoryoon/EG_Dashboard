@@ -5418,6 +5418,132 @@ h1 {
   }
 }
 
+.study-bond-section {
+  min-width: 0;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #d9d9d2;
+}
+
+.study-bond-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.study-bond-head > div {
+  min-width: 0;
+}
+
+.study-bond-head h3 {
+  margin: 6px 0;
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.study-bond-head p,
+.study-bond-source {
+  color: #686861;
+  font-size: 0.76rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.study-bond-head p {
+  margin: 0;
+}
+
+.study-bond-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px 0;
+  margin-top: 12px;
+  border-block: 1px solid #e3e3dd;
+}
+
+.study-bond-metrics span {
+  display: block;
+  margin-bottom: 7px;
+  color: #71716a;
+  font-size: 0.73rem;
+}
+
+.study-bond-metrics strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.study-bond-metrics > div:first-child strong {
+  color: #a45b13;
+  font-size: 1.7rem;
+}
+
+.study-bond-history-note,
+.study-bond-warning {
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: #76603d;
+}
+
+.study-bond-warning {
+  color: #b42318;
+}
+
+.study-bond-chart-wrap {
+  position: relative;
+  height: 300px;
+  min-width: 0;
+}
+
+.study-bond-chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.study-bond-source {
+  margin-top: 10px;
+}
+
+.study-bond-source p {
+  margin: 0 0 8px;
+}
+
+.study-bond-source > div {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.study-bond-source a {
+  color: #1c665d;
+  text-underline-offset: 3px;
+}
+
+.study-bond-source > span {
+  display: block;
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .study-bond-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+
+  .study-bond-chart-wrap {
+    height: 250px;
+  }
+
+  .study-bond-head .m7-range-row {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+}
+
 .study-cds-page {
   min-width: 0;
 }

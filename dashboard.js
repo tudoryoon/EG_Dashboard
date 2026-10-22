@@ -22,6 +22,7 @@ const studyData = window.studyData ?? { updatedAt: "", startDate: "2025-01-01", 
 const studyDataCenterDeals = window.studyDataCenterDeals ?? { updatedAt: "", scope: "", companies: [], statusLegend: [], deals: [] };
 const studyEtfFlowData = window.studyEtfFlowData ?? { updatedAt: "", startDate: "", defaultRange: "ytd", ranges: [], methodology: {}, sources: [], items: {} };
 const studyCdsData = window.studyCdsData ?? { updatedAt: "", generatedAt: "", startDate: "", defaultRange: "1y", ranges: [], source: {}, methodology: {}, dates: [], items: {} };
+const studyCrwvBondData = window.studyCrwvBondData ?? { observations: [], source: {}, bond: {} };
 const studyCalendarData = window.studyCalendarData ?? {
   updatedAt: "",
   timezone: "America/New_York",
@@ -406,6 +407,7 @@ const state = {
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
   studyCdsRange: studyCdsData.defaultRange ?? "1y",
+  studyCrwvBondRange: studyCrwvBondData.defaultRange ?? "1y",
   studyCdsIndexSelection: ["sox"],
   studyCdsCompanySelection: ["GOOGL", "MSFT", "NVDA", "META", "ORCL", "AMZN"],
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
@@ -17851,6 +17853,132 @@ function getStudyCdsFreshness(latest) {
   return { label: `${staleDays}일 경과`, className: "is-stale" };
 }
 
+function getStudyCrwvBondPayload(rangeKey) {
+  const observations = (studyCrwvBondData.observations ?? [])
+    .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.ytmPct))
+    .slice().sort((a, b) => a.date.localeCompare(b.date));
+  if (!observations.length) return { labels: [], values: [], observations: [] };
+  const cutoff = new Date(`${observations.at(-1).date}T12:00:00Z`);
+  const months = { "3m": 3, "6m": 6, "1y": 12 }[rangeKey];
+  if (months) cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+  const selected = months ? observations.filter((item) => item.date >= cutoff.toISOString().slice(0, 10)) : observations;
+  const byDate = new Map(selected.map((item) => [item.date, item]));
+  const labels = [];
+  const cursor = new Date(`${selected[0].date}T12:00:00Z`);
+  const lastDate = selected.at(-1).date;
+  // Missing disclosure days stay null; never substitute a carried or zero yield.
+  while (cursor.toISOString().slice(0, 10) <= lastDate) {
+    const day = cursor.toISOString().slice(0, 10);
+    if (![0, 6].includes(cursor.getUTCDay()) || byDate.has(day)) labels.push(day);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return { labels, values: labels.map((day) => byDate.get(day)?.ytmPct ?? null),
+    observations: labels.map((day) => byDate.get(day) ?? null) };
+}
+
+function renderStudyCrwvBondSection() {
+  const ranges = [{ key: "3m", label: "3M" }, { key: "6m", label: "6M" },
+    { key: "1y", label: "1Y" }, { key: "max", label: "Max" }];
+  const range = ranges.some((item) => item.key === state.studyCrwvBondRange) ? state.studyCrwvBondRange : "1y";
+  const payload = getStudyCrwvBondPayload(range);
+  const actual = payload.observations.filter(Boolean);
+  const latest = actual.at(-1);
+  const all = studyCrwvBondData.observations ?? [];
+  const limited = all.length < 2;
+  const ageDays = latest ? Math.floor((Date.now() - Date.parse(`${latest.date}T00:00:00Z`)) / 86400000) : null;
+  return `
+    <section class="study-bond-section" data-study-crwv-bond-panel aria-labelledby="study-crwv-bond-heading">
+      <header class="study-bond-head">
+        <div>
+          <span class="study-cds-eyebrow">COREWEAVE · USD SENIOR NOTES · 2025년 7월 발행</span>
+          <h3 id="study-crwv-bond-heading">CRWV 채권 수익률 · 9% / 2031</h3>
+          <p>발행 2025-07-25 · 만기 2031-02-01 · CUSIP 21873SAC2 · ISIN US21873SAC26 (144A)</p>
+        </div>
+        <div class="m7-range-row" aria-label="CRWV 채권 표시 기간">
+          ${ranges.map((item) => `<button type="button" class="m7-range-chip${range === item.key ? " active" : ""}"
+            data-study-crwv-bond-range="${item.key}" aria-pressed="${range === item.key}">${item.label}</button>`).join("")}
+        </div>
+      </header>
+      <div class="study-bond-metrics">
+        <div><span>공개 평가 YTM</span><strong>${latest ? `${latest.ytmPct.toFixed(2)}%` : "-"}</strong></div>
+        <div><span>공시 기준일</span><strong>${escapeHtml(latest?.date ?? "-")}</strong></div>
+        <div><span>평가가격 / 액면 $100</span><strong>${Number.isFinite(latest?.pricePer100) ? `$${latest.pricePer100.toFixed(2)}` : "-"}</strong></div>
+        <div><span>누적 관측</span><strong>${all.length}일</strong></div>
+      </div>
+      ${ageDays > 4 ? `<p class="study-bond-warning">공시 기준일이 ${ageDays}일 전입니다. 새 자료 미확인 시 이전 값만 유지하며 오늘 값으로 이월하지 않습니다.</p>` : ""}
+      <p class="study-bond-history-note">${!latest ? "선택 채권의 검증된 수익률 자료가 아직 없습니다." : limited
+        ? "과거 일별 이력 미확보 · 현재는 확인된 1개 관측점만 표시하며, 새로 공개되는 날짜부터 매일 누적합니다."
+        : `선택 기간 ${actual.length}개 관측 · ${escapeHtml(actual[0].date)} ~ ${escapeHtml(latest.date)} · 미확인 날짜는 공백`}</p>
+      ${latest ? '<div class="study-bond-chart-wrap"><canvas data-study-crwv-bond-chart role="img" aria-label="CoreWeave 9% 2031 채권의 iShares 공개 평가 YTM 추이"></canvas></div>' : ""}
+      <footer class="study-bond-source">
+        <p>출처: iShares HYG 보유채권 공개 CSV. 운용사가 공개한 평가 만기수익률(YTM)이며, TRACE 실거래 수익률·확정 종가가 아닙니다. 공시 기준일은 최종 거래일을 뜻하지 않으며, 쿠폰 9%와 YTM은 다른 값입니다.</p>
+        <div><a href="https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf" target="_blank" rel="noreferrer">iShares 원출처</a>
+          <a href="https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv" target="_blank" rel="noreferrer">원자료 CSV</a>
+          <a href="https://www.sec.gov/Archives/edgar/data/1769628/000119312525165924/d73657d8k.htm" target="_blank" rel="noreferrer">발행 조건 (SEC)</a></div>
+        <span>자료 확인 ${escapeHtml(formatKstDateTime(studyCrwvBondData.checkedAt) || "-")} KST · 기존 CDS와 별도 자료</span>
+      </footer>
+    </section>
+  `;
+}
+
+function createStudyCrwvBondChart(canvas) {
+  if (!canvas || typeof Chart === "undefined") return;
+  const payload = getStudyCrwvBondPayload(state.studyCrwvBondRange);
+  if (!payload.labels.length) return;
+  const actualValues = payload.values.filter(Number.isFinite);
+  const low = Math.min(...actualValues);
+  const high = Math.max(...actualValues);
+  const padding = Math.max(0.25, (high - low) * 0.15);
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: payload.labels, datasets: [{
+      label: "iShares 공개 평가 YTM", data: payload.values, borderColor: "#a45b13",
+      backgroundColor: "#a45b13", borderWidth: 2.3, tension: 0,
+      pointRadius: actualValues.length < 2 ? 6 : 2.5, pointHoverRadius: 7,
+      pointBorderColor: "#ffffff", pointBorderWidth: 1.5, spanGaps: false,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "nearest", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        title: (items) => payload.labels[items[0]?.dataIndex] ?? "",
+        label: (context) => `공개 평가 YTM ${context.parsed.y.toFixed(2)}%`,
+        afterLabel: (context) => {
+          const value = payload.observations[context.dataIndex]?.pricePer100;
+          return Number.isFinite(value) ? `평가가격 $${value.toFixed(2)} / 액면 $100` : "";
+        },
+        footer: () => "iShares 공시 기준일 · 실거래 수익률 아님",
+      } } },
+      scales: {
+        x: { offset: true, grid: { display: false }, ticks: {
+          maxTicksLimit: canvas.clientWidth < 500 ? 4 : 9, maxRotation: 0,
+          callback: (value) => payload.labels[value] ?? "",
+        } },
+        y: { min: low - padding, max: high + padding,
+          title: { display: true, text: "YTM (%)" },
+          grid: { color: "rgba(70,70,66,0.10)" }, ticks: { callback: (value) => `${Number(value).toFixed(2)}%` },
+        },
+      },
+    },
+  });
+  charts.push(chart);
+}
+
+function bindStudyCrwvBondControls() {
+  usOverviewRoot.querySelectorAll("[data-study-crwv-bond-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.studyCrwvBondRange = button.dataset.studyCrwvBondRange;
+      const panel = usOverviewRoot.querySelector("[data-study-crwv-bond-panel]");
+      const canvas = panel?.querySelector("[data-study-crwv-bond-chart]");
+      const index = charts.findIndex((chart) => chart.canvas === canvas);
+      if (index >= 0) charts.splice(index, 1)[0].destroy();
+      if (panel) panel.outerHTML = renderStudyCrwvBondSection();
+      bindStudyCrwvBondControls();
+      createStudyCrwvBondChart(usOverviewRoot.querySelector("[data-study-crwv-bond-chart]"));
+    });
+  });
+}
+
 function renderStudyCdsOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -17859,6 +17987,9 @@ function renderStudyCdsOverview() {
   const items = Object.values(studyCdsData.items ?? {});
   if (!studyCdsData.dates?.length || !items.length) {
     renderPlaceholderOverview("CDS", "DTCC CDS transaction data is not available yet.");
+    usOverviewRoot.insertAdjacentHTML("beforeend", renderStudyCrwvBondSection());
+    bindStudyCrwvBondControls();
+    createStudyCrwvBondChart(usOverviewRoot.querySelector("[data-study-crwv-bond-chart]"));
     return;
   }
   const latestItems = items.filter((item) => Number.isFinite(Number(item.latest?.bps)));
@@ -18017,6 +18148,7 @@ function renderStudyCdsOverview() {
         <p>${escapeHtml(studyCdsData.methodology?.carry ?? "")} ${escapeHtml(studyCdsData.methodology?.notionalDisclosure ?? "")}</p>
         <a href="${escapeHtml(studyCdsData.source?.url ?? "https://pddata.dtcc.com/ppd/secdashboard")}" target="_blank" rel="noreferrer">DTCC 원자료</a>
       </footer>
+      ${renderStudyCrwvBondSection()}
     </section>
   `;
 
@@ -18075,6 +18207,8 @@ function renderStudyCdsOverview() {
     const canvas = usOverviewRoot.querySelector(`[data-study-cds-chart="${item.ticker}"]`);
     createStudyCdsChart(canvas, item, activeRange);
   });
+  bindStudyCrwvBondControls();
+  createStudyCrwvBondChart(usOverviewRoot.querySelector("[data-study-crwv-bond-chart]"));
 }
 
 function formatStudyCalendarDate(value) {
