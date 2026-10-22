@@ -407,7 +407,8 @@ const state = {
   studyMemoryCapaSection: "dram",
   studyRange: studyData.defaultRange ?? "max",
   studyCdsRange: studyCdsData.defaultRange ?? "1y",
-  studyCrwvBondRange: studyCrwvBondData.defaultRange ?? "1y",
+  studyCrwvBondRange: studyCrwvBondData.defaultRange ?? "3m",
+  studyCrwvBondCpi: true,
   studyCdsIndexSelection: ["sox"],
   studyCdsCompanySelection: ["GOOGL", "MSFT", "NVDA", "META", "ORCL", "AMZN"],
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
@@ -17853,16 +17854,34 @@ function getStudyCdsFreshness(latest) {
   return { label: `${staleDays}일 경과`, className: "is-stale" };
 }
 
+function getStudyCrwvBondCpiEvents(labels) {
+  if (!labels.length) return [];
+  const groups = macroIndicatorsData.releaseCalendar?.groups?.cpi ?? {};
+  return Object.entries(groups).map(([referenceMonth, item]) => ({
+    date: item.releaseDate, referenceMonth, sourceUrl: item.sourceUrl,
+  })).filter((item) => item.date >= labels[0] && item.date <= labels.at(-1))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function getStudyCrwvBondPayload(rangeKey) {
   const observations = (studyCrwvBondData.observations ?? [])
     .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.date) && Number.isFinite(item.ytmPct))
     .slice().sort((a, b) => a.date.localeCompare(b.date));
-  if (!observations.length) return { labels: [], values: [], observations: [] };
+  if (!observations.length) return { labels: [], values: [], observations: [], cpiEvents: [] };
   const cutoff = new Date(`${observations.at(-1).date}T12:00:00Z`);
-  const months = { "3m": 3, "6m": 6, "1y": 12 }[rangeKey];
-  if (months) cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+  const months = { "1m": 1, "3m": 3, "6m": 6, "1y": 12 }[rangeKey];
+  if (months) {
+    const dayOfMonth = cutoff.getUTCDate();
+    cutoff.setUTCDate(1);
+    cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+    const lastDay = new Date(Date.UTC(cutoff.getUTCFullYear(), cutoff.getUTCMonth() + 1, 0)).getUTCDate();
+    cutoff.setUTCDate(Math.min(dayOfMonth, lastDay));
+  }
   const selected = months ? observations.filter((item) => item.date >= cutoff.toISOString().slice(0, 10)) : observations;
-  const byDate = new Map(selected.map((item) => [item.date, item]));
+  const byDate = new Map(observations.map((item, index) => [item.date, {
+    ...item, previousDate: observations[index - 1]?.date ?? null,
+    changeBps: index ? Math.round((item.ytmPct - observations[index - 1].ytmPct) * 100) : null,
+  }]));
   const labels = [];
   const cursor = new Date(`${selected[0].date}T12:00:00Z`);
   const lastDate = selected.at(-1).date;
@@ -17873,18 +17892,23 @@ function getStudyCrwvBondPayload(rangeKey) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return { labels, values: labels.map((day) => byDate.get(day)?.ytmPct ?? null),
-    observations: labels.map((day) => byDate.get(day) ?? null) };
+    observations: labels.map((day) => byDate.get(day) ?? null), cpiEvents: getStudyCrwvBondCpiEvents(labels) };
 }
 
 function renderStudyCrwvBondSection() {
-  const ranges = [{ key: "3m", label: "3M" }, { key: "6m", label: "6M" },
+  const ranges = [{ key: "1m", label: "1M" }, { key: "3m", label: "3M" }, { key: "6m", label: "6M" },
     { key: "1y", label: "1Y" }, { key: "max", label: "Max" }];
-  const range = ranges.some((item) => item.key === state.studyCrwvBondRange) ? state.studyCrwvBondRange : "1y";
+  const range = ranges.some((item) => item.key === state.studyCrwvBondRange) ? state.studyCrwvBondRange : "3m";
   const payload = getStudyCrwvBondPayload(range);
   const actual = payload.observations.filter(Boolean);
   const latest = actual.at(-1);
   const all = studyCrwvBondData.observations ?? [];
   const limited = all.length < 2;
+  const latestCpi = payload.cpiEvents.map((event) => ({ ...event,
+    observation: actual.find((item) => item.date === event.date),
+  })).filter((event) => event.observation).at(-1);
+  const datedUrl = latest ? (studyCrwvBondData.source?.historyUrlTemplate ?? "")
+    .replace("{stamp}", latest.date.replaceAll("-", "")) : "";
   const ageDays = latest ? Math.floor((Date.now() - Date.parse(`${latest.date}T00:00:00Z`)) / 86400000) : null;
   return `
     <section class="study-bond-section" data-study-crwv-bond-panel aria-labelledby="study-crwv-bond-heading">
@@ -17894,9 +17918,12 @@ function renderStudyCrwvBondSection() {
           <h3 id="study-crwv-bond-heading">CRWV 채권 수익률 · 9% / 2031</h3>
           <p>발행 2025-07-25 · 만기 2031-02-01 · CUSIP 21873SAC2 · ISIN US21873SAC26 (144A)</p>
         </div>
+        <div class="study-bond-controls">
+        <label class="study-bond-cpi-toggle"><input type="checkbox" data-study-crwv-bond-cpi ${state.studyCrwvBondCpi !== false ? "checked" : ""}> CPI 발표일</label>
         <div class="m7-range-row" aria-label="CRWV 채권 표시 기간">
           ${ranges.map((item) => `<button type="button" class="m7-range-chip${range === item.key ? " active" : ""}"
             data-study-crwv-bond-range="${item.key}" aria-pressed="${range === item.key}">${item.label}</button>`).join("")}
+        </div>
         </div>
       </header>
       <div class="study-bond-metrics">
@@ -17910,10 +17937,14 @@ function renderStudyCrwvBondSection() {
         ? "과거 일별 이력 미확보 · 현재는 확인된 1개 관측점만 표시하며, 새로 공개되는 날짜부터 매일 누적합니다."
         : `선택 기간 ${actual.length}개 관측 · ${escapeHtml(actual[0].date)} ~ ${escapeHtml(latest.date)} · 미확인 날짜는 공백`}</p>
       ${latest ? '<div class="study-bond-chart-wrap"><canvas data-study-crwv-bond-chart role="img" aria-label="CoreWeave 9% 2031 채권의 iShares 공개 평가 YTM 추이"></canvas></div>' : ""}
+      ${latestCpi ? `<p class="study-bond-cpi-note">최근 CPI 발표 ${escapeHtml(latestCpi.date)} · 당일 평가 YTM <strong>${latestCpi.observation.ytmPct.toFixed(2)}%</strong>${Number.isFinite(latestCpi.observation.changeBps)
+        ? ` · ${escapeHtml(latestCpi.observation.previousDate)} 대비 <strong>${latestCpi.observation.changeBps >= 0 ? "+" : ""}${latestCpi.observation.changeBps}bp</strong>` : ""}</p>` : ""}
       <footer class="study-bond-source">
-        <p>출처: iShares HYG 보유채권 공개 CSV. 운용사가 공개한 평가 만기수익률(YTM)이며, TRACE 실거래 수익률·확정 종가가 아닙니다. 공시 기준일은 최종 거래일을 뜻하지 않으며, 쿠폰 9%와 YTM은 다른 값입니다.</p>
+        <p>출처: BlackRock / iShares HYG의 날짜별 보유채권 공개 CSV. 운용사가 공개한 평가 만기수익률(YTM)이며, TRACE 실거래 수익률·확정 종가가 아닙니다. 공시 기준일은 최종 거래일을 뜻하지 않으며, 쿠폰 9%와 YTM은 다른 값입니다. CPI 표시는 BLS의 미국 발표일 기준이며, 물가의 예상치 상회 여부나 채권 변동의 원인을 뜻하지 않습니다.</p>
         <div><a href="https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf" target="_blank" rel="noreferrer">iShares 원출처</a>
           <a href="https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv" target="_blank" rel="noreferrer">원자료 CSV</a>
+          ${datedUrl ? `<a href="${escapeHtml(datedUrl)}" target="_blank" rel="noreferrer">날짜별 원자료</a>` : ""}
+          <a href="https://www.bls.gov/schedule/2026/home.htm" target="_blank" rel="noreferrer">CPI 발표 일정 (BLS)</a>
           <a href="https://www.sec.gov/Archives/edgar/data/1769628/000119312525165924/d73657d8k.htm" target="_blank" rel="noreferrer">발행 조건 (SEC)</a></div>
         <span>자료 확인 ${escapeHtml(formatKstDateTime(studyCrwvBondData.checkedAt) || "-")} KST · 기존 CDS와 별도 자료</span>
       </footer>
@@ -17929,23 +17960,57 @@ function createStudyCrwvBondChart(canvas) {
   const low = Math.min(...actualValues);
   const high = Math.max(...actualValues);
   const padding = Math.max(0.25, (high - low) * 0.15);
+  const cpiByDate = new Map(payload.cpiEvents.map((event) => [event.date, event]));
+  const cpiPlugin = {
+    id: "studyCrwvBondCpi",
+    beforeDatasetsDraw(chart) {
+      if (state.studyCrwvBondCpi === false) return;
+      const { ctx, chartArea, scales } = chart;
+      ctx.save();
+      ctx.strokeStyle = "#436fa6";
+      ctx.fillStyle = "#436fa6";
+      ctx.font = "bold 11px sans-serif";
+      let previousLabelX = -Infinity;
+      for (const event of payload.cpiEvents) {
+        const index = payload.labels.indexOf(event.date);
+        if (index < 0) continue;
+        const x = scales.x.getPixelForValue(index);
+        ctx.setLineDash([4, 5]);
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top + 17);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        if (x - previousLabelX > 45) {
+          ctx.setLineDash([]);
+          ctx.fillText("CPI", Math.min(x + 3, chartArea.right - 22), chartArea.top + 12);
+          previousLabelX = x;
+        }
+      }
+      ctx.restore();
+    },
+  };
   const chart = new Chart(canvas, {
     type: "line",
+    plugins: [cpiPlugin],
     data: { labels: payload.labels, datasets: [{
       label: "iShares 공개 평가 YTM", data: payload.values, borderColor: "#a45b13",
       backgroundColor: "#a45b13", borderWidth: 2.3, tension: 0,
-      pointRadius: actualValues.length < 2 ? 6 : 2.5, pointHoverRadius: 7,
+      pointRadius: actualValues.length < 2 ? 6 : payload.labels.map((day) => state.studyCrwvBondCpi !== false && cpiByDate.has(day) ? 4 : actualValues.length > 120 ? 1 : 2), pointHoverRadius: 7,
       pointBorderColor: "#ffffff", pointBorderWidth: 1.5, spanGaps: false,
     }] },
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
       interaction: { mode: "nearest", intersect: false },
       plugins: { legend: { display: false }, tooltip: { callbacks: {
-        title: (items) => payload.labels[items[0]?.dataIndex] ?? "",
+        title: (items) => {
+          const day = payload.labels[items[0]?.dataIndex] ?? "";
+          return `${day}${cpiByDate.has(day) ? " · CPI 발표일" : ""}`;
+        },
         label: (context) => `공개 평가 YTM ${context.parsed.y.toFixed(2)}%`,
         afterLabel: (context) => {
-          const value = payload.observations[context.dataIndex]?.pricePer100;
-          return Number.isFinite(value) ? `평가가격 $${value.toFixed(2)} / 액면 $100` : "";
+          const item = payload.observations[context.dataIndex];
+          return [Number.isFinite(item?.pricePer100) ? `평가가격 $${item.pricePer100.toFixed(2)} / 액면 $100` : "",
+            Number.isFinite(item?.changeBps) ? `${item.previousDate} 대비 ${item.changeBps >= 0 ? "+" : ""}${item.changeBps}bp` : ""].filter(Boolean);
         },
         footer: () => "iShares 공시 기준일 · 실거래 수익률 아님",
       } } },
@@ -17968,15 +18033,23 @@ function bindStudyCrwvBondControls() {
   usOverviewRoot.querySelectorAll("[data-study-crwv-bond-range]").forEach((button) => {
     button.addEventListener("click", () => {
       state.studyCrwvBondRange = button.dataset.studyCrwvBondRange;
-      const panel = usOverviewRoot.querySelector("[data-study-crwv-bond-panel]");
-      const canvas = panel?.querySelector("[data-study-crwv-bond-chart]");
-      const index = charts.findIndex((chart) => chart.canvas === canvas);
-      if (index >= 0) charts.splice(index, 1)[0].destroy();
-      if (panel) panel.outerHTML = renderStudyCrwvBondSection();
-      bindStudyCrwvBondControls();
-      createStudyCrwvBondChart(usOverviewRoot.querySelector("[data-study-crwv-bond-chart]"));
+      redrawStudyCrwvBondPanel();
     });
   });
+  usOverviewRoot.querySelector("[data-study-crwv-bond-cpi]")?.addEventListener("change", (event) => {
+    state.studyCrwvBondCpi = event.target.checked;
+    redrawStudyCrwvBondPanel();
+  });
+}
+
+function redrawStudyCrwvBondPanel() {
+  const panel = usOverviewRoot.querySelector("[data-study-crwv-bond-panel]");
+  const canvas = panel?.querySelector("[data-study-crwv-bond-chart]");
+  const index = charts.findIndex((chart) => chart.canvas === canvas);
+  if (index >= 0) charts.splice(index, 1)[0].destroy();
+  if (panel) panel.outerHTML = renderStudyCrwvBondSection();
+  bindStudyCrwvBondControls();
+  createStudyCrwvBondChart(usOverviewRoot.querySelector("[data-study-crwv-bond-chart]"));
 }
 
 function renderStudyCdsOverview() {

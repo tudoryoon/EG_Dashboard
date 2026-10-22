@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -43,6 +43,53 @@ class BondTests(unittest.TestCase):
     def test_html_200_rejected(self):
         with self.assertRaises(ValueError):
             self.parse(b"<!doctype html><html>Product page</html>")
+
+    def test_requested_date_must_match_embedded_reference_date(self):
+        with self.assertRaisesRegex(ValueError, "rejecting date substitution"):
+            bond.parse_holdings(fixture(), today=date(2026, 10, 22), requested_date="2026-09-30")
+        item = bond.parse_holdings(fixture("Sep 30, 2026"), today=date(2026, 10, 22), requested_date="2026-09-30")
+        self.assertEqual(item["date"], "2026-09-30")
+
+    def test_explicit_historical_import_extends_archive_without_regressing_latest(self):
+        existing = bond.merge_observation({}, self.parse(fixture()), "2026-10-22T00:40:00+00:00")
+        result = bond.merge_observation(existing, self.parse(fixture("Sep 30, 2026")), existing["checkedAt"], allow_historical=True)
+        self.assertEqual(result["updatedAt"], "2026-10-20")
+        self.assertEqual(len(result["observations"]), 2)
+        self.assertEqual(result["observations"][0]["date"], "2026-09-30")
+
+    def test_unavailable_disclosure_is_not_a_zero_yield(self):
+        with self.assertRaises(bond.HoldingsUnavailableError):
+            self.parse(fixture("-"))
+
+    def test_weekdays_and_last_completed_new_york_session(self):
+        self.assertEqual(bond.weekdays(date(2026,10,16),date(2026,10,20)), ["2026-10-16","2026-10-19","2026-10-20"])
+        self.assertEqual(bond.latest_completed_session(datetime(2026,10,22,0,40,tzinfo=timezone.utc)),date(2026,10,21))
+        self.assertEqual(bond.latest_completed_session(datetime(2026,10,19,0,40,tzinfo=timezone.utc)),date(2026,10,16))
+
+    def test_dated_fetch_preserves_raw_provenance_and_caches_only_verified_date(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(bond, "CACHE_DIR", Path(folder)), patch.object(
+            bond, "fetch_holdings", return_value=fixture("Sep 30, 2026")
+        ) as fetch:
+            status, item = bond.collect_dated("2026-09-30", bond.RequestPacer(0))
+            self.assertEqual(status,"ok")
+            self.assertIn("asOfDate=20260930", item["sourceUrl"])
+            self.assertEqual(item["date"],"2026-09-30")
+            self.assertEqual(bond.collect_dated("2026-09-30", bond.RequestPacer(0))[1],item)
+            fetch.assert_called_once()
+        with tempfile.TemporaryDirectory() as folder, patch.object(bond, "CACHE_DIR", Path(folder)), patch.object(
+            bond, "fetch_holdings", return_value=fixture()
+        ):
+            with self.assertRaises(ValueError):
+                bond.collect_dated("2026-09-30", bond.RequestPacer(0))
+            self.assertEqual(list(Path(folder).iterdir()),[])
+
+    def test_empty_or_missing_bond_is_recorded_without_observation(self):
+        for content, expected in [(b"", "unpublished"), (fixture(**{"CUSIP":"different"}), "not-held")]:
+            with tempfile.TemporaryDirectory() as folder, patch.object(bond, "CACHE_DIR", Path(folder)), patch.object(
+                bond, "fetch_holdings", return_value=content
+            ):
+                self.assertEqual(bond.collect_dated("2026-10-20", bond.RequestPacer(0)),(expected,None))
+                self.assertEqual(list(Path(folder).iterdir()),[])
 
     def test_different_tranche_and_terms_rejected(self):
         for changes in [{"CUSIP": "21873SAD0"}, {"ISIN": "USU2069EAB66"}, {"Coupon (%)": "9.75"},

@@ -5437,6 +5437,33 @@ h1 {
   min-width: 0;
 }
 
+.study-bond-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.study-bond-cpi-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #436fa6;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.study-bond-cpi-toggle input {
+  accent-color: #436fa6;
+}
+
+.study-bond-cpi-note {
+  color: #375d8b;
+  font-size: 0.8rem;
+  line-height: 1.8;
+}
+
 .study-bond-head h3 {
   margin: 6px 0;
   font-size: 1.25rem;
