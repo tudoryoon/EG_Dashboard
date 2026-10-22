@@ -5437,6 +5437,54 @@ h1 {
   min-width: 0;
 }
 
+.study-bond-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #deded8;
+}
+
+.study-bond-picker h3 {
+  margin: 5px 0 0;
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.study-bond-ticker-tabs {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #d9d9d2;
+  border-radius: 6px;
+  background: #efefeb;
+}
+
+.study-bond-ticker-tabs button {
+  width: 76px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #686861;
+  font: 700 0.85rem "Space Grotesk", sans-serif;
+  cursor: pointer;
+}
+
+.study-bond-ticker-tabs button[aria-selected="true"] {
+  background: var(--bond-color, #a45b13);
+  color: white;
+}
+
+.study-bond-ticker-tabs button:focus-visible {
+  outline: 2px solid #436fa6;
+  outline-offset: 2px;
+}
+
 .study-bond-controls {
   display: flex;
   align-items: center;
@@ -5464,7 +5512,7 @@ h1 {
   line-height: 1.8;
 }
 
-.study-bond-head h3 {
+.study-bond-head h4 {
   margin: 6px 0;
   font-size: 1.25rem;
   letter-spacing: 0;
@@ -5505,7 +5553,7 @@ h1 {
 }
 
 .study-bond-metrics > div:first-child strong {
-  color: #a45b13;
+  color: var(--bond-color, #a45b13);
   font-size: 1.7rem;
 }
 

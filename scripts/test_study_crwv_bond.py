@@ -1,4 +1,5 @@
 import csv
+import gzip
 import io
 import json
 import os
@@ -28,6 +29,16 @@ def fixture(as_of="Oct 20, 2026", **changes):
     return out.getvalue().encode("utf-8-sig")
 
 
+def profile_fixture(ticker, as_of="Oct 20, 2026", ytm="7.50"):
+    item = bond.PROFILES[ticker]["bond"]
+    return fixture(as_of, **{
+        "Name": item["issuer"].upper(), "CUSIP": item["cusip"], "ISIN": item["isin"],
+        "Coupon (%)": str(item["couponPct"]), "YTM (%)": ytm,
+        "Maturity": date.fromisoformat(item["maturityDate"]).strftime("%b %d, %Y"),
+        "Effective Date": date.fromisoformat(item["issueDate"]).strftime("%b %d, %Y"),
+    })
+
+
 class BondTests(unittest.TestCase):
     def parse(self, content):
         return bond.parse_holdings(content, today=date(2026, 10, 22))
@@ -39,6 +50,56 @@ class BondTests(unittest.TestCase):
         self.assertEqual(item["pricePer100"], 80.61)
         self.assertEqual(item["yieldToWorstPct"], 15.33)
         self.assertEqual(len(item["sourceSha256"]), 64)
+
+    def test_each_issuer_validates_its_exact_bond(self):
+        for ticker in ["ORCL", "EQIX"]:
+            profile = bond.PROFILES[ticker]
+            content = profile_fixture(ticker)
+            item = bond.parse_holdings(content, bond=profile["bond"])
+            self.assertEqual(item["ytmPct"],7.5)
+            result = bond.merge_observation({}, item, "2026-10-22", bond=profile["bond"], source=bond.profile_source(profile))
+            self.assertEqual(result["bond"]["ticker"],ticker)
+            self.assertEqual(result["source"]["fund"],"LQD")
+            with self.assertRaises(ValueError):
+                bond.parse_holdings(content)
+            with self.assertRaises(ValueError):
+                bond.merge_observation(result,item,"2026-10-22")
+
+    def test_missing_secondary_metadata_is_flagged_not_fabricated(self):
+        item=self.parse(fixture(**{"ISIN":"-","Effective Date":"-"}))
+        self.assertEqual(item["identityMissingFields"],["ISIN","Effective Date"])
+        self.assertEqual(item["ytmPct"],15.33)
+        with self.assertRaises(ValueError):
+            self.parse(fixture(**{"ISIN":"-","Effective Date":"-","Coupon (%)":"9.75"}))
+        with self.assertRaises(ValueError):
+            self.parse(fixture(**{"ISIN":"-","Effective Date":"-","CUSIP":"another bond"}))
+
+    def test_two_lqd_bonds_share_only_date_verified_raw_disclosure(self):
+        content = profile_fixture("EQIX",ytm="5.80") + profile_fixture("ORCL").splitlines()[-1] + b"\n"
+        with tempfile.TemporaryDirectory() as folder, patch.object(bond,"fetch_holdings",return_value=content) as fetch:
+            root = Path(folder)
+            profiles = {ticker: {**bond.PROFILES[ticker], "cacheDir":root/ticker, "rawCacheDir":root/"raw"}
+                        for ticker in ["ORCL","EQIX"]}
+            eqix = bond.collect_dated("2026-10-20",bond.RequestPacer(0),profile=profiles["EQIX"])[1]
+            orcl = bond.collect_dated("2026-10-20",bond.RequestPacer(0),profile=profiles["ORCL"])[1]
+            self.assertEqual(eqix["ytmPct"],5.8)
+            self.assertEqual(orcl["ytmPct"],7.5)
+            fetch.assert_called_once()
+            raw = root/"raw/2026-09-30.csv.gz"
+            raw.write_bytes(gzip.compress(content))
+            with self.assertRaisesRegex(ValueError,"rejecting date substitution"):
+                bond.collect_dated("2026-09-30",bond.RequestPacer(0),profile=profiles["ORCL"])
+
+    def test_each_archive_has_its_own_export(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/"bond.js"
+            profile=bond.PROFILES["ORCL"]
+            data=bond.merge_observation({},bond.parse_holdings(profile_fixture("ORCL"),bond=profile["bond"]),
+                                        "2026-10-22",bond=profile["bond"],source=bond.profile_source(profile))
+            bond.write_payload(data,path,profile["export"])
+            self.assertEqual(bond.load_existing(path,profile["export"])["bond"]["ticker"],"ORCL")
+            with self.assertRaises(ValueError):
+                bond.load_existing(path)
 
     def test_html_200_rejected(self):
         with self.assertRaises(ValueError):
@@ -155,9 +216,9 @@ class BondTests(unittest.TestCase):
                 bond.load_existing(path)
 
     def test_one_failed_collector_still_publishes_other_output(self):
-        for failed_index in [0, 1]:
-            results = [{"name": "Bond", "status": "updated", "changed": ["data/study-crwv-bond-data.js"]},
-                       {"name": "CDS", "status": "updated", "changed": ["data/study-cds-data.js"]}]
+        for failed_index in range(4):
+            files=["data/study-crwv-bond-data.js","data/study-orcl-bond-data.js","data/study-eqix-bond-data.js","data/study-cds-data.js"]
+            results = [{"name": file, "status": "updated", "changed": [file]} for file in files]
             results[failed_index] = {"name": "Failed", "status": "failed", "changed": []}
             with tempfile.TemporaryDirectory() as folder:
                 output = Path(folder) / "output"
@@ -167,8 +228,12 @@ class BondTests(unittest.TestCase):
                     batch.main(backfill=True)
                 text = output.read_text()
                 self.assertIn("failed_count=1", text)
-                self.assertIn(results[1 - failed_index]["changed"][0], text)
-                self.assertEqual(collect.call_args_list[1].kwargs["script_args"], ["--backfill"])
+                for index,file in enumerate(files):
+                    if index != failed_index:
+                        self.assertIn(file,text)
+                self.assertEqual(collect.call_args_list[3].kwargs["script_args"], ["--backfill"])
+                self.assertEqual(collect.call_args_list[1].kwargs["script_args"], ["--ticker","ORCL"])
+                self.assertEqual(collect.call_args_list[2].kwargs["script_args"], ["--ticker","EQIX"])
                 self.assertNotIn("script_args", collect.call_args_list[0].kwargs)
 
     def test_failed_collector_partial_write_is_restored(self):

@@ -1,4 +1,4 @@
-"""Archive official, date-verified HYG valuations for the July 2025 CRWV bond.
+"""Archive official, date-verified valuations for selected unsecured bonds.
 
 The product-page CSV is latest-only; BlackRock's dated holdings document API
 also serves historical disclosures. Both carry the same security identifiers
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import hashlib
 import io
 import json
@@ -39,6 +40,39 @@ BOND = {
     "issueDate": "2025-07-25", "maturityDate": "2031-02-01",
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)",
 }
+LQD_PAGE = "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf"
+PROFILES = {
+    "CRWV": {"bond": BOND, "fund": "HYG", "pageUrl": PAGE_URL, "url": SOURCE_URL,
+             "historyUrlTemplate": HISTORY_URL, "dataPath": DATA_PATH, "export": EXPORT,
+             "startDate": "2025-07-25", "cacheDir": CACHE_DIR,
+             "termsUrl": "https://www.sec.gov/Archives/edgar/data/1769628/000119312525165924/d73657d8k.htm"},
+    "ORCL": {"bond": {
+        "issuer": "Oracle", "ticker": "ORCL", "cusip": "68389XDX0", "isin": "US68389XDX03",
+        "couponPct": 4.95, "currency": "USD", "issueDate": "2026-02-04", "maturityDate": "2031-02-04",
+        "name": "Oracle 4.950% Senior Unsecured Notes 2031",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1341439/000119312526033882/d44245dfwp.htm"},
+    "EQIX": {"bond": {
+        "issuer": "Equinix", "ticker": "EQIX", "cusip": "29444UBS4", "isin": "US29444UBS42",
+        "couponPct": 2.5, "currency": "USD", "issueDate": "2021-05-17", "maturityDate": "2031-05-15",
+        "name": "Equinix 2.500% Senior Unsecured Notes 2031",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1101239/000110465921068051/tm2116587d1_ex4-6.htm"},
+}
+for _ticker in ("ORCL", "EQIX"):
+    PROFILES[_ticker].update({
+        "fund": "LQD", "pageUrl": LQD_PAGE, "url": LQD_PAGE + "/latest-holdings.csv",
+        "historyUrlTemplate": HISTORY_URL.replace("portfolioId=239565", "portfolioId=239566"),
+        "dataPath": ROOT / f"data/study-{_ticker.lower()}-bond-data.js",
+        "export": f"window.study{_ticker.title()}BondData = ", "startDate": "2025-07-25",
+        "cacheDir": ROOT / f"output/{_ticker.lower()}-bond-holdings-cache",
+        "rawCacheDir": ROOT / "output/credit-bond-holdings-raw/239566",
+    })
+
+
+def profile_source(profile: dict) -> dict:
+    return {"name": f"iShares {profile['fund']} official holdings", "fund": profile["fund"],
+            "url": profile["url"], "pageUrl": profile["pageUrl"], "termsUrl": profile["termsUrl"],
+            "historyUrlTemplate": profile["historyUrlTemplate"], "measure": "Published valuation YTM (%)",
+            "historyMode": "date-verified-official-holdings"}
 
 
 class HoldingsUnavailableError(ValueError):
@@ -60,7 +94,7 @@ def numeric(value: str) -> float:
     return result
 
 
-def parse_holdings(content: bytes, today: date | None = None, requested_date: str | None = None) -> dict:
+def parse_holdings(content: bytes, today: date | None = None, requested_date: str | None = None, *, bond=BOND) -> dict:
     text = content.decode("utf-8-sig")
     if "<html" in text[:1000].lower() or "<!doctype" in text[:1000].lower():
         raise ValueError("Holdings endpoint returned HTML, not CSV")
@@ -73,7 +107,7 @@ def parse_holdings(content: bytes, today: date | None = None, requested_date: st
     as_of = source_date(date_rows[0][1])
     if requested_date and as_of != requested_date:
         raise ValueError(f"Requested {requested_date}, received {as_of}; rejecting date substitution")
-    if not BOND["issueDate"] <= as_of <= (today or datetime.now(timezone.utc).date()).isoformat():
+    if not bond["issueDate"] <= as_of <= (today or datetime.now(timezone.utc).date()).isoformat():
         raise ValueError("Holdings date outside the bond's valid observation period")
     required = {"Name", "CUSIP", "ISIN", "Price", "YTM (%)", "Maturity", "Coupon (%)", "Market Currency", "Effective Date"}
     headers = [i for i, row in enumerate(rows) if required.issubset(row)]
@@ -82,42 +116,48 @@ def parse_holdings(content: bytes, today: date | None = None, requested_date: st
     index = headers[0]
     header = rows[index]
     records = [dict(zip(header, row)) for row in rows[index + 1:] if len(row) == len(header)]
-    matches = [record for record in records if record.get("CUSIP", "").strip() == BOND["cusip"]]
+    matches = [record for record in records if record.get("CUSIP", "").strip() == bond["cusip"]]
     if not matches:
         raise BondNotHeldError("Exact CUSIP not held on this disclosed date")
     if len(matches) != 1:
         raise ValueError("Exact CUSIP duplicated; keeping previous observations")
     record = matches[0]
-    if (record["ISIN"].strip() != BOND["isin"]
-            or "COREWEAVE" not in record["Name"].upper()
-            or record["Market Currency"].strip() != BOND["currency"]
-            or source_date(record["Maturity"]) != BOND["maturityDate"]
-            or source_date(record["Effective Date"]) != BOND["issueDate"]
-            or abs(numeric(record["Coupon (%)"]) - BOND["couponPct"]) > 0.005):
+    identity_missing = [field for field in ("ISIN", "Effective Date") if record[field].strip() in ("", "-", "--")]
+    # A unique CUSIP plus issuer, currency, coupon and maturity identifies the
+    # bond even when the issuer file omits secondary metadata. Conflicting
+    # nonblank identifiers still fail; missing fields remain explicitly marked.
+    if (("ISIN" not in identity_missing and record["ISIN"].strip() != bond["isin"])
+            or bond["issuer"].upper() not in record["Name"].upper()
+            or record["Market Currency"].strip() != bond["currency"]
+            or source_date(record["Maturity"]) != bond["maturityDate"]
+            or ("Effective Date" not in identity_missing and source_date(record["Effective Date"]) != bond["issueDate"])
+            or abs(numeric(record["Coupon (%)"]) - bond["couponPct"]) > 0.005):
         raise ValueError("Bond identity mismatch; refusing a different tranche")
     ytm, price = numeric(record["YTM (%)"]), numeric(record["Price"])
     if not -20 < ytm < 1000 or not 0 < price < 1000:
         raise ValueError("Implausible bond valuation")
     observation = {"date": as_of, "ytmPct": ytm, "pricePer100": price,
                    "sourceSha256": hashlib.sha256(content).hexdigest()}
+    if identity_missing:
+        observation["identityMissingFields"] = identity_missing
     ytw = record.get("Yield to Worst (%)", "")
     if ytw not in ("", "-", "--"):
         observation["yieldToWorstPct"] = numeric(ytw)
     return observation
 
 
-def load_existing(path: Path = DATA_PATH) -> dict:
+def load_existing(path: Path = DATA_PATH, export: str = EXPORT) -> dict:
     if not path.exists():
         return {}
     text = path.read_text(encoding="utf-8")
-    match = re.fullmatch(r"\s*window\.studyCrwvBondData\s*=\s*(\{.*\});\s*", text, re.S)
+    match = re.fullmatch(r"\s*" + re.escape(export.strip()) + r"\s*(\{.*\});\s*", text, re.S)
     if not match:
         raise ValueError("Cannot read existing bond archive; refusing to erase it")
     return json.loads(match[1])
 
 
-def merge_observation(existing: dict, observation: dict, checked_at: str, *, allow_historical=False) -> dict:
-    if existing and existing.get("bond") != BOND:
+def merge_observation(existing: dict, observation: dict, checked_at: str, *, allow_historical=False, bond=BOND, source=None) -> dict:
+    if existing and existing.get("bond") != bond:
         raise ValueError("Existing archive belongs to a different bond")
     by_date = {item["date"]: dict(item) for item in existing.get("observations", [])}
     day = observation["date"]
@@ -129,11 +169,9 @@ def merge_observation(existing: dict, observation: dict, checked_at: str, *, all
                     "lastCollectedAt": checked_at}
     observations = [by_date[key] for key in sorted(by_date)]
     return {
-        "schemaVersion": 2, "bond": BOND, "updatedAt": observations[-1]["date"],
+        "schemaVersion": 2, "bond": bond, "updatedAt": observations[-1]["date"],
         "checkedAt": checked_at, "defaultRange": "3m",
-        "source": {"name": "iShares HYG official holdings", "url": SOURCE_URL, "pageUrl": PAGE_URL,
-                   "historyUrlTemplate": HISTORY_URL, "measure": "Published valuation YTM (%)",
-                   "historyMode": "date-verified-official-holdings"},
+        "source": source or profile_source(PROFILES["CRWV"]),
         "coverage": existing.get("coverage", {}),
         "observations": observations,
     }
@@ -188,74 +226,89 @@ def latest_completed_session(now: datetime) -> date:
     return day
 
 
-def collect_dated(day: str, pacer: RequestPacer) -> tuple[str, dict | None]:
-    path = CACHE_DIR / f"{day}.json"
-    url = HISTORY_URL.format(stamp=day.replace("-", ""))
+def collect_dated(day: str, pacer: RequestPacer, *, profile=None) -> tuple[str, dict | None]:
+    profile = profile or {**PROFILES["CRWV"], "cacheDir": CACHE_DIR}
+    bond = profile["bond"]
+    cache_dir = profile["cacheDir"]
+    path = cache_dir / f"{day}.json"
+    url = profile["historyUrlTemplate"].format(stamp=day.replace("-", ""))
     if path.exists():
         cached = json.loads(path.read_text(encoding="utf-8"))
         item = cached.get("observation", {})
-        if (cached.get("date") == day and cached.get("sourceUrl") == url and cached.get("cusip") == BOND["cusip"]
+        if (cached.get("date") == day and cached.get("sourceUrl") == url and cached.get("cusip") == bond["cusip"]
                 and item.get("date") == day and isinstance(item.get("ytmPct"), (float, int))
                 and math.isfinite(item["ytmPct"]) and isinstance(item.get("pricePer100"), (float, int))
                 and math.isfinite(item["pricePer100"]) and item["pricePer100"] > 0):
             return "ok", cached["observation"]
-    content = fetch_holdings(url, pacer)
+    # ORCL and EQIX share LQD. Reuse the dated source file instead of downloading
+    # the same fund portfolio twice; never cache an unpublished/empty response.
+    raw_path = profile["rawCacheDir"] / f"{day}.csv.gz" if profile.get("rawCacheDir") else None
+    content = gzip.decompress(raw_path.read_bytes()) if raw_path and raw_path.exists() else fetch_holdings(url, pacer)
     if not content.strip():
         return "unpublished", None
     try:
-        observation = parse_holdings(content, requested_date=day)
+        observation = parse_holdings(content, requested_date=day, bond=bond)
     except HoldingsUnavailableError:
         return "unpublished", None
     except BondNotHeldError:
+        if raw_path and not raw_path.exists():
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_bytes(gzip.compress(content))
         return "not-held", None
     observation["sourceUrl"] = url
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"date": day, "cusip": BOND["cusip"], "sourceUrl": url,
+    if raw_path and not raw_path.exists():
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_bytes(gzip.compress(content))
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"date": day, "cusip": bond["cusip"], "sourceUrl": url,
                                 "observation": observation}, allow_nan=False), encoding="utf-8")
     return "ok", observation
 
 
-def write_payload(payload: dict) -> None:
-    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+def write_payload(payload: dict, path=DATA_PATH, export=EXPORT) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=DATA_PATH.parent,
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=path.parent,
                                          suffix=".tmp", delete=False) as out:
             temporary = Path(out.name)
-            out.write(EXPORT + json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + ";\n")
-        temporary.replace(DATA_PATH)
+            out.write(export + json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + ";\n")
+        temporary.replace(path)
     finally:
         if temporary:
             temporary.unlink(missing_ok=True)
 
 
-def main(backfill=False) -> None:
-    existing = load_existing()
+def main(backfill=False, ticker="CRWV") -> None:
+    profile = PROFILES[ticker]
+    bond = profile["bond"]
+    existing = load_existing(profile["dataPath"], profile["export"])
     now = datetime.now(timezone.utc)
     checked_at = now.isoformat(timespec="seconds")
     payload = existing
     observations = []
     errors = []
     try:
-        latest = parse_holdings(fetch_holdings())
-        latest["sourceUrl"] = SOURCE_URL
+        latest = parse_holdings(fetch_holdings(profile["url"]), bond=bond)
+        latest["sourceUrl"] = profile["url"]
         observations.append(latest)
     except Exception as error:
         errors.append({"date": "latest", "error": str(error)})
     end = latest_completed_session(now)
-    start = date.fromisoformat(BOND["issueDate"]) if backfill else max(
-        date.fromisoformat(BOND["issueDate"]), end - timedelta(days=10))
+    history_start = max(bond["issueDate"], profile["startDate"])
+    start = date.fromisoformat(history_start) if backfill else max(
+        date.fromisoformat(history_start), end - timedelta(days=10))
     present = {item["date"] for item in existing.get("observations", [])}
     desired = weekdays(start, end)
     failed_before = {item.get("date", "") for item in existing.get("coverage", {}).get("errors", [])}
     retry_dates = {day for day in failed_before if re.fullmatch(r"\d{4}-\d{2}-\d{2}", day)
-                   and BOND["issueDate"] <= day <= end.isoformat()}
+                   and history_start <= day <= end.isoformat()}
     missing = sorted((set(desired) | retry_dates) - present)
     pacer = RequestPacer()
     unavailable = set(existing.get("coverage", {}).get("unavailableDates", []))
     not_held = set(existing.get("coverage", {}).get("notHeldDates", []))
     with ThreadPoolExecutor(max_workers=3) as pool:
-        futures = {pool.submit(collect_dated, day, pacer): day for day in missing}
+        futures = {pool.submit(collect_dated, day, pacer, profile=profile): day for day in missing}
         for count, future in enumerate(as_completed(futures), 1):
             day = futures[future]
             try:
@@ -276,7 +329,8 @@ def main(backfill=False) -> None:
         raise RuntimeError("No verified source observations; previous archive preserved")
     # Explicit historical imports may extend the archive backwards, never move its latest date backwards.
     for observation in sorted(observations, key=lambda item: item["date"]):
-        payload = merge_observation(payload, observation, checked_at, allow_historical=True)
+        payload = merge_observation(payload, observation, checked_at, allow_historical=True,
+                                    bond=bond, source=profile_source(profile))
     coverage_start = min(start.isoformat(), existing.get("coverage", {}).get("startDate", start.isoformat()))
     coverage_end = max(end.isoformat(), payload["updatedAt"])
     observed = {item["date"] for item in payload["observations"]}
@@ -286,15 +340,17 @@ def main(backfill=False) -> None:
         "unavailableDates": sorted(unavailable - observed), "notHeldDates": sorted(not_held - observed),
         "errors": errors, "lastFullBackfillAt": checked_at if backfill else existing.get("coverage", {}).get("lastFullBackfillAt"),
     }
-    write_payload(payload)
+    write_payload(payload, profile["dataPath"], profile["export"])
     for error in errors:
         print(f"::warning::Bond disclosure {error['date']}: {error['error']}")
     last = payload["observations"][-1]
-    print(f"CRWV {BOND['cusip']}: {payload['observations'][0]['date']} through {last['date']}, "
+    print(f"{ticker} {bond['cusip']}: {payload['observations'][0]['date']} through {last['date']}, "
           f"{len(payload['observations'])} verified dates; latest YTM {last['ytmPct']:.2f}%")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--backfill", action="store_true", help="Fetch every available weekday since the bond's issue")
-    main(backfill=parser.parse_args().backfill)
+    parser.add_argument("--ticker", choices=PROFILES, default="CRWV")
+    args = parser.parse_args()
+    main(backfill=args.backfill, ticker=args.ticker)

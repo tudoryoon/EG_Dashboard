@@ -11,13 +11,17 @@ function functionSource(name) {
   return source.slice(start, end < 0 ? undefined : end);
 }
 const context = vm.createContext({
-  studyCrwvBondData: { observations: [{date:'2026-10-20', ytmPct:15.33, pricePer100:80.61}], checkedAt:'2026-10-22' },
-  state: { studyCrwvBondRange:'1y', studyCdsRange:'6m' }, charts: [],
+  studyCrwvBondData: { bond:{ticker:'CRWV',issuer:'CoreWeave',cusip:'21873SAC2',isin:'US21873SAC26',couponPct:9},
+    observations: [{date:'2026-10-20', ytmPct:15.33, pricePer100:80.61}], checkedAt:'2026-10-22' },
+  state: { studyCrwvBondRange:'1y', studyCdsRange:'6m',studyCreditBondTicker:'CRWV' }, charts: [],
   macroIndicatorsData: {releaseCalendar:{groups:{cpi:{'2026-09':{releaseDate:'2026-10-14',sourceUrl:'https://www.bls.gov/schedule/2026/home.htm'}}}}},
   escapeHtml: text => String(text), formatKstDateTime: text => text || '',
-  Chart: function(canvas, config) { this.canvas = canvas; this.config = config; },
+  Chart: function(canvas, config) { this.canvas = canvas; this.config = config; this.destroy=()=>{}; },
 });
-for (const name of ['getStudyCrwvBondCpiEvents', 'getStudyCrwvBondPayload', 'renderStudyCrwvBondSection', 'createStudyCrwvBondChart', 'bindStudyCrwvBondControls', 'redrawStudyCrwvBondPanel']) {
+context.studyCreditBondData={CRWV:context.studyCrwvBondData,
+  ORCL:{bond:{ticker:'ORCL',issuer:'Oracle',cusip:'68389XDX0',couponPct:4.95},source:{fund:'LQD',termsUrl:'https://www.sec.gov/oracle'},observations:[{date:'2026-10-20',ytmPct:7.5,pricePer100:90.74}]},
+  EQIX:{bond:{ticker:'EQIX',issuer:'Equinix',cusip:'29444UBS4',couponPct:2.5},source:{fund:'LQD'},observations:[{date:'2026-10-20',ytmPct:5.8,pricePer100:86.86}]}};
+for (const name of ['getStudySelectedCreditBond', 'getStudyCrwvBondCpiEvents', 'getStudyCrwvBondPayload', 'renderStudyCrwvBondSection', 'createStudyCrwvBondChart', 'bindStudyCrwvBondControls', 'redrawStudyCrwvBondPanel']) {
   vm.runInContext(functionSource(name), context);
 }
 const html = context.renderStudyCrwvBondSection();
@@ -66,16 +70,33 @@ const handler = {};
 const button = { dataset:{studyCrwvBondRange:'3m'}, addEventListener:(_, fn) => handler.click = fn };
 const panel = {querySelector:() => canvas, outerHTML:''};
 context.charts[0].destroy = () => handler.destroyed = true;
-let bindCount = 0;
+const tabs=Object.fromEntries(['CRWV','ORCL','EQIX'].map(key=>{const handlers={};return [key,{
+  dataset:{studyBondTicker:key},addEventListener:(event,fn)=>handlers[event]=fn,
+  click:()=>handlers.click(),focus:()=>handler.focused=key,handlers}];}));
 context.usOverviewRoot = {
-  querySelectorAll:() => (++bindCount === 1 ? [button] : []),
-  querySelector:selector => selector.includes('panel') ? panel : selector.includes('cpi]') ? null : canvas,
+  querySelectorAll:selector => selector.includes('ticker') ? Object.values(tabs) : [button],
+  querySelector:selector => selector.includes('panel') ? panel : selector.includes('cpi]') ? null
+    : selector.includes('ticker=') ? tabs[selector.match(/ticker="(\w+)"/)[1]] : canvas,
 };
 context.bindStudyCrwvBondControls();
 handler.click();
 assert.equal(context.state.studyCrwvBondRange, '3m');
 assert.equal(context.state.studyCdsRange, '6m');
 assert.ok(handler.destroyed && panel.outerHTML.includes('study-bond-section'));
+tabs.ORCL.click();
+assert.equal(context.state.studyCreditBondTicker,'ORCL');
+assert.equal(context.getStudyCrwvBondPayload('3m').values[0],7.5);
+assert.ok(panel.outerHTML.includes('68389XDX0') && panel.outerHTML.includes('LQD') && !panel.outerHTML.includes('21873SAC2'));
+assert.equal(context.charts.at(-1).config.data.datasets[0].borderColor,'#b34736');
+assert.equal(handler.focused,'ORCL');
+tabs.ORCL.handlers.keydown({key:'ArrowRight',preventDefault(){}});
+assert.equal(context.state.studyCreditBondTicker,'EQIX');
+assert.equal(context.getStudyCrwvBondPayload('3m').values[0],5.8);
+assert.ok(panel.outerHTML.includes('29444UBS4'));
+assert.equal(context.state.studyCdsRange,'6m');
+assert.equal(context.state.studyCrwvBondRange,'3m');
+tabs.EQIX.handlers.keydown({key:'Home',preventDefault(){}});
+assert.equal(context.state.studyCreditBondTicker,'CRWV');
 context.studyCrwvBondData.observations = [];
 assert.equal(context.getStudyCrwvBondPayload('1y').labels.length, 0);
 assert.ok(!context.renderStudyCrwvBondSection().includes('<canvas'));
@@ -93,4 +114,15 @@ assert.ok(data.observations.length > 250, 'Historical trend must not regress to 
 assert.ok(data.observations[0].date < '2025-08-01', 'Keep the issue-date history');
 assert.equal(data.source.historyMode,'date-verified-official-holdings');
 assert.ok(data.observations.some(row=>row.date==='2026-10-14'), 'CPI release observation retained');
-console.log('CRWV bond chart tests passed');
+for(const [ticker,variable,cusip,minCount] of [['ORCL','studyOrclBondData','68389XDX0',150],['EQIX','studyEqixBondData','29444UBS4',250]]) {
+  const file=`data/study-${ticker.toLowerCase()}-bond-data.js`;
+  assert.ok(index.indexOf(`./${file}`) < index.indexOf('./dashboard.js'));
+  vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),stored);
+  const value=stored.window[variable];
+  assert.equal(value.bond.cusip,cusip);
+  assert.equal(value.source.fund,'LQD');
+  assert.ok(value.observations.length > minCount);
+  assert.ok(value.observations.every(row=>Number.isFinite(row.ytmPct) && row.date>=value.bond.issueDate));
+  assert.equal(new Set(value.observations.map(row=>row.date)).size,value.observations.length);
+}
+console.log('Unsecured bond chart and ticker selection tests passed');

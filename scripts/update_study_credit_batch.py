@@ -1,4 +1,4 @@
-"""Refresh CDS and the CRWV bond independently, publishing successful outputs."""
+"""Refresh CDS and each selected unsecured bond independently."""
 import argparse
 import os
 
@@ -8,6 +8,10 @@ from update_ai_data_batch import run_task
 def main(backfill=False):
     results = [
         run_task("CRWV bond valuation", "update_study_crwv_bond.py", ["data/study-crwv-bond-data.js"], 180),
+        run_task("ORCL bond valuation", "update_study_crwv_bond.py", ["data/study-orcl-bond-data.js"], 180,
+                 script_args=["--ticker", "ORCL"]),
+        run_task("EQIX bond valuation", "update_study_crwv_bond.py", ["data/study-eqix-bond-data.js"], 180,
+                 script_args=["--ticker", "EQIX"]),
         run_task("DTCC CDS", "update_study_cds.py", ["data/study-cds-data.js"], 1080,
                  script_args=["--backfill"] if backfill else []),
     ]

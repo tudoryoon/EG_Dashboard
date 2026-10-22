@@ -12,12 +12,14 @@ window.studyCrwvBondData = {
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)"
   },
   "updatedAt": "2026-10-20",
-  "checkedAt": "2026-10-22T06:33:15+00:00",
+  "checkedAt": "2026-10-22T07:11:52+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
+    "fund": "HYG",
     "url": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv",
     "pageUrl": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf",
+    "termsUrl": "https://www.sec.gov/Archives/edgar/data/1769628/000119312525165924/d73657d8k.htm",
     "historyUrlTemplate": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate={stamp}",
     "measure": "Published valuation YTM (%)",
     "historyMode": "date-verified-official-holdings"
@@ -3184,7 +3186,7 @@ window.studyCrwvBondData = {
       "yieldToWorstPct": 15.33,
       "sourceUrl": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-10-22T06:15:50+00:00",
-      "lastCollectedAt": "2026-10-22T06:33:15+00:00"
+      "lastCollectedAt": "2026-10-22T07:11:52+00:00"
     }
   ]
 };
