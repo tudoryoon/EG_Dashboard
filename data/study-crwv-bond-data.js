@@ -12,7 +12,7 @@ window.studyCrwvBondData = {
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)"
   },
   "updatedAt": "2026-10-20",
-  "checkedAt": "2026-10-22T06:15:50+00:00",
+  "checkedAt": "2026-10-22T06:17:49+00:00",
   "defaultRange": "1y",
   "source": {
     "name": "iShares HYG official holdings",
@@ -29,7 +29,7 @@ window.studyCrwvBondData = {
       "sourceSha256": "ec456d3be17cb2894b171922e814d5deba36fd8ad50de97253ece3334b6d29b8",
       "yieldToWorstPct": 15.33,
       "firstCollectedAt": "2026-10-22T06:15:50+00:00",
-      "lastCollectedAt": "2026-10-22T06:15:50+00:00"
+      "lastCollectedAt": "2026-10-22T06:17:49+00:00"
     }
   ]
 };
