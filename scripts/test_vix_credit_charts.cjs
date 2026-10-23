@@ -16,19 +16,25 @@ const context = vm.createContext({
     labels: labels.filter(date => (!start || date >= start) && (!end || date <= end)),
   }),
   formatKstDateTime: value => value || '',
-  marketVixData: { defaultRange: '3y', ranges: [{key:'1m',label:'1M'},{key:'3y',label:'3Y'}], fixedIncome: {
+  marketVixData: { defaultRange: '3y', ranges: [{key:'1m',label:'1M'},{key:'1y',label:'1Y'},{key:'3y',label:'3Y'}], fixedIncome: {
     move: { dates: ['2026-10-12', '2026-10-15', '2026-10-16'], values: [90, 91, 92], unit: 'index' },
     igSpread: { dates: ['2026-10-12', '2026-10-15'], values: [.83, .84], latestValue: .84,
       latestDate: '2026-10-15', fredId: 'BAMLC0A0CM', unit: '%', fetchStatus: 'ok' },
     hySpread: { dates: ['2026-10-12'], values: [3.11], fredId: 'BAMLH0A0HYM2', unit: '%' },
-    cccSpread: { dates: [], values: [], latestValue: null, unit: '%', fetchStatus: 'error' },
+    bbbSpread: { dates: [], values: [], fredId: 'BAMLC0A4CBBB', unit: '%' },
+    cccSpread: { dates: [], values: [], latestValue: null, fredId: 'BAMLH0A3HYC', unit: '%', fetchStatus: 'error' },
   } },
 });
-for (const name of ['getMarketVixFixedIncomeWindow', 'setMarketVixFixedIncomeWindow',
+for (const name of ['getMarketVixFixedIncomeDefaultRange', 'getMarketVixFixedIncomeWindow', 'setMarketVixFixedIncomeWindow',
   'renderVixFixedIncomeControls', 'buildMarketVixFixedIncomePayload', 'formatFixedIncomeVixValue', 'renderVixCreditPanel']) {
   vm.runInContext(functionSource(name), context);
 }
 const original = JSON.stringify(context.marketVixData);
+for (const key of ['igSpread', 'bbbSpread', 'hySpread', 'cccSpread']) {
+  assert.equal(context.getMarketVixFixedIncomeWindow(key).range, '1y');
+  assert.match(context.renderVixFixedIncomeControls(key), /class="m7-range-chip active"\s+data-market-vix-fixed-income-range="1y"/);
+}
+assert.equal(context.getMarketVixFixedIncomeWindow('move').range, '3y');
 const ig = context.buildMarketVixFixedIncomePayload('igSpread', '3y');
 assert.equal(ig.item.unit, 'bp');
 assert.equal(JSON.stringify(ig.datasets[0].data), '[83,84,null]');
@@ -52,6 +58,11 @@ assert.equal(context.getMarketVixFixedIncomeWindow('igSpread').start, '2026-10-1
 assert.ok(context.renderVixFixedIncomeControls('hySpread').includes('data-vix-series="hySpread"'));
 assert.ok(context.renderVixFixedIncomeControls('igSpread').includes('value="2026-10-15"'));
 context.setMarketVixFixedIncomeWindow('hySpread', { range: '3y', start: '', end: '' });
+assert.equal(context.getMarketVixFixedIncomeWindow('igSpread').end, '2026-10-15');
+context.setMarketVixFixedIncomeWindow('hySpread', {
+  range: context.getMarketVixFixedIncomeDefaultRange('hySpread'), start: '', end: '',
+});
+assert.equal(context.getMarketVixFixedIncomeWindow('hySpread').range, '1y');
 assert.equal(context.getMarketVixFixedIncomeWindow('igSpread').end, '2026-10-15');
 assert.equal(JSON.stringify(context.marketVixData), original);
 const stored = vm.createContext({ window: {} });

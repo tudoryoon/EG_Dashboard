@@ -3301,8 +3301,13 @@ function buildMarketVixMetricsPayload(rangeKey) {
   return { labels: slicedLabels, datasets };
 }
 
+function getMarketVixFixedIncomeDefaultRange(seriesKey) {
+  const item = marketVixData.fixedIncome?.[seriesKey];
+  return item?.fredId && item.unit === "%" ? "1y" : marketVixData.defaultRange || "3y";
+}
+
 function getMarketVixFixedIncomeWindow(seriesKey) {
-  return { range: marketVixData.defaultRange || "3y", start: "", end: "",
+  return { range: getMarketVixFixedIncomeDefaultRange(seriesKey), start: "", end: "",
     ...state.marketVixFixedIncomeWindows[seriesKey] };
 }
 
@@ -21633,7 +21638,7 @@ function renderMarketVixOverview() {
   usOverviewRoot.querySelectorAll("[data-market-vix-fixed-income-range]").forEach((button) => {
     button.addEventListener("click", () => {
       setMarketVixFixedIncomeWindow(button.dataset.vixSeries, {
-        range: button.dataset.marketVixFixedIncomeRange || marketVixData.defaultRange || "3y",
+        range: button.dataset.marketVixFixedIncomeRange || getMarketVixFixedIncomeDefaultRange(button.dataset.vixSeries),
         start: "", end: "",
       });
       render();
@@ -21657,7 +21662,7 @@ function renderMarketVixOverview() {
       render();
     });
     controls.querySelector("[data-vix-fixed-income-reset]").addEventListener("click", () => {
-      setMarketVixFixedIncomeWindow(seriesKey, { range: marketVixData.defaultRange || "3y", start: "", end: "" });
+      setMarketVixFixedIncomeWindow(seriesKey, { range: getMarketVixFixedIncomeDefaultRange(seriesKey), start: "", end: "" });
       render();
     });
   });
