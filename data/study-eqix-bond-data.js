@@ -11,8 +11,8 @@ window.studyEqixBondData = {
     "maturityDate": "2031-05-15",
     "name": "Equinix 2.500% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-10-21",
-  "checkedAt": "2026-10-23T05:17:23+00:00",
+  "updatedAt": "2026-10-22",
+  "checkedAt": "2026-10-24T04:58:50+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyEqixBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-10-22",
+    "endDate": "2026-10-23",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyEqixBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-22"
+      "2026-10-23"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyEqixBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-22"
+      "2026-10-23"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3201,6 +3201,16 @@ window.studyEqixBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261021",
       "firstCollectedAt": "2026-10-23T05:17:23+00:00",
       "lastCollectedAt": "2026-10-23T05:17:23+00:00"
+    },
+    {
+      "date": "2026-10-22",
+      "ytmPct": 5.68,
+      "pricePer100": 87.38,
+      "sourceSha256": "d194ad6cde9f01f4a3f5a2925fb20d3d8b5963a8e05b2e612fa6cc689f21b216",
+      "yieldToWorstPct": 5.68,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261022",
+      "firstCollectedAt": "2026-10-24T04:58:50+00:00",
+      "lastCollectedAt": "2026-10-24T04:58:50+00:00"
     }
   ]
 };
