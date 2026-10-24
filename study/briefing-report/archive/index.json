@@ -2,6 +2,20 @@
   "version": 1,
   "reports": [
     {
+      "date": "2026-10-23",
+      "kind": "weekly",
+      "issueDate": "2026-10-24",
+      "createdAt": "2026-10-24T06:53:53.983Z",
+      "sourceCommit": "2e4fbea611b61bb57b73c9d308110fc5a16c741b",
+      "universeCount": 218,
+      "eligible": 184,
+      "files": {
+        "report.pdf": "3461b2b970be903852d842bc8fe6ff14d9310d54f76b99cc55e7a779fdd7f6d1",
+        "preview.png": "e3d694bf0f3942af455abba4ac9f7f16f4ff0c466d1c9512d4d4da75cb8066cd",
+        "snapshot.json": "c2321bebd1ae9ff2828ce3bbde4c41df75cc2581fbf1c31d30809d343ac53243"
+      }
+    },
+    {
       "date": "2026-10-16",
       "kind": "weekly",
       "issueDate": "2026-10-17",
@@ -100,5 +114,5 @@
       }
     }
   ],
-  "updatedAt": "2026-10-17T06:34:54.444Z"
+  "updatedAt": "2026-10-24T06:53:53.983Z"
 }
