@@ -416,7 +416,7 @@ const state = {
   studyCrwvBondCpi: true,
   studyCreditBondTicker: "CRWV",
   studyCdsIndexSelection: ["sox"],
-  studyCdsCompanySelection: ["GOOGL", "MSFT", "NVDA", "META", "ORCL", "AMZN"],
+  studyCdsCompanySelection: Object.values(studyCdsData.items ?? {}).map((item) => item.ticker),
   studyEtfFlowRange: studyEtfFlowData.defaultRange ?? "ytd",
   studyDataCenterCompany: "All",
   studyDataCenterSort: "dateDesc",
@@ -17551,7 +17551,7 @@ function renderCapexOverview() {
 
 function formatStudyCdsBps(value, signed = false) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
+  if (value == null || !Number.isFinite(numeric)) {
     return "-";
   }
   const sign = signed && numeric > 0 ? "+" : "";
@@ -17599,12 +17599,12 @@ function createStudyCdsChart(canvas, item, rangeKey) {
     return;
   }
   const payload = getStudyCdsPayload(item, rangeKey);
-  if (!payload.labels.length || !payload.values.some((value) => Number.isFinite(Number(value)))) {
+  if (!payload.labels.length || !payload.values.some(Number.isFinite)) {
     return;
   }
   const tickSet = new Set(getMacroTickIndexes(payload.labels, rangeKey, canvas.clientWidth ?? 0));
-  const pointRadius = payload.observed.map((value) => (Number.isFinite(Number(value)) ? 2.8 : 0));
-  const pointHoverRadius = payload.observed.map((value) => (Number.isFinite(Number(value)) ? 5 : 3));
+  const pointRadius = payload.observed.map((value) => (Number.isFinite(value) ? 2.8 : 0));
+  const pointHoverRadius = payload.observed.map((value) => (Number.isFinite(value) ? 5 : 3));
   const chart = new Chart(canvas, {
     type: "line",
     data: {
@@ -17625,7 +17625,7 @@ function createStudyCdsChart(canvas, item, rangeKey) {
           spanGaps: false,
           segment: {
             borderDash: (context) => (
-              Number.isFinite(Number(payload.observed[context.p1DataIndex])) ? undefined : [5, 4]
+              Number.isFinite(payload.observed[context.p1DataIndex]) ? undefined : [5, 4]
             ),
           },
         },
@@ -17643,7 +17643,7 @@ function createStudyCdsChart(canvas, item, rangeKey) {
             title: (items) => formatFullIsoDate(payload.labels[items[0]?.dataIndex] ?? ""),
             label: (context) => {
               const index = context.dataIndex;
-              const isObserved = Number.isFinite(Number(payload.observed[index]));
+              const isObserved = Number.isFinite(payload.observed[index]);
               const tradeCount = Number(payload.directTradeCounts[index]) || 0;
               return isObserved
                 ? `일별 중앙값 ${formatStudyCdsBps(context.parsed.y)} · 직접 거래 ${tradeCount}건`
@@ -17740,8 +17740,8 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey, selectedIndexKey
       borderColor: item.color,
       backgroundColor: item.color,
       borderWidth: 2.15,
-      pointRadius: payload.observed.map((value) => (Number.isFinite(Number(value)) ? 2.1 : 0)),
-      pointHoverRadius: payload.observed.map((value) => (Number.isFinite(Number(value)) ? 5 : 3)),
+      pointRadius: payload.observed.map((value) => (Number.isFinite(value) ? 2.1 : 0)),
+      pointHoverRadius: payload.observed.map((value) => (Number.isFinite(value) ? 5 : 3)),
       pointBackgroundColor: item.color,
       pointBorderColor: "#ffffff",
       pointBorderWidth: 1,
@@ -17752,7 +17752,7 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey, selectedIndexKey
       cdsPayloadIndex: index,
       segment: {
         borderDash: (context) => (
-          Number.isFinite(Number(payload.observed[context.p1DataIndex])) ? undefined : [5, 4]
+          Number.isFinite(payload.observed[context.p1DataIndex]) ? undefined : [5, 4]
         ),
       },
     };
@@ -17795,7 +17795,7 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey, selectedIndexKey
                 return `${context.dataset.label} ${Number(context.parsed.y).toLocaleString("en-US", { maximumFractionDigits: 1 })}`;
               }
               const payload = payloads[context.dataset.cdsPayloadIndex];
-              const isObserved = Number.isFinite(Number(payload.observed[context.dataIndex]));
+              const isObserved = Number.isFinite(payload.observed[context.dataIndex]);
               const suffix = isObserved ? "직접 관측" : "직전값 이월";
               return `${context.dataset.label} ${formatStudyCdsBps(context.parsed.y)} · ${suffix}`;
             },
@@ -17853,7 +17853,7 @@ function createStudyCdsComparisonChart(canvas, items, rangeKey, selectedIndexKey
 
 function getStudyCdsFreshness(latest) {
   const staleDays = Number(latest?.staleDays);
-  if (!Number.isFinite(staleDays)) {
+  if (latest?.staleDays == null || !Number.isFinite(staleDays)) {
     return { label: "관측 없음", className: "is-stale" };
   }
   if (staleDays === 0) {
@@ -18117,7 +18117,7 @@ function renderStudyCdsOverview() {
     createStudyCrwvBondChart(usOverviewRoot.querySelector("[data-study-crwv-bond-chart]"));
     return;
   }
-  const latestItems = items.filter((item) => Number.isFinite(Number(item.latest?.bps)));
+  const latestItems = items.filter((item) => item.latest?.bps != null && Number.isFinite(Number(item.latest.bps)));
   const sortedLatest = [...latestItems].sort((a, b) => Number(b.latest.bps) - Number(a.latest.bps));
   const medianValues = sortedLatest.map((item) => Number(item.latest.bps)).sort((a, b) => a - b);
   const medianIndex = Math.floor(medianValues.length / 2);
@@ -18235,8 +18235,8 @@ function renderStudyCdsOverview() {
       <section class="study-cds-comparison-panel">
         <div class="study-cds-comparison-head">
           <div>
-            <h3>Index & 6-Company CDS Comparison</h3>
-            <p>선택 지수는 왼쪽 축, 여섯 기업의 5년물 CDS 프리미엄은 오른쪽 bps 축으로 비교합니다.</p>
+            <h3>Index & ${items.length}-Company CDS Comparison</h3>
+            <p>선택 지수는 왼쪽 축, ${items.length}개 기업의 5년물 CDS 프리미엄은 오른쪽 bps 축으로 비교합니다.</p>
           </div>
           <div class="study-cds-comparison-controls">
             <div class="study-cds-control-group">
@@ -18250,14 +18250,14 @@ function renderStudyCdsOverview() {
           </div>
         </div>
         <div class="study-cds-comparison-wrap">
-          <canvas data-study-cds-comparison aria-label="Big Tech six-company 5-year CDS comparison"></canvas>
+          <canvas data-study-cds-comparison aria-label="${items.length}-company 5-year CDS comparison"></canvas>
         </div>
       </section>
 
       <div class="study-cds-snapshot-grid">
         <div><span>가장 높은 위험 보험료</span><strong>${escapeHtml(sortedLatest[0]?.ticker ?? "-")} ${formatStudyCdsBps(sortedLatest[0]?.latest?.bps)}</strong></div>
         <div><span>가장 낮은 위험 보험료</span><strong>${escapeHtml(tightestItem?.ticker ?? "-")} ${formatStudyCdsBps(tightestItem?.latest?.bps)}</strong></div>
-        <div><span>6개사 중앙값</span><strong>${formatStudyCdsBps(medianBps)}</strong></div>
+        <div><span>${latestItems.length}개사 중앙값</span><strong>${formatStudyCdsBps(medianBps)}</strong></div>
         <div><span>3일 이내 직접 관측</span><strong>${freshCount} / ${latestItems.length}</strong></div>
       </div>
 

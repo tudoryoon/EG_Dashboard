@@ -60,6 +60,12 @@ ISSUERS = {
         "aliases": ("AMAZON",),
         "color": "#d97706",
     },
+    "spcx": {
+        "ticker": "SPCX",
+        "name": "SpaceX",
+        "aliases": ("SPACE EXPLORATION TECHNOLOGIES", "SPACEX", "SPACE X"),
+        "color": "#20201d",
+    },
 }
 
 
@@ -444,6 +450,7 @@ def main() -> None:
     existing_payload = load_existing()
     needs_trade_backfill = bool(existing_payload) and (
         int(existing_payload.get("schemaVersion") or 0) < 2
+        or bool(set(ISSUERS) - set(existing_payload.get("items") or {}))
         or any(
             "directTrades" not in item
             for item in (existing_payload.get("items") or {}).values()

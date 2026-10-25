@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - scripts/update_study_cds.py
+      - scripts/test_study_cds.py
+      - scripts/test_study_cds_view.cjs
       - scripts/update_study_crwv_bond.py
       - scripts/update_study_credit_batch.py
       - scripts/test_study_crwv_bond.py
@@ -52,6 +54,8 @@ jobs:
 
       - name: Test bond collection and presentation
         run: |
+          python scripts/test_study_cds.py
+          node scripts/test_study_cds_view.cjs
           python scripts/test_study_crwv_bond.py
           node scripts/test_study_crwv_bond_view.cjs
 
