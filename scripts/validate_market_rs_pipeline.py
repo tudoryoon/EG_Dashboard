@@ -4,6 +4,8 @@ import json
 import re
 from pathlib import Path
 
+from update_market_rs import is_terminal_symbol
+
 
 ROOT = Path(__file__).resolve().parents[1]
 HISTORY_START_DATE = "2025-01-01"
@@ -32,6 +34,8 @@ def main() -> None:
 
     rs_rows = rs.get("rows") or []
     rs_by_ticker = {row.get("ticker"): row for row in rs_rows if row.get("ticker")}
+    terminal_rows = sorted(ticker for ticker in rs_by_ticker if is_terminal_symbol(ticker))
+    require(not terminal_rows, f"Terminal securities remain in RS: {terminal_rows}")
     history_dates = rs.get("historyDates") or []
     require(len(rs_rows) >= 2_000, f"RS universe is unexpectedly small: {len(rs_rows)}")
     require(bool(history_dates), "RS history dates are empty.")

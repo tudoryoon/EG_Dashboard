@@ -137,6 +137,9 @@ SYMBOL_ALIASES = {
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # CRH completed the Arcosa merger before the 2026-10-23 NYSE session
+    # (SEC 8-K 0001140361-26-040596, Items 2.01 and 3.01).
+    "ACA",
     # Copart completed the ACV merger on 2026-10-16; NYSE removed ACVA trading.
     "ACVA",
     "ADRO",
