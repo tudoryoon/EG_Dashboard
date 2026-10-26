@@ -73,7 +73,7 @@ class ManualCapExemptionTests(unittest.TestCase):
         self.assertTrue(rs.is_terminal_symbol("WBD"))
 
     def test_completed_merger_tickers_leave_the_rs_universe(self):
-        for ticker in ("ACA", "ACVA", "ATKR", "BZH"):
+        for ticker in ("ACA", "ACVA", "ATKR", "BZH", "WEAV", "NATH"):
             self.assertTrue(rs.is_terminal_symbol(ticker))
             self.assertFalse(rs.passes_market_cap_filter(ticker, 1_000_000_000, {ticker}))
 

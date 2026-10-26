@@ -153,6 +153,11 @@ TERMINAL_SKIP_TICKERS = {
     "BLFS",
     "GTXI",
     "INH",
+    # Both mergers closed 2026-10-26; SEC 8-Ks 0001609151-26-000120
+    # (WEAV, NYSE suspension before open) and 0001104659-26-118639
+    # (NATH, Nasdaq suspension requested on closing day).
+    "WEAV",
+    "NATH",
     "P5N994",
     "PDLI",
     "SBT",
