@@ -52,7 +52,7 @@ class BondTests(unittest.TestCase):
         self.assertEqual(len(item["sourceSha256"]), 64)
 
     def test_each_issuer_validates_its_exact_bond(self):
-        for ticker in ["ORCL", "EQIX"]:
+        for ticker in ["ORCL", "EQIX", "GOOGL", "MSFT", "NVDA", "META", "AMZN", "SPCX"]:
             profile = bond.PROFILES[ticker]
             content = profile_fixture(ticker)
             item = bond.parse_holdings(content, bond=profile["bond"])
@@ -216,8 +216,9 @@ class BondTests(unittest.TestCase):
                 bond.load_existing(path)
 
     def test_one_failed_collector_still_publishes_other_output(self):
-        for failed_index in range(4):
-            files=["data/study-crwv-bond-data.js","data/study-orcl-bond-data.js","data/study-eqix-bond-data.js","data/study-cds-data.js"]
+        for failed_index in range(11):
+            tickers = ["crwv", "orcl", "eqix", "googl", "msft", "nvda", "meta", "amzn", "spcx"]
+            files=[f"data/study-{ticker}-bond-data.js" for ticker in tickers] + ["data/study-credit-spreads-data.js", "data/study-cds-data.js"]
             results = [{"name": file, "status": "updated", "changed": [file]} for file in files]
             results[failed_index] = {"name": "Failed", "status": "failed", "changed": []}
             with tempfile.TemporaryDirectory() as folder:
@@ -231,9 +232,11 @@ class BondTests(unittest.TestCase):
                 for index,file in enumerate(files):
                     if index != failed_index:
                         self.assertIn(file,text)
-                self.assertEqual(collect.call_args_list[3].kwargs["script_args"], ["--backfill"])
+                self.assertEqual(collect.call_args_list[-1].kwargs["script_args"], ["--backfill"])
                 self.assertEqual(collect.call_args_list[1].kwargs["script_args"], ["--ticker","ORCL"])
                 self.assertEqual(collect.call_args_list[2].kwargs["script_args"], ["--ticker","EQIX"])
+                self.assertEqual(collect.call_args_list[8].kwargs["script_args"], ["--ticker","SPCX"])
+                self.assertEqual(collect.call_args_list[9].args[1], "update_study_credit_spreads.py")
                 self.assertNotIn("script_args", collect.call_args_list[0].kwargs)
 
     def test_failed_collector_partial_write_is_restored(self):

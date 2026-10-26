@@ -11,8 +11,8 @@ window.studyEqixBondData = {
     "maturityDate": "2031-05-15",
     "name": "Equinix 2.500% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-10-22",
-  "checkedAt": "2026-10-25T09:51:44+00:00",
+  "updatedAt": "2026-10-23",
+  "checkedAt": "2026-10-26T01:22:39+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -37,8 +37,7 @@ window.studyEqixBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07",
-      "2026-10-23"
+      "2026-09-07"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -50,8 +49,7 @@ window.studyEqixBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07",
-      "2026-10-23"
+      "2026-09-07"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3211,6 +3209,16 @@ window.studyEqixBondData = {
       "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-10-24T04:58:50+00:00",
       "lastCollectedAt": "2026-10-25T09:51:44+00:00"
+    },
+    {
+      "date": "2026-10-23",
+      "ytmPct": 5.71,
+      "pricePer100": 87.28,
+      "sourceSha256": "593b10766e9a05c09aff23ee97037bcb303377638735058fcacbbf9b1652b735",
+      "yieldToWorstPct": 5.71,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261023",
+      "firstCollectedAt": "2026-10-26T01:22:39+00:00",
+      "lastCollectedAt": "2026-10-26T01:22:39+00:00"
     }
   ]
 };

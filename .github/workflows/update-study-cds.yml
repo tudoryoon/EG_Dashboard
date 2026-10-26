@@ -10,6 +10,8 @@ on:
       - scripts/test_study_cds_view.cjs
       - scripts/update_study_crwv_bond.py
       - scripts/update_study_credit_batch.py
+      - scripts/update_study_credit_spreads.py
+      - scripts/test_study_credit_spreads.py
       - scripts/test_study_crwv_bond.py
       - scripts/test_study_crwv_bond_view.cjs
       - .github/workflows/update-study-cds.yml
@@ -34,7 +36,7 @@ concurrency:
 jobs:
   update-study-cds:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 55
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -56,6 +58,7 @@ jobs:
         run: |
           python scripts/test_study_cds.py
           node scripts/test_study_cds_view.cjs
+          python scripts/test_study_credit_spreads.py
           python scripts/test_study_crwv_bond.py
           node scripts/test_study_crwv_bond_view.cjs
 

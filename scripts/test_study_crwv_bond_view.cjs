@@ -14,6 +14,7 @@ const context = vm.createContext({
   studyCrwvBondData: { bond:{ticker:'CRWV',issuer:'CoreWeave',cusip:'21873SAC2',isin:'US21873SAC26',couponPct:9},
     observations: [{date:'2026-10-20', ytmPct:15.33, pricePer100:80.61}], checkedAt:'2026-10-22' },
   state: { studyCrwvBondRange:'1y', studyCdsRange:'6m',studyCreditBondTicker:'CRWV' }, charts: [],
+  studyCreditSpreadsData: {items:{},treasury:{}},
   macroIndicatorsData: {releaseCalendar:{groups:{cpi:{'2026-09':{releaseDate:'2026-10-14',sourceUrl:'https://www.bls.gov/schedule/2026/home.htm'}}}}},
   escapeHtml: text => String(text), formatKstDateTime: text => text || '',
   Chart: function(canvas, config) { this.canvas = canvas; this.config = config; this.destroy=()=>{}; },
@@ -21,7 +22,7 @@ const context = vm.createContext({
 context.studyCreditBondData={CRWV:context.studyCrwvBondData,
   ORCL:{bond:{ticker:'ORCL',issuer:'Oracle',cusip:'68389XDX0',couponPct:4.95},source:{fund:'LQD',termsUrl:'https://www.sec.gov/oracle'},observations:[{date:'2026-10-20',ytmPct:7.5,pricePer100:90.74}]},
   EQIX:{bond:{ticker:'EQIX',issuer:'Equinix',cusip:'29444UBS4',couponPct:2.5},source:{fund:'LQD'},observations:[{date:'2026-10-20',ytmPct:5.8,pricePer100:86.86}]}};
-for (const name of ['getStudySelectedCreditBond', 'getStudyCrwvBondCpiEvents', 'getStudyCrwvBondPayload', 'renderStudyCrwvBondSection', 'createStudyCrwvBondChart', 'bindStudyCrwvBondControls', 'redrawStudyCrwvBondPanel']) {
+for (const name of ['isStudyCreditSpreadMode', 'getStudyCreditBondColor', 'getStudySelectedCreditBond', 'getStudyCrwvBondCpiEvents', 'getStudyCrwvBondPayload', 'renderStudyCrwvBondSection', 'createStudyCrwvBondChart', 'bindStudyCrwvBondControls', 'redrawStudyCrwvBondPanel']) {
   vm.runInContext(functionSource(name), context);
 }
 const html = context.renderStudyCrwvBondSection();
@@ -68,15 +69,19 @@ context.state.studyCrwvBondCpi=true;
 // The new control only redraws its own panel; CDS filters and charts stay intact.
 const handler = {};
 const button = { dataset:{studyCrwvBondRange:'3m'}, addEventListener:(_, fn) => handler.click = fn };
+const modes=Object.fromEntries(['ytm','gspread'].map(key=>{const handlers={};return [key,{
+  dataset:{studyBondMode:key}, addEventListener:(event,fn)=>handlers[event]=fn,
+  click:()=>handlers.click(),focus:()=>handler.focused=key,handlers}];}));
 const panel = {querySelector:() => canvas, outerHTML:''};
 context.charts[0].destroy = () => handler.destroyed = true;
 const tabs=Object.fromEntries(['CRWV','ORCL','EQIX'].map(key=>{const handlers={};return [key,{
   dataset:{studyBondTicker:key},addEventListener:(event,fn)=>handlers[event]=fn,
   click:()=>handlers.click(),focus:()=>handler.focused=key,handlers}];}));
 context.usOverviewRoot = {
-  querySelectorAll:selector => selector.includes('ticker') ? Object.values(tabs) : [button],
+  querySelectorAll:selector => selector.includes('mode') ? Object.values(modes) : selector.includes('ticker') ? Object.values(tabs) : [button],
   querySelector:selector => selector.includes('panel') ? panel : selector.includes('cpi]') ? null
-    : selector.includes('ticker=') ? tabs[selector.match(/ticker="(\w+)"/)[1]] : canvas,
+    : selector.includes('mode=') ? modes[selector.match(/mode="(\w+)"/)[1]]
+      : selector.includes('ticker=') ? tabs[selector.match(/ticker="(\w+)"/)[1]] : canvas,
 };
 context.bindStudyCrwvBondControls();
 handler.click();
@@ -97,6 +102,27 @@ assert.equal(context.state.studyCdsRange,'6m');
 assert.equal(context.state.studyCrwvBondRange,'3m');
 tabs.EQIX.handlers.keydown({key:'Home',preventDefault(){}});
 assert.equal(context.state.studyCreditBondTicker,'CRWV');
+context.studyCreditSpreadsData.items.CRWV={...context.studyCrwvBondData,
+  updatedAt:'2026-10-15',
+  observations:[{date:'2026-10-13',ytmPct:13.77,spreadBps:950,benchmarkPct:4.27,remainingYears:4.3,
+    lowerTenorYears:3,upperTenorYears:5,lowerYieldPct:4.1,upperYieldPct:4.36,upperWeight:.65,treasuryDate:'2026-10-13'},
+    {date:'2026-10-14',ytmPct:14.9,spreadBps:1060,benchmarkPct:4.3,remainingYears:4.3,
+    lowerTenorYears:3,upperTenorYears:5,lowerYieldPct:4.1,upperYieldPct:4.4,upperWeight:.66,treasuryDate:'2026-10-14'},
+    {date:'2026-10-15',ytmPct:15,spreadBps:null,benchmarkPct:null}]};
+modes.gspread.click();
+assert.equal(context.state.studyCreditBondMode,'gspread');
+assert.equal(context.state.studyCrwvBondRange,'3m');
+assert.equal(context.state.studyCdsRange,'6m');
+assert.equal(context.getStudyCrwvBondPayload('3m').values.at(-1),1060);
+assert.ok(panel.outerHTML.includes('1060.0bp'));
+assert.ok(panel.outerHTML.includes('스프레드는 아직 미확인'));
+const spreadConfig=context.charts.at(-1).config;
+assert.equal(spreadConfig.options.scales.y.title.text,'G-spread (bp)');
+assert.ok(spreadConfig.options.plugins.tooltip.callbacks.afterLabel({dataIndex:1}).join(' ').includes('국채 4.3000%'));
+assert.equal(context.getStudyCrwvBondPayload('3m').observations.at(-1).changeBps,110);
+modes.ytm.click();
+assert.equal(context.state.studyCreditBondMode,'ytm');
+assert.equal(context.charts.at(-1).config.options.scales.y.title.text,'YTM (%)');
 context.studyCrwvBondData.observations = [];
 assert.equal(context.getStudyCrwvBondPayload('1y').labels.length, 0);
 assert.ok(!context.renderStudyCrwvBondSection().includes('<canvas'));
@@ -126,3 +152,25 @@ for(const [ticker,variable,cusip,minCount] of [['ORCL','studyOrclBondData','6838
   assert.equal(new Set(value.observations.map(row=>row.date)).size,value.observations.length);
 }
 console.log('Unsecured bond chart and ticker selection tests passed');
+for (const ticker of ['GOOGL','MSFT','NVDA','META','AMZN','SPCX']) {
+  const name=`study${ticker[0]}${ticker.slice(1).toLowerCase()}BondData`;
+  const file=`data/study-${ticker.toLowerCase()}-bond-data.js`;
+  assert.ok(index.indexOf(`./${file}`) < index.indexOf('./dashboard.js'));
+  vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),stored);
+  const value=stored.window[name];
+  assert.equal(value.bond.ticker,ticker);
+  assert.ok(value.observations.length > 50);
+  context.studyCreditBondData[ticker]=value;
+}
+vm.runInContext(fs.readFileSync(path.join(root,'data/study-credit-spreads-data.js'),'utf8'),stored);
+context.studyCreditSpreadsData=stored.window.studyCreditSpreadsData;
+context.state.studyCreditBondMode='gspread';
+context.state.studyCreditBondTicker='SPCX';
+context.state.studyCrwvBondRange='max';
+const spcxHtml=context.renderStudyCrwvBondSection();
+assert.equal((spcxHtml.match(/role="tab"/g)||[]).length,9);
+assert.ok(spcxHtml.includes('84615QAA1') && spcxHtml.includes('국채 대비 G-spread'));
+assert.ok(context.getStudyCrwvBondPayload('max').values.filter(Number.isFinite).length > 50);
+const values=context.getStudyCrwvBondPayload('max').values;
+assert.ok(values.some(value=>value===null),'Treasury holidays must remain gaps');
+console.log('All CDS issuers available in Treasury-spread mode');

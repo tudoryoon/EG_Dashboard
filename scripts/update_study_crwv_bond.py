@@ -57,7 +57,40 @@ PROFILES = {
         "name": "Equinix 2.500% Senior Unsecured Notes 2031",
     }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1101239/000110465921068051/tm2116587d1_ex4-6.htm"},
 }
-for _ticker in ("ORCL", "EQIX"):
+PROFILES.update({
+    "GOOGL": {"bond": {
+        "issuer": "Alphabet", "ticker": "GOOGL", "cusip": "02079KAD9", "isin": "US02079KAD90",
+        "couponPct": 1.1, "currency": "USD", "issueDate": "2020-08-05", "maturityDate": "2030-08-15",
+        "name": "Alphabet 1.100% Senior Unsecured Notes 2030",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1652044/000119312520208301/d21098dfwp.htm"},
+    "MSFT": {"bond": {
+        "issuer": "Microsoft", "ticker": "MSFT", "cusip": "594918BC7", "isin": "US594918BC73",
+        "couponPct": 3.5, "currency": "USD", "issueDate": "2015-02-12", "maturityDate": "2035-02-12",
+        "name": "Microsoft 3.500% Senior Unsecured Notes 2035",
+    }, "termsUrl": "https://news.microsoft.com/source/2015/02/10/microsoft-announces-debt-offerings-3/"},
+    "NVDA": {"bond": {
+        "issuer": "NVIDIA", "ticker": "NVDA", "cusip": "67066GAN4", "isin": "US67066GAN43",
+        "couponPct": 2.0, "currency": "USD", "issueDate": "2021-06-16", "maturityDate": "2031-06-15",
+        "name": "NVIDIA 2.000% Senior Unsecured Notes 2031",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000119312521191303/d187484d424b5.htm"},
+    "META": {"bond": {
+        "issuer": "Meta", "ticker": "META", "cusip": "30303M8T2", "isin": "US30303M8T23",
+        "couponPct": 4.55, "currency": "USD", "issueDate": "2024-08-09", "maturityDate": "2031-08-15",
+        "name": "Meta Platforms 4.550% Senior Unsecured Notes 2031",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1326801/000119312524197096/d874457d424b2.htm"},
+    "AMZN": {"bond": {
+        "issuer": "Amazon", "ticker": "AMZN", "cusip": "023135BZ8", "isin": "US023135BZ81",
+        "couponPct": 2.1, "currency": "USD", "issueDate": "2021-05-12", "maturityDate": "2031-05-12",
+        "name": "Amazon 2.100% Senior Unsecured Notes 2031",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1018724/000119312521157863/d123111d424b2.htm"},
+    "SPCX": {"bond": {
+        "issuer": "Space Exploration Technologies", "displayIssuer": "SpaceX", "ticker": "SPCX",
+        "cusip": "84615QAA1", "isin": "US84615QAA13", "couponPct": 5.35, "currency": "USD",
+        "issueDate": "2026-06-26", "maturityDate": "2031-07-15",
+        "name": "SpaceX 5.350% Senior Unsecured Notes 2031 (144A)",
+    }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026052535/spcx-20260630.htm"},
+})
+for _ticker in ("ORCL", "EQIX", "GOOGL", "MSFT", "NVDA", "META", "AMZN", "SPCX"):
     PROFILES[_ticker].update({
         "fund": "LQD", "pageUrl": LQD_PAGE, "url": LQD_PAGE + "/latest-holdings.csv",
         "historyUrlTemplate": HISTORY_URL.replace("portfolioId=239565", "portfolioId=239566"),
@@ -265,14 +298,15 @@ def collect_dated(day: str, pacer: RequestPacer, *, profile=None) -> tuple[str, 
     return "ok", observation
 
 
-def write_payload(payload: dict, path=DATA_PATH, export=EXPORT) -> None:
+def write_payload(payload: dict, path=DATA_PATH, export=EXPORT, *, compact=False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n", dir=path.parent,
                                          suffix=".tmp", delete=False) as out:
             temporary = Path(out.name)
-            out.write(export + json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + ";\n")
+            out.write(export + json.dumps(payload, ensure_ascii=False, indent=None if compact else 2,
+                                          separators=(",", ":") if compact else None, allow_nan=False) + ";\n")
         temporary.replace(path)
     finally:
         if temporary:

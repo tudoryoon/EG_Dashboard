@@ -5456,11 +5456,21 @@ h1 {
 
 .study-bond-ticker-tabs {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 3px;
   padding: 3px;
   border: 1px solid #d9d9d2;
   border-radius: 6px;
   background: #efefeb;
+}
+
+.study-bond-mode {
+  margin-left: auto;
+}
+
+.study-bond-metrics.is-spread {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .study-bond-ticker-tabs button {
@@ -5604,9 +5614,14 @@ h1 {
 }
 
 @media (max-width: 600px) {
-  .study-bond-metrics {
+  .study-bond-metrics,
+  .study-bond-metrics.is-spread {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px 12px;
+  }
+
+  .study-bond-mode {
+    margin-left: 0;
   }
 
   .study-bond-chart-wrap {
