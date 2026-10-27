@@ -37,6 +37,13 @@ class StatementOverlayTest(unittest.TestCase):
         self.assertIsNone(rows[0]['operatingMarginYoyPp'])
         self.assertEqual(rows[0]['revenueYoyPct'], 0)
 
+    def test_verified_revenue_recomputes_yoy_from_retained_comparison(self):
+        rows = [{'periodEnd': '2025-05-31', 'revenue': 51, 'revenueYoyPct': 999,
+                 'operatingMarginYoyPp': 7, 'yoyComparison': {'periodEnd': '2024-05-31', 'revenue': 30}}]
+        recompute_quarterly_changes(rows)
+        self.assertEqual(rows[0]['revenueYoyPct'], 70)
+        self.assertEqual(rows[0]['operatingMarginYoyPp'], 7)
+
     def test_negative_revenue_fallback_and_unknown_currency_rejected(self):
         self.assertEqual(statement_rows({'income': {'2025-05-31': {'TotalRevenue': -33300000}}}), [])
         original = {'quarters': []}
@@ -48,6 +55,34 @@ class StatementOverlayTest(unittest.TestCase):
         result = apply_verified_quarters(profile, [definition])
         self.assertEqual(result['quarters'][0]['revenue'], 51076000)
         self.assertEqual(result['quarters'][0]['periodKey'], 'FY2025Q4')
+
+    def test_verified_release_can_append_missing_reported_quarter(self):
+        profile = {'currency': 'USD', 'quarters': [{'periodEnd': '2025-06-30', 'revenue': 100}]}
+        definition = {'period': 'FY2025 Q3', 'periodStart': '2025-07-01', 'periodEnd': '2025-09-30',
+                      'filed': '2025-10-20', 'source': 'https://example.com/official', 'currency': 'USD',
+                      'appendIfMissing': True, 'values': {'revenue': 125, 'epsDiluted': 2}}
+        result = apply_verified_quarters(profile, [definition])
+        self.assertEqual(result['quarters'][0]['periodEnd'], '2025-09-30')
+        self.assertEqual(result['quarters'][0]['revenue'], 125)
+        self.assertIsNone(result['quarters'][0]['ocf'])
+        self.assertEqual(len(result['quarters']), 2)
+        apply_verified_quarters(result, [definition])
+        self.assertEqual(len(result['quarters']), 2)
+
+    def test_unverified_or_nonquarterly_supplement_is_rejected(self):
+        profile = {'currency': 'USD', 'quarters': []}
+        definition = {'period': 'FY2025 Q3', 'periodStart': '2025-01-01', 'periodEnd': '2025-09-30',
+                      'filed': '2025-10-20', 'source': 'https://example.com/official', 'currency': 'USD',
+                      'appendIfMissing': True, 'values': {'revenue': 125}}
+        with self.assertRaises(ValueError):
+            apply_verified_quarters(profile, [definition])
+
+    def test_later_filed_statement_supersedes_release_supplement(self):
+        profile = {'currency': 'USD', 'quarters': [{'periodEnd': '2025-09-30', 'filed': '2025-11-03', 'revenue': 126}]}
+        definition = {'period': 'FY2025 Q3', 'periodStart': '2025-07-01', 'periodEnd': '2025-09-30',
+                      'filed': '2025-10-20', 'source': 'https://example.com/official', 'currency': 'USD',
+                      'appendIfMissing': True, 'values': {'revenue': 125}}
+        self.assertEqual(apply_verified_quarters(profile, [definition])['quarters'][0]['revenue'], 126)
 
 
 if __name__ == '__main__':

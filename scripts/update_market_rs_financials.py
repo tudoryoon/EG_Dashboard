@@ -1204,6 +1204,9 @@ def recompute_quarterly_changes(rows: list[dict[str, Any]]) -> None:
     for row in rows:
         candidates = [prior for prior in rows if is_same_quarter_year_ago(row.get("periodEnd"), prior.get("periodEnd"))]
         if not candidates:
+            comparison = row.get('yoyComparison') or {}
+            if is_same_quarter_year_ago(row.get('periodEnd'), comparison.get('periodEnd')):
+                row['revenueYoyPct'] = safe_round(pct_change(row.get('revenue'), comparison.get('revenue')), 1)
             continue
         current_end = parse_iso_date(row.get("periodEnd"))
         prior = min(candidates, key=lambda candidate: abs((current_end - parse_iso_date(candidate["periodEnd"])).days - 365))
@@ -1553,6 +1556,26 @@ def validate_refresh_profile(profile: dict[str, Any], previous: dict[str, Any]) 
             raise ValueError(f'Source quarter regressed ({current_end or "empty"} < {previous_end}); existing profile retained')
 
 
+def needs_reported_earnings_refresh(profile: dict[str, Any], earnings: dict[str, Any], as_of: datetime) -> bool:
+    latest_end = max((q.get('periodEnd') or '' for q in profile.get('quarters', [])), default='')
+    checked = str(profile.get('financialUpdatedAt') or '')[:10]
+    for quarter in earnings.get('quarters', []):
+        released = parse_iso_date(quarter.get('releaseDate'))
+        if released is None or not 0 <= (as_of.date() - released.date()).days <= 14:
+            continue
+        if (quarter.get('eps') or {}).get('actual') is None:
+            continue
+        period = parse_iso_date(quarter.get('period'))
+        stored_end = parse_iso_date(latest_end)
+        if period and (stored_end is None or (period - stored_end).days > 21):
+            return True
+        if not period and (not stored_end or (released - stored_end).days > 70):
+            return True
+        if released.date().isoformat() > checked:
+            return True
+    return False
+
+
 def main() -> None:
     rs_payload = read_js_payload(RS_DATA_PATH, "marketRsData")
     briefing_tickers = load_daily_briefing_tickers()
@@ -1602,6 +1625,12 @@ def main() -> None:
         if ticker.strip()
     }
     financials: dict[str, Any] = dict(previous_payload.get("financials") or {})
+    earnings_path = ROOT / 'data' / 'market-canslim-earnings-data.js'
+    earnings_profiles = read_js_payload(earnings_path, 'marketCanslimEarningsData').get('profiles', {}) if earnings_path.exists() else {}
+    earnings_due = {
+        ticker for ticker in briefing_tickers
+        if needs_reported_earnings_refresh(financials.get(ticker, {}), earnings_profiles.get(ticker, {}), datetime.now(timezone.utc))
+    }
     fallback_ticker_map = {
         str(ticker).upper(): {
             "cik": str(item.get("cik") or "").zfill(10),
@@ -1642,6 +1671,7 @@ def main() -> None:
         key=lambda item: (
             0 if str(item.get("ticker") or "").upper() in explicit_tickers else 1,
             0 if str(item.get("ticker") or "").upper() in briefing_tickers else 1,
+            0 if str(item.get("ticker") or "").upper() in earnings_due else 1,
             ticker_updated_at(str(item.get("ticker") or "").upper()),
             str(item.get("ticker")),
         ),
@@ -1662,6 +1692,7 @@ def main() -> None:
             or recheck_adjusted_only
             or str(row.get("ticker") or "").upper() in explicit_tickers
             or force_refresh
+            or str(row.get("ticker") or "").upper() in earnings_due
             or is_stale(str(row.get("ticker") or "").upper())
         )
     ]

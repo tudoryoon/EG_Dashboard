@@ -148,12 +148,20 @@ jobs:
         continue-on-error: true
         run: python scripts/update_market_breadth.py
 
+      - name: Refresh Daily Briefing reported EPS before financial prioritization
+        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
+        continue-on-error: true
+        run: python scripts/update_market_canslim_earnings.py --scope daily-briefing
+
       - name: Refresh market RS financials
         if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
         env:
           MARKET_RS_FINANCIALS_MAX_COMPANIES: "35"
           MARKET_RS_FINANCIALS_STALE_DAYS: "14"
-        run: python scripts/update_market_rs_financials.py
+        run: |
+          python scripts/test_financial_earnings_priority.py
+          python scripts/test_financial_statement_overlay.py
+          python scripts/update_market_rs_financials.py
 
       - name: Refresh full CANSLIM EPS surprise history
         if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '45 20 * * *')

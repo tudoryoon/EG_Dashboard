@@ -119,8 +119,26 @@ def apply_verified_quarters(profile, definitions):
     rows = {row['periodEnd']: row for row in profile.get('quarters', [])}
     for definition in definitions:
         row = rows.get(definition['periodEnd'])
-        if row is None:
+        if (row is not None and definition.get('appendIfMissing')
+                and str(row.get('filed') or '') > definition['filed']):
             continue
+        if row is None:
+            if not definition.get('appendIfMissing'):
+                continue
+            start = datetime.fromisoformat(definition['periodStart']).date()
+            end = datetime.fromisoformat(definition['periodEnd']).date()
+            filed = datetime.fromisoformat(definition['filed']).date()
+            currency = definition.get('currency')
+            revenue = number(definition.get('values', {}).get('revenue'))
+            if (not 60 <= (end - start).days <= 110 or not end <= filed <= datetime.now(timezone.utc).date()
+                    or not str(definition.get('source', '')).startswith('https://')
+                    or not currency or currency != profile.get('currency', 'USD')
+                    or revenue is None or revenue < 0):
+                raise ValueError('Invalid verified quarterly earnings supplement')
+            row = {metric: None for metric in METRICS}
+            row.update({'periodEnd': definition['periodEnd'], 'revenueYoyPct': None,
+                        'operatingMarginYoyPp': None, 'metricSources': {}})
+            rows[definition['periodEnd']] = row
         row['period'] = definition['period']
         row['periodKey'] = definition['period'].replace(' ', '')
         row['periodStart'] = definition.get('periodStart')
@@ -134,4 +152,7 @@ def apply_verified_quarters(profile, definitions):
         row['irReleaseUrl'] = definition['source']
         row['irReleaseDate'] = definition['filed']
         row['filed'] = definition['filed']
+        if definition.get('note'):
+            row['verifiedReleaseNote'] = definition['note']
+    profile['quarters'] = sorted(rows.values(), key=lambda row: row['periodEnd'], reverse=True)
     return profile

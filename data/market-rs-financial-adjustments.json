@@ -1,6 +1,160 @@
 {
   "policy": "Remove only separately quantified, non-recurring operating items. Keep reported results when no defensible bridge is available.",
   "quarterOverrides": {
+    "BAC": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-14", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/70858/000007085826000481/bac-09302026ex993.htm",
+        "values": {"revenue": 29958000000, "epsDiluted": 1.08},
+        "metricBasis": {"epsDiluted": "Non-GAAP excluding $0.17 per share regulatory settlement charge"},
+        "note": "Supplemental consolidated statement GAAP revenue net of interest expense, not $30.119B FTE revenue. Adjusted EPS from accompanying exhibit 99.1; reported EPS $0.91. Bank margins and unverified quarterly cash flow remain unavailable."
+      }
+    ],
+    "BLK": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-14", "currency": "USD", "appendIfMissing": true,
+        "source": "https://s24.q4cdn.com/856567660/files/doc_financials/2026/Q3/BLK-3Q26-Earnings-Release.pdf",
+        "values": {"revenue": 7752000000, "operatingMarginPct": 47.8, "epsDiluted": 15.93},
+        "metricBasis": {"operatingMarginPct": "Non-GAAP adjusted operating margin on company adjusted revenue denominator", "epsDiluted": "Non-GAAP adjusted diluted EPS"},
+        "note": "GAAP revenue $7.752B. Adjusted OPM uses $6.967B denominator excluding $414M distribution fees and $371M investment advisory fees; not adjusted operating income divided by GAAP revenue. Reported OPM 30.0%, EPS $10.57."
+      }
+    ],
+    "SCCO": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-20", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/1001838/000110465926117588/scco-ex99d1.htm",
+        "values": {"revenue": 4696600000, "operatingMarginPct": 59.9, "epsDiluted": 2.15, "ocf": 2224300000, "fcf": 1708500000},
+        "metricBasis": {"operatingMarginPct": "Derived reported operating income $2.8151B divided by revenue $4.6966B", "fcf": "Derived quarterly OCF $2.2243B minus capital investments $0.5158B"},
+        "note": "Standalone three-month results. Gross margin left unavailable because presented cost of sales excludes depreciation, depletion and amortization; EBITDA margin is not used as gross margin."
+      }
+    ],
+    "AA": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-15", "currency": "USD", "appendIfMissing": true,
+        "source": "https://investors.alcoa.com/press-releases/press-release-details/2026/Alcoa-Corporation-Reports-Third-Quarter-2026-Results/default.aspx",
+        "values": {"revenue": 3704000000, "epsDiluted": 1.82, "ocf": 643000000, "fcf": 472000000},
+        "metricBasis": {"epsDiluted": "Non-GAAP adjusted diluted EPS"},
+        "note": "Official consolidated revenue and standalone quarterly cash flow. Gross/operating margins are not substituted with segment EBITDA margins."
+      }
+    ],
+    "JPM": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-13", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/19617/000162828026065582/a3q26erfexhibit991narrative.htm",
+        "values": {"revenue": 50172000000, "epsDiluted": 5.75},
+        "metricBasis": {"epsDiluted": "Non-GAAP excluding the disclosed significant item"},
+        "note": "Reported GAAP net revenue $50.172B, not managed/tax-equivalent revenue $50.907B. Reported EPS $5.57; excluding the significant item $5.75."
+      }
+    ],
+    "MS": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-14", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/895421/000089542126000288/a3q26msearningsrelease.htm",
+        "values": {"revenue": 20338000000, "epsDiluted": 3.03},
+        "note": "Consolidated net revenue, not institutional-securities or wealth-management segment revenue."
+      }
+    ],
+    "SCHW": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-15", "currency": "USD", "appendIfMissing": true,
+        "source": "https://pressroom.aboutschwab.com/press-releases/press-release/2026/Schwab-Delivers-Record-Net-New-Assets--Earnings/default.aspx",
+        "values": {"revenue": 7171000000, "epsDiluted": 1.69},
+        "metricBasis": {"epsDiluted": "Non-GAAP adjusted diluted EPS"},
+        "note": "Pre-tax profit margin is not relabeled as operating margin."
+      }
+    ],
+    "WFC": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-13", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/72971/000007297126000318/wfc3qer10-13x26ex991xrelea.htm",
+        "values": {"revenue": 21870000000, "epsDiluted": 1.87},
+        "note": "Consolidated revenue includes net interest income plus noninterest income; no manufacturing-style gross or operating margin inferred."
+      }
+    ],
+    "AMKR": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-26", "currency": "USD", "appendIfMissing": true,
+        "source": "https://ir.amkor.com/news-releases/news-release-details/amkor-technology-reports-financial-results-third-quarter-2026",
+        "values": {"revenue": 1990557000, "grossMarginPct": 18.3, "operatingMarginPct": 11.3, "epsDiluted": 0.76},
+        "note": "Reported standalone quarter; cash-flow table is nine-month cumulative and is not inserted as quarterly cash flow."
+      }
+    ],
+    "CDNS": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-26", "currency": "USD", "appendIfMissing": true,
+        "source": "https://investor.cadence.com/news/news-details/2026/Cadence-Reports-Third-Quarter-2026-Financial-Results/default.aspx",
+        "values": {"revenue": 1633311000, "grossMarginPct": 85.6, "operatingMarginPct": 44.1, "epsDiluted": 2.11},
+        "metricBasis": {"operatingMarginPct": "Non-GAAP operating margin", "epsDiluted": "Non-GAAP diluted EPS"},
+        "note": "Gross margin derived from reported $173.867M product cost and $61.753M service cost. Nine-month cash flow is not treated as quarterly cash flow."
+      }
+    ],
+    "GS": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-13", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/886982/000088698226000529/a3q26gsearningsresults.htm",
+        "values": {"revenue": 18679000000, "epsDiluted": 17.01},
+        "note": "Consolidated net revenues and diluted common EPS; no manufacturing-style gross or operating margin inferred for the bank."
+      }
+    ],
+    "C": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-13", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/831001/000110465926115323/c-ex99d1.htm",
+        "values": {"revenue": 23845000000, "epsDiluted": 2.85},
+        "note": "Consolidated revenue net of interest expense. No manufacturing-style gross or operating margin inferred for the bank."
+      }
+    ],
+    "DECK": [
+      {
+        "period": "FY2027 Q2", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-22", "currency": "USD", "appendIfMissing": true,
+        "source": "https://ir.deckers.com/news-events/press-releases/detail/666/deckers-brands-reports-second-quarter-fiscal-year-2027-financial-results",
+        "values": {"revenue": 1480554000, "grossMarginPct": 60.5, "operatingMarginPct": 26.3, "epsDiluted": 2.31},
+        "note": "Reported quarter: gross profit $895.112M and operating income $389.456M. Results include $46.0M tariff refunds; disclosed margin benefit 3.1pp and EPS benefit $0.28."
+      }
+    ],
+    "SLB": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-23", "currency": "USD", "appendIfMissing": true,
+        "source": "https://investorcenter.slb.com/news-releases/news-release-details/slb-announces-third-quarter-2026-results",
+        "values": {"revenue": 9449000000, "grossMarginPct": 16.6, "operatingMarginPct": 11.5, "epsDiluted": 0.64, "ocf": 1510000000, "fcf": 1025000000},
+        "metricBasis": {"epsDiluted": "Non-GAAP, excluding charges and credits", "fcf": "Derived OCF minus PP&E capital expenditure: $1.510B - $0.485B"},
+        "note": "Gross profit = revenue minus $7.883B cost of revenue; operating income also subtracts $156M R&D, $84M G&A, $55M merger/integration and $187M restructuring. FCF follows dashboard OCF-minus-capex definition, not SLB's $828M measure including APS and exploration investments."
+      }
+    ],
+    "UNH": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-13", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.unitedhealthgroup.com/content/dam/UHG/PDF/investors/2026/unh-reports-third-quarter-2026-results.pdf",
+        "values": {"revenue": 112694000000, "operatingMarginPct": 5.6, "epsDiluted": 4.69, "ocf": 5100000000},
+        "metricBasis": {"operatingMarginPct": "Non-GAAP consolidated adjusted operating margin", "epsDiluted": "Non-GAAP adjusted diluted EPS", "ocf": "Reported, rounded to $5.1B in the release"},
+        "note": "Page 8 consolidated revenue; page 12 adjusted OPM is 5.6% versus reported 5.8%. No gross-margin proxy inferred for the insurer."
+      }
+    ],
+    "VLO": [
+      {
+        "period": "FY2026 Q3", "periodStart": "2026-07-01", "periodEnd": "2026-09-30",
+        "filed": "2026-10-22", "currency": "USD", "appendIfMissing": true,
+        "source": "https://www.sec.gov/Archives/edgar/data/1035002/000162828026066795/a9302026exh9901earningsrel.htm",
+        "values": {"revenue": 46098000000, "grossMarginPct": 20.4, "operatingMarginPct": 19.7, "epsDiluted": 23.90, "ocf": 6900000000},
+        "metricBasis": {"epsDiluted": "Non-GAAP adjusted diluted EPS", "ocf": "Reported, rounded to $6.9B in the release"},
+        "note": "Consolidated revenue, $36.691B cost of sales and $9.073B operating income; not refining-segment margin. Capital investments are not assumed identical to PP&E cash capex, so FCF remains unavailable."
+      }
+    ],
     "APLD": [
       {
         "period": "FY2026 Q4",
