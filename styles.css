@@ -9986,6 +9986,73 @@ h1 {
   font-size: 0.9rem;
 }
 
+/* Keep the RS ticker and price chart together without shrinking the chart. */
+.market-rs-overview .market-rs-extension-panel {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.market-rs-overview .market-rs-extension-title {
+  margin-bottom: 6px;
+}
+
+.market-rs-overview .market-rs-extension-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.market-rs-overview .market-rs-extension-card {
+  min-width: 0;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.market-rs-overview .market-rs-extension-head,
+.market-rs-overview .market-rs-extension-head > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.market-rs-overview .market-rs-extension-head > div {
+  flex-wrap: wrap;
+}
+
+.market-rs-overview .market-rs-extension-head b {
+  padding: 2px 7px;
+}
+
+.market-rs-overview .market-rs-extension-scale {
+  padding: 10px 4px 14px;
+}
+
+.market-rs-overview .market-rs-extension-track {
+  height: 8px;
+}
+
+.market-rs-overview .market-rs-extension-marker {
+  width: 10px;
+  height: 16px;
+}
+
+.market-rs-overview .market-rs-extension-tick {
+  top: -8px;
+}
+
+.market-rs-overview .market-rs-extension-tick i {
+  height: 16px;
+}
+
+@media (max-width: 760px) {
+  .market-rs-overview .market-rs-extension-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .market-rs-chart-control-row {
   display: flex;
   flex-wrap: wrap;
