@@ -464,6 +464,17 @@
       "sharesOutstanding": 59440526
     },
     {
+      "ticker": "EPAM",
+      "name": "EPAM Systems, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 51586981
+    },
+    {
       "ticker": "EWT",
       "name": "iShares MSCI Taiwan ETF",
       "memberships": {

@@ -119,6 +119,17 @@ SECTOR_GROUPS = [
         ],
     },
     {
+        "key": "it_consulting",
+        "label": "IT 컨설팅",
+        "items": [
+            {"ticker": "ACN", "label": "ACN US", "name": "Accenture", "query": "Accenture stock"},
+            {"ticker": "EPAM", "label": "EPAM US", "name": "EPAM Systems", "query": "EPAM Systems stock"},
+            {"ticker": "GLOB", "label": "GLOB US", "name": "Globant", "query": "Globant stock"},
+            {"ticker": "CTSH", "label": "CTSH US", "name": "Cognizant", "query": "Cognizant stock"},
+            {"ticker": "IT", "label": "IT US", "name": "Gartner", "query": "Gartner stock"},
+        ],
+    },
+    {
         "key": "cloud_bigtech",
         "label": "클라우드 빅테크",
         "items": [
