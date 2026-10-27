@@ -9,10 +9,12 @@ class ItConsultingSectorTests(unittest.TestCase):
         self.assertEqual(len(sectors), 1)
         sector = sectors[0]
         self.assertEqual(sector['label'], 'IT 컨설팅')
-        self.assertEqual([item['ticker'] for item in sector['items']], ['ACN', 'EPAM', 'GLOB', 'CTSH', 'IT'])
+        keys = [s['key'] for s in briefing.SECTOR_GROUPS]
+        self.assertEqual(keys.index('it_consulting'), keys.index('software') + 1)
+        self.assertEqual([item['ticker'] for item in sector['items']], ['ACN', 'EPAM', 'GLOB', 'CTSH', 'IT', 'G'])
         self.assertNotIn('scoreTickers', sector)
         self.assertEqual({item['ticker'] for item in briefing.get_sector_scoring_items(sector)},
-                         {'ACN', 'EPAM', 'GLOB', 'CTSH', 'IT'})
+                         {'ACN', 'EPAM', 'GLOB', 'CTSH', 'IT', 'G'})
 
 
 if __name__ == '__main__':

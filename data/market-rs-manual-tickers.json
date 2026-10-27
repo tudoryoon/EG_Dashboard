@@ -519,6 +519,17 @@
       "sharesOutstanding": 73432664
     },
     {
+      "ticker": "G",
+      "name": "Genpact Limited",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 167227006
+    },
+    {
       "ticker": "GDX",
       "name": "VanEck Gold Miners ETF",
       "memberships": {

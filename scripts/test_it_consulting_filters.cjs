@@ -13,7 +13,7 @@ const rs = payload('market-rs-data.js');
 const trend = payload('market-trend-score-data.js');
 const financials = payload('market-rs-financials-data.js');
 const earnings = payload('market-canslim-earnings-data.js');
-const expected = ['ACN', 'CTSH', 'EPAM', 'GLOB', 'IT'];
+const expected = ['ACN', 'CTSH', 'EPAM', 'G', 'GLOB', 'IT'];
 const sectorKey = 'it_consulting';
 const context = vm.createContext({
   window: {marketBriefingData: briefing},
@@ -46,6 +46,11 @@ for (const expression of ['getMarketRsBaseRows()', 'getVisibleTrendScoreRows()',
 const panel = briefing.sectorPanels.find(s => s.key === sectorKey);
 assert.equal(panel.label, 'IT \uCEE8\uC124\uD305');
 assert.equal(panel.items.map(r => r.ticker).sort().join(','), expected.join(','));
+const sectorKeys = briefing.sectorPanels.map(s => s.key);
+assert.equal(new Set(sectorKeys).size, sectorKeys.length);
+assert.equal(briefing.rotationSignal.sectors.map(s => s.key).sort().join(','), [...sectorKeys].sort().join(','));
+assert.equal(Object.keys(briefing.rotationSignal.history).sort().join(','), [...sectorKeys].sort().join(','));
+assert.equal(sectorKeys.indexOf(sectorKey), sectorKeys.indexOf('software') + 1);
 assert.ok(briefing.rotationSignal.history[sectorKey].length >= 250);
 assert.ok(Number.isFinite(briefing.rotationSignal.sectors.find(s => s.key === sectorKey).score));
 for (const ticker of expected) {
@@ -56,4 +61,4 @@ for (const ticker of expected) {
   assert.ok(Array.isArray(earnings.profiles[ticker].quarters), `${ticker} EPS profile`);
   assert.ok(financials.financials[ticker].quarters.some(row => Number.isFinite(row.epsDiluted)), `${ticker} reported EPS`);
 }
-console.log('IT consulting: five members selectable in RS, Trend and CANSLIM, with briefing score/history and financials.');
+console.log('IT consulting: six members selectable in RS, Trend and CANSLIM, with briefing score/history and financials.');

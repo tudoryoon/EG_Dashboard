@@ -119,17 +119,6 @@ SECTOR_GROUPS = [
         ],
     },
     {
-        "key": "it_consulting",
-        "label": "IT 컨설팅",
-        "items": [
-            {"ticker": "ACN", "label": "ACN US", "name": "Accenture", "query": "Accenture stock"},
-            {"ticker": "EPAM", "label": "EPAM US", "name": "EPAM Systems", "query": "EPAM Systems stock"},
-            {"ticker": "GLOB", "label": "GLOB US", "name": "Globant", "query": "Globant stock"},
-            {"ticker": "CTSH", "label": "CTSH US", "name": "Cognizant", "query": "Cognizant stock"},
-            {"ticker": "IT", "label": "IT US", "name": "Gartner", "query": "Gartner stock"},
-        ],
-    },
-    {
         "key": "cloud_bigtech",
         "label": "클라우드 빅테크",
         "items": [
@@ -270,6 +259,18 @@ SECTOR_GROUPS = [
             {"ticker": "NTAP", "label": "NTAP US", "name": "NetApp", "query": "NetApp stock"},
             {"ticker": "P", "label": "P US", "name": "Everpure", "query": "Everpure stock"},
             {"ticker": "TWLO", "label": "TWLO US", "name": "Twilio", "query": "Twilio stock"},
+        ],
+    },
+    {
+        "key": "it_consulting",
+        "label": "IT 컨설팅",
+        "items": [
+            {"ticker": "ACN", "label": "ACN US", "name": "Accenture", "query": "Accenture stock"},
+            {"ticker": "EPAM", "label": "EPAM US", "name": "EPAM Systems", "query": "EPAM Systems stock"},
+            {"ticker": "GLOB", "label": "GLOB US", "name": "Globant", "query": "Globant stock"},
+            {"ticker": "CTSH", "label": "CTSH US", "name": "Cognizant", "query": "Cognizant stock"},
+            {"ticker": "IT", "label": "IT US", "name": "Gartner", "query": "Gartner stock"},
+            {"ticker": "G", "label": "G US", "name": "Genpact", "query": "Genpact stock"},
         ],
     },
     {
