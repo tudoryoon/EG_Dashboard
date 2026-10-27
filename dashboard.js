@@ -13965,6 +13965,16 @@ function createMarketRsAtrChart(canvas, row) {
   charts.push(chart);
 }
 
+function getMarketRsChartNavigation(rows, ticker) {
+  const index = rows.findIndex((row) => row.ticker === ticker);
+  return {
+    previous: index > 0 ? rows[index - 1].ticker : null,
+    next: index + 1 < rows.length ? rows[index + 1].ticker : null,
+    position: index + 1,
+    total: rows.length,
+  };
+}
+
 function renderMarketRsSelectionPreservingScroll() {
   const pagePosition = { left: window.scrollX, top: window.scrollY };
   const selectors = [".market-rs-card-grid", ".market-rs-table-wrap", ".market-rs-new-high-list", ".market-rs-period-list"];
@@ -14098,6 +14108,14 @@ function renderMarketRsOverview() {
   const tableSortRows = sortMarketRsTableRows(rows);
   const sortedLeaderRows = sortMarketRsLeaderRows(rows);
   const leaderRows = sortedLeaderRows;
+  const chartNavigation = getMarketRsChartNavigation(leaderRows, selected?.ticker);
+  const chartNavigationMarkup = `
+    <div class="market-rs-chart-navigation" role="group" aria-label="필터 내 종목 이동">
+      <span class="market-rs-chart-navigation-count">${chartNavigation.position} / ${chartNavigation.total}</span>
+      <button type="button" data-rs-chart-navigate="previous" aria-label="이전 종목" title="${chartNavigation.previous ? `이전 종목: ${chartNavigation.previous}` : "이전 종목 없음"}" ${chartNavigation.previous ? "" : "disabled"}>&#8592;</button>
+      <button type="button" data-rs-chart-navigate="next" aria-label="다음 종목" title="${chartNavigation.next ? `다음 종목: ${chartNavigation.next}` : "다음 종목 없음"}" ${chartNavigation.next ? "" : "disabled"}>&#8594;</button>
+    </div>
+  `;
   const rsCardLimit = ENABLE_RS_LIMITED_CARDS
     ? Math.max(RS_CARD_BATCH_SIZE, Number(state.rsVisibleCardCount) || RS_CARD_BATCH_SIZE)
     : leaderRows.length;
@@ -14521,6 +14539,7 @@ function renderMarketRsOverview() {
             <div class="market-rs-chart-control-row market-rs-chart-range-row">
               <span>Chart Range</span>
               <div class="market-rs-chip-row">${chartRangeChips}</div>
+              ${chartNavigationMarkup}
             </div>
             <div class="market-rs-chart-control-row">
               <span>Price</span>
@@ -14760,6 +14779,17 @@ function renderMarketRsOverview() {
       render();
     });
   }
+  usOverviewRoot.querySelectorAll("[data-rs-chart-navigate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const direction = button.dataset.rsChartNavigate;
+      const ticker = chartNavigation[direction];
+      if (!ticker) return;
+      state.rsMonitorSelectedTicker = "";
+      state.rsSelectedTicker = ticker;
+      renderMarketRsSelectionPreservingScroll();
+      usOverviewRoot.querySelector(`[data-rs-chart-navigate="${direction}"]:not(:disabled)`)?.focus({ preventScroll: true });
+    });
+  });
   usOverviewRoot.querySelectorAll("[data-rs-chart-zoom]").forEach((button) => {
     button.addEventListener("click", () => {
       if (!marketRsDetailChart) {
