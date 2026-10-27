@@ -9,6 +9,20 @@
         "values": {"revenue": 29958000000, "epsDiluted": 1.08},
         "metricBasis": {"epsDiluted": "Non-GAAP excluding $0.17 per share regulatory settlement charge"},
         "note": "Supplemental consolidated statement GAAP revenue net of interest expense, not $30.119B FTE revenue. Adjusted EPS from accompanying exhibit 99.1; reported EPS $0.91. Bank margins and unverified quarterly cash flow remain unavailable."
+      },
+      {
+        "period": "FY2025 Q3", "periodStart": "2025-07-01", "periodEnd": "2025-09-30",
+        "filed": "2026-10-14",
+        "source": "https://www.sec.gov/Archives/edgar/data/70858/000007085826000481/bac-09302026ex993.htm",
+        "values": {"revenue": 29040000000},
+        "note": "Prior-year comparative GAAP revenue from the 3Q26 consolidated statement; replaces the older inconsistent revenue series so latest YoY uses the same basis."
+      },
+      {
+        "period": "FY2025 Q4", "periodStart": "2025-10-01", "periodEnd": "2025-12-31",
+        "filed": "2026-10-14",
+        "source": "https://www.sec.gov/Archives/edgar/data/70858/000007085826000481/bac-09302026ex993.htm",
+        "values": {"revenue": 28367000000},
+        "note": "Comparative fourth-quarter GAAP revenue from the same five-quarter consolidated statement; not FTE revenue."
       }
     ],
     "BLK": [
