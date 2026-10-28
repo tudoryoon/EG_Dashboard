@@ -29,6 +29,25 @@ assert.equal(resolve("#/tech/power-infra"), "#/research/power-infra");
 assert.equal(resolve("#/research/market-regime"), "#/research/data-center");
 assert.equal(resolve("#/research/trend-search"), "#/research/data-center");
 assert.equal(resolve("#/tech/cloud"), "#/tech/cloud");
+for (const [key, slug] of [
+  ["LLM", "llm"], ["Cloud", "cloud"], ["BigTech", "capex-fcf"],
+  ["TokenPrice", "token-price-index"], ["OpenRouter", "openrouter"],
+  ["MemorySpot", "memory-data"], ["GPUCloud", "gpu-rental-price"],
+]) {
+  assert.equal(resolve(`#/tech/${slug}`), `#/tech/${slug}`);
+  assert.equal(context.state.tab, "Tech");
+  assert.equal(context.state.techView, key);
+}
+for (const slug of ["token-price-index", "openrouter", "memory-data", "gpu-rental-price"]) {
+  assert.equal(resolve(`#/ai-data/${slug}`), `#/tech/${slug}`);
+  assert.equal(context.state.tab, "Tech");
+}
+assert.equal(resolve("#/ai-data"), "#/tech/token-price-index");
+assert.equal(resolve("#/tech"), "#/tech/llm");
+const primary = dashboard.slice(dashboard.indexOf("const primaryTabMeta ="), dashboard.indexOf("const screeningSubtabMeta ="));
+assert.match(primary, /Tech & AI Data/);
+assert.doesNotMatch(primary, /AIData:/);
+assert.doesNotMatch(dashboard, /aiDataView|aiDataSubtabMeta/);
 
 assert.doesNotMatch(dashboard, /MarketRegime|TrendSearch|data-study-market-regime/);
 assert.match(dashboard, /state\.researchView === "PowerInfra"[\s\S]*?renderInfraOverview\(\)/);

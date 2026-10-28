@@ -126,8 +126,7 @@ const primaryTabMeta = {
   DailyBriefing: { label: "Daily Briefing", className: "is-daily-briefing" },
   Screening: { label: "Screening", className: "is-screening", defaultView: "RS" },
   Market: { label: "Market", className: "is-market", defaultView: "Index" },
-  Tech: { label: "Tech", className: "is-tech", defaultView: "LLM" },
-  AIData: { label: "AI Data", className: "is-ai-data", defaultView: "TokenPrice" },
+  Tech: { label: "Tech & AI Data", className: "is-tech", defaultView: "LLM" },
   Flows: { label: "Flows", className: "is-flows", defaultView: "EtfStatus" },
   TradeData: { label: "수출입데이터" },
   Research: { label: "Research", className: "is-research", defaultView: "DataCenter" },
@@ -154,6 +153,10 @@ const techSubtabMeta = {
   LLM: { label: "LLM" },
   Cloud: { label: "Cloud" },
   BigTech: { label: "Capex & FCF" },
+  TokenPrice: { label: "Token Price" },
+  OpenRouter: { label: "OpenRouter" },
+  MemorySpot: { label: "Memory Data" },
+  GPUCloud: { label: "GPU Rental Price" },
 };
 
 const flowsSubtabMeta = {
@@ -174,13 +177,6 @@ const researchSubtabMeta = {
 const marketIndexSubtabMeta = {
   Trend: { label: "Index Trend" },
   Total: { label: "Total Dashboard" },
-};
-
-const aiDataSubtabMeta = {
-  TokenPrice: { label: "Token Price" },
-  OpenRouter: { label: "OpenRouter" },
-  MemorySpot: { label: "Memory Data" },
-  GPUCloud: { label: "GPU Rental Price" },
 };
 
 const studyDataCenterSortOptions = [
@@ -409,7 +405,6 @@ const state = {
   techView: "LLM",
   flowsView: "EtfStatus",
   researchView: "DataCenter",
-  aiDataView: "TokenPrice",
   currency: "USD",
   sector: "All",
   query: "",
@@ -621,13 +616,6 @@ const DASHBOARD_ROUTE_META = {
       LLM: "llm",
       Cloud: "cloud",
       BigTech: "capex-fcf",
-    },
-  },
-  AIData: {
-    slug: "ai-data",
-    viewStateKey: "aiDataView",
-    defaultView: "TokenPrice",
-    views: {
       TokenPrice: "token-price-index",
       OpenRouter: "openrouter",
       MemorySpot: "memory-data",
@@ -706,6 +694,10 @@ function buildDashboardRouteHash() {
 
 function applyDashboardRouteFromHash(hash = window.location.hash) {
   const parts = getDashboardRouteParts(hash);
+  if (parts[0] === "ai-data") {
+    parts[0] = "tech";
+    parts[1] = parts[1] || "token-price-index";
+  }
   if (parts[0] === "tech" && parts[1] === "power-infra") {
     parts[0] = "research";
   }
@@ -22525,8 +22517,6 @@ function renderCountries() {
         state.marketIndexView = "Trend";
       } else if (tabKey === "Tech") {
         state.techView = meta.defaultView;
-      } else if (tabKey === "AIData") {
-        state.aiDataView = meta.defaultView;
       } else if (tabKey === "Flows") {
         state.flowsView = meta.defaultView;
       } else if (tabKey === "Research") {
@@ -22571,12 +22561,6 @@ function renderSubtabs() {
     activeKey = state.techView;
     setActive = (viewKey) => {
       state.techView = viewKey;
-    };
-  } else if (state.tab === "AIData") {
-    entries = Object.entries(aiDataSubtabMeta);
-    activeKey = state.aiDataView;
-    setActive = (viewKey) => {
-      state.aiDataView = viewKey;
     };
   } else if (state.tab === "Flows") {
     entries = Object.entries(flowsSubtabMeta);
@@ -22741,17 +22725,12 @@ function renderSummary(list) {
       summaryText.textContent = "OpenAI와 Anthropic의 ARR: 회사 발표·보도와 TickerTrends 추정치";
     } else if (state.techView === "BigTech") {
       summaryText.textContent = "Big tech capex & cash flow dashboard";
-    }
-    return;
-  }
-
-  if (state.tab === "AIData") {
-    if (state.aiDataView === "TokenPrice") {
+    } else if (state.techView === "TokenPrice") {
       summaryText.textContent = "Silicon Data의 시장 지출 가중 LLM token price index";
-    } else if (state.aiDataView === "OpenRouter") {
+    } else if (state.techView === "OpenRouter") {
       summaryText.textContent = "OpenRouter AI model rankings, token usage, market share, and leaderboard";
     } else {
-      summaryText.textContent = state.aiDataView === "MemorySpot" ? "Memory data dashboard workspace" : "GPU rental price dashboard workspace";
+      summaryText.textContent = state.techView === "MemorySpot" ? "Memory data dashboard workspace" : "GPU rental price dashboard workspace";
     }
     return;
   }
@@ -23593,14 +23572,9 @@ function render() {
       renderCapexOverview();
       return;
     }
-    return;
-  }
-
-  if (state.tab === "AIData") {
-    renderSummary([]);
-    if (state.aiDataView === "TokenPrice") renderTokenPriceOverview();
-    else if (state.aiDataView === "OpenRouter") renderOpenrouterOverview();
-    else if (state.aiDataView === "GPUCloud") renderGpuCloudOverview();
+    if (state.techView === "TokenPrice") renderTokenPriceOverview();
+    else if (state.techView === "OpenRouter") renderOpenrouterOverview();
+    else if (state.techView === "GPUCloud") renderGpuCloudOverview();
     else renderMemorySpotOverview();
     return;
   }
