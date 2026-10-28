@@ -23160,7 +23160,16 @@ function renderOpenrouterLeaderboardRows(rows) {
 
 function getOpenrouterUsageSelection() {
   const usage = openrouterRankingsData.weeklyUsage;
-  const companies = usage?.companies ?? [];
+  const companies = [...(usage?.companies ?? [])];
+  const members = ["openai", "anthropic"].map((key) => companies.find((item) => item.key === key));
+  if (members.every(Boolean)) {
+    companies.push({
+      key: "openai-anthropic", label: "OpenAI + Anthropic", members: ["openai", "anthropic"],
+      tokens: members.reduce((sum, item) => sum + item.tokens, 0),
+      modelCount: members.reduce((sum, item) => sum + item.modelCount, 0),
+      models: members.flatMap((item) => item.models).sort((a, b) => b.tokens - a.tokens),
+    });
+  }
   const company = companies.find((item) => item.key === state.openrouterUsageCompany) ?? companies[0];
   const model = company?.models.find((item) => item.key === state.openrouterUsageModel);
   if (company) state.openrouterUsageCompany = company.key;
@@ -23168,16 +23177,37 @@ function getOpenrouterUsageSelection() {
   return { usage, companies, company, model };
 }
 
+function getOpenrouterUsageHistory(usage, company, model) {
+  const history = model ? usage.modelHistory : usage.companyHistory;
+  const dates = history?.dates ?? [];
+  const keys = model ? [model.key] : (company.members ?? [company.key]);
+  const values = dates.map((_, index) => {
+    const parts = keys.map((key) => history?.series?.[key]?.[index]);
+    return parts.every((value) => typeof value === "number" && Number.isFinite(value))
+      ? parts.reduce((sum, value) => sum + value, 0) : null;
+  });
+  const dayMs = 86400000;
+  const cutoff = Date.parse(`${usage.asOf}T00:00:00Z`) + dayMs;
+  const partial = dates.map((date) => Date.parse(`${date}T00:00:00Z`) + 7 * dayMs > cutoff);
+  const growth = values.map((value, index) => {
+    const previous = values[index - 1];
+    const consecutive = index > 0 && Date.parse(dates[index]) - Date.parse(dates[index - 1]) === 7 * dayMs;
+    if (!consecutive || partial[index] || partial[index - 1] || value == null || previous == null || previous <= 0) return null;
+    return (value / previous - 1) * 100;
+  });
+  return { dates, values, partial, growth };
+}
+
 function renderOpenrouterUsageSection() {
   const { usage, companies, company, model } = getOpenrouterUsageSelection();
   if (!company) return "";
   const tokens = model?.tokens ?? company.tokens;
   const share = usage.totalTokens > 0 ? tokens / usage.totalTokens * 100 : 0;
-  const history = model ? usage.modelHistory : usage.companyHistory;
-  const hasHistory = (history?.series?.[model?.key ?? company.key] ?? []).some((value) => value != null);
+  const history = getOpenrouterUsageHistory(usage, company, model);
+  const hasHistory = history.values.some((value) => value != null);
   const companyOptions = companies.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === company.key ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("");
   const modelOptions = company.models.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === model?.key ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("");
-  const preferred = ["openai", "anthropic", "google", "deepseek", "x-ai", "qwen", "minimax", "z-ai"];
+  const preferred = ["openai", "anthropic", "openai-anthropic", "google", "deepseek", "x-ai", "qwen", "minimax", "z-ai"];
   const buttons = preferred.map((key) => companies.find((item) => item.key === key)).filter(Boolean).map((item) =>
     `<button type="button" class="market-rs-chip${item.key === company.key ? " active" : ""}" data-openrouter-company="${escapeHtml(item.key)}" aria-pressed="${item.key === company.key}">${escapeHtml(item.label)}</button>`).join("");
   return `<article class="us-panel openrouter-usage-panel">
@@ -23202,7 +23232,7 @@ function renderOpenrouterUsageSection() {
     </div>
     <div class="openrouter-usage-chart"><canvas id="openrouter-company-usage-chart"></canvas></div>
     ${hasHistory ? "" : '<p class="openrouter-caption">선택 항목의 주별 이력은 원천에서 미공개입니다. 위 최근 7일 합계와 아래 모델별 사용량은 전체 주간 데이터 기준입니다.</p>'}
-    <p class="openrouter-caption">추이는 원천의 주별 구간이며 최근 7일 합계와 기간이 다릅니다. 마지막 주는 진행 중입니다. 과거 공개 순위 밖의 회사·모델 값은 미공개로 비워둡니다.</p>
+    <p class="openrouter-caption">막대: 주간 토큰(왼쪽) · 선: WoW 성장률(오른쪽, 전주 대비 %). 진행 중인 주는 연한 막대만 표시하며 WoW는 제외합니다. 추이는 원천의 주별 구간이라 최근 7일 합계와 기간이 다릅니다. 미공개 값은 비워두며 합산은 두 회사 값이 모두 있는 주만 표시합니다.</p>
     <div class="openrouter-usage-table-head"><h4>${escapeHtml(company.label)} 모델별 최근 7일</h4><span>사용량 내림차순 · 전체 ${company.modelCount}개</span></div>
     <div class="openrouter-usage-table-wrap"><table class="openrouter-usage-table">
       <thead><tr><th>모델</th><th>주간 토큰</th><th>회사 내 비중</th></tr></thead><tbody>
@@ -23216,27 +23246,37 @@ function createOpenrouterUsageChart() {
   const canvas = usOverviewRoot.querySelector("#openrouter-company-usage-chart");
   const { usage, company, model } = getOpenrouterUsageSelection();
   if (!canvas || !company || typeof Chart === "undefined") return;
-  const history = model ? usage.modelHistory : usage.companyHistory;
+  const history = getOpenrouterUsageHistory(usage, company, model);
   const limit = { "1m": 5, "3m": 14, "6m": 27, "1y": 53 }[state.openrouterUsageRange] ?? 53;
-  const labels = (history?.dates ?? []).slice(-limit);
-  const values = (history?.series?.[model?.key ?? company.key] ?? []).slice(-limit);
+  const labels = history.dates.slice(-limit);
+  const values = history.values.slice(-limit);
+  const growth = history.growth.slice(-limit);
+  const partial = history.partial.slice(-limit);
   const chart = new Chart(canvas, {
-    type: "line",
-    data: { labels, datasets: [{ label: model?.label ?? company.label, data: labels.map((_, i) => values[i] ?? null),
-      borderColor: "#087f8c", backgroundColor: "rgba(8,127,140,0.08)", fill: true,
-      borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, tension: 0.15, spanGaps: false,
-      segment: { borderDash: (context) => context.p1DataIndex === labels.length - 1 ? [5, 4] : undefined },
+    type: "bar",
+    data: { labels, datasets: [{ type: "bar", label: model?.label ?? company.label, data: values,
+      yAxisID: "y", backgroundColor: partial.map((inProgress) => inProgress ? "rgba(8,127,140,0.3)" : "#087f8c"),
+      borderWidth: 0, maxBarThickness: 30, categoryPercentage: 0.8, barPercentage: 0.85, order: 1,
+    }, { type: "line", label: "WoW 성장률", data: growth, yAxisID: "yGrowth",
+      borderColor: "#d7791c", backgroundColor: "#d7791c", borderWidth: 2,
+      pointRadius: 2, pointHoverRadius: 5, tension: 0.15, spanGaps: false, fill: false, order: 0,
     }] },
     options: { responsive: true, maintainAspectRatio: false, animation: false,
       interaction: { mode: "index", intersect: false },
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
-        title: (items) => `${items[0]?.label ?? ""} 주${items[0]?.dataIndex === labels.length - 1 ? " (진행 중)" : ""}`,
-        label: (context) => `${context.dataset.label}: ${formatOpenrouterCount(context.parsed.y)}`,
+      plugins: { legend: { position: "bottom", align: "start", labels: { boxWidth: 10, boxHeight: 10 } }, tooltip: { callbacks: {
+        title: (items) => `${items[0]?.label ?? ""} 주${partial[items[0]?.dataIndex] ? " (진행 중)" : ""}`,
+        label: (context) => context.dataset.yAxisID === "yGrowth"
+          ? `WoW: ${context.parsed.y > 0 ? "+" : ""}${context.parsed.y.toFixed(2)}%`
+          : `${context.dataset.label}: ${formatOpenrouterCount(context.parsed.y)}`,
+        afterBody: (items) => partial[items[0]?.dataIndex] ? "주간 집계 진행 중 · WoW 제외" : "",
       } } },
       scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 7 } },
         y: { beginAtZero: true, title: { display: true, text: "주간 토큰" },
           ticks: { callback: (value) => formatOpenrouterCount(value).replace(" tokens", "") },
-          grid: { color: "rgba(17,24,39,0.07)" } } },
+          grid: { color: "rgba(17,24,39,0.07)" } },
+        yGrowth: { position: "right", title: { display: true, text: "WoW 성장률 (%)", color: "#a65911" },
+          ticks: { color: "#a65911", callback: (value) => `${value}%` },
+          grid: { drawOnChartArea: false } } },
     },
   });
   charts.push(chart);
