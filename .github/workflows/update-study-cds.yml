@@ -23,8 +23,8 @@ on:
         default: false
         type: boolean
   schedule:
-    # 00:40 UTC = 09:40 KST, after DTCC's usual next-day 00:15 UTC file publication.
-    - cron: "40 0 * * 2-6"
+    # Sunday-Friday 21:23 UTC = Monday-Saturday 06:23 KST.
+    - cron: "23 21 * * 0-5"
 
 permissions:
   contents: write
