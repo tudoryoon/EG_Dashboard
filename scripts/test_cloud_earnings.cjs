@@ -38,9 +38,25 @@ assert.equal(series('netNewArr', 'amazon').arrValues[quarter], null);
 assert.equal(series('yoyGrowth', 'microsoft').values[quarter - 1], 42);
 assert.equal(series('yoyGrowth', 'microsoft').values[quarter], 48);
 assert.equal(series('rpo', 'microsoft').values[quarter], 677);
-assert.equal(series('margin', 'microsoft').values[quarter], null);
-assert.equal(series('rpo', 'google').values[quarter], null);
-assert.equal(series('rpo', 'google').values[quarter - 1], 514);
+assert.equal(series('margin', 'microsoftLegacy').values[quarter], null);
+assert.equal(series('margin', 'microsoftLegacy').values[quarter - 1], 40.59);
+assert.equal(series('margin', 'microsoft').values[quarter], round(40558 / 76795 * 100));
+assert.equal(series('rpo', 'google').values[quarter], 561);
+assert.equal(series('rpo', 'google').values[quarter - 1], 513.9);
+for (const item of data.rpo.googleCloudVerification) {
+  assert.equal(series('rpo', 'google').values[data.labels.indexOf(item.quarter)], item.valueBillions);
+  assert.ok(item.sourceUrl.startsWith('https://'));
+}
+const marginCheck = data.margin.verification;
+assert.equal(round(marginCheck.legacy.operatingIncomeMillions / marginCheck.legacy.revenueMillions * 100), 40.59);
+for (let i = 0; i < marginCheck.current.calendarQuarters.length; i += 1) {
+  const index = data.labels.indexOf(marginCheck.current.calendarQuarters[i]);
+  assert.equal(series('margin', 'microsoft').values[index],
+    round(marginCheck.current.operatingIncomeMillions[i] / marginCheck.current.revenueMillions[i] * 100));
+}
+assert.ok(series('margin', 'microsoft').values.slice(0, 14).every(value => value === null));
+assert.match(series('margin', 'microsoft').basis, /직접 비교 불가/);
+assert.notEqual(series('margin', 'microsoft').values[quarter], 66);
 assert.equal(series('revenue', 'google').values[quarter], 30709);
 assert.equal(series('yoyGrowth', 'google').values[quarter], round((30709 / 15157 - 1) * 100));
 assert.equal(series('margin', 'google').values[quarter], round(11121 / 30709 * 100));
@@ -92,9 +108,19 @@ assert.ok(charts[2].data.datasets[1].borderDash.length);
 const ratio = vm.runInContext('buildCloudRpoRevenueRatioPanel()', context);
 assert.equal(ratio.series.find(item => item.key === 'microsoft').values[quarter], Math.round(677 / 33.165 * 10) / 10);
 assert.equal(ratio.series.find(item => item.key === 'microsoft').values[azureStart - 1], null);
-assert.equal(ratio.series.find(item => item.key === 'google').values[quarter], null);
+assert.equal(ratio.series.find(item => item.key === 'google').values[quarter], Math.round(561 / 30.709 * 10) / 10);
 const stats = vm.runInContext('buildCloudRpoStatsMarkup(cloudDashboardData.rpo)', context);
 assert.match(stats, /2026 Q2/);
 assert.match(stats, /2026 Q3/);
+assert.match(stats, /\$561\.0B/);
+assert.match(stats, /\+261\.9% YoY/);
 assert.doesNotMatch(stats, /NaN|undefined/);
+vm.runInContext('createCloudLineChart({}, cloudDashboardData.margin, String, -20);', context);
+const marginChart = charts.at(-1);
+const currentMargin = marginChart.data.datasets.find(item => item.label.includes('Agents and Infra'));
+const legacyMargin = marginChart.data.datasets.find(item => item.label.includes('Intelligent Cloud'));
+assert.equal(currentMargin.data[quarter], 52.81);
+assert.equal(legacyMargin.data[quarter], null);
+assert.notEqual(currentMargin.borderColor, legacyMargin.borderColor);
+assert.match(marginChart.options.plugins.tooltip.callbacks.afterLabel({ dataset: currentMargin }), /직접 비교 불가/);
 console.log('PASS: CY 3Q26 earnings, Azure recast, ARR math, missing disclosures and chart datasets.');

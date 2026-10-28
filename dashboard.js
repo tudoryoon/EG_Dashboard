@@ -6563,6 +6563,7 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
+    basis: series.basis,
     borderColor: cloudDashboardData.colors[series.key],
     backgroundColor: cloudDashboardData.colors[series.key],
     borderWidth: 2.8,
@@ -6605,6 +6606,7 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
           enabled: true,
           callbacks: {
             label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
+            afterLabel: (context) => context.dataset.basis ?? "",
           },
         },
       },
@@ -7664,7 +7666,7 @@ function renderCloudOverview() {
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-cloud-chart="rpo"></canvas>
           </div>
-          <p class="cloud-rpo-note">RPO는 이미 계약됐지만 아직 매출로 인식되지 않은 잔고입니다. 다만 기준은 완전히 동일하지 않습니다. AWS는 주로 AWS 장기계약, Microsoft는 Azure-only가 아닌 Commercial RPO, Google은 최신 공시상 대부분 Google Cloud 관련 RPO로 봐야 합니다.</p>
+          <p class="cloud-rpo-note">RPO는 이미 계약됐지만 아직 매출로 인식되지 않은 잔고입니다. AWS는 주로 AWS 장기계약, Microsoft는 Azure-only가 아닌 Commercial RPO입니다. Google은 CY 3Q25부터 Google Cloud 전용 잔고이며, 그 이전은 기존 Alphabet RPO 이력을 유지합니다.</p>
           <p class="cloud-rpo-note">${cloudDashboardData.rpo.note ?? ""}</p>
         </article>
         <article class="cloud-panel cloud-panel-wide">

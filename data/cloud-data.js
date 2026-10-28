@@ -8,7 +8,10 @@ window.cloudDashboardData = {
     sourceLinks: [
       { label: "Microsoft FY27 Q1 실적", url: "https://www.microsoft.com/en-us/investor/earnings/fy-2027-q1/press-release-webcast" },
       { label: "Microsoft FY27 재작성 자료 (17~18쪽)", url: "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/FY27ExternalKPIs.pptx" },
+      { label: "MSFT 공식 Excel (Segment Results / History)", url: "https://microsoft.com/en-us/investor/earnings/FY-2027-Q1/Document/DownloadDocument/15/FinancialStatementFY27Q1.xlsx" },
       { label: "Alphabet 3Q26 실적 / SEC 8-K", url: "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000080/googexhibit991q32026.htm" },
+      { label: "Alphabet 3Q26 공식 컨콜", url: "https://abc.xyz/investor/events/event-details/2026/2026-Q3-Earnings-Call-2026-Ujou16CTw9/default.aspx" },
+      { label: "Alphabet 3Q26 컨콜 전사본", url: "https://stockanalysis.com/stocks/googl/transcripts/712854-q3-2026/" },
     ],
   },
   labels: [
@@ -63,8 +66,24 @@ window.cloudDashboardData = {
   },
   margin: {
     title: "Cloud Margin",
-    subtitle: "CY 분기별 영업이익률 · Microsoft 과거 계열은 Intelligent Cloud",
-    note: "Google Cloud CY 3Q26: 영업이익 $11.121B ÷ 매출 $30.709B = 36.21%. Microsoft는 FY27 부문 개편으로 Intelligent Cloud가 종료됐으며, Azure 단독 영업이익률은 비공개이므로 CY 3Q26을 비워둡니다. Microsoft Cloud의 매출총이익률과 혼용하지 않습니다.",
+    subtitle: "CY 분기별 영업이익률(OPM) · Microsoft 구·신 부문은 별도 계열",
+    note: "기존 MSFT CY 2Q26의 40.59%는 Intelligent Cloud 영업이익 $15.955B ÷ 매출 $39.306B와 일치합니다. FY27에는 이 구 부문을 더 이상 공시하지 않아 이력은 회색으로 보존합니다. 파란색은 새 Agents and Infra 부문의 공식 재작성 계열이며, CY 3Q26은 $40.558B ÷ $76.795B = 52.81%입니다. M365 등을 포함하므로 Azure 단독 마진이나 구 Intelligent Cloud와 동일한 범위가 아닙니다. Microsoft Cloud 매출총이익률 66%와도 구분합니다.",
+    verification: {
+      legacy: {
+        quarter: "2026 Q2",
+        revenueMillions: 39306,
+        operatingIncomeMillions: 15955,
+        sourceUrl: "https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4/press-release-webcast",
+      },
+      current: {
+        definition: "Agents and Infra segment operating income / revenue",
+        sourceUrl: "https://microsoft.com/en-us/investor/earnings/FY-2027-Q1/Document/DownloadDocument/15/FinancialStatementFY27Q1.xlsx",
+        worksheet: "Segment History",
+        calendarQuarters: ["2025 Q3", "2025 Q4", "2026 Q1", "2026 Q2", "2026 Q3"],
+        revenueMillions: [61672, 64441, 67438, 74576, 76795],
+        operatingIncomeMillions: [32718, 33167, 33748, 36732, 40558],
+      },
+    },
     unit: "%",
     series: [
       {
@@ -73,9 +92,16 @@ window.cloudDashboardData = {
         values: [35.35, 28.95, 26.31, 24.35, 23.99, 24.23, 29.67, 29.61, 37.63, 35.52, 38.06, 36.93, 39.45, 32.91, 34.64, 35.03, 37.68, 39.36, null],
       },
       {
-        key: "microsoft",
-        name: "MS Intelligent Cloud Margin",
+        key: "microsoftLegacy",
+        name: "MS Intelligent Cloud OPM (구 부문)",
+        basis: "구 부문 Intelligent Cloud · CY 2Q26까지 · Azure 단독 마진 아님",
         values: [null, null, 39.98, 37.53, 38.46, 39.81, 44.51, 44.39, 42.97, 41.35, 43.6, 42.48, 41.48, 40.63, 43.34, 42.16, 39.66, 40.59, null],
+      },
+      {
+        key: "microsoft",
+        name: "MS Agents and Infra OPM (신 부문)",
+        basis: "신 부문 Agents and Infra · FY27 재작성 기준 · M365 등 포함 · 구 부문과 직접 비교 불가",
+        values: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, 53.05, 51.47, 50.04, 49.25, 52.81],
       },
       {
         key: "google",
@@ -115,10 +141,17 @@ window.cloudDashboardData = {
   },
   rpo: {
     title: "Cloud RPO Backlog",
-    subtitle: "Quarterly contracted backlog. AWS is management-disclosed revenue backlog, while Microsoft is Commercial RPO and Google is Alphabet RPO, now mostly Google Cloud; definitions are not identical.",
+    subtitle: "CY 분기별 계약 잔고 · AWS Revenue Backlog / Microsoft Commercial RPO / Google Cloud Backlog · 회사별 범위는 서로 다릅니다.",
     unit: "$B",
     source: "Company filings, earnings releases, and earnings-call disclosures",
-    note: "Microsoft Commercial RPO는 CY 3Q26 $677B입니다. Google CY 3Q26 RPO는 현재 확인된 실적 발표문에 없어 공란으로 두며, $514B는 CY 2Q26 수치입니다. 미발표 분기를 직전 값으로 채우지 않습니다.",
+    note: "Google Cloud CY 3Q26 잔고 $561B는 10월 28일 CFO Anat Ashkenazi의 컨콜 발언입니다(보도자료 표가 아닌 컨콜 공시). 향후 24개월에 총 잔고의 55%를 조금 넘게 매출로 인식할 것으로 설명했습니다. CY 3Q25부터 비교 구간을 Cloud 전용 잔고로 정리했습니다: $155B → $240B → $462.3B → $513.9B → $561B. 그 이전 Google 이력은 기존 Alphabet 전체 RPO 계열입니다. CY 1Q26부터는 1년 이하 계약도 포함하는 공시 방식으로 바뀌어 YoY에는 이 범위 변경 영향도 포함됩니다.",
+    googleCloudVerification: [
+      { quarter: "2025 Q3", valueBillions: 155, sourceUrl: "https://s206.q4cdn.com/479360582/files/doc_events/2025/Oct/29/2025_Q3_Earnings_Transcript.pdf" },
+      { quarter: "2025 Q4", valueBillions: 240, sourceUrl: "https://s206.q4cdn.com/479360582/files/doc_events/2026/Feb/04/2025_Q4_Earnings_Transcript.pdf" },
+      { quarter: "2026 Q1", valueBillions: 462.3, sourceUrl: "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000048/R11.htm" },
+      { quarter: "2026 Q2", valueBillions: 513.9, sourceUrl: "https://www.sec.gov/Archives/edgar/data/1652044/000165204426000071/goog-20260630.htm" },
+      { quarter: "2026 Q3", valueBillions: 561, sourceUrl: "https://stockanalysis.com/stocks/googl/transcripts/712854-q3-2026/", sourceType: "CFO earnings-call remarks", officialWebcastUrl: "https://www.youtube.com/watch?v=X9mmCagxJTo" },
+    ],
     series: [
       {
         key: "amazon",
@@ -133,7 +166,7 @@ window.cloudDashboardData = {
       {
         key: "google",
         name: "Google Cloud RPO",
-        values: [50.5, 51.2, 52.4, 64.3, 61.7, 60.6, 64.9, 74.1, 72.5, 78.8, 86.8, 93.2, 92.4, 108.2, 157.7, 242.8, 467.6, 514.0, null],
+        values: [50.5, 51.2, 52.4, 64.3, 61.7, 60.6, 64.9, 74.1, 72.5, 78.8, 86.8, 93.2, 92.4, 108.2, 155.0, 240.0, 462.3, 513.9, 561.0],
       },
     ],
   },
