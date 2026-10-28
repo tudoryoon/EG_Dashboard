@@ -6547,6 +6547,14 @@ function createUsQuarterlyChart(canvas, company) {
   charts.push(chart);
 }
 
+function cloudQuarterTickLabel(index, labels, width, minimumStep = 2) {
+  const last = labels.length - 1;
+  const capacity = Math.max(2, Math.floor((width ?? 800) / 100));
+  const step = Math.max(minimumStep, Math.ceil(last / (capacity - 1)));
+  return index === 0 || index === last || (index % step === 0 && index <= last - step)
+    ? labels[index] ?? "" : "";
+}
+
 function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
   if (typeof Chart === "undefined" || !panel) {
     return;
@@ -6607,14 +6615,8 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (_, index) => {
-              const labels = cloudDashboardData.labels ?? [];
-              const isLatest = index === labels.length - 1;
-              const isInterval = index % 2 === 0 && index < labels.length - 2;
-              if (index === 0 || isLatest || isInterval) {
-                return labels[index] ?? "";
-              }
-              return "";
+            callback: function (_, index) {
+              return cloudQuarterTickLabel(index, cloudDashboardData.labels ?? [], this.chart?.width);
             },
           },
           border: { color: "#d8d8d2" },
@@ -6645,6 +6647,7 @@ function createCloudRevenueBarChart(canvas, panel) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
+    hidden: series.hidden ?? false,
     backgroundColor: cloudDashboardData.colors[series.key],
     borderColor: cloudDashboardData.colors[series.key],
     borderWidth: 0,
@@ -6694,14 +6697,8 @@ function createCloudRevenueBarChart(canvas, panel) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (_, index) => {
-              const labels = cloudDashboardData.labels ?? [];
-              const isLatest = index === labels.length - 1;
-              const isInterval = index % 2 === 0 && index < labels.length - 2;
-              if (index === 0 || isLatest || isInterval) {
-                return labels[index] ?? "";
-              }
-              return "";
+            callback: function (_, index) {
+              return cloudQuarterTickLabel(index, cloudDashboardData.labels ?? [], this.chart?.width);
             },
           },
           border: { color: "#d8d8d2" },
@@ -6780,13 +6777,8 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (_, index) => {
-              const isLatest = index === labels.length - 1;
-              const isInterval = index % tickEvery === 0 && index < labels.length - 2;
-              if (index === 0 || isLatest || isInterval) {
-                return labels[index] ?? "";
-              }
-              return "";
+            callback: function (_, index) {
+              return cloudQuarterTickLabel(index, labels, this.chart?.width, tickEvery);
             },
           },
           border: { color: "#d8d8d2" },
@@ -6894,10 +6886,8 @@ function createCloudNetNewArrChart(canvas, series) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (_, index) => {
-              const isLatest = index === labels.length - 1;
-              const isInterval = index % 4 === 0 && index < labels.length - 2;
-              return index === 0 || isLatest || isInterval ? labels[index] ?? "" : "";
+            callback: function (_, index) {
+              return cloudQuarterTickLabel(index, labels, this.chart?.width, 4);
             },
           },
           border: { color: "#d8d8d2" },
@@ -7059,13 +7049,8 @@ function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
             color: "#8d8d86",
             autoSkip: false,
             maxRotation: 0,
-            callback: (_, index) => {
-              const isLatest = index === labels.length - 1;
-              const isInterval = index % 2 === 0 && index < labels.length - 2;
-              if (index === 0 || isLatest || isInterval) {
-                return labels[index] ?? "";
-              }
-              return "";
+            callback: function (_, index) {
+              return cloudQuarterTickLabel(index, labels, this.chart?.width);
             },
           },
           border: { color: "#d8d8d2" },
@@ -7131,7 +7116,7 @@ function buildCloudRpoRevenueRatioPanel() {
 
   return {
     title: "RPO / Cloud Revenue Ratio",
-    subtitle: "RPO backlog divided by quarterly cloud revenue. Higher means contracted backlog is larger versus the current quarterly revenue base.",
+    subtitle: "계약 잔고 ÷ 분기 매출. Microsoft는 Commercial RPO ÷ Azure 공식 매출(CY 3Q24~)로, Azure-only 잔고 비율은 아닙니다. 업체별 RPO 범위가 달라 절대 수준의 직접 비교에는 주의가 필요합니다.",
     series,
   };
 }
@@ -7624,8 +7609,11 @@ function renderCloudOverview() {
     <section class="cloud-overview">
       <div class="us-section-head cloud-section-head">
         <h2>Cloud Dashboard</h2>
-        <p>AWS, Microsoft cloud, and Google Cloud trends from the raw Excel sheets</p>
+        <p>모든 분기는 CY(달력연도) 기준 · MSFT FY2027 Q1 = CY 2026 Q3 · 실적 확인 ${cloudDashboardData.updatedAt ?? "-"}</p>
       </div>
+      <p class="cloud-rpo-note">실적 출처: ${(cloudDashboardData.latestEarnings?.sourceLinks ?? [])
+        .map((source) => `<a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.label}</a>`)
+        .join(" · ")}</p>
       <div class="cloud-panel-grid">
         <article class="cloud-panel">
           <div class="us-panel-head">
@@ -7637,6 +7625,7 @@ function renderCloudOverview() {
           <div class="cloud-chart-wrap">
             <canvas data-cloud-chart="growth"></canvas>
           </div>
+          <p class="cloud-rpo-note">${cloudDashboardData.yoyGrowth.note ?? ""}</p>
         </article>
         <article class="cloud-panel">
           <div class="us-panel-head">
@@ -7648,6 +7637,7 @@ function renderCloudOverview() {
           <div class="cloud-chart-wrap">
             <canvas data-cloud-chart="margin"></canvas>
           </div>
+          <p class="cloud-rpo-note">${cloudDashboardData.margin.note ?? ""}</p>
         </article>
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
@@ -7659,6 +7649,7 @@ function renderCloudOverview() {
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-cloud-chart="revenue"></canvas>
           </div>
+          <p class="cloud-rpo-note">${cloudDashboardData.revenue.note ?? ""}</p>
         </article>
         <article class="cloud-panel cloud-panel-wide cloud-rpo-panel">
           <div class="us-panel-head">
@@ -7674,6 +7665,7 @@ function renderCloudOverview() {
             <canvas data-cloud-chart="rpo"></canvas>
           </div>
           <p class="cloud-rpo-note">RPO는 이미 계약됐지만 아직 매출로 인식되지 않은 잔고입니다. 다만 기준은 완전히 동일하지 않습니다. AWS는 주로 AWS 장기계약, Microsoft는 Azure-only가 아닌 Commercial RPO, Google은 최신 공시상 대부분 Google Cloud 관련 RPO로 봐야 합니다.</p>
+          <p class="cloud-rpo-note">${cloudDashboardData.rpo.note ?? ""}</p>
         </article>
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
@@ -7710,7 +7702,7 @@ function renderCloudOverview() {
               )
               .join("")}
           </div>
-          <p class="cloud-rpo-note">막대(좌축)는 전분기 대비 매출 순증가분을 연율화한 Net New ARR 프록시이며, 점선(우축)은 해당 분기 매출을 4배한 ARR 프록시입니다. AWS와 Google Cloud는 회사 공시 매출, Azure는 독립 매출 비공개로 Altimeter / Clouded Judgement 추정계열을 사용합니다.</p>
+          <p class="cloud-rpo-note">${cloudDashboardData.netNewArr.note ?? ""}</p>
         </article>
         <article class="cloud-panel cloud-panel-wide cloud-gpu-pricing-panel">
           <div class="us-panel-head">
