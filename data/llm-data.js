@@ -82,7 +82,7 @@ window.llmDashboardData = {
           null,
           null,
           null,
-          30.0,
+          30,
           null,
           50
         ],
@@ -90,7 +90,7 @@ window.llmDashboardData = {
           "2026-07": {
             "provider": "openai",
             "kind": "reported",
-            "value": 30.0,
+            "value": 30,
             "date": "2026-07-15",
             "asOf": null,
             "observationMonth": "2026-07",
@@ -424,7 +424,7 @@ window.llmDashboardData = {
     }
   ],
   "arrRefresh": {
-    "checkedAt": "2026-10-28T04:36:25.784201+00:00",
+    "checkedAt": "2026-10-28T07:45:01.792283+00:00",
     "sources": [
       {
         "key": "tickertrends",
