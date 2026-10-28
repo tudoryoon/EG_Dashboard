@@ -1,6 +1,28 @@
 {
   "source": "https://blog.tickertrends.io/feed",
+  "sourceUrls": [
+    "https://blog.tickertrends.io/feed",
+    "https://epoch.ai/data/ai_companies_revenue_reports.csv"
+  ],
   "observations": [
+    {
+      "provider": "openai",
+      "kind": "reported",
+      "value": 30.0,
+      "date": "2026-07-15",
+      "asOf": null,
+      "observationMonth": "2026-07",
+      "publishedAt": "2026-10-08",
+      "dateBasis": "month-via-epoch",
+      "sourceUrl": "https://www.ft.com/content/b66a9858-f8fb-46cb-b506-44bfe26fca2a?syn-25a6b1a6=1",
+      "sourceTitle": "Epoch AI: OpenAI 30B July",
+      "verificationUrl": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
+      "sourceName": "Epoch AI 공개 집계",
+      "qualifier": "approximately",
+      "note": "Epoch AI가 원문 출처와 함께 제공한 회사 전체 런레이트입니다. 기준 월만 표시하며 데이터셋의 일자를 정확한 관측일로 단정하지 않습니다. 후속 FT 보도에서 클라우드 파트너 매출을 gross-up한 이전 수치와 구분해 수정한 값입니다.",
+      "originalSourceNotes": "Bloomberg previously reported that OpenAI had exceeded $40B in annualized revenue in August. However, a later FT report provided further context that the $40B figure was the result of an investor analysis grossing up OpenAI's revenue to include cloud provider revenue that wasn't shared with OpenAI. FT reported that OpenAI was near 30bn annualized in July.",
+      "confidence": "Likely"
+    },
     {
       "provider": "anthropic",
       "value": 74.1,
@@ -22,6 +44,24 @@
       "sourceTitle": "OpenAI ARR Growth Accelerated Into July"
     },
     {
+      "provider": "anthropic",
+      "kind": "reported",
+      "value": 65.0,
+      "date": "2026-07-31",
+      "asOf": null,
+      "observationMonth": "2026-07",
+      "publishedAt": "2026-08-17",
+      "dateBasis": "month-via-epoch",
+      "sourceUrl": "https://www.bloomberg.com/news/articles/2026-08-17/anthropic-revenue-run-rate-surpasses-65-billion-ahead-of-ipo",
+      "sourceTitle": "Epoch AI: July 2026 65B",
+      "verificationUrl": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
+      "sourceName": "Epoch AI 공개 집계",
+      "qualifier": "approximately",
+      "note": "Epoch AI가 원문 출처와 함께 제공한 회사 전체 런레이트입니다. 기준 월만 표시하며 데이터셋의 일자를 정확한 관측일로 단정하지 않습니다.",
+      "originalSourceNotes": "65B by end of July (entered as July 31, but could have been reached beforehand).\n\n\"The companyâs run rate, a metric that projects full-year revenue from a shorter period, hit $65 billion by the end of July, said the people, who spoke on condition of anonymity to discuss private information. Anthropic shared the figures as part of a regular update with investors, one person said.\"",
+      "confidence": "Likely"
+    },
+    {
       "provider": "openai",
       "value": 44.3,
       "date": "2026-08-12",
@@ -30,6 +70,22 @@
       "dateBasis": "observation",
       "sourceUrl": "https://blog.tickertrends.io/p/openai-arr-tracking-44-3b-bloomberg-40b-run-rate",
       "sourceTitle": "OpenAI ARR Tracking Reached $44.3B as Bloomberg Reported $40B Run Rate"
+    },
+    {
+      "provider": "openai",
+      "kind": "reported",
+      "value": 50,
+      "date": "2026-09-01",
+      "asOf": null,
+      "observationMonth": "2026-09",
+      "publishedAt": "2026-10-08",
+      "dateBasis": "observation-month",
+      "sourceUrl": "https://www.axios.com/2026/10/08/openai-50-billion-arr-anthropic-revenue-accounting",
+      "sourceTitle": "OpenAI annualized revenue $20 billion less than previously reported",
+      "verificationUrl": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
+      "sourceName": "Axios / FT 정정 보도",
+      "qualifier": "approximately",
+      "note": "9월 기준 약 $50B. $70B는 클라우드 파트너 몫을 gross-up한 비교치로, OpenAI에 귀속되는 매출 기준과 다름. 기준 월만 확인되어 특정 기준일은 지정하지 않음. Epoch CSV의 보도일 2026-09-08은 관측일보다 빨라 자동 반영하지 않고 원문 게시일 2026-10-08로 검증해 보완함."
     },
     {
       "provider": "anthropic",

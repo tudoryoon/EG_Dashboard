@@ -7517,7 +7517,7 @@ function createLlmRevenueChart(canvas) {
             title: (items) => items?.[0]?.label ?? "",
             label: (context) => {
               const point = context.dataset.observations?.[panel.labels[context.dataIndex]];
-              return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 2)}B${point?.qualifier === "more-than" ? " 초과" : ""}`;
+              return `${context.dataset.label}: $${Number(context.parsed.y).toFixed(context.parsed.y < 1 ? 3 : 2)}B${point?.qualifier === "more-than" ? " 초과" : point?.qualifier === "approximately" ? " 내외" : ""}`;
             },
             afterLabel: (context) => {
               const source = context.dataset.sourceLabels?.[context.dataIndex];
@@ -7526,7 +7526,9 @@ function createLlmRevenueChart(canvas) {
               if (point.status === "tracking") {
                 return [`출처: ${source}`, point.asOf ? `기준일: ${point.asOf} · 게시일: ${point.publishedAt}` : `게시일: ${point.publishedAt} · 별도 관측일 미공개`, "구분: TickerTrends 추정치 (회사 발표 아님)", point.sourceUrl];
               }
-              return [`출처: ${source}`, `기준일: ${point.asOf} · 보도일: ${point.reportedAt}`, `구분: 언론 보도값 (공식 공시 아님)`, point.note];
+              const basis = point.asOf ? `기준일: ${point.asOf}` : `기준 월: ${point.observationMonth ?? panel.labels[context.dataIndex]} · 정확한 기준일 미공개`;
+              const revisions = point.revisions?.map((old) => `이전 보도값 $${old.value}B에서 수정 · 매출 인식 기준 주의`) ?? [];
+              return [`출처: ${source}`, `${basis} · 보도일: ${point.reportedAt}`, `구분: 언론 보도값 (공식 공시 아님)`, point.note, ...revisions];
             },
           },
         },
@@ -7555,6 +7557,11 @@ function renderLlmOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
   companyGrid.classList.add("hidden");
+  const refresh = llmDashboardData.arrRefresh;
+  const checkedAt = refresh?.checkedAt ? new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short",
+  }).format(new Date(refresh.checkedAt)) : "미확인";
+  const failed = (refresh?.sources ?? []).filter((source) => source.status !== "ok").length;
   usOverviewRoot.innerHTML = `
     <section class="llm-overview">
       <div class="us-section-head llm-section-head">
@@ -7562,17 +7569,18 @@ function renderLlmOverview() {
           <h2>프론티어 모델 대시보드</h2>
           <p>OpenAI와 Anthropic의 연환산 매출 런레이트</p>
         </div>
-        <span class="llm-updated">Updated ${llmDashboardData.updatedAt}</span>
+        <div class="llm-updated">수치·출처 갱신 ${escapeHtml(llmDashboardData.updatedAt)}<br>최근 확인 ${escapeHtml(checkedAt)} KST${failed ? `<br>${failed}개 출처 접속 실패 · 이전 값 유지` : ""}</div>
       </div>
       <div class="llm-snapshot-strip">
         ${(llmDashboardData.snapshots ?? [])
           .map(
             (item) => `
               <div class="llm-snapshot is-${item.tone}">
-                <span>${item.provider}</span>
-                <strong>${item.value}</strong>
-                <p>${item.metric}</p>
-                <small>${item.asOf}</small>
+                <span>${escapeHtml(item.provider)}</span>
+                <strong>${escapeHtml(item.value)}</strong>
+                <p>${escapeHtml(item.metric)}</p>
+                <small>${escapeHtml(item.asOf)}</small>
+                ${item.sourceUrl ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">출처 확인 ↗</a>` : ""}
               </div>`,
           )
           .join("")}

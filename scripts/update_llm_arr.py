@@ -1,7 +1,9 @@
-"""Import explicitly attributed company-total ARR from TickerTrends' public RSS."""
+"""Refresh public company-total revenue run rates without inventing daily ARR."""
 from __future__ import annotations
 
 import copy
+import csv
+import io
 import json
 import re
 import subprocess
@@ -18,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data/llm-data.js"
 HISTORY = ROOT / "data/llm-arr-public-history.json"
 FEED = "https://blog.tickertrends.io/feed"
+EPOCH = "https://epoch.ai/data/ai_companies_revenue_reports.csv"
 CONTENT = "{http://purl.org/rss/1.0/modules/content/}encoded"
 PRODUCT = re.compile(r"\b(codex|claude code|chatgpt|ads|segment|valuation)\b", re.I)
 MONEY = re.compile(
@@ -30,6 +33,52 @@ DATED = re.compile(
     r"(?:,?\s+(?P<year>20\d{2}))?\b", re.I
 )
 MONTHS = {datetime(2000, n, 1).strftime("%b").lower(): n for n in range(1, 13)}
+
+
+def parse_reported_csv(text: str, today: date | None = None) -> tuple[list[dict], list[str]]:
+    today = today or datetime.now(timezone.utc).date()
+    reader = csv.DictReader(io.StringIO(text))
+    required = {"Company", "Date", "Annualized revenue (USD)", "Annualized revenue type",
+                "Scope", "Confidence", "Report date", "Source 1"}
+    if not required.issubset(reader.fieldnames or []):
+        raise ValueError("Epoch revenue dataset schema changed")
+    points, warnings = [], []
+    for row in reader:
+        if (row["Company"] not in ("OpenAI", "Anthropic") or row["Date"] < "2026-06-01"
+                or row["Scope"] != "Full company" or row["Annualized revenue type"] != "Annualized run rate"
+                or row["Confidence"] not in ("Likely", "Confident")):
+            continue
+        try:
+            observed = date.fromisoformat(row["Date"])
+            published = date.fromisoformat(row["Report date"])
+            value = float(row["Annualized revenue (USD)"]) / 1e9
+        except (ValueError, TypeError):
+            warnings.append(f"Review invalid Epoch date/value: {row.get('Id')}")
+            continue
+        if published < observed:
+            warnings.append(f"Review Epoch report date precedes observation: {row.get('Id')}")
+            continue
+        url = row["Source 1"]
+        host = urlparse(url).hostname or ""
+        allowed = ("ft.com", "reuters.com", "bloomberg.com", "axios.com", "openai.com", "anthropic.com")
+        if (urlparse(url).scheme != "https" or not any(host == domain or host.endswith("." + domain) for domain in allowed)
+                or observed > today or published > today or not 0 < value < 1000):
+            continue
+        # Do not turn quarterly revenue, interpolation or forecasts into ARR.
+        if re.search(r"\b(forecast|target|projected|expected|could reach)\b", row.get("Other revenue info", ""), re.I):
+            continue
+        points.append({
+            "provider": row["Company"].lower(), "kind": "reported", "value": value,
+            "date": observed.isoformat(), "asOf": None, "observationMonth": observed.isoformat()[:7],
+            "publishedAt": published.isoformat(), "dateBasis": "month-via-epoch",
+            "sourceUrl": url, "sourceTitle": f"Epoch AI: {row.get('Id', row['Company'])}",
+            "verificationUrl": EPOCH, "sourceName": "Epoch AI 공개 집계", "qualifier": "approximately",
+            "note": "Epoch AI가 원문 출처와 함께 제공한 회사 전체 런레이트입니다. 기준 월만 표시하며 데이터셋의 일자를 정확한 관측일로 단정하지 않습니다."
+                    + (" 후속 FT 보도에서 클라우드 파트너 매출을 gross-up한 이전 수치와 구분해 수정한 값입니다."
+                       if "gross" in row.get("Notes", "").lower() else ""),
+            "originalSourceNotes": row.get("Notes", ""), "confidence": row["Confidence"],
+        })
+    return points, warnings
 
 
 def parse_feed(xml: bytes, today: date | None = None) -> tuple[list[dict], list[str]]:
@@ -123,20 +172,23 @@ def update_payload(payload: dict, history: list[dict]) -> dict:
     labels = sorted(set(old_labels) | {p["date"][:7] for p in history})
     latest = {}
     for point in history:
-        key = (point["provider"], point["date"][:7])
+        kind = point.get("kind", "tracking")
+        key = (point["provider"], point["date"][:7], kind)
         prior = latest.get(key)
         if prior and (point["date"], point["publishedAt"]) == (prior["date"], prior["publishedAt"]) and point["value"] != prior["value"]:
             raise ValueError(f"Conflicting ARR estimates for {key}")
-        if not prior or (point["date"], point["publishedAt"]) > (prior["date"], prior["publishedAt"]):
+        order = ("publishedAt", "date") if kind == "reported" else ("date", "publishedAt")
+        if not prior or tuple(point[k] for k in order) > tuple(prior[k] for k in order):
             latest[key] = point
+    reported_changes = set()
     for series in panel["series"]:
         values = dict(zip(old_labels, series["values"]))
         sources = dict(zip(old_labels, series["sourceLabels"]))
-        if series["mode"] == "tracking":
-            for (provider, month), point in latest.items():
-                if provider != series["key"]:
-                    continue
-                observation = series.get("observations", {}).get(month)
+        for (provider, month, kind), point in latest.items():
+            if provider != series["key"] or kind != ("tracking" if series["mode"] == "tracking" else "reported"):
+                continue
+            observation = series.get("observations", {}).get(month)
+            if kind == "tracking":
                 prior_date = (observation or {}).get("date") or legacy_date(month, sources.get(month) or "")
                 if point["date"] < prior_date:
                     continue
@@ -144,27 +196,64 @@ def update_payload(payload: dict, history: list[dict]) -> dict:
                 basis = "기준일" if point["asOf"] else "게시일 기준 · 관측일 미공개"
                 sources[month] = f"TickerTrends 추정 · {basis} {point['date']}"
                 series.setdefault("observations", {})[month] = {**point, "status": "tracking"}
+            else:
+                prior_report = (observation or {}).get("reportedAt", "")
+                if point["publishedAt"] < prior_report:
+                    continue
+                if point["publishedAt"] == prior_report and values.get(month) == point["value"]:
+                    if observation.get("sourceUrl") != point["sourceUrl"] or all(observation.get(k) == v for k, v in point.items()):
+                        continue
+                record = {**point, "status": "reported", "reportedAt": point["publishedAt"]}
+                if values.get(month) is not None and values[month] != point["value"]:
+                    record["revisions"] = list((observation or {}).get("revisions", [])) + [{
+                        "value": values[month], "sourceLabel": sources.get(month),
+                        "sourceUrl": (observation or {}).get("sourceUrl"),
+                    }]
+                elif observation and observation.get("revisions"):
+                    record["revisions"] = observation["revisions"]
+                values[month] = point["value"]
+                sources[month] = f"{point.get('sourceName', '언론 보도')} · {point['publishedAt']} · {month} 기준"
+                series.setdefault("observations", {})[month] = record
+                reported_changes.add(provider)
         series["values"] = [values.get(label) for label in labels]
         series["sourceLabels"] = [sources.get(label) for label in labels]
     panel["labels"] = labels
     if history:
         snapshots = [s for s in result.get("snapshots", []) if s.get("kind") != "tracking"]
         for provider in ("openai", "anthropic"):
-            candidates = [p for p in history if p["provider"] == provider]
+            candidates = [p for p in history if p["provider"] == provider and p.get("kind", "tracking") == "tracking"]
             if candidates:
                 point = max(candidates, key=lambda p: (p["date"], p["publishedAt"]))
                 basis = "관측 기준" if point["asOf"] else "게시일 기준 · 관측일 미공개"
                 snapshots.append({"provider": "OpenAI" if provider == "openai" else "Anthropic", "kind": "tracking",
                                   "metric": "TickerTrends ARR 추정치", "value": f"${point['value']:g}B",
-                                  "asOf": f"{point['date']} · {basis}", "tone": provider})
+                                  "asOf": f"{point['date']} · {basis}", "tone": provider, "sourceUrl": point["sourceUrl"]})
         result["snapshots"] = snapshots
+    for provider in reported_changes:
+        series = next(s for s in panel["series"] if s["key"] == provider and s["mode"] == "actual")
+        month = max(label for label, value in zip(labels, series["values"]) if value is not None)
+        record = series["observations"][month]
+        value = series["values"][labels.index(month)]
+        suffix = "+" if record.get("qualifier") == "more-than" else " 내외"
+        snapshot = {"provider": "OpenAI" if provider == "openai" else "Anthropic", "kind": "reported",
+                    "metric": "보도된 연환산 매출 런레이트", "value": f"${value:g}B{suffix}",
+                    "asOf": f"{month} 기준 · {record['reportedAt']} 보도", "tone": provider,
+                    "sourceUrl": record["sourceUrl"]}
+        index = next((i for i, s in enumerate(result["snapshots"]) if s.get("tone") == provider and s.get("kind") != "tracking"), None)
+        if index is None:
+            result["snapshots"].insert(0, snapshot)
+        else:
+            result["snapshots"][index] = snapshot
     if panel != payload["revenue"]:
         result["updatedAt"] = max(payload["updatedAt"], *(p["publishedAt"] for p in history))
         known_urls = {s["url"] for s in result.get("sources", [])}
         for point in history:
             if point["sourceUrl"] not in known_urls:
-                result.setdefault("sources", []).append({"label": f"TickerTrends: {point['sourceTitle']}", "url": point["sourceUrl"]})
+                result.setdefault("sources", []).append({"label": point['sourceTitle'], "url": point["sourceUrl"]})
                 known_urls.add(point["sourceUrl"])
+            if point.get("verificationUrl") and point["verificationUrl"] not in known_urls:
+                result["sources"].append({"label": "Epoch AI 공개 매출 이력: 원문 교차 확인", "url": point["verificationUrl"]})
+                known_urls.add(point["verificationUrl"])
     return result
 
 
@@ -175,20 +264,33 @@ def load_payload() -> dict:
 
 
 def main() -> None:
-    response = requests.get(FEED, timeout=(10, 40), headers={"User-Agent": "EGDashboard/1.0 public ARR research"})
-    response.raise_for_status()
-    fresh, warnings = parse_feed(response.content)
+    fresh, warnings, checks = [], [], []
+    for key, url, parser in [("tickertrends", FEED, parse_feed), ("epoch", EPOCH, parse_reported_csv)]:
+        try:
+            response = requests.get(url, timeout=(10, 35), headers={"User-Agent": "EGDashboard/1.0 public ARR research"})
+            response.raise_for_status()
+            points, notices = parser(response.content if key == "tickertrends" else response.text)
+            fresh.extend(points)
+            warnings.extend(notices)
+            checks.append({"key": key, "url": url, "status": "ok", "observations": len(points), "reviewWarnings": len(notices)})
+        except Exception as error:
+            warnings.append(f"{key} public ARR check failed; stored observations preserved: {error}")
+            checks.append({"key": key, "url": url, "status": "failed"})
+    if not any(check["status"] == "ok" for check in checks):
+        raise RuntimeError("All public ARR sources failed; previous files preserved")
     for warning in warnings:
         print(f"::warning::{warning}")
     previous = json.loads(HISTORY.read_text(encoding="utf-8")) if HISTORY.exists() else {"observations": []}
     history = merge_history(previous["observations"], fresh)
     payload = load_payload()
     updated = update_payload(payload, history)
+    chart_changed = updated["revenue"] != payload["revenue"]
+    updated["arrRefresh"] = {"checkedAt": datetime.now(timezone.utc).isoformat(), "sources": checks}
     if updated != payload:
         DATA.write_text("window.llmDashboardData = " + json.dumps(updated, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
     if history != previous["observations"]:
-        HISTORY.write_text(json.dumps({"source": FEED, "observations": history}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Public ARR: {len(fresh)} observations found; chart {'updated' if updated != payload else 'unchanged'}; {len(warnings)} review warnings")
+        HISTORY.write_text(json.dumps({"source": FEED, "sourceUrls": [FEED, EPOCH], "observations": history}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"Public ARR: {len(fresh)} observations found; chart {'updated' if chart_changed else 'unchanged'}; {len(warnings)} review warnings")
 
 
 if __name__ == "__main__":

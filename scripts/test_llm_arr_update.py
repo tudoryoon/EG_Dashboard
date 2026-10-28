@@ -1,11 +1,13 @@
 import copy
+import csv
+import io
 import json
 import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
 from xml.sax.saxutils import escape
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import update_ai_data_batch as batch
 import update_llm_arr as arr
@@ -81,6 +83,107 @@ class PublicArrTests(unittest.TestCase):
         q = {**p[0], 'value': 99, 'sourceUrl': 'https://blog.tickertrends.io/p/other'}
         with self.assertRaises(ValueError):
             arr.update_payload({'revenue': {'labels': [], 'series': []}}, [p[0], q])
+
+
+def reported_csv(**changes):
+    row = {"Id": "OpenAI July revision", "Company": "OpenAI", "Date": "2026-07-15",
+           "Annualized revenue (USD)": "30000000000", "Annualized revenue type": "Annualized run rate",
+           "Scope": "Full company", "Confidence": "Likely", "Report date": "2026-10-08",
+           "Source 1": "https://www.ft.com/content/test", "Other revenue info": "", "Notes": "Revised partner gross-up"}
+    row.update(changes)
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=row.keys())
+    writer.writeheader()
+    writer.writerow(row)
+    return out.getvalue()
+
+
+class ReportedArrTests(unittest.TestCase):
+    def test_reported_company_total_month_not_false_exact_date(self):
+        points, warnings = arr.parse_reported_csv(reported_csv(), date(2026, 10, 28))
+        self.assertEqual(warnings, [])
+        self.assertEqual(len(points), 1)
+        point = points[0]
+        self.assertEqual((point['value'], point['kind'], point['observationMonth']), (30, 'reported', '2026-07'))
+        self.assertIsNone(point['asOf'])
+        self.assertEqual(point['verificationUrl'], arr.EPOCH)
+
+    def test_misdated_dataset_requires_review_not_silent_redating(self):
+        points, warnings = arr.parse_reported_csv(reported_csv(**{
+            'Date': '2026-09-30', 'Report date': '2026-09-08'}), date(2026, 10, 28))
+        self.assertEqual(points, [])
+        self.assertTrue(any('precedes' in warning for warning in warnings))
+
+    def test_reject_period_annualization_products_forecasts_and_weak_sources(self):
+        for changes in [
+            {'Annualized revenue type': 'Period interpolation'}, {'Scope': 'Claude Code'},
+            {'Confidence': 'Uncertain'}, {'Other revenue info': 'expected to reach $100B'},
+            {'Report date': '2027-01-01'}, {'Source 1': 'https://unknown.example/news'},
+            {'Annualized revenue (USD)': 'NaN'},
+        ]:
+            with self.subTest(changes=changes):
+                self.assertEqual(arr.parse_reported_csv(reported_csv(**changes), date(2026, 10, 28))[0], [])
+
+    def test_schema_change_fails(self):
+        with self.assertRaises(ValueError):
+            arr.parse_reported_csv('Company,Date\nOpenAI,2026-09-30\n')
+
+    def test_revision_updates_reported_preserves_old_value_and_tracking(self):
+        baseline = {'updatedAt': '2026-09-29', 'sources': [], 'snapshots': [
+            {'provider': 'OpenAI', 'tone': 'openai', 'value': '$40B+'}], 'revenue': {
+            'labels': ['2026-07'], 'series': [
+                {'key': 'openai', 'mode': 'actual', 'values': [40], 'sourceLabels': ['Bloomberg $40B'],
+                 'observations': {'2026-07': {'asOf': '2026-07-31', 'reportedAt': '2026-08-13',
+                                             'sourceUrl': 'https://www.bloomberg.com/old'}}},
+                {'key': 'openai', 'mode': 'tracking', 'values': [42.6], 'sourceLabels': ['TickerTrends Jul 29']},
+            ]}}
+        history = arr.parse_reported_csv(reported_csv(), date(2026, 10, 28))[0]
+        result = arr.update_payload(baseline, history)
+        actual = result['revenue']['series'][0]
+        self.assertEqual(actual['values'], [30])
+        self.assertEqual(actual['observations']['2026-07']['revisions'][0]['value'], 40)
+        self.assertEqual(result['revenue']['series'][1], baseline['revenue']['series'][1])
+        self.assertEqual(result['snapshots'][0]['value'], '$30B 내외')
+        self.assertFalse(any(s.get('kind') == 'tracking' for s in result['snapshots']))
+        self.assertEqual(result['updatedAt'], '2026-10-08')
+        self.assertEqual(result, arr.update_payload(result, history))
+
+    def test_newer_reported_point_does_not_become_tickertrends_estimate(self):
+        baseline = {'updatedAt': '2026-09-29', 'sources': [], 'snapshots': [], 'revenue': {
+            'labels': ['2026-09'], 'series': [
+                {'key': 'openai', 'mode': 'actual', 'values': [50], 'sourceLabels': ['Reported']},
+                {'key': 'openai', 'mode': 'tracking', 'values': [50.44], 'sourceLabels': ['TickerTrends Sep 29']},
+            ]}}
+        reported = arr.parse_reported_csv(reported_csv(**{
+            'Date': '2026-10-01', 'Annualized revenue (USD)': '60000000000'}), date(2026, 10, 28))[0]
+        tracking = {'provider': 'openai', 'date': '2026-09-29', 'value': 50.44, 'asOf': None,
+                    'publishedAt': '2026-09-29', 'sourceUrl': 'https://blog.tickertrends.io/p/test', 'sourceTitle': 'ARR'}
+        result = arr.update_payload(baseline, reported + [tracking])
+        self.assertEqual(next(s for s in result['snapshots'] if s['kind'] == 'tracking')['value'], '$50.44B')
+        self.assertEqual(next(s for s in result['snapshots'] if s['kind'] == 'reported')['value'], '$60B 내외')
+
+    def test_one_failed_source_still_updates_other_and_reports_checked_time(self):
+        baseline = {'updatedAt': '2026-09-29', 'sources': [], 'snapshots': [], 'revenue': {
+            'labels': [], 'series': [{'key': 'openai', 'mode': 'actual', 'values': [], 'sourceLabels': []}]}}
+        response = MagicMock()
+        response.text = reported_csv()
+        with tempfile.TemporaryDirectory(dir=batch.ROOT / 'output') as folder:
+            data, history = Path(folder)/'llm.js', Path(folder)/'history.json'
+            with patch.object(arr, 'DATA', data), patch.object(arr, 'HISTORY', history), \
+                 patch.object(arr, 'load_payload', return_value=baseline), \
+                 patch.object(arr.requests, 'get', side_effect=[RuntimeError('offline'), response]):
+                arr.main()
+            result = json.loads(data.read_text(encoding='utf-8').split('=', 1)[1].strip().rstrip(';'))
+        self.assertEqual(result['revenue']['series'][0]['values'], [30])
+        self.assertEqual([s['status'] for s in result['arrRefresh']['sources']], ['failed', 'ok'])
+        self.assertTrue(result['arrRefresh']['checkedAt'])
+
+    def test_all_sources_fail_without_writes(self):
+        with patch.object(arr.requests, 'get', side_effect=RuntimeError('offline')), \
+             patch.object(arr, 'load_payload') as load:
+            with self.assertRaises(RuntimeError):
+                arr.main()
+        load.assert_not_called()
 
 
 class IndependentBatchTests(unittest.TestCase):
