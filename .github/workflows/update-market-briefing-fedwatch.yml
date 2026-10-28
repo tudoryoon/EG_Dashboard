@@ -1,6 +1,14 @@
 name: Update Market Briefing FedWatch
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/fedwatch_data.py
+      - scripts/test_fedwatch_data.py
+      - scripts/update_market_briefing_fedwatch.py
+      - .github/workflows/update-market-briefing-fedwatch.yml
   workflow_dispatch:
   schedule:
     # Capture the official CME probability table at 04:15/05:15 KST
@@ -22,6 +30,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5

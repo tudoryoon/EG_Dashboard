@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import re
 from datetime import date, datetime, timezone
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, urljoin, urlsplit, urlunsplit
 from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
@@ -95,13 +95,25 @@ def fetch_probability_html(session) -> tuple[str, str]:
     response = session.get(CME_FEDWATCH_URL, timeout=30)
     response.raise_for_status()
     page = BeautifulSoup(response.text, "html.parser")
-    iframe = next((frame for frame in page.find_all("iframe")
-                   if urlsplit(urljoin(CME_FEDWATCH_URL, frame.get("src", ""))).hostname == CME_TOOL_HOST), None)
-    if iframe is None:
-        raise RuntimeError("CME official FedWatch iframe was not found")
+    page_url = response.url
+    tool_link = None
+    # CME's AEM page exposes the embed URL as a link before client-side rendering.
+    for element in page.find_all(["iframe", "a"]):
+        value = element.get("src" if element.name == "iframe" else "href", "")
+        parsed = urlsplit(urljoin(page_url, value))
+        if parsed.scheme != "https" or parsed.hostname != CME_TOOL_HOST:
+            continue
+        if element.name == "a" and (
+            parsed.path != "/User/QuikStrikeTools.aspx"
+            or parse_qs(parsed.query).get("viewitemid") != ["IntegratedFedWatchTool"]
+        ):
+            continue
+        tool_link = _tool_url(page_url, value)
+        break
+    if tool_link is None:
+        raise RuntimeError("CME official FedWatch embed URL was not found")
 
-    response = session.get(_tool_url(CME_FEDWATCH_URL, iframe["src"]),
-                           headers={"Referer": CME_FEDWATCH_URL}, timeout=30)
+    response = session.get(tool_link, headers={"Referer": page_url}, timeout=30)
     response.raise_for_status()
     tool_url = _tool_url(CME_FEDWATCH_URL, response.url)
     # The public iframe initializes a session in Tools, then renders the View page.

@@ -90,6 +90,39 @@ class FedWatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "URL"):
             fedwatch._tool_url(fedwatch.CME_FEDWATCH_URL, "https://example.com/form")
 
+    def test_aem_page_discovers_official_embed_link_without_iframe(self):
+        root = fedwatch.CME_FEDWATCH_URL.removesuffix(".html")
+        tool = "https://cmegroup-tools.quikstrike.net/User/QuikStrikeTools.aspx?viewitemid=IntegratedFedWatchTool"
+        view = tool.replace("QuikStrikeTools.aspx", "QuikStrikeView.aspx")
+
+        def response(text, url):
+            result = MagicMock()
+            result.text, result.url = text, url
+            return result
+
+        session = MagicMock()
+        session.get.side_effect = [
+            response('<a href="https://example.com/User/QuikStrikeTools.aspx?viewitemid=IntegratedFedWatchTool">Wrong host</a>'
+                     '<a href="https://cmegroup-tools.quikstrike.net/User/QuikStrikeTools.aspx?viewitemid=OtherTool">Other tool</a>'
+                     f'<div class="embed"><a href="{tool}">FedWatch</a></div>', root),
+            response("Loading", tool),
+            response('<form><input type="hidden" name="__VIEWSTATE" value="state">'
+                     '<a href="javascript:__doPostBack(\'probabilities\',\'\')">Probabilities</a></form>', view),
+        ]
+        session.post.return_value = response(TABLE, view)
+        html, _ = fedwatch.fetch_probability_html(session)
+        self.assertEqual(html, TABLE)
+        self.assertEqual(session.get.call_args_list[1].args[0], tool)
+        self.assertEqual(session.get.call_args_list[1].kwargs["headers"]["Referer"], root)
+
+    def test_missing_official_embed_stops_before_postback(self):
+        session = MagicMock()
+        session.get.return_value.text = '<a href="https://example.com/tool">FedWatch</a>'
+        session.get.return_value.url = fedwatch.CME_FEDWATCH_URL
+        with self.assertRaisesRegex(RuntimeError, "embed URL"):
+            fedwatch.fetch_probability_html(session)
+        session.post.assert_not_called()
+
     def test_snapshot_is_direct_and_does_not_invent_source_timestamp(self):
         now = datetime(2026, 10, 1, 6, 0, tzinfo=timezone.utc)
         with patch.object(fedwatch, "fetch_probability_html", return_value=(TABLE, "375-400")), \
