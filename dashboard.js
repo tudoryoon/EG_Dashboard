@@ -17435,7 +17435,7 @@ function renderCapexOverview() {
     <section class="cloud-overview">
       <div class="us-section-head cloud-section-head">
         <h2>Big Tech Capex & Cash Flow Dashboard</h2>
-        <p>Quarterly capex, OCF, and derived FCF trends on the same CY-adjusted basis</p>
+        <p>CY(달력연도) 기준 · MSFT FY27 Q1 = CY 3Q26 · MSFT·GOOGL 실제 분기 실적 확인 ${capexDashboardData.updatedAt ?? "-"}</p>
       </div>
       <div class="cloud-panel-grid">
         <article class="cloud-panel cloud-panel-wide">
@@ -17471,6 +17471,7 @@ function renderCapexOverview() {
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-capex-chart="quarterly-capex"></canvas>
           </div>
+          ${capexDashboardData.quarterlyCapex.sourceNote ? `<p class="capex-source-note">${capexDashboardData.quarterlyCapex.sourceNote}</p>` : ""}
         </article>
         <article class="cloud-panel">
           <div class="us-panel-head">
@@ -17516,6 +17517,7 @@ function renderCapexOverview() {
             <canvas data-capex-chart="quarterly-fcf"></canvas>
           </div>
           ${capexDashboardData.quarterlyFcf.sourceNote ? `<p class="capex-source-note">${capexDashboardData.quarterlyFcf.sourceNote}</p>` : ""}
+          ${capexDashboardData.quarterlyFcf.latestSourceNote ? `<p class="capex-source-note">${capexDashboardData.quarterlyFcf.latestSourceNote}</p>` : ""}
         </article>
         <article class="cloud-panel">
           <div class="us-panel-head">
