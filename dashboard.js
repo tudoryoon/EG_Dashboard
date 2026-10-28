@@ -570,6 +570,9 @@ const state = {
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
   openrouterOpennessFilter: "all",
   openrouterScale: "linear",
+  openrouterUsageCompany: "openai",
+  openrouterUsageModel: "all",
+  openrouterUsageRange: "1y",
 };
 
 const DASHBOARD_ROUTE_META = {
@@ -23155,7 +23158,120 @@ function renderOpenrouterLeaderboardRows(rows) {
   }).join("");
 }
 
+function getOpenrouterUsageSelection() {
+  const usage = openrouterRankingsData.weeklyUsage;
+  const companies = usage?.companies ?? [];
+  const company = companies.find((item) => item.key === state.openrouterUsageCompany) ?? companies[0];
+  const model = company?.models.find((item) => item.key === state.openrouterUsageModel);
+  if (company) state.openrouterUsageCompany = company.key;
+  if (!model) state.openrouterUsageModel = "all";
+  return { usage, companies, company, model };
+}
+
+function renderOpenrouterUsageSection() {
+  const { usage, companies, company, model } = getOpenrouterUsageSelection();
+  if (!company) return "";
+  const tokens = model?.tokens ?? company.tokens;
+  const share = usage.totalTokens > 0 ? tokens / usage.totalTokens * 100 : 0;
+  const history = model ? usage.modelHistory : usage.companyHistory;
+  const hasHistory = (history?.series?.[model?.key ?? company.key] ?? []).some((value) => value != null);
+  const companyOptions = companies.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === company.key ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("");
+  const modelOptions = company.models.map((item) => `<option value="${escapeHtml(item.key)}"${item.key === model?.key ? " selected" : ""}>${escapeHtml(item.label)}</option>`).join("");
+  const preferred = ["openai", "anthropic", "google", "deepseek", "x-ai", "qwen", "minimax", "z-ai"];
+  const buttons = preferred.map((key) => companies.find((item) => item.key === key)).filter(Boolean).map((item) =>
+    `<button type="button" class="market-rs-chip${item.key === company.key ? " active" : ""}" data-openrouter-company="${escapeHtml(item.key)}" aria-pressed="${item.key === company.key}">${escapeHtml(item.label)}</button>`).join("");
+  return `<article class="us-panel openrouter-usage-panel">
+    <div class="openrouter-section-head">
+      <div><h3>회사 · 모델별 주간 사용량</h3><p>OpenRouter 공개 트래픽 · 입력 + 출력 토큰</p></div>
+      <a href="${escapeHtml(usage.sourceUrl)}" target="_blank" rel="noreferrer">원천 데이터 ↗</a>
+    </div>
+    <div class="openrouter-usage-controls">
+      <div class="market-rs-chip-row">${buttons}</div>
+      <div class="openrouter-usage-selects">
+        <label>회사<select id="openrouter-usage-company">${companyOptions}</select></label>
+        <label>모델<select id="openrouter-usage-model"><option value="all">전체 모델 합산</option>${modelOptions}</select></label>
+      </div>
+    </div>
+    <div class="openrouter-usage-summary">
+      <div><span>${escapeHtml(model?.label ?? company.label)} · 최근 7일</span><strong>${formatOpenrouterCount(tokens)}</strong><small>${escapeHtml(usage.windowStart)} ~ ${escapeHtml(usage.asOf)} UTC${usage.stale ? " · 이전 정상 수집값" : ""}</small></div>
+      <div><span>OpenRouter 전체 대비</span><strong>${share.toFixed(2)}%</strong><small>토큰 사용량 점유율</small></div>
+      <div><span>${escapeHtml(company.label)} 합산</span><strong>${formatOpenrouterCount(company.tokens)}</strong><small>${company.modelCount}개 모델/variant · 무료/유료 포함</small></div>
+    </div>
+    <div class="openrouter-usage-chart-head"><h4>${escapeHtml(model?.label ?? company.label)} 주간 추이</h4>
+      <div class="market-rs-chip-row">${[["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["1y", "1Y"]].map(([key, label]) => `<button type="button" class="market-rs-chip${state.openrouterUsageRange === key ? " active" : ""}" data-openrouter-usage-range="${key}">${label}</button>`).join("")}</div>
+    </div>
+    <div class="openrouter-usage-chart"><canvas id="openrouter-company-usage-chart"></canvas></div>
+    ${hasHistory ? "" : '<p class="openrouter-caption">선택 항목의 주별 이력은 원천에서 미공개입니다. 위 최근 7일 합계와 아래 모델별 사용량은 전체 주간 데이터 기준입니다.</p>'}
+    <p class="openrouter-caption">추이는 원천의 주별 구간이며 최근 7일 합계와 기간이 다릅니다. 마지막 주는 진행 중입니다. 과거 공개 순위 밖의 회사·모델 값은 미공개로 비워둡니다.</p>
+    <div class="openrouter-usage-table-head"><h4>${escapeHtml(company.label)} 모델별 최근 7일</h4><span>사용량 내림차순 · 전체 ${company.modelCount}개</span></div>
+    <div class="openrouter-usage-table-wrap"><table class="openrouter-usage-table">
+      <thead><tr><th>모델</th><th>주간 토큰</th><th>회사 내 비중</th></tr></thead><tbody>
+      ${company.models.map((item) => `<tr class="${model?.key === item.key ? "is-selected" : ""}"><td><button type="button" data-openrouter-model="${escapeHtml(item.key)}">${escapeHtml(item.label)}</button></td><td>${formatOpenrouterCount(item.tokens)}</td><td>${company.tokens > 0 ? (item.tokens / company.tokens * 100).toFixed(2) : "0.00"}%</td></tr>`).join("")}
+      </tbody></table></div>
+    <p class="openrouter-caption">회사 합계는 상위 100개로 자르기 전 전체 모델 데이터를 합산합니다. 각 회사의 전체 API·ChatGPT·Claude 이용량이나 이용자 수가 아닙니다. Source: <a href="https://openrouter.ai/rankings" target="_blank" rel="noreferrer">OpenRouter</a> · CC BY 4.0</p>
+  </article>`;
+}
+
+function createOpenrouterUsageChart() {
+  const canvas = usOverviewRoot.querySelector("#openrouter-company-usage-chart");
+  const { usage, company, model } = getOpenrouterUsageSelection();
+  if (!canvas || !company || typeof Chart === "undefined") return;
+  const history = model ? usage.modelHistory : usage.companyHistory;
+  const limit = { "1m": 5, "3m": 14, "6m": 27, "1y": 53 }[state.openrouterUsageRange] ?? 53;
+  const labels = (history?.dates ?? []).slice(-limit);
+  const values = (history?.series?.[model?.key ?? company.key] ?? []).slice(-limit);
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets: [{ label: model?.label ?? company.label, data: labels.map((_, i) => values[i] ?? null),
+      borderColor: "#087f8c", backgroundColor: "rgba(8,127,140,0.08)", fill: true,
+      borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5, tension: 0.15, spanGaps: false,
+      segment: { borderDash: (context) => context.p1DataIndex === labels.length - 1 ? [5, 4] : undefined },
+    }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        title: (items) => `${items[0]?.label ?? ""} 주${items[0]?.dataIndex === labels.length - 1 ? " (진행 중)" : ""}`,
+        label: (context) => `${context.dataset.label}: ${formatOpenrouterCount(context.parsed.y)}`,
+      } } },
+      scales: { x: { grid: { display: false }, ticks: { maxRotation: 0, maxTicksLimit: 7 } },
+        y: { beginAtZero: true, title: { display: true, text: "주간 토큰" },
+          ticks: { callback: (value) => formatOpenrouterCount(value).replace(" tokens", "") },
+          grid: { color: "rgba(17,24,39,0.07)" } } },
+    },
+  });
+  charts.push(chart);
+}
+
+function bindOpenrouterUsageControls() {
+  const chooseCompany = (key) => {
+    state.openrouterUsageCompany = key;
+    state.openrouterUsageModel = "all";
+    renderOpenrouterOverview();
+  };
+  usOverviewRoot.querySelectorAll("[data-openrouter-company]").forEach((button) => {
+    button.addEventListener("click", () => chooseCompany(button.dataset.openrouterCompany));
+  });
+  usOverviewRoot.querySelector("#openrouter-usage-company")?.addEventListener("change", (event) => chooseCompany(event.target.value));
+  usOverviewRoot.querySelector("#openrouter-usage-model")?.addEventListener("change", (event) => {
+    state.openrouterUsageModel = event.target.value;
+    renderOpenrouterOverview();
+  });
+  usOverviewRoot.querySelectorAll("[data-openrouter-model]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.openrouterUsageModel = button.dataset.openrouterModel;
+      renderOpenrouterOverview();
+    });
+  });
+  usOverviewRoot.querySelectorAll("[data-openrouter-usage-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.openrouterUsageRange = button.dataset.openrouterUsageRange;
+      renderOpenrouterOverview();
+    });
+  });
+}
+
 function renderOpenrouterOverview() {
+  destroyCharts();
   companyGrid.classList.add("hidden");
   usOverviewRoot.classList.remove("hidden");
   const topChart = openrouterRankingsData.charts?.models;
@@ -23239,6 +23355,7 @@ function renderOpenrouterOverview() {
         </div>
       </div>
 
+      ${renderOpenrouterUsageSection()}
       <article class="us-panel openrouter-chart-panel">
         <div class="openrouter-section-head">
           <div>
@@ -23286,6 +23403,8 @@ function renderOpenrouterOverview() {
     </section>
   `;
 
+  createOpenrouterUsageChart();
+  bindOpenrouterUsageControls();
   createOpenrouterStackedChart(document.querySelector("#openrouter-top-models-chart"), topChart);
   if (dailyUsage?.dates?.length) {
     const coloredDailyUsage = {

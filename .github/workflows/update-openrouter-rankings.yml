@@ -42,6 +42,11 @@ jobs:
           python -m unittest discover -s scripts -p test_llm_arr_update.py
           node scripts/test_llm_reported_arr.cjs
 
+      - name: Test company and model weekly usage
+        run: |
+          python -m unittest discover -s scripts -p test_openrouter_usage.py
+          node scripts/test_openrouter_usage_view.cjs
+
       - name: Test earnings fallback and calendar dates
         run: |
           python -m unittest discover -s scripts -p 'test_study_calendar*.py'

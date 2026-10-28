@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -160,10 +160,15 @@ def build_model_name_map() -> dict[str, str]:
         name = str(row.get("name") or "").strip()
         if not name:
             continue
-        for key in (row.get("id"), row.get("canonical_slug")):
-            normalized = normalize_model_id(str(key or ""))
-            if normalized:
-                names[normalized] = name
+        normalized = normalize_model_id(row.get("id"))
+        if normalized:
+            names[normalized] = name
+    # Variants can share a canonical slug; never replace a standard model's name.
+    for row in sorted(data, key=lambda item: ":" in str(item.get("id") or "")):
+        normalized = normalize_model_id(row.get("canonical_slug"))
+        name = str(row.get("name") or "").strip()
+        if normalized and name:
+            names.setdefault(normalized, name)
     return names
 
 
@@ -218,7 +223,7 @@ def normalize_leaderboard_row(row: dict[str, Any], rank: int, model_names: dict[
     prompt_tokens = int(row.get("total_prompt_tokens") or 0)
     completion_tokens = int(row.get("total_completion_tokens") or 0)
     reasoning_tokens = int(row.get("total_native_tokens_reasoning") or 0)
-    total_tokens = prompt_tokens + completion_tokens + reasoning_tokens
+    total_tokens = prompt_tokens + completion_tokens
     return {
         "rank": rank,
         "date": str(row.get("date") or "")[:10],
@@ -250,6 +255,74 @@ def load_existing_payload() -> dict[str, Any]:
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"Unable to load previous OpenRouter payload: {error}")
     return {}
+
+
+AUTHOR_LABELS = {
+    "openai": "OpenAI", "anthropic": "Anthropic", "google": "Google",
+    "deepseek": "DeepSeek", "x-ai": "xAI", "qwen": "Qwen / Alibaba",
+    "meta-llama": "Meta", "microsoft": "Microsoft", "nvidia": "NVIDIA",
+    "moonshotai": "Moonshot AI", "z-ai": "Z.ai", "minimax": "MiniMax",
+    "mistralai": "Mistral AI", "tencent": "Tencent", "stepfun": "StepFun",
+}
+
+
+def weekly_history(raw: dict[str, Any]) -> dict[str, Any]:
+    body = raw.get("data", {})
+    rows = body.get("data", []) if isinstance(body, dict) else body
+    rows = sorted(rows or [], key=lambda row: row["x"])
+    keys = sorted({key for row in rows for key in row["ys"] if key.lower() != "others"})
+    return {
+        "dates": [row["x"] for row in rows],
+        "cachedAt": body.get("cachedAt") if isinstance(body, dict) else raw.get("cachedAt"),
+        # Missing named rows are inside Others, not zero usage.
+        "series": {key: [row["ys"].get(key) for row in rows] for key in keys},
+    }
+
+
+def build_weekly_usage(rows: list[dict[str, Any]], author_raw: dict[str, Any],
+                       model_raw: dict[str, Any], model_names: dict[str, str]) -> dict[str, Any]:
+    if not rows:
+        raise ValueError("Empty weekly model usage; refusing to replace stored totals")
+    as_of = max(row["date"] for row in rows if row.get("date"))
+    date.fromisoformat(as_of)
+    companies: dict[str, Any] = {}
+    for row in rows:
+        company = companies.setdefault(row["author"], {
+            "key": row["author"], "label": AUTHOR_LABELS.get(row["author"], row["author"]),
+            "tokens": 0, "requests": 0, "models": {},
+        })
+        # Keep disjoint variants explicit so their history matches the source chart.
+        model_id = row["variantId"]
+        variant = row.get("variant") or ""
+        label = display_name(row["modelId"], model_names)
+        if variant and variant != "standard":
+            label += f" ({variant})"
+        model = company["models"].setdefault(model_id, {
+            "key": model_id, "label": label,
+            "tokens": 0, "requests": 0, "variants": [],
+        })
+        model["tokens"] += row["tokens"]
+        model["requests"] += row["requests"]
+        model["variants"].append(row["variantId"])
+        company["tokens"] += row["tokens"]
+        company["requests"] += row["requests"]
+    for company in companies.values():
+        company["models"] = sorted(company["models"].values(), key=lambda item: item["tokens"], reverse=True)
+        company["modelCount"] = len(company["models"])
+    return {
+        "asOf": as_of,
+        "windowStart": (date.fromisoformat(as_of) - timedelta(days=6)).isoformat(),
+        "totalTokens": sum(company["tokens"] for company in companies.values()),
+        "modelCount": sum(company["modelCount"] for company in companies.values()),
+        "companies": sorted(companies.values(), key=lambda item: item["tokens"], reverse=True),
+        "companyHistory": weekly_history(author_raw),
+        "modelHistory": weekly_history(model_raw),
+        "sourceUrl": BASE_URL + "/rankings",
+        "authorHistoryUrl": BASE_URL + RANKINGS_API_BASE + "/author-market-share",
+        "modelHistoryUrl": BASE_URL + CHART_ENDPOINTS["models"]["endpoint"],
+        "scope": "OpenRouter public traffic only; prompt + completion tokens, not users or revenue.",
+        "historyCoverage": "Weekly chart buckets are distinct from the trailing 7-day summary. Missing named series are unreported, not zero. The latest week is in progress.",
+    }
 
 
 def build_daily_usage_payload(existing_daily: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -308,18 +381,33 @@ def build_payload() -> dict[str, Any]:
     existing_payload = load_existing_payload()
     model_names = build_model_name_map()
     charts = {}
+    raw_charts = {}
     for key, config in CHART_ENDPOINTS.items():
         raw = fetch_json(str(config["endpoint"]))
+        raw_charts[key] = raw
         charts[key] = normalize_chart_payload(raw, model_names, config)
 
     leaderboards = {}
+    weekly_rows = []
     for view in LEADERBOARD_VIEWS:
         data = fetch_json(f"{RANKINGS_API_BASE}/models", {"view": view}).get("data", [])
         rows = [normalize_leaderboard_row(row, index + 1, model_names) for index, row in enumerate(data)]
         rows.sort(key=lambda row: row["tokens"], reverse=True)
         for index, row in enumerate(rows, start=1):
             row["rank"] = index
+        if view == "week":
+            weekly_rows = rows
         leaderboards[view] = rows[:100]
+
+    try:
+        author_raw = fetch_json(f"{RANKINGS_API_BASE}/author-market-share")
+        weekly_usage = build_weekly_usage(weekly_rows, author_raw, raw_charts["models"], model_names)
+    except Exception as error:
+        previous = existing_payload.get("weeklyUsage")
+        if not previous:
+            raise
+        weekly_usage = {**previous, "stale": True}
+        print(f"Weekly usage refresh failed; preserving stored snapshot: {error}")
 
     latest_chart_dates = [chart["dates"][-1] for chart in charts.values() if chart.get("dates")]
     latest_leaderboard_dates = [
@@ -344,6 +432,7 @@ def build_payload() -> dict[str, Any]:
             {"key": "month", "label": "This Month"},
         ],
         "charts": charts,
+        "weeklyUsage": weekly_usage,
         "dailyUsage": build_daily_usage_payload(existing_payload.get("dailyUsage")),
         "leaderboards": leaderboards,
     }

@@ -39,5 +39,7 @@ const workflow = fs.readFileSync(
   "utf8",
 );
 assert.doesNotMatch(workflow, /pytrends|update_trend_search|trend-search-data/);
-assert.match(workflow, /update_study_calendar\.py/);
+assert.match(workflow, /update_ai_data_batch\.py/);
+const batch = fs.readFileSync(path.join(root, "scripts", "update_ai_data_batch.py"), "utf8");
+assert.match(batch, /update_study_calendar\.py/);
 console.log("Research tab cleanup and Power Infra routes passed.");
