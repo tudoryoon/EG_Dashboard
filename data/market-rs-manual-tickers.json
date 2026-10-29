@@ -1227,6 +1227,17 @@
       "sharesOutstanding": 47185754
     },
     {
+      "ticker": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 2444153879
+    },
+    {
       "ticker": "XBI",
       "name": "State Street SPDR S&P Biotech ETF",
       "memberships": {
