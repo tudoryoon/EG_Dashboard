@@ -149,27 +149,62 @@ class AcwiTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "identity"):
                 acwi.official_eod_close("2026-10-28")
 
-    def test_provider_close_must_match_official_eod_before_replacing_cache(self):
+    def test_official_eod_replaces_disputed_close_without_inventing_ohlc(self):
         old = {"dates": ["2016-01-01", "2026-10-27"], "values": [100, 628.05]}
-        item = {"dates": ["2016-01-01"] * 1000 + ["2026-10-28"],
-                "values": [100] * 1000 + [630.82]}
+        def item():
+            dates = ["2016-01-01"] * 1000 + ["2026-10-28"]
+            values = [100] * 1000 + [630.82]
+            return {"dates": dates, "values": values,
+                    "opens": values.copy(), "highs": values.copy(),
+                    "lows": values.copy(), "closes": values.copy(),
+                    "officialUrl": "https://www.msci.com/indexes/index/892400/msci-acwi-index"}
         response = Mock()
         response.json.return_value = {"data": []}
+        disputed = item()
         with patch.object(acwi.requests, "get", return_value=response), \
-             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "parse_history", return_value=disputed), \
              patch.object(acwi, "latest_completed_date", return_value="2026-10-28"), \
              patch.object(acwi, "official_eod_close", return_value=630.433651):
-            self.assertIs(acwi.fetch_item(old), old)
+            self.assertIs(acwi.fetch_item(old), disputed)
+        self.assertEqual(disputed["values"][-1], 630.4337)
+        self.assertEqual(disputed["closes"][-1], 630.4337)
+        self.assertIsNone(disputed["opens"][-1])
+        self.assertIsNone(disputed["highs"][-1])
+        self.assertIsNone(disputed["lows"][-1])
+        self.assertTrue(disputed["closeOnly"])
+        self.assertEqual(disputed["officialEodOverrides"], {"2026-10-28": 630.433651})
+        matching = item()
         with patch.object(acwi.requests, "get", return_value=response), \
-             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "parse_history", return_value=matching), \
              patch.object(acwi, "latest_completed_date", return_value="2026-10-28"), \
              patch.object(acwi, "official_eod_close", return_value=630.823651):
-            self.assertIs(acwi.fetch_item(old), item)
+            self.assertIs(acwi.fetch_item(old), matching)
+        self.assertNotIn("officialEodOverrides", matching)
         with patch.object(acwi.requests, "get", return_value=response), \
-             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "parse_history", return_value=item()), \
              patch.object(acwi, "latest_completed_date", return_value="2026-10-28"), \
              patch.object(acwi, "official_eod_close", side_effect=ValueError("EOD not yet published")):
             self.assertIs(acwi.fetch_item(old), old)
+
+    def test_prior_official_close_survives_later_provider_refresh(self):
+        old = {"dates": ["2016-01-01", "2026-10-28"],
+               "officialEodOverrides": {"2026-10-28": 630.433651}}
+        dates = ["2016-01-01"] * 999 + ["2026-10-28", "2026-10-29"]
+        values = [100] * 999 + [630.82, 631.25]
+        item = {"dates": dates, "values": values.copy(), "opens": values.copy(),
+                "highs": values.copy(), "lows": values.copy(), "closes": values.copy(),
+                "officialUrl": "https://www.msci.com/indexes/index/892400/msci-acwi-index"}
+        response = Mock()
+        response.json.return_value = {"data": []}
+        official = {"2026-10-28": 630.433651, "2026-10-29": 631.25}
+        with patch.object(acwi.requests, "get", return_value=response), \
+             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "latest_completed_date", return_value="2026-10-29"), \
+             patch.object(acwi, "official_eod_close", side_effect=official.get):
+            self.assertIs(acwi.fetch_item(old), item)
+        self.assertEqual(item["values"][-2:], [630.4337, 631.25])
+        self.assertIsNone(item["opens"][-2])
+        self.assertEqual(item["officialEodOverrides"], {"2026-10-28": 630.433651})
 
     def test_append_does_not_rerank_stocks(self):
         import numpy as np

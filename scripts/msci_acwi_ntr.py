@@ -94,11 +94,30 @@ def fetch_item(existing=None):
                 raise ValueError("MSCI ACWI NTR history regressed")
         latest = item["dates"][-1]
         official = official_eod_close(latest)
-        if round(item["values"][-1], 2) != round(official, 2):
-            raise ValueError(
-                f"MSCI ACWI NTR provider close differs from official EOD on {latest}: "
-                f"{item['values'][-1]} vs {official}"
-            )
+        prior_overrides = (existing or {}).get("officialEodOverrides") or {}
+        overrides = {}
+        for day in sorted(set(prior_overrides) | {latest}):
+            if day not in item["dates"]:
+                raise ValueError(f"MSCI ACWI NTR official EOD date missing from provider history: {day}")
+            verified_close = official if day == latest else official_eod_close(day)
+            index = item["dates"].index(day)
+            provider_close = item["values"][index]
+            if round(provider_close, 2) == round(verified_close, 2):
+                continue
+            # MSCI supplies an EOD level, not an OHLC candle. Keep the close
+            # and leave the unverified intraday fields empty for this session.
+            item["values"][index] = round(verified_close, 4)
+            item["closes"][index] = round(verified_close, 4)
+            for key in ("opens", "highs", "lows"):
+                item[key][index] = None
+            overrides[day] = verified_close
+            print(f"Used MSCI official NETR USD EOD close for {day}: {verified_close}; "
+                  f"Investing.com close {provider_close} disagreed", flush=True)
+        if overrides:
+            item["closeOnly"] = True
+            item["officialEodOverrides"] = overrides
+            item["source"] = "MSCI official NETR USD EOD closes; Investing.com prior historical data"
+            item["sourceUrl"] = item["officialUrl"]
         return item
     except Exception as exc:
         if not existing or not existing.get("dates"):
@@ -125,7 +144,8 @@ def append_rs_index(payload, item=None):
     as_of = min(payload["updatedAt"], item["dates"][-1])
     scoped = {**payload, "updatedAt": as_of}
     row, history = build_new_row_and_history(scoped, TICKER, frame, LABEL, None, is_index=True)
-    row.update(isIndex=True, currency="USD", asOfDate=as_of, sourceUrl=SOURCE_URL,
+    row.update(isIndex=True, currency="USD", asOfDate=as_of,
+               sourceUrl=item.get("officialUrl") if item.get("closeOnly") else SOURCE_URL,
                rsBasis="Existing All universe; index excluded from stock ranks")
     reference = pd.DataFrame({r["ticker"]: payload["histories"][r["ticker"]]["price"]
                               for r in payload["rows"] if not r.get("isIndex")

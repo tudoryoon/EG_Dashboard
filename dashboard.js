@@ -14575,7 +14575,7 @@ function renderMarketRsOverview() {
             <div>
               <h2>${selected?.ticker ?? "-"}</h2>
               <p>${selected?.name ?? "Select a ticker from the table or search box."}</p>
-              ${selected?.isIndex ? `<p><a href="${selected.sourceUrl}" target="_blank" rel="noopener noreferrer">NTR USD 지수 · ${selected.asOfDate} · Investing.com / MSCI</a></p>` : ""}
+              ${selected?.isIndex ? `<p><a href="${selected.sourceUrl}" target="_blank" rel="noopener noreferrer">NTR USD 지수 · ${selected.asOfDate} · ${(selected.sourceUrl ?? "").includes("msci.com") ? "MSCI 공식 EOD 종가" : "Investing.com / MSCI"}</a></p>` : ""}
             </div>
             <span class="market-rs-score-stack market-rs-detail-score-stack">
               <span class="market-rs-detail-score">${formatRsNumber(getMarketRsUniverseScore(selected ?? {}, state.rsUniverse))}</span>
@@ -20132,7 +20132,7 @@ function renderIndexTrendOverview() {
           <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
           <span>Gap = Index / EMA - 1</span>
           ${marketTrendCloseOnly ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">Cboe 공식 종가</a> · ${marketTrendItem.dates.at(-1)} · OHLC 미제공: Candle·ATR 미산출</span>` : ""}
-          ${marketTrendItem?.msciIndexCode ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">MSCI ACWI · 배당 원천세 차감 후 재투자 · USD · Investing.com</a> · ${marketTrendItem.dates.at(-1)}</span>` : ""}
+          ${marketTrendItem?.msciIndexCode ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">MSCI ACWI · 배당 원천세 차감 후 재투자 · USD · ${marketTrendItem.closeOnly ? "MSCI 공식 EOD 종가" : "Investing.com"}</a> · ${marketTrendItem.dates.at(-1)}</span>` : ""}
         </div>
         <div class="market-trend-gap-row">
           ${marketTrendGapMarkup}
