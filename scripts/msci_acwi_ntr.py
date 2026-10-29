@@ -11,6 +11,7 @@ TICKER = "MIWD00000NUS"
 LABEL = "MSCI ACWI NTR USD"
 SOURCE_URL = "https://www.investing.com/indices/msci-acwi-net-usd-historical-data"
 HISTORY_URL = "https://api.investing.com/api/financialdata/historical/951385"
+OFFICIAL_LEVEL_URL = "https://app2.msci.com/products/service/index/indexmaster/getLevelDataForGraph"
 START_DATE = "2016-01-01"
 
 
@@ -52,6 +53,30 @@ def latest_completed_date(now=None):
     return day.isoformat()
 
 
+def official_eod_close(day):
+    """Verify an Investing.com close against MSCI's dated NETR USD EOD level."""
+    response = requests.get(OFFICIAL_LEVEL_URL, params={
+        "currency_symbol": "USD", "index_variant": "NETR",
+        "start_date": day.replace("-", ""), "end_date": day.replace("-", ""),
+        "data_frequency": "DAILY", "index_codes": "892400",
+    }, impersonate="chrome", timeout=30)
+    response.raise_for_status()
+    payload = response.json()
+    if (str(payload.get("msci_index_code")) != "892400"
+            or payload.get("index_variant_type") != "NETR"
+            or payload.get("ISO_currency_symbol") != "USD"):
+        raise ValueError("MSCI official index identity does not match ACWI NETR USD")
+    levels = payload.get("indexes", {}).get("INDEX_LEVELS", [])
+    matching = [row.get("level_eod") for row in levels
+                if str(row.get("calc_date")) == day.replace("-", "")]
+    if len(matching) != 1:
+        raise ValueError(f"MSCI official NETR USD EOD is not available for {day}")
+    level = float(matching[0])
+    if not math.isfinite(level) or level <= 0:
+        raise ValueError(f"Invalid MSCI official NETR USD EOD for {day}")
+    return level
+
+
 def fetch_item(existing=None):
     through = latest_completed_date()
     try:
@@ -67,6 +92,13 @@ def fetch_item(existing=None):
         if existing and existing.get("dates"):
             if item["dates"][-1] < existing["dates"][-1] or item["dates"][0] > existing["dates"][0]:
                 raise ValueError("MSCI ACWI NTR history regressed")
+        latest = item["dates"][-1]
+        official = official_eod_close(latest)
+        if round(item["values"][-1], 2) != round(official, 2):
+            raise ValueError(
+                f"MSCI ACWI NTR provider close differs from official EOD on {latest}: "
+                f"{item['values'][-1]} vs {official}"
+            )
         return item
     except Exception as exc:
         if not existing or not existing.get("dates"):

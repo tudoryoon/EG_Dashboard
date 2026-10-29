@@ -1,7 +1,7 @@
 import copy
 from datetime import datetime
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import msci_acwi_ntr as acwi
 import update_market_trend_score as trend
@@ -132,6 +132,44 @@ class AcwiTests(unittest.TestCase):
             self.assertIs(acwi.fetch_item(old), old)
             with self.assertRaises(RuntimeError):
                 acwi.fetch_item()
+
+    def test_official_eod_requires_exact_index_and_date(self):
+        response = Mock()
+        response.json.return_value = {
+            "msci_index_code": "892400", "index_variant_type": "NETR",
+            "ISO_currency_symbol": "USD",
+            "indexes": {"INDEX_LEVELS": [{"calc_date": 20261027, "level_eod": 628.045088},
+                                         {"calc_date": 20261028, "level_eod": 630.433651}]},
+        }
+        with patch.object(acwi.requests, "get", return_value=response):
+            self.assertAlmostEqual(acwi.official_eod_close("2026-10-28"), 630.433651)
+            with self.assertRaisesRegex(ValueError, "not available"):
+                acwi.official_eod_close("2026-10-29")
+            response.json.return_value["index_variant_type"] = "PR"
+            with self.assertRaisesRegex(ValueError, "identity"):
+                acwi.official_eod_close("2026-10-28")
+
+    def test_provider_close_must_match_official_eod_before_replacing_cache(self):
+        old = {"dates": ["2016-01-01", "2026-10-27"], "values": [100, 628.05]}
+        item = {"dates": ["2016-01-01"] * 1000 + ["2026-10-28"],
+                "values": [100] * 1000 + [630.82]}
+        response = Mock()
+        response.json.return_value = {"data": []}
+        with patch.object(acwi.requests, "get", return_value=response), \
+             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "latest_completed_date", return_value="2026-10-28"), \
+             patch.object(acwi, "official_eod_close", return_value=630.433651):
+            self.assertIs(acwi.fetch_item(old), old)
+        with patch.object(acwi.requests, "get", return_value=response), \
+             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "latest_completed_date", return_value="2026-10-28"), \
+             patch.object(acwi, "official_eod_close", return_value=630.823651):
+            self.assertIs(acwi.fetch_item(old), item)
+        with patch.object(acwi.requests, "get", return_value=response), \
+             patch.object(acwi, "parse_history", return_value=item), \
+             patch.object(acwi, "latest_completed_date", return_value="2026-10-28"), \
+             patch.object(acwi, "official_eod_close", side_effect=ValueError("EOD not yet published")):
+            self.assertIs(acwi.fetch_item(old), old)
 
     def test_append_does_not_rerank_stocks(self):
         import numpy as np
