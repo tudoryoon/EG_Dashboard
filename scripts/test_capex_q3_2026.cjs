@@ -43,13 +43,32 @@ assert.notEqual(value('quarterlyFcf', 'msft'), value('quarterlyOcf', 'msft') - v
 assert.equal(value('quarterlyCapex', 'googl'), 51.355);
 assert.equal(value('quarterlyFcf', 'googl'), -9.065);
 
+const meta = data.quarterlySources.meta['2026-Q3'];
+const metaCapex = meta.purchasesOfPropertyAndEquipment + meta.financeLeasePrincipalPayments;
+const metaPriorCapex = meta.priorYearPurchasesOfPropertyAndEquipment + meta.priorYearFinanceLeasePrincipalPayments;
+const metaCash = meta.cashAndCashEquivalents + meta.marketableSecurities;
+assert.equal(meta.releaseDate, '2026-10-21');
+assert.equal(meta.periodEnd, '2026-09-30');
+assert.equal(metaCapex, 34906);
+assert.equal(value('quarterlyCapex', 'meta'), metaCapex / 1000);
+assert.equal(value('quarterlyOcf', 'meta'), 32.786);
+assert.equal(value('quarterlyFcf', 'meta'), -2.12);
+assert.equal(meta.reportedFreeCashFlow, meta.operatingCashFlow - metaCapex);
+assert.equal(value('quarterlyYoy', 'meta'), Math.round((metaCapex / metaPriorCapex - 1) * 100));
+assert.equal(value('quarterlyCapexToOcf', 'meta'), oneDecimal(metaCapex / meta.operatingCashFlow * 100));
+assert.equal(value('cashHistory', 'meta'), metaCash / 1000);
+assert.equal(value('debtHistory', 'meta'), meta.debt / 1000);
+assert.equal(value('debtToCash', 'meta'), oneDecimal(meta.debt / metaCash * 100));
+assert.ok(data.quarterlyCapex.sourceNote.includes(meta.sourceUrl));
+assert.ok(data.quarterlyFcf.latestSourceNote.includes(meta.sourceUrl));
+
 for (const [key, panel] of Object.entries(data)) {
   if (!panel.series) continue;
   for (const series of panel.series) {
     assert.equal(series.values.length, key === 'annualCapex' ? data.annualLabels.length : data.quarterLabels.length,
       `${key}/${series.key}: quarter alignment`);
     assert.ok(series.values.every(item => item === null || Number.isFinite(item)));
-    if (key !== 'annualCapex' && !['msft', 'googl'].includes(series.key)) {
+    if (key !== 'annualCapex' && !['msft', 'googl', 'meta'].includes(series.key)) {
       assert.equal(series.values[quarter], null, `${key}/${series.key}: not updated in this request`);
     }
   }
@@ -66,7 +85,10 @@ for (const name of ['isCapexEstimateLabel', 'sumTrailingWindow', 'buildTtmCapexT
 const ttm = vm.runInContext('buildTtmCapexToOcfPanel()', context);
 assert.equal(ttm.series.find(series => series.key === 'msft').values[quarter], 79.4);
 assert.equal(ttm.series.find(series => series.key === 'googl').values[quarter], 89.0);
-assert.equal(ttm.series.find(series => series.key === 'meta').values[quarter], null);
+const metaSum4 = key => data[key].series.find(series => series.key === 'meta').values
+  .slice(quarter - 3, quarter + 1).reduce((sum, value) => sum + value, 0);
+assert.equal(ttm.series.find(series => series.key === 'meta').values[quarter],
+  oneDecimal(metaSum4('quarterlyCapex') / metaSum4('quarterlyOcf') * 100));
 const annual = vm.runInContext('buildAnnualBig5CapexPanel()', context);
 assert.equal(annual.totals.at(-1), 747.5);
 console.log('PASS: CY 3Q26 actuals, MSFT lease/cash distinction, FCF, ratios, alignment and frozen annual outlook.');
