@@ -403,6 +403,7 @@ const state = {
   marketView: "Index",
   marketIndexView: "Trend",
   techView: "LLM",
+  cloudHiddenCompanies: {},
   flowsView: "EtfStatus",
   researchView: "DataCenter",
   currency: "USD",
@@ -6555,6 +6556,90 @@ function cloudQuarterTickLabel(index, labels, width, minimumStep = 2) {
     ? labels[index] ?? "" : "";
 }
 
+function getCloudCompanyKey(key) {
+  if (key === "aws" || key === "amazon") return "amazon";
+  if (key === "azure" || String(key).startsWith("microsoft")) return "microsoft";
+  return key === "google" ? "google" : "";
+}
+
+function buildCloudCompanyTogglesMarkup(panelKey) {
+  const hidden = state.cloudHiddenCompanies[panelKey] ?? [];
+  return `<div class="cloud-company-toggles" data-cloud-company-toggles="${panelKey}" role="group" aria-label="표시 기업 선택">
+    ${[["amazon", "AMZN"], ["microsoft", "MSFT"], ["google", "GOOGL"]].map(([key, label]) => `
+      <label class="cloud-company-toggle" style="--cloud-company-color:${cloudDashboardData.colors[key]}">
+        <input type="checkbox" data-cloud-company="${key}" ${hidden.includes(key) ? "" : "checked"}>
+        <span class="cloud-company-swatch" aria-hidden="true"></span><span>${label}</span>
+      </label>`).join("")}
+  </div>`;
+}
+
+function bindCloudCompanyToggles() {
+  if (typeof Chart === "undefined") return;
+  const scales = {
+    growth: { step: 5, padding: 5 },
+    margin: { step: 5, padding: 5 },
+    revenue: { step: 5000, multiplier: 1.1 },
+    rpo: { step: 100, multiplier: 1.1 },
+    "rpo-ratio": { step: 5, padding: 5 },
+  };
+  usOverviewRoot.querySelectorAll("[data-cloud-company-toggles]").forEach((controls) => {
+    const panelKey = controls.dataset.cloudCompanyToggles;
+    const panel = controls.closest(".cloud-panel");
+    const canvas = panel.querySelector("[data-cloud-chart]");
+    const chart = canvas ? Chart.getChart(canvas) : null;
+    const legendHidden = chart?.data.datasets.map((dataset) => dataset.hidden === true) ?? [];
+    const initialMax = chart?.options.scales.y.max;
+    const update = () => {
+      const hidden = state.cloudHiddenCompanies[panelKey] ?? [];
+      panel.style.setProperty("--cloud-company-columns", Math.max(1, 3 - hidden.length));
+      panel.querySelectorAll("[data-cloud-company-item]").forEach((item) => {
+        item.classList.toggle("hidden", hidden.includes(getCloudCompanyKey(item.dataset.cloudCompanyItem)));
+      });
+      const visibleProviders = Array.from(panel.querySelectorAll(".cloud-gpu-price-item:not(.hidden)"));
+      panel.querySelectorAll(".cloud-gpu-price-item").forEach((item) => {
+        item.classList.toggle("is-first-visible", item === visibleProviders[0]);
+        item.classList.toggle("is-last-visible", item === visibleProviders.at(-1));
+      });
+      if (chart) {
+        chart.data.datasets.forEach((dataset, index) => {
+          chart.setDatasetVisibility(index, !hidden.includes(dataset.companyKey) && !legendHidden[index]);
+        });
+        const values = chart.data.datasets.flatMap((dataset, index) =>
+          chart.isDatasetVisible(index) ? dataset.data.filter(Number.isFinite) : []);
+        const scale = scales[panelKey];
+        if (scale) {
+          chart.options.scales.y.max = values.length
+            ? Math.ceil((Math.max(...values) * (scale.multiplier ?? 1) + (scale.padding ?? 0)) / scale.step) * scale.step
+            : initialMax;
+        }
+        chart.update("none");
+      } else {
+        panel.querySelectorAll("[data-cloud-company-item]:not(.hidden) canvas").forEach((canvas) => Chart.getChart(canvas)?.resize());
+      }
+    };
+    controls.querySelectorAll("[data-cloud-company]").forEach((input) => {
+      input.addEventListener("change", () => {
+        const hidden = new Set(state.cloudHiddenCompanies[panelKey] ?? []);
+        if (input.checked) hidden.delete(input.dataset.cloudCompany);
+        else hidden.add(input.dataset.cloudCompany);
+        state.cloudHiddenCompanies[panelKey] = Array.from(hidden);
+        update();
+      });
+    });
+    if (chart) {
+      // Keep individual legend choices, including the legacy revenue series, under the company filter.
+      chart.options.plugins.legend.onClick = (_, item) => {
+        const index = item.datasetIndex;
+        const dataset = chart.data.datasets[index];
+        if (!dataset || (state.cloudHiddenCompanies[panelKey] ?? []).includes(dataset.companyKey)) return;
+        legendHidden[index] = !legendHidden[index];
+        update();
+      };
+    }
+    update();
+  });
+}
+
 function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
   if (typeof Chart === "undefined" || !panel) {
     return;
@@ -6563,6 +6648,7 @@ function createCloudLineChart(canvas, panel, formatter, minOverride = null) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
+    companyKey: getCloudCompanyKey(series.key),
     basis: series.basis,
     borderColor: cloudDashboardData.colors[series.key],
     backgroundColor: cloudDashboardData.colors[series.key],
@@ -6649,6 +6735,7 @@ function createCloudRevenueBarChart(canvas, panel) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
+    companyKey: getCloudCompanyKey(series.key),
     hidden: series.hidden ?? false,
     backgroundColor: cloudDashboardData.colors[series.key],
     borderColor: cloudDashboardData.colors[series.key],
@@ -6732,6 +6819,7 @@ function createCloudBarChart(canvas, panel, formatter, options = {}) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
+    companyKey: getCloudCompanyKey(series.key),
     backgroundColor: series.color ?? cloudDashboardData.colors[series.key],
     borderColor: series.color ?? cloudDashboardData.colors[series.key],
     borderWidth: 0,
@@ -6998,6 +7086,7 @@ function createCloudPointLineChart(canvas, panel, formatter, options = {}) {
   const datasets = panel.series.map((series) => ({
     label: series.name,
     data: series.values,
+    companyKey: getCloudCompanyKey(series.key),
     borderColor: series.color ?? cloudDashboardData.colors[series.key],
     backgroundColor: series.color ?? cloudDashboardData.colors[series.key],
     borderWidth: 2.6,
@@ -7088,7 +7177,7 @@ function buildCloudRpoStatsMarkup(panel) {
           ? ((latestValue - yearAgoValue) / yearAgoValue) * 100
           : null;
       return `
-        <div class="cloud-rpo-stat">
+        <div class="cloud-rpo-stat" data-cloud-company-item="${series.key}">
           <span>${series.name}</span>
           <strong>${Number.isFinite(latestValue) ? `$${Number(latestValue).toFixed(1)}B` : "-"}</strong>
           <small>${Number.isFinite(yoy) ? `${labels[latestIndex] ?? "-"} · ${yoy >= 0 ? "+" : ""}${yoy.toFixed(1)}% YoY` : "YoY N/A"}</small>
@@ -7137,7 +7226,7 @@ function buildCloudNetNewArrStatsMarkup(panel) {
           ? ((latestValue - yearAgoValue) / Math.abs(yearAgoValue)) * 100
           : null;
       return `
-        <div class="cloud-rpo-stat">
+        <div class="cloud-rpo-stat" data-cloud-company-item="${series.key}">
           <span>${series.name} Net New ARR</span>
           <strong>${Number.isFinite(latestValue) ? formatCompactDollarMillions(latestValue) : "-"}</strong>
           <small>${labels[latestIndex] ?? "-"} · ARR ${Number.isFinite(latestArr) ? formatCompactDollarMillions(latestArr) : "-"}</small>
@@ -7624,6 +7713,7 @@ function renderCloudOverview() {
               <p>${cloudDashboardData.yoyGrowth.subtitle}</p>
             </div>
           </div>
+          ${buildCloudCompanyTogglesMarkup("growth")}
           <div class="cloud-chart-wrap">
             <canvas data-cloud-chart="growth"></canvas>
           </div>
@@ -7636,6 +7726,7 @@ function renderCloudOverview() {
               <p>${cloudDashboardData.margin.subtitle}</p>
             </div>
           </div>
+          ${buildCloudCompanyTogglesMarkup("margin")}
           <div class="cloud-chart-wrap">
             <canvas data-cloud-chart="margin"></canvas>
           </div>
@@ -7648,6 +7739,7 @@ function renderCloudOverview() {
               <p>${cloudDashboardData.revenue.subtitle}</p>
             </div>
           </div>
+          ${buildCloudCompanyTogglesMarkup("revenue")}
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-cloud-chart="revenue"></canvas>
           </div>
@@ -7660,6 +7752,7 @@ function renderCloudOverview() {
               <p>${cloudDashboardData.rpo.subtitle}</p>
             </div>
           </div>
+          ${buildCloudCompanyTogglesMarkup("rpo")}
           <div class="cloud-rpo-stats">
             ${buildCloudRpoStatsMarkup(cloudDashboardData.rpo)}
           </div>
@@ -7676,6 +7769,7 @@ function renderCloudOverview() {
               <p>${rpoRatioPanel.subtitle}</p>
             </div>
           </div>
+          ${buildCloudCompanyTogglesMarkup("rpo-ratio")}
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
             <canvas data-cloud-chart="rpo-ratio"></canvas>
           </div>
@@ -7687,6 +7781,7 @@ function renderCloudOverview() {
               <p>${cloudDashboardData.netNewArr.subtitle}</p>
             </div>
           </div>
+          ${buildCloudCompanyTogglesMarkup("arr")}
           <div class="cloud-rpo-stats cloud-net-new-arr-stats">
             ${buildCloudNetNewArrStatsMarkup(cloudDashboardData.netNewArr)}
           </div>
@@ -7694,7 +7789,7 @@ function renderCloudOverview() {
             ${(cloudDashboardData.netNewArr.series ?? [])
               .map(
                 (series) => `
-                  <section class="cloud-net-new-arr-item">
+                  <section class="cloud-net-new-arr-item" data-cloud-company-item="${series.key}">
                     <h4>${series.name}</h4>
                     <p>${series.basis}</p>
                     <div class="cloud-chart-wrap cloud-net-new-arr-chart">
@@ -7714,11 +7809,12 @@ function renderCloudOverview() {
             </div>
             <span class="cloud-gpu-updated">Updated ${cloudDashboardData.gpuPricing.updatedAt}</span>
           </div>
+          ${buildCloudCompanyTogglesMarkup("gpu-pricing")}
           <div class="cloud-gpu-pricing-grid">
             ${(cloudDashboardData.gpuPricing.providers ?? [])
               .map(
                 (provider) => `
-                  <section class="cloud-gpu-price-item">
+                  <section class="cloud-gpu-price-item" data-cloud-company-item="${provider.key}">
                     <div class="cloud-gpu-price-head">
                       <div class="cloud-gpu-price-title-row">
                         <h4>${provider.name}</h4>
@@ -7792,6 +7888,7 @@ function renderCloudOverview() {
       createCloudGpuPricingChart(canvas, provider, cloudDashboardData.gpuPricing);
     }
   });
+  bindCloudCompanyToggles();
 }
 
 function renderPlaceholderOverview(title, description) {

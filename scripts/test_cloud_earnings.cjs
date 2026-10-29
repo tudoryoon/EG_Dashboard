@@ -82,7 +82,7 @@ assert.equal(series('netNewArr', 'google').arrValues[quarter], 122836);
 assert.equal(series('netNewArr', 'google').values[quarter], 23764);
 
 const code = fs.readFileSync(path.join(root, 'dashboard.js'), 'utf8');
-for (const name of ['cloudQuarterTickLabel', 'createCloudRevenueBarChart', 'createCloudLineChart', 'createCloudNetNewArrChart',
+for (const name of ['getCloudCompanyKey', 'cloudQuarterTickLabel', 'createCloudRevenueBarChart', 'createCloudLineChart', 'createCloudNetNewArrChart',
   'buildCloudRpoRevenueRatioPanel', 'buildCloudRpoStatsMarkup']) {
   const start = code.indexOf(`function ${name}(`);
   assert.ok(start >= 0);

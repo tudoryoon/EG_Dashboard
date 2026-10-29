@@ -3176,6 +3176,49 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.cloud-company-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin: 10px 0 12px;
+}
+
+.cloud-company-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cloud-company-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--cloud-company-color);
+  cursor: pointer;
+}
+
+.cloud-company-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--cloud-company-color);
+  outline-offset: 4px;
+}
+
+.cloud-company-toggle:has(input:not(:checked)) {
+  color: var(--muted);
+}
+
+.cloud-company-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cloud-company-color);
+}
+
 .cloud-chart-wrap canvas {
   display: block;
   width: 100%;
@@ -3189,7 +3232,7 @@ h1 {
 
 .cloud-rpo-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cloud-company-columns, 3), minmax(0, 1fr));
   gap: 10px;
   margin: 14px 0 12px;
 }
@@ -3227,12 +3270,12 @@ h1 {
 
 .cloud-net-new-arr-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cloud-company-columns, 3), minmax(0, 1fr));
   gap: 18px;
 }
 
 .cloud-rpo-stats.cloud-net-new-arr-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cloud-company-columns, 3), minmax(0, 1fr));
 }
 
 .cloud-net-new-arr-item {
@@ -3266,7 +3309,7 @@ h1 {
 
 .cloud-gpu-pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--cloud-company-columns, 3), minmax(0, 1fr));
   gap: 0;
   margin-top: 14px;
 }
@@ -3277,12 +3320,14 @@ h1 {
   border-left: 1px solid rgba(70, 70, 66, 0.12);
 }
 
-.cloud-gpu-price-item:first-child {
+.cloud-gpu-price-item:first-child,
+.cloud-gpu-price-item.is-first-visible {
   padding-left: 0;
   border-left: 0;
 }
 
-.cloud-gpu-price-item:last-child {
+.cloud-gpu-price-item:last-child,
+.cloud-gpu-price-item.is-last-visible {
   padding-right: 0;
 }
 
@@ -11619,7 +11664,8 @@ h1 {
     border-left: 0;
   }
 
-  .cloud-gpu-price-item:first-child {
+  .cloud-gpu-price-item:first-child,
+  .cloud-gpu-price-item.is-first-visible {
     padding-top: 0;
     border-top: 0;
   }
