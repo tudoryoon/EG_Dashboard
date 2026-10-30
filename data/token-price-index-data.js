@@ -1,6 +1,6 @@
 window.tokenPriceIndexData = {
-  "updatedAt": "2026-10-19",
-  "generatedAt": "2026-10-21T06:46:01.283674Z",
+  "updatedAt": "2026-10-28",
+  "generatedAt": "2026-10-30T07:53:27.377964Z",
   "source": {
     "provider": "Silicon Data",
     "label": "Silicon Data LLM Token Expenditure Index",
@@ -13,8 +13,8 @@ window.tokenPriceIndexData = {
     "overall": {
       "ticker": "SDLLMTK",
       "label": "LLM Token Expenditure Index",
-      "value": 0.9523,
-      "date": "2026-10-19",
+      "value": 0.9141,
+      "date": "2026-10-28",
       "quality": "official-public"
     },
     "closed": {
@@ -31,8 +31,8 @@ window.tokenPriceIndexData = {
       "date": "2026-08-03",
       "quality": "public-chart-reference"
     },
-    "dailyChangePct": 0.96,
-    "publicWindowChangePct": -29.83,
+    "dailyChangePct": -0.92,
+    "publicWindowChangePct": -32.65,
     "closedOpenPremium": 4.65
   },
   "series": {
@@ -440,6 +440,51 @@ window.tokenPriceIndexData = {
       {
         "date": "2026-10-19",
         "value": 0.9523,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-20",
+        "value": 0.9552,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-21",
+        "value": 0.9447,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-22",
+        "value": 0.948,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-23",
+        "value": 0.9348,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-24",
+        "value": 0.9364,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-25",
+        "value": 0.9526,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-26",
+        "value": 0.9236,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-27",
+        "value": 0.9226,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-28",
+        "value": 0.9141,
         "quality": "official-public"
       }
     ],
