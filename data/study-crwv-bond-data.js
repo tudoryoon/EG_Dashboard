@@ -11,8 +11,8 @@ window.studyCrwvBondData = {
     "maturityDate": "2031-02-01",
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)"
   },
-  "updatedAt": "2026-10-27",
-  "checkedAt": "2026-10-29T01:03:41+00:00",
+  "updatedAt": "2026-10-28",
+  "checkedAt": "2026-10-30T01:08:45+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -26,7 +26,7 @@ window.studyCrwvBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-10-28",
+    "endDate": "2026-10-29",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyCrwvBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-28"
+      "2026-10-29"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyCrwvBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-28"
+      "2026-10-29"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3237,6 +3237,16 @@ window.studyCrwvBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261027",
       "firstCollectedAt": "2026-10-29T01:03:41+00:00",
       "lastCollectedAt": "2026-10-29T01:03:41+00:00"
+    },
+    {
+      "date": "2026-10-28",
+      "ytmPct": 13.93,
+      "pricePer100": 84.5,
+      "sourceSha256": "2d041bfdc021b50d1e53af9896001baeb69036901a039e3fb15a4c379b017856",
+      "yieldToWorstPct": 13.93,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261028",
+      "firstCollectedAt": "2026-10-30T01:08:45+00:00",
+      "lastCollectedAt": "2026-10-30T01:08:45+00:00"
     }
   ]
 };
