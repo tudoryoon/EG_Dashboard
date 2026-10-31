@@ -11,8 +11,8 @@ window.studyCrwvBondData = {
     "maturityDate": "2031-02-01",
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)"
   },
-  "updatedAt": "2026-10-28",
-  "checkedAt": "2026-10-30T01:08:45+00:00",
+  "updatedAt": "2026-10-29",
+  "checkedAt": "2026-10-31T00:52:51+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -26,7 +26,7 @@ window.studyCrwvBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-10-29",
+    "endDate": "2026-10-30",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyCrwvBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-29"
+      "2026-10-30"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyCrwvBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-29"
+      "2026-10-30"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3247,6 +3247,16 @@ window.studyCrwvBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261028",
       "firstCollectedAt": "2026-10-30T01:08:45+00:00",
       "lastCollectedAt": "2026-10-30T01:08:45+00:00"
+    },
+    {
+      "date": "2026-10-29",
+      "ytmPct": 13.91,
+      "pricePer100": 84.58,
+      "sourceSha256": "a1843217bc927f6fdff5577f23459a91b2994b4aca965e68893eb7748747bebc",
+      "yieldToWorstPct": 13.91,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261029",
+      "firstCollectedAt": "2026-10-31T00:52:51+00:00",
+      "lastCollectedAt": "2026-10-31T00:52:51+00:00"
     }
   ]
 };

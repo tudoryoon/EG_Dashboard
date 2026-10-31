@@ -11,8 +11,8 @@ window.studyAmznBondData = {
     "maturityDate": "2031-05-12",
     "name": "Amazon 2.100% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-10-28",
-  "checkedAt": "2026-10-30T01:08:51+00:00",
+  "updatedAt": "2026-10-29",
+  "checkedAt": "2026-10-31T00:52:56+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyAmznBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-10-29",
+    "endDate": "2026-10-30",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyAmznBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-29"
+      "2026-10-30"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyAmznBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-10-29"
+      "2026-10-30"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3251,6 +3251,16 @@ window.studyAmznBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261028",
       "firstCollectedAt": "2026-10-30T01:08:51+00:00",
       "lastCollectedAt": "2026-10-30T01:08:51+00:00"
+    },
+    {
+      "date": "2026-10-29",
+      "ytmPct": 5.37,
+      "pricePer100": 86.98,
+      "sourceSha256": "81da94615d62045b68d3c84a6b1eef66da68846be6430462c8779571cc14cccc",
+      "yieldToWorstPct": 5.37,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261029",
+      "firstCollectedAt": "2026-10-31T00:52:56+00:00",
+      "lastCollectedAt": "2026-10-31T00:52:56+00:00"
     }
   ]
 };
