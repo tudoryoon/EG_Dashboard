@@ -32,9 +32,9 @@ for (const panel of ['yoyGrowth', 'margin', 'revenue', 'rpo', 'netNewArr']) {
     assert.ok(item.values.every(value => value === null || Number.isFinite(value)));
     if (item.arrValues) assert.equal(item.arrValues.length, data.labels.length);
   }
-  assert.equal(series(panel, 'amazon').values[quarter], null, `${panel}: AWS not yet reported`);
+  assert.ok(Number.isFinite(series(panel, 'amazon').values[quarter]), `${panel}: AWS reported`);
 }
-assert.equal(series('netNewArr', 'amazon').arrValues[quarter], null);
+assert.equal(series('netNewArr', 'amazon').arrValues[quarter], 183936);
 assert.equal(series('yoyGrowth', 'microsoft').values[quarter - 1], 42);
 assert.equal(series('yoyGrowth', 'microsoft').values[quarter], 48);
 assert.equal(series('rpo', 'microsoft').values[quarter], 677);
@@ -110,7 +110,7 @@ assert.equal(ratio.series.find(item => item.key === 'microsoft').values[quarter]
 assert.equal(ratio.series.find(item => item.key === 'microsoft').values[azureStart - 1], null);
 assert.equal(ratio.series.find(item => item.key === 'google').values[quarter], Math.round(561 / 30.709 * 10) / 10);
 const stats = vm.runInContext('buildCloudRpoStatsMarkup(cloudDashboardData.rpo)', context);
-assert.match(stats, /2026 Q2/);
+assert.match(stats, /\$578\.0B/);
 assert.match(stats, /2026 Q3/);
 assert.match(stats, /\$561\.0B/);
 assert.match(stats, /\+261\.9% YoY/);

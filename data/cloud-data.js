@@ -1,11 +1,22 @@
 window.cloudDashboardData = {
-  updatedAt: "2026-10-29",
+  updatedAt: "2026-11-01",
   latestEarnings: {
     calendarQuarter: "2026 Q3",
     periodEnd: "2026-09-30",
     releaseDate: "2026-10-28",
     microsoftFiscalQuarter: "FY2027 Q1",
+    amazon: {
+      releaseDate: "2026-10-29",
+      periodEnd: "2026-09-30",
+      revenueMillions: 45984,
+      priorYearRevenueMillions: 33006,
+      operatingIncomeMillions: 17773,
+      backlogBillions: 578,
+      backlogSourceUrl: "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000040/amzn-20260930.htm",
+    },
     sourceLinks: [
+      { label: "Amazon 3Q26 실적 / SEC 8-K", url: "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000038/amzn-20260930xex991.htm" },
+      { label: "AWS 계약잔고 / SEC 10-Q", url: "https://www.sec.gov/Archives/edgar/data/1018724/000101872426000040/amzn-20260930.htm" },
       { label: "Microsoft FY27 Q1 실적", url: "https://www.microsoft.com/en-us/investor/earnings/fy-2027-q1/press-release-webcast" },
       { label: "Microsoft FY27 재작성 자료 (17~18쪽)", url: "https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/FY27ExternalKPIs.pptx" },
       { label: "MSFT 공식 Excel (Segment Results / History)", url: "https://microsoft.com/en-us/investor/earnings/FY-2027-Q1/Document/DownloadDocument/15/FinancialStatementFY27Q1.xlsx" },
@@ -44,13 +55,13 @@ window.cloudDashboardData = {
   yoyGrowth: {
     title: "Cloud Revenue Growth",
     subtitle: "CY 분기별 YoY 성장률 · Azure는 환율 고정(CC), AWS·Google Cloud는 보고 매출 기준",
-    note: "Azure CY 3Q25부터 FY27 공식 재작성 기준입니다. CY 2Q26은 42%로 정정했고(기존 Azure and other cloud services 43%), CY 3Q26은 48%입니다. 그 이전은 당시 공시 성장률입니다. AWS CY 3Q26은 발표 전이므로 비워둡니다.",
+    note: "Azure CY 3Q25부터 FY27 공식 재작성 기준입니다. CY 2Q26은 42%로 정정했고(기존 Azure and other cloud services 43%), CY 3Q26은 48%입니다. 그 이전은 당시 공시 성장률입니다. AWS CY 3Q26 매출 $45.984B, 보고 매출 기준 YoY +39.32%입니다.",
     unit: "%",
     series: [
       {
         key: "amazon",
         name: "AWS",
-        values: [36.57, 33.29, 27.49, 20.24, 15.8, 12.16, 14.47, 13.22, 17.25, 18.7, 16.77, 18.93, 16.89, 17.47, 20.23, 23.6, 28.43, 36.79, null],
+        values: [36.57, 33.29, 27.49, 20.24, 15.8, 12.16, 14.47, 13.22, 17.25, 18.7, 16.77, 18.93, 16.89, 17.47, 20.23, 23.6, 28.43, 36.79, 39.32],
       },
       {
         key: "microsoft",
@@ -89,7 +100,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS Margin",
-        values: [35.35, 28.95, 26.31, 24.35, 23.99, 24.23, 29.67, 29.61, 37.63, 35.52, 38.06, 36.93, 39.45, 32.91, 34.64, 35.03, 37.68, 39.36, null],
+        values: [35.35, 28.95, 26.31, 24.35, 23.99, 24.23, 29.67, 29.61, 37.63, 35.52, 38.06, 36.93, 39.45, 32.91, 34.64, 35.03, 37.68, 39.36, 38.65],
       },
       {
         key: "microsoftLegacy",
@@ -119,7 +130,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS Revenue",
-        values: [18441, 19739, 20538, 21378, 21354, 22140, 23059, 24204, 25037, 26281, 27452, 28786, 29267, 30873, 33006, 35579, 37587, 42232, null],
+        values: [18441, 19739, 20538, 21378, 21354, 22140, 23059, 24204, 25037, 26281, 27452, 28786, 29267, 30873, 33006, 35579, 37587, 42232, 45984],
       },
       {
         key: "microsoft",
@@ -156,7 +167,7 @@ window.cloudDashboardData = {
       {
         key: "amazon",
         name: "AWS Revenue Backlog",
-        values: [88.9, 100.1, 104.3, 110.4, 122.0, 132.1, 133.0, 155.7, 157.7, 156.6, 164.0, 177.0, 189.0, 195.0, 200.0, 244.0, 364.0, 496.0, null],
+        values: [88.9, 100.1, 104.3, 110.4, 122.0, 132.1, 133.0, 155.7, 157.7, 156.6, 164.0, 177.0, 189.0, 195.0, 200.0, 244.0, 364.0, 496.0, 578],
       },
       {
         key: "microsoft",
@@ -181,8 +192,8 @@ window.cloudDashboardData = {
         key: "amazon",
         name: "AWS",
         basis: "Company-reported AWS revenue; ARR = quarterly revenue x 4",
-        values: [2644, 5192, 3196, 3360, -96, 3144, 3676, 4580, 3332, 4976, 4684, 5336, 1924, 6424, 8532, 10292, 8032, 18580, null],
-        arrValues: [73764, 78956, 82152, 85512, 85416, 88560, 92236, 96816, 100148, 105124, 109808, 115144, 117068, 123492, 132024, 142316, 150348, 168928, null],
+        values: [2644, 5192, 3196, 3360, -96, 3144, 3676, 4580, 3332, 4976, 4684, 5336, 1924, 6424, 8532, 10292, 8032, 18580, 15008],
+        arrValues: [73764, 78956, 82152, 85512, 85416, 88560, 92236, 96816, 100148, 105124, 109808, 115144, 117068, 123492, 132024, 142316, 150348, 168928, 183936],
       },
       {
         key: "microsoft",

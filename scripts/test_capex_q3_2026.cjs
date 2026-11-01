@@ -68,7 +68,7 @@ for (const [key, panel] of Object.entries(data)) {
     assert.equal(series.values.length, key === 'annualCapex' ? data.annualLabels.length : data.quarterLabels.length,
       `${key}/${series.key}: quarter alignment`);
     assert.ok(series.values.every(item => item === null || Number.isFinite(item)));
-    if (key !== 'annualCapex' && !['msft', 'googl', 'meta'].includes(series.key)) {
+    if (key !== 'annualCapex' && !['msft', 'googl', 'meta', 'amzn'].includes(series.key)) {
       assert.equal(series.values[quarter], null, `${key}/${series.key}: not updated in this request`);
     }
   }

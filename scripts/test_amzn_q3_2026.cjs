@@ -1,0 +1,38 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const context = { window: {} };
+for (const file of ['cloud-data', 'capex-data']) {
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'data', `${file}.js`), 'utf8'), context);
+}
+const cloud = context.window.cloudDashboardData;
+const capex = context.window.capexDashboardData;
+const q = cloud.labels.indexOf('2026 Q3');
+const cq = capex.quarterLabels.indexOf('2026-Q3');
+const c = panel => cloud[panel].series.find(s => s.key === 'amazon');
+const v = panel => capex[panel].series.find(s => s.key === 'amzn').values[cq];
+const round = (n, digits = 2) => Number(n.toFixed(digits));
+assert.equal(c('revenue').values[q], 45984);
+assert.equal(c('yoyGrowth').values[q], round((45984 / 33006 - 1) * 100));
+assert.equal(c('margin').values[q], round(17773 / 45984 * 100));
+assert.equal(c('rpo').values[q], 578);
+assert.equal(c('netNewArr').arrValues[q], 45984 * 4);
+assert.equal(c('netNewArr').values[q], (45984 - 42232) * 4);
+assert.ok(cloud.latestEarnings.sourceLinks.some(s => s.url.includes('1018724')));
+const source = capex.quarterlySources.amzn['2026-Q3'];
+assert.equal(source.releaseDate, '2026-10-29');
+assert.equal(source.periodEnd, '2026-09-30');
+assert.equal(v('quarterlyCapex'), source.purchasesOfPropertyAndEquipment / 1000);
+assert.equal(v('quarterlyOcf'), source.operatingCashFlow / 1000);
+assert.equal(v('quarterlyFcf'), source.chartFreeCashFlow / 1000);
+assert.equal(source.chartFreeCashFlow, source.operatingCashFlow - source.purchasesOfPropertyAndEquipment);
+assert.equal(source.companyDefinedFreeCashFlow, source.chartFreeCashFlow + source.proceedsFromPropertyAndEquipmentSalesAndIncentives);
+assert.equal(v('quarterlyYoy'), Math.round((77259 / 35095 - 1) * 100));
+assert.equal(v('quarterlyCapexToOcf'), round(77259 / 42422 * 100, 1));
+assert.equal(v('cashHistory'), (55783 + 58443) / 1000);
+assert.ok(capex.quarterlyFcf.latestSourceNote.includes(source.sourceUrl));
+assert.ok(capex.quarterlyFcf.latestSourceNote.includes('TTM'));
+assert.equal(v('quarterlyFcf'), -34.837);
+console.log('PASS: AWS Q3 growth, margin, backlog, ARR and AMZN gross/net capex/FCF distinction.');
