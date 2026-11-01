@@ -31,10 +31,10 @@ on:
       - "scripts/update_market_rs.py"
       - "data/market-rs-manual-tickers.json"
   schedule:
-    # 20:27 UTC = 05:27 KST. Main RS / Trend Score run.
-    - cron: "27 20 * * *"
-    # 20:45 UTC = 05:45 KST. Backup RS / Trend Score run.
-    - cron: "45 20 * * *"
+    # 21:27 UTC = 06:27 KST. Main RS / Trend Score run.
+    - cron: "27 21 * * *"
+    # 21:45 UTC = 06:45 KST. Backup RS / Trend Score run.
+    - cron: "45 21 * * *"
 
 permissions:
   contents: write
@@ -164,7 +164,7 @@ jobs:
           python scripts/update_market_rs_financials.py
 
       - name: Refresh full CANSLIM EPS surprise history
-        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '45 20 * * *')
+        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '45 21 * * *')
         run: python scripts/update_market_canslim_earnings.py --scope all
 
       - name: Commit updated market RS history

@@ -11,10 +11,10 @@ on:
       - .github/workflows/update-market-briefing-fedwatch.yml
   workflow_dispatch:
   schedule:
-    # Capture the official CME probability table at 04:15/05:15 KST
+    # Capture the official CME probability table at 05:15/06:15 KST
     # Tuesday-Saturday, without reconstructing it from settlement prices.
-    - cron: "15 19 * * 1-5"
     - cron: "15 20 * * 1-5"
+    - cron: "15 21 * * 1-5"
 
 permissions:
   contents: write

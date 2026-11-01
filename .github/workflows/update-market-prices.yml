@@ -8,10 +8,10 @@ on:
         type: boolean
         default: false
   schedule:
-    # 20:45 UTC = 05:45 KST. Run after the 05:25 briefing-only update.
-    - cron: "45 20 * * *"
-    # 21:25 UTC = 06:25 KST. Backup run after the 05:45 RS backup.
-    - cron: "25 21 * * *"
+    # 21:45 UTC = 06:45 KST. Run after the 06:35 briefing-only update.
+    - cron: "45 21 * * *"
+    # 22:25 UTC = 07:25 KST. Backup run after the 06:45 RS backup.
+    - cron: "25 22 * * *"
     # 14:33 UTC = 23:33 KST. Recheck credit after FRED morning publication in CST/CDT.
     - cron: "33 14 * * 1-5"
 
