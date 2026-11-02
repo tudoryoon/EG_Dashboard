@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_if_stale:
-        description: "Exit without refreshing when RS data already has the latest completed session"
+        description: "Refresh only datasets missing the latest completed session; check RS, Trend and CANSLIM independently"
         required: false
         default: "false"
         type: choice
@@ -58,59 +58,13 @@ jobs:
       - name: Check whether refresh is needed
         id: refresh-guard
         shell: bash
+        env:
+          REFRESH_IF_STALE: ${{ inputs.refresh_if_stale }}
+          PRICES_ONLY: ${{ inputs.prices_only }}
+          FULL_EARNINGS_ALLOWED: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '45 21 * * *' }}
         run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          import re
-          from datetime import datetime, time, timezone
-          from pathlib import Path
-          from urllib.request import Request, urlopen
-          from zoneinfo import ZoneInfo
-
-          event_name = "${{ github.event_name }}"
-          refresh_if_stale = "${{ inputs.refresh_if_stale }}" == "true"
-          should_run = True
-          reason = "manual run always refreshes data"
-
-          if event_name == "schedule" or refresh_if_stale:
-              text = Path("data/market-rs-data.js").read_text(encoding="utf-8")
-              match = re.search(r"window\.marketRsData\s*=\s*(\{.*\});\s*$", text, re.S)
-              payload = json.loads(match.group(1)) if match else {}
-              current_date = str(payload.get("updatedAt") or "")
-              now_new_york = datetime.now(ZoneInfo("America/New_York"))
-
-              try:
-                  request = Request(
-                      "https://query1.finance.yahoo.com/v8/finance/chart/QQQ"
-                      "?range=10d&interval=1d&includePrePost=false&events=history",
-                      headers={"User-Agent": "Mozilla/5.0"},
-                  )
-                  with urlopen(request, timeout=15) as response:
-                      chart = json.loads(response.read().decode("utf-8"))
-                  result = chart["chart"]["result"][0]
-                  available_dates = sorted(
-                      datetime.fromtimestamp(value, timezone.utc).date()
-                      for value in (result.get("timestamp") or [])
-                  )
-                  if now_new_york.weekday() < 5 and now_new_york.time() < time(16, 10):
-                      available_dates = [day for day in available_dates if day < now_new_york.date()]
-                  latest_available = available_dates[-1].isoformat() if available_dates else ""
-
-                  if current_date and latest_available and current_date >= latest_available:
-                      should_run = False
-                      reason = f"RS data is current ({current_date}); latest completed QQQ session is {latest_available}"
-                  else:
-                      reason = f"RS data {current_date or 'missing'} trails latest completed QQQ session {latest_available or 'unknown'}"
-              except Exception as error:
-                  if now_new_york.weekday() < 5 and now_new_york.time() < time(16, 10):
-                      should_run = False
-                      reason = f"QQQ session check failed before market close; retry later: {error}"
-                  else:
-                      reason = f"QQQ session check failed after market close; running guarded update: {error}"
-
-          print(f"should_run={'true' if should_run else 'false'}")
-          print(f"reason={reason}")
-          PY
+          python scripts/test_market_rs_refresh_guard.py
+          python scripts/market_rs_refresh_guard.py >> "$GITHUB_OUTPUT"
 
       - name: Report refresh guard
         run: echo "${{ steps.refresh-guard.outputs.reason }}"
@@ -124,13 +78,13 @@ jobs:
         run: python -m pip install pandas yfinance requests curl_cffi lxml html5lib beautifulsoup4
 
       - name: Catch up delayed MSCI RS and Trend without refreshing the full universe
-        if: steps.refresh-guard.outputs.should_run != 'true'
+        if: steps.refresh-guard.outputs.refresh_rs != 'true'
         run: python scripts/msci_acwi_ntr.py --if-stale --rs-only
 
       # Keep every RS universe current each trading day. The script fetches only
       # the latest five sessions and merges them into the saved three-year history.
       - name: Refresh full daily market RS universe
-        if: steps.refresh-guard.outputs.should_run == 'true'
+        if: steps.refresh-guard.outputs.refresh_rs == 'true'
         env:
           # Price/RS needs every ticker daily; shares only change materially
           # around splits and are fully revalidated by the Sunday 5Y job.
@@ -140,21 +94,24 @@ jobs:
         run: python scripts/update_market_rs.py
 
       - name: Refresh full daily market trend score universe
-        if: steps.refresh-guard.outputs.should_run == 'true'
+        if: steps.refresh-guard.outputs.refresh_trend == 'true'
         run: python scripts/update_market_trend_score.py
 
       - name: Refresh closing-price new high and low breadth
-        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
+        if: steps.refresh-guard.outputs.refresh_breadth == 'true'
         continue-on-error: true
         run: python scripts/update_market_breadth.py
 
       - name: Refresh Daily Briefing reported EPS before financial prioritization
-        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
+        id: earnings-daily
+        if: steps.refresh-guard.outputs.refresh_earnings_daily == 'true'
         continue-on-error: true
         run: python scripts/update_market_canslim_earnings.py --scope daily-briefing
 
       - name: Refresh market RS financials
-        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true'
+        id: financials
+        if: steps.refresh-guard.outputs.refresh_financials == 'true'
+        continue-on-error: true
         env:
           MARKET_RS_FINANCIALS_MAX_COMPANIES: "35"
           MARKET_RS_FINANCIALS_STALE_DAYS: "14"
@@ -164,7 +121,9 @@ jobs:
           python scripts/update_market_rs_financials.py
 
       - name: Refresh full CANSLIM EPS surprise history
-        if: steps.refresh-guard.outputs.should_run == 'true' && inputs.prices_only != 'true' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '45 21 * * *')
+        id: earnings-all
+        if: steps.refresh-guard.outputs.refresh_earnings_all == 'true'
+        continue-on-error: true
         run: python scripts/update_market_canslim_earnings.py --scope all
 
       - name: Commit updated market RS history
@@ -189,10 +148,16 @@ jobs:
       # Validation remains visible in the run, but a recoverable coverage or
       # provider-lag warning must not discard already-generated daily data.
       - name: Validate market RS pipeline outputs
-        if: steps.refresh-guard.outputs.should_run == 'true'
+        if: steps.refresh-guard.outputs.refresh_rs == 'true' || steps.refresh-guard.outputs.refresh_trend == 'true'
         continue-on-error: true
         run: |
           python scripts/test_rs_maturity_ramp.py
           python scripts/test_rs_manual_cap_exemption.py
           python -m unittest discover -s scripts -p "test_market_breadth.py"
           python scripts/validate_market_rs_pipeline.py
+
+      - name: Report financial collection failures after publishing successful data
+        if: always() && (steps.financials.outcome == 'failure' || steps.earnings-daily.outcome == 'failure' || steps.earnings-all.outcome == 'failure')
+        run: |
+          echo "::error::Some CANSLIM collectors failed. Successful outputs were preserved; the next run checks each dataset independently."
+          exit 1
