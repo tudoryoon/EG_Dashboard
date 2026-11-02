@@ -1040,6 +1040,17 @@
       "sharesOutstanding": 346600000
     },
     {
+      "ticker": "SOFI",
+      "name": "SoFi Technologies, Inc.",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 1296617325
+    },
+    {
       "ticker": "SOXX",
       "name": "iShares Semiconductor ETF",
       "memberships": {
@@ -1192,6 +1203,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 1396820716
+    },
+    {
+      "ticker": "VHT",
+      "name": "Vanguard Health Care Index Fund ETF Shares",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 54301900
     },
     {
       "ticker": "VICR",
