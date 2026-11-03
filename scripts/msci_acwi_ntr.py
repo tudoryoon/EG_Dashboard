@@ -1,7 +1,9 @@
 """Exact MSCI ACWI Net Total Return USD index, not the ACWI ETF."""
 
-from datetime import datetime, time, timedelta
+from copy import deepcopy
+from datetime import datetime, time, timedelta, timezone
 import math
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from curl_cffi import requests
@@ -9,34 +11,77 @@ from curl_cffi import requests
 KEY = "acwiNtrUsd"
 TICKER = "MIWD00000NUS"
 LABEL = "MSCI ACWI NTR USD"
-SOURCE_URL = "https://www.investing.com/indices/msci-acwi-net-usd-historical-data"
-HISTORY_URL = "https://api.investing.com/api/financialdata/historical/951385"
-OFFICIAL_LEVEL_URL = "https://app2.msci.com/products/service/index/indexmaster/getLevelDataForGraph"
+YAHOO_SYMBOL = "^892400-USD-NETR"
+SOURCE_URL = f"https://finance.yahoo.com/quote/{quote(YAHOO_SYMBOL, safe='')}/"
+HISTORY_URL = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(YAHOO_SYMBOL, safe='')}"
 START_DATE = "2016-01-01"
+PRICE_FIELDS = ("values", "opens", "highs", "lows", "closes")
 
 
-def parse_history(payload, through):
+def parse_yahoo_history(payload, through):
+    chart = payload.get("chart") or {}
+    results = chart.get("result") or []
+    if chart.get("error") or len(results) != 1:
+        raise ValueError(f"Yahoo MSCI chart unavailable: {chart.get('error')}")
+    result = results[0]
+    meta = result.get("meta") or {}
+    if (meta.get("symbol") != YAHOO_SYMBOL or meta.get("instrumentType") != "INDEX"
+            or meta.get("currency") not in (None, "USD")):
+        raise ValueError("Yahoo index identity does not match ACWI NETR USD")
+    zone = ZoneInfo(meta.get("exchangeTimezoneName") or "America/New_York")
+    quote_time = meta.get("regularMarketTime")
+    quote_day = datetime.fromtimestamp(quote_time, zone).date() if quote_time else None
+    timestamps = result.get("timestamp") or []
+    quotes = (result.get("indicators") or {}).get("quote") or []
+    if len(quotes) != 1:
+        raise ValueError("Yahoo MSCI chart has no daily quotes")
+    values = quotes[0]
     rows = {}
-    for entry in payload.get("data", []):
-        day = str(entry.get("rowDateTimestamp", ""))[:10]
-        parsed = datetime.strptime(day, "%Y-%m-%d").date()
+    snapshots = {}
+    for i, stamp in enumerate(timestamps):
+        observed = datetime.fromtimestamp(stamp, zone)
+        day = observed.date().isoformat()
+        parsed = observed.date()
         if day < START_DATE or day > through or parsed.weekday() >= 5:
             continue
-        values = [float(str(entry[f"last_{field}Raw"]).replace(",", ""))
-                  for field in ("open", "max", "min", "close")]
-        o, h, l, c = values
-        if not all(math.isfinite(v) and v > 0 for v in values) or not l <= min(o, c) <= max(o, c) <= h:
-            raise ValueError(f"Invalid MSCI ACWI NTR OHLC: {day}")
-        rows[day] = [round(v, 4) for v in values]
+        def field(key):
+            series = values.get(key) or []
+            value = series[i] if i < len(series) else None
+            return None if value is None else float(value)
+        c = field("close")
+        if c is None:
+            continue
+        if not math.isfinite(c) or c <= 0:
+            raise ValueError(f"Invalid Yahoo MSCI close: {day}")
+        # Yahoo currently exposes a rolling latest quote, not a finalized EOD
+        # candle. Its UTC timestamp can fall on the next calendar day in Korea.
+        is_snapshot = parsed == quote_day
+        if is_snapshot:
+            if datetime.fromtimestamp(quote_time, zone).time() < time(16):
+                continue
+            o = h = l = None
+            snapshots[day] = datetime.fromtimestamp(quote_time, timezone.utc).isoformat()
+        else:
+            o, h, l = (field(key) for key in ("open", "high", "low"))
+            if any(v is None for v in (o, h, l)):
+                o = h = l = None
+            elif (not all(math.isfinite(v) and v > 0 for v in (o, h, l))
+                  or not l <= min(o, c) <= max(o, c) <= h):
+                raise ValueError(f"Invalid Yahoo MSCI OHLC: {day}")
+        rows[day] = [None if v is None else round(v, 4) for v in (o, h, l, c)]
     if not rows:
-        raise ValueError("No completed MSCI ACWI NTR sessions")
+        raise ValueError("No completed-session Yahoo MSCI observations")
     dates = sorted(rows)
     return {
         "label": LABEL, "symbol": TICKER, "color": "#0d9488", "isIndex": True,
         "currency": "USD", "returnType": "Net Total Return",
-        "msciIndexCode": "892400", "source": "Investing.com / MSCI ACWI Net USD",
+        "msciIndexCode": "892400", "providerSymbol": YAHOO_SYMBOL,
+        "source": "Yahoo Finance / MSCI ACWI NETR USD",
         "sourceUrl": SOURCE_URL,
         "officialUrl": "https://www.msci.com/indexes/index/892400/msci-acwi-index",
+        "snapshotDates": snapshots,
+        "priceStatus": "provider_snapshot" if dates[-1] in snapshots else "provider_daily",
+        "quoteAsOf": snapshots.get(dates[-1]),
         "dates": dates, "values": [rows[d][3] for d in dates],
         **{key: [rows[d][i] for d in dates]
            for i, key in enumerate(("opens", "highs", "lows", "closes"))},
@@ -53,71 +98,47 @@ def latest_completed_date(now=None):
     return day.isoformat()
 
 
-def official_eod_close(day):
-    """Verify an Investing.com close against MSCI's dated NETR USD EOD level."""
-    response = requests.get(OFFICIAL_LEVEL_URL, params={
-        "currency_symbol": "USD", "index_variant": "NETR",
-        "start_date": day.replace("-", ""), "end_date": day.replace("-", ""),
-        "data_frequency": "DAILY", "index_codes": "892400",
-    }, impersonate="chrome", timeout=30)
-    response.raise_for_status()
-    payload = response.json()
-    if (str(payload.get("msci_index_code")) != "892400"
-            or payload.get("index_variant_type") != "NETR"
-            or payload.get("ISO_currency_symbol") != "USD"):
-        raise ValueError("MSCI official index identity does not match ACWI NETR USD")
-    levels = payload.get("indexes", {}).get("INDEX_LEVELS", [])
-    matching = [row.get("level_eod") for row in levels
-                if str(row.get("calc_date")) == day.replace("-", "")]
-    if len(matching) != 1:
-        raise ValueError(f"MSCI official NETR USD EOD is not available for {day}")
-    level = float(matching[0])
-    if not math.isfinite(level) or level <= 0:
-        raise ValueError(f"Invalid MSCI official NETR USD EOD for {day}")
-    return level
+def merge_history(existing, incoming):
+    """Retain the saved archive when Yahoo supplies only its latest quote."""
+    if not existing or not existing.get("dates"):
+        return incoming
+    if incoming["dates"][-1] < existing["dates"][-1]:
+        raise ValueError("Yahoo MSCI observation regressed")
+    rows = {}
+    for item in (existing, incoming):
+        for i, day in enumerate(item["dates"]):
+            rows[day] = [item.get(key, [])[i] if i < len(item.get(key, [])) else None
+                         for key in PRICE_FIELDS]
+    # Already verified EOD corrections remain authoritative in the saved archive.
+    overrides = existing.get("officialEodOverrides") or {}
+    for day, value in overrides.items():
+        if day in rows:
+            rows[day] = [round(value, 4), None, None, None, round(value, 4)]
+    item = {**deepcopy(existing), **incoming}
+    item.pop("closeOnly", None)
+    item["historicalSource"] = existing.get("historicalSource") or existing.get("source")
+    item["snapshotDates"] = {**existing.get("snapshotDates", {}), **incoming["snapshotDates"]}
+    for day in incoming["dates"]:
+        if day not in incoming["snapshotDates"] or day in overrides:
+            item["snapshotDates"].pop(day, None)
+    item["dates"] = sorted(rows)
+    for i, key in enumerate(PRICE_FIELDS):
+        item[key] = [rows[day][i] for day in item["dates"]]
+    latest = item["dates"][-1]
+    item["priceStatus"] = "provider_snapshot" if latest in item["snapshotDates"] else "provider_daily"
+    item["quoteAsOf"] = item["snapshotDates"].get(latest)
+    return item
 
 
 def fetch_item(existing=None):
     through = latest_completed_date()
     try:
         response = requests.get(HISTORY_URL, params={
-            "start-date": START_DATE, "end-date": through,
-            "time-frame": "Daily", "add-missing-rows": "false",
-        }, headers={"domain-id": "www", "referer": SOURCE_URL},
-            impersonate="chrome", timeout=45)
+            "range": "5d", "interval": "1d", "includePrePost": "false",
+        }, impersonate="chrome", timeout=30)
         response.raise_for_status()
-        item = parse_history(response.json(), through)
-        if len(item["dates"]) < 1000:
-            raise ValueError("MSCI ACWI NTR history unexpectedly short")
-        if existing and existing.get("dates"):
-            if item["dates"][-1] < existing["dates"][-1] or item["dates"][0] > existing["dates"][0]:
-                raise ValueError("MSCI ACWI NTR history regressed")
-        latest = item["dates"][-1]
-        official = official_eod_close(latest)
-        prior_overrides = (existing or {}).get("officialEodOverrides") or {}
-        overrides = {}
-        for day in sorted(set(prior_overrides) | {latest}):
-            if day not in item["dates"]:
-                raise ValueError(f"MSCI ACWI NTR official EOD date missing from provider history: {day}")
-            verified_close = official if day == latest else official_eod_close(day)
-            index = item["dates"].index(day)
-            provider_close = item["values"][index]
-            if round(provider_close, 2) == round(verified_close, 2):
-                continue
-            # MSCI supplies an EOD level, not an OHLC candle. Keep the close
-            # and leave the unverified intraday fields empty for this session.
-            item["values"][index] = round(verified_close, 4)
-            item["closes"][index] = round(verified_close, 4)
-            for key in ("opens", "highs", "lows"):
-                item[key][index] = None
-            overrides[day] = verified_close
-            print(f"Used MSCI official NETR USD EOD close for {day}: {verified_close}; "
-                  f"Investing.com close {provider_close} disagreed", flush=True)
-        if overrides:
-            item["closeOnly"] = True
-            item["officialEodOverrides"] = overrides
-            item["source"] = "MSCI official NETR USD EOD closes; Investing.com prior historical data"
-            item["sourceUrl"] = item["officialUrl"]
+        item = merge_history(existing, parse_yahoo_history(response.json(), through))
+        item["refreshedAt"] = datetime.now(timezone.utc).isoformat()
         return item
     except Exception as exc:
         if not existing or not existing.get("dates"):
@@ -145,7 +166,9 @@ def append_rs_index(payload, item=None):
     scoped = {**payload, "updatedAt": as_of}
     row, history = build_new_row_and_history(scoped, TICKER, frame, LABEL, None, is_index=True)
     row.update(isIndex=True, currency="USD", asOfDate=as_of,
-               sourceUrl=item.get("officialUrl") if item.get("closeOnly") else SOURCE_URL,
+               sourceUrl=item.get("sourceUrl", SOURCE_URL),
+               providerSymbol=item.get("providerSymbol"), priceStatus=item.get("priceStatus"),
+               quoteAsOf=item.get("quoteAsOf"),
                rsBasis="Existing All universe; index excluded from stock ranks")
     reference = pd.DataFrame({r["ticker"]: payload["histories"][r["ticker"]]["price"]
                               for r in payload["rows"] if not r.get("isIndex")
