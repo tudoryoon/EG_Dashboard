@@ -275,7 +275,7 @@ def main():
                  or current_item.get("officialEodDate") != current_item["dates"][-1])
     if args.rs_only:
         needs_eod = False  # A separate price workflow owns this file.
-    rs_stale = rs_index_is_stale(rs)
+    rs_stale = rs_index_is_stale(rs, current_item)
     if args.if_stale and not rs_stale and not trend_index_is_stale(rs, result) and not needs_eod:
         print("MSCI ACWI NTR RS and Trend already reach the current RS session")
         return
@@ -334,11 +334,21 @@ def trend_index_is_stale(rs, result):
             or len(scores) != len(dates) or scores[-1] != row.get("score"))
 
 
-def rs_index_is_stale(payload):
+def rs_index_is_stale(payload, item=None):
     row = next((r for r in payload.get("rows", []) if r.get("ticker") == TICKER), {})
     history = payload.get("histories", {}).get(TICKER, {})
-    return (str(row.get("asOfDate") or "") < str(payload.get("updatedAt") or "")
-            or any(not history.get(key) or history[key][-1] is None for key in ("price", "rsRatingAll")))
+    if (str(row.get("asOfDate") or "") < str(payload.get("updatedAt") or "")
+            or any(not history.get(key) or history[key][-1] is None for key in ("price", "rsRatingAll"))):
+        return True
+    if item is not None:
+        if not item.get("dates") or not item.get("values"):
+            return True
+        expected = round(float(item["values"][-1]), 2)
+        if (row.get("asOfDate") != item["dates"][-1]
+                or row.get("price") != expected
+                or history["price"][-1] != expected):
+            return True
+    return False
 
 
 if __name__ == "__main__":

@@ -52,6 +52,10 @@ class AcwiTests(unittest.TestCase):
     def test_guard_repairs_trend_when_rs_is_fresh_without_network(self):
         import json
         rs, prices, result = self.trend_fixture()
+        prices["items"][acwi.KEY] = {"dates": [rs["updatedAt"]],
+                                      "values": [rs["rows"][-1]["price"]],
+                                      "priceStatus": "official_eod",
+                                      "officialEodDate": rs["updatedAt"]}
         self.assertFalse(acwi.rs_index_is_stale(rs))
         payloads = {"marketRsData": rs, "marketPriceData": prices, "marketTrendScoreData": result}
         with patch("sys.argv", ["msci_acwi_ntr.py", "--if-stale", "--rs-only"]), \
@@ -85,6 +89,28 @@ class AcwiTests(unittest.TestCase):
         append.assert_called_once()
         refresh.assert_called_once()
         self.assertEqual(write.call_count, 3)
+
+    def test_rs_only_repairs_same_day_price_mismatch_from_saved_official_item(self):
+        rs, prices, result = self.trend_fixture()
+        acwi.refresh_trend_index(result, rs, prices)
+        prices["items"][acwi.KEY] = {"dates": [rs["updatedAt"]],
+                                      "values": [rs["rows"][-1]["price"] + 1],
+                                      "priceStatus": "official_eod",
+                                      "officialEodDate": rs["updatedAt"]}
+        payloads = {"marketRsData": rs, "marketPriceData": prices,
+                    "marketTrendScoreData": result}
+        with patch("sys.argv", ["msci_acwi_ntr.py", "--if-stale", "--rs-only"]), \
+             patch("add_market_rs_tickers.load_js_payload", side_effect=lambda p, name: payloads[name]), \
+             patch.object(acwi, "fetch_item") as fetch, \
+             patch.object(acwi, "append_rs_index") as append, \
+             patch.object(acwi, "refresh_trend_index") as refresh, \
+             patch("pathlib.Path.write_text", autospec=True) as write:
+            acwi.main()
+        fetch.assert_not_called()
+        append.assert_called_once_with(rs, prices["items"][acwi.KEY])
+        refresh.assert_called_once()
+        self.assertEqual([c.args[0].name for c in write.call_args_list],
+                         ["market-rs-data.js", "market-trend-score-data.js"])
 
     def test_full_refresh_includes_index_but_excludes_it_from_rank(self):
         rs, prices, _ = self.trend_fixture()
@@ -123,6 +149,12 @@ class AcwiTests(unittest.TestCase):
         self.assertTrue(acwi.rs_index_is_stale(p))
         p["histories"][acwi.TICKER] = {"price": [639.13, 635.84], "rsRatingAll": [55, 56]}
         self.assertFalse(acwi.rs_index_is_stale(p))
+        certified = {"dates": ["2026-09-09"], "values": [635.8564],
+                     "priceStatus": "official_eod"}
+        self.assertTrue(acwi.rs_index_is_stale(p, certified))
+        p["rows"][0]["price"] = 635.86
+        p["histories"][acwi.TICKER]["price"][-1] = 635.86
+        self.assertFalse(acwi.rs_index_is_stale(p, certified))
 
     def yahoo(self, stamps=("2026-11-03T00:09:15+00:00",), closes=None):
         timestamps = [int(datetime.fromisoformat(stamp).timestamp()) for stamp in stamps]
