@@ -14,6 +14,7 @@ LABEL = "MSCI ACWI NTR USD"
 YAHOO_SYMBOL = "^892400-USD-NETR"
 SOURCE_URL = f"https://finance.yahoo.com/quote/{quote(YAHOO_SYMBOL, safe='')}/"
 HISTORY_URL = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(YAHOO_SYMBOL, safe='')}"
+OFFICIAL_LEVEL_URL = "https://app2.msci.com/products/service/index/indexmaster/getLevelDataForGraph"
 START_DATE = "2016-01-01"
 PRICE_FIELDS = ("values", "opens", "highs", "lows", "closes")
 
@@ -98,6 +99,48 @@ def latest_completed_date(now=None):
     return day.isoformat()
 
 
+def official_eod_close(day):
+    """Read the dated MSCI ACWI NETR USD final level, not a rolling quote."""
+    response = requests.get(OFFICIAL_LEVEL_URL, params={
+        "currency_symbol": "USD", "index_variant": "NETR",
+        "start_date": day.replace("-", ""), "end_date": day.replace("-", ""),
+        "data_frequency": "DAILY", "index_codes": "892400",
+    }, impersonate="chrome", timeout=30)
+    response.raise_for_status()
+    payload = response.json()
+    if (str(payload.get("msci_index_code")) != "892400"
+            or payload.get("index_variant_type") != "NETR"
+            or payload.get("ISO_currency_symbol") != "USD"):
+        raise ValueError("MSCI official index identity does not match ACWI NETR USD")
+    levels = payload.get("indexes", {}).get("INDEX_LEVELS", [])
+    matching = [row.get("level_eod") for row in levels
+                if str(row.get("calc_date")) == day.replace("-", "")]
+    if len(matching) != 1:
+        raise ValueError(f"MSCI official NETR USD EOD is not available for {day}")
+    level = float(matching[0])
+    if not math.isfinite(level) or level <= 0:
+        raise ValueError(f"Invalid MSCI official NETR USD EOD for {day}")
+    return level
+
+
+def certify_latest_eod(item):
+    """Keep Yahoo history, but publish the exact MSCI final close only."""
+    day = item["dates"][-1]
+    level = official_eod_close(day)
+    item["values"][-1] = item["closes"][-1] = round(level, 4)
+    for key in ("opens", "highs", "lows"):
+        item[key][-1] = None  # MSCI EOD supplies no verifiable candle.
+    item.setdefault("officialEodOverrides", {})[day] = level
+    item.get("snapshotDates", {}).pop(day, None)
+    item["priceStatus"] = "official_eod"
+    item["officialEodDate"] = day
+    item["quoteAsOf"] = None
+    item["closeOnly"] = True
+    item["source"] = "MSCI official NETR USD EOD closes; Yahoo Finance prior history"
+    item["sourceUrl"] = item["officialUrl"]
+    return item
+
+
 def merge_history(existing, incoming):
     """Retain the saved archive when Yahoo supplies only its latest quote."""
     if not existing or not existing.get("dates"):
@@ -137,11 +180,14 @@ def fetch_item(existing=None):
             "range": "5d", "interval": "1d", "includePrePost": "false",
         }, impersonate="chrome", timeout=30)
         response.raise_for_status()
-        item = merge_history(existing, parse_yahoo_history(response.json(), through))
+        item = certify_latest_eod(merge_history(existing, parse_yahoo_history(response.json(), through)))
         item["refreshedAt"] = datetime.now(timezone.utc).isoformat()
         return item
     except Exception as exc:
-        if not existing or not existing.get("dates"):
+        if (not existing or not existing.get("dates")
+                or (existing["dates"][-1] == through
+                    and existing.get("priceStatus") != "official_eod"
+                    and through not in (existing.get("officialEodOverrides") or {}))):
             raise
         print(f"Retained MSCI ACWI NTR history after refresh failure: {exc}", flush=True)
         return existing
@@ -155,7 +201,8 @@ def append_rs_index(payload, item=None):
 
     if item is None:
         from update_market_prices import load_existing_item
-        item = fetch_item(load_existing_item(rs.OUTPUT_PATH.parent / "market-price-data.js", KEY))
+        # RS-only workflows must use the already published, certified price.
+        item = load_existing_item(rs.OUTPUT_PATH.parent / "market-price-data.js", KEY)
     dates = pd.to_datetime(payload["historyDates"])
     frame = pd.DataFrame({k: item[v] for k, v in {
         "open": "opens", "high": "highs", "low": "lows", "close": "closes",
@@ -221,14 +268,20 @@ def main():
     data = Path(__file__).resolve().parents[1] / "data"
     rs = load_js_payload(data / "market-rs-data.js", "marketRsData")
     result = load_js_payload(data / "market-trend-score-data.js", "marketTrendScoreData")
+    prices = load_js_payload(data / "market-price-data.js", "marketPriceData")
+    current_item = prices["items"].get(KEY) or {}
+    needs_eod = (not current_item.get("dates")
+                 or current_item.get("priceStatus") != "official_eod"
+                 or current_item.get("officialEodDate") != current_item["dates"][-1])
+    if args.rs_only:
+        needs_eod = False  # A separate price workflow owns this file.
     rs_stale = rs_index_is_stale(rs)
-    if args.if_stale and not rs_stale and not trend_index_is_stale(rs, result):
+    if args.if_stale and not rs_stale and not trend_index_is_stale(rs, result) and not needs_eod:
         print("MSCI ACWI NTR RS and Trend already reach the current RS session")
         return
-    prices = load_js_payload(data / "market-price-data.js", "marketPriceData")
-    refresh_rs = not args.trend_only and (rs_stale or not args.if_stale)
+    refresh_rs = not args.trend_only and (rs_stale or needs_eod or not args.if_stale)
     if refresh_rs:
-        item = fetch_item(prices["items"].get(KEY))
+        item = current_item if args.rs_only else fetch_item(current_item)
         prices["items"][KEY] = item
         append_rs_index(rs, item)
     refresh_trend_index(result, rs, prices)

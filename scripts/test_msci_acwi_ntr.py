@@ -67,6 +67,25 @@ class AcwiTests(unittest.TestCase):
         saved = json.loads(write.call_args.args[1].split("=", 1)[1].strip().rstrip(";"))
         self.assertFalse(acwi.trend_index_is_stale(rs, saved))
 
+    def test_guard_rechecks_same_day_provider_snapshot_when_rs_is_fresh(self):
+        rs, prices, result = self.trend_fixture()
+        acwi.refresh_trend_index(result, rs, prices)
+        prices["items"][acwi.KEY] = {"dates": [rs["updatedAt"]],
+                                      "priceStatus": "provider_snapshot"}
+        payloads = {"marketRsData": rs, "marketPriceData": prices,
+                    "marketTrendScoreData": result}
+        with patch("sys.argv", ["msci_acwi_ntr.py", "--if-stale"]), \
+             patch("add_market_rs_tickers.load_js_payload", side_effect=lambda p, name: payloads[name]), \
+             patch.object(acwi, "fetch_item", return_value=prices["items"][acwi.KEY]) as fetch, \
+             patch.object(acwi, "append_rs_index") as append, \
+             patch.object(acwi, "refresh_trend_index") as refresh, \
+             patch("pathlib.Path.write_text", autospec=True) as write:
+            acwi.main()
+        fetch.assert_called_once()
+        append.assert_called_once()
+        refresh.assert_called_once()
+        self.assertEqual(write.call_count, 3)
+
     def test_full_refresh_includes_index_but_excludes_it_from_rank(self):
         rs, prices, _ = self.trend_fixture()
         with patch.object(trend, "load_market_rs_payload", return_value=rs), \
@@ -116,6 +135,11 @@ class AcwiTests(unittest.TestCase):
                                       "low": [99] * len(stamps), "close": closes}]},
         }]}}
 
+    def official(self, day="2026-11-02", level=99.75):
+        return {"msci_index_code": 892400, "index_variant_type": "NETR",
+                "ISO_currency_symbol": "USD", "indexes": {"INDEX_LEVELS": [
+                    {"calc_date": day.replace("-", ""), "level_eod": level}]}}
+
     def test_exact_identity_and_no_synthetic_volume(self):
         result = acwi.parse_yahoo_history(self.yahoo(), "2026-11-02")
         self.assertEqual(result["symbol"], "MIWD00000NUS")
@@ -150,7 +174,7 @@ class AcwiTests(unittest.TestCase):
         response = Mock()
         response.json.return_value = self.yahoo(("2026-11-02T15:00:00+00:00",))
         with patch.object(acwi.requests, "get", return_value=response), \
-             patch.object(acwi, "latest_completed_date", return_value="2026-10-30"):
+             patch.object(acwi, "latest_completed_date", return_value="2026-11-02"):
             self.assertIs(acwi.fetch_item(old), old)
         for p in [{"chart": {"result": None, "error": {"code": "Not Found"}}},
                   self.yahoo(closes=[None])]:
@@ -190,23 +214,57 @@ class AcwiTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 acwi.fetch_item()
 
-    def test_yahoo_refresh_merges_short_history_without_official_dependency(self):
+    def test_yahoo_refresh_merges_short_history_with_official_final_close(self):
         old = acwi.parse_yahoo_history(self.yahoo(("2026-10-30T21:30:00+00:00",)), "2026-10-30")
         old["source"] = "Investing.com / MSCI ACWI Net USD"
         before = copy.deepcopy(old)
         response = Mock()
         response.json.return_value = self.yahoo(closes=[99.5])
-        with patch.object(acwi.requests, "get", return_value=response) as get, \
+        official = Mock()
+        official.json.return_value = self.official()
+        with patch.object(acwi.requests, "get", side_effect=[response, official]) as get, \
              patch.object(acwi, "latest_completed_date", return_value="2026-11-02"):
             result = acwi.fetch_item(old)
-        self.assertEqual(get.call_count, 1)
-        self.assertEqual(get.call_args.args[0], acwi.HISTORY_URL)
+        self.assertEqual(get.call_count, 2)
+        self.assertEqual(get.call_args_list[0].args[0], acwi.HISTORY_URL)
+        self.assertEqual(get.call_args_list[1].args[0], acwi.OFFICIAL_LEVEL_URL)
         self.assertEqual(result["dates"], ["2026-10-30", "2026-11-02"])
-        self.assertEqual(result["values"], [101, 99.5])
+        self.assertEqual(result["values"], [101, 99.75])
+        self.assertEqual(result["closes"][-1], 99.75)
+        self.assertIsNone(result["opens"][-1])
+        self.assertEqual(result["officialEodOverrides"]["2026-11-02"], 99.75)
+        self.assertEqual(result["priceStatus"], "official_eod")
+        self.assertEqual(result["officialEodDate"], "2026-11-02")
+        self.assertNotIn("2026-11-02", result["snapshotDates"])
+        self.assertIn("msci.com", result["sourceUrl"])
         self.assertEqual(result["historicalSource"], old["source"])
         self.assertEqual(result["providerSymbol"], acwi.YAHOO_SYMBOL)
         self.assertEqual(old, before)
         self.assertIn("refreshedAt", result)
+
+    def test_official_identity_date_and_missing_eod_guard(self):
+        response = Mock()
+        response.json.return_value = self.official()
+        with patch.object(acwi.requests, "get", return_value=response):
+            self.assertEqual(acwi.official_eod_close("2026-11-02"), 99.75)
+        for payload in [self.official("2026-10-30"),
+                        {**self.official(), "index_variant_type": "GRTR"},
+                        {**self.official(), "ISO_currency_symbol": "EUR"}]:
+            response.json.return_value = payload
+            with patch.object(acwi.requests, "get", return_value=response):
+                with self.assertRaises(ValueError):
+                    acwi.official_eod_close("2026-11-02")
+
+    def test_unverified_same_day_snapshot_is_not_retained_after_eod_failure(self):
+        old = acwi.parse_yahoo_history(self.yahoo(), "2026-11-02")
+        response = Mock()
+        response.json.return_value = self.yahoo()
+        missing = Mock()
+        missing.json.return_value = self.official("2026-10-30")
+        with patch.object(acwi.requests, "get", side_effect=[response, missing]), \
+             patch.object(acwi, "latest_completed_date", return_value="2026-11-02"):
+            with self.assertRaisesRegex(ValueError, "not available"):
+                acwi.fetch_item(old)
 
     def test_prior_official_close_and_archive_survive_yahoo_overlap(self):
         old = acwi.parse_yahoo_history(self.yahoo(("2026-10-30T21:30:00+00:00",)), "2026-10-30")
