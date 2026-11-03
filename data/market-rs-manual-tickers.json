@@ -166,6 +166,17 @@
       "sharesOutstanding": 136470427
     },
     {
+      "ticker": "AVUV",
+      "name": "Avantis US Small Cap Value ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 246187063
+    },
+    {
       "ticker": "AXTI",
       "name": "AXT, Inc.",
       "memberships": {
@@ -497,6 +508,17 @@
       "sharesOutstanding": 75600000
     },
     {
+      "ticker": "EWZ",
+      "name": "iShares MSCI Brazil ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 200550000
+    },
+    {
       "ticker": "FTAI",
       "name": "FTAI Aviation Ltd.",
       "memberships": {
@@ -649,6 +671,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 117372805
+    },
+    {
+      "ticker": "KBWB",
+      "name": "Invesco KBW Bank ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 70090350
     },
     {
       "ticker": "KRMN",
@@ -1084,6 +1117,17 @@
       "sharesOutstanding": 13174187298
     },
     {
+      "ticker": "SPMO",
+      "name": "Invesco S&P 500 Momentum ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 168944410
+    },
+    {
       "ticker": "SPOT",
       "name": "Spotify Technology S.A.",
       "memberships": {
@@ -1280,6 +1324,17 @@
         "russell2000": false
       },
       "sharesOutstanding": 287458734
+    },
+    {
+      "ticker": "XLE",
+      "name": "State Street Energy Select Sector SPDR ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 186424000
     },
     {
       "ticker": "XLK",
