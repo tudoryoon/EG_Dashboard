@@ -409,6 +409,17 @@
       "sharesOutstanding": 174970101
     },
     {
+      "ticker": "DFSV",
+      "name": "DFA U.S. Small Cap Value Portfolio – ETF Class Shares",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 667401428
+    },
+    {
       "ticker": "DFUV",
       "name": "Dimensional US Marketwide Value ETF",
       "memberships": {
