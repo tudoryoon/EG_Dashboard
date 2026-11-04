@@ -1762,8 +1762,33 @@ h1 {
 }
 
 .briefing-rotation-name {
+  width: 100%;
+  min-width: 0;
+  border: 0;
   border-top: 1px solid rgba(28, 28, 26, 0.08);
-  padding-top: 7px;
+  border-radius: 0;
+  padding: 7px 6px 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.briefing-rotation-name:hover:not(:disabled),
+.briefing-rotation-name.active {
+  background: #edf6f2;
+  box-shadow: inset 3px 0 #0f766e;
+}
+
+.briefing-rotation-name:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.briefing-rotation-name:disabled {
+  cursor: default;
+  opacity: 0.65;
 }
 
 .briefing-rotation-name:first-child {
@@ -1771,7 +1796,7 @@ h1 {
   padding-top: 0;
 }
 
-.briefing-rotation-name > div,
+.briefing-rotation-name > span,
 .briefing-rotation-name-stats {
   display: grid;
   gap: 2px;
@@ -1779,6 +1804,81 @@ h1 {
 
 .briefing-rotation-name-stats {
   text-align: right;
+}
+
+.briefing-rs-chart {
+  min-width: 0;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 16px;
+}
+
+.briefing-rs-chart-toggle-row,
+.briefing-rs-chart-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+
+.briefing-rs-chart h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+[data-briefing-rs-toggle] {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #d8d8d2;
+  border-radius: 6px;
+  background: #fff;
+  color: #252620;
+  font: inherit;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+[data-briefing-rs-toggle]:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+
+[data-briefing-rs-chart-content] {
+  min-width: 0;
+  padding-top: 12px;
+}
+
+[data-briefing-rs-chart-content][hidden] { display: none; }
+
+.briefing-rs-chart-heading > div { min-width: 0; }
+.briefing-rs-chart-heading h3 { font-size: 1.1rem; overflow-wrap: anywhere; }
+.briefing-rs-chart-heading h3 small {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.briefing-rs-chart-list { display: block; margin-bottom: 4px; color: #0f766e; font-size: 0.76rem; font-weight: 700; }
+.briefing-rs-chart-summary { display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.8rem; color: var(--muted); }
+.briefing-rs-chart-summary b { color: var(--text); font-size: 0.9rem; }
+.briefing-rs-chart .market-rs-chart-wrap { height: 540px; }
+.briefing-rs-chart .market-rs-chart-controls { gap: 10px 18px; }
+.briefing-rs-chart .market-rs-chart-control-row > span { letter-spacing: 0; }
+
+@media (max-width: 760px) {
+  .briefing-rs-chart .market-rs-chart-wrap { height: 400px; }
+  .briefing-rs-chart .market-rs-risk-chart-grid { grid-template-columns: minmax(0, 1fr); }
+  .briefing-rs-chart .market-rs-chart-range-row { gap: 8px; }
+  .briefing-rs-chart .market-rs-chart-range-row > .market-rs-chip-row { flex: 1 1 100%; }
+  .briefing-rs-chart-heading h3 small { display: block; margin: 4px 0 0; }
 }
 
 .briefing-total-sector-grid {

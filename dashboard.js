@@ -482,6 +482,9 @@ const state = {
   briefingRotationDistributionXAxis: "score",
   briefingRotationDistributionCorrWindow: "3m",
   briefingRotationChartMode: "rotation",
+  briefingRsChartOpen: false,
+  briefingRsChartTicker: "",
+  briefingRsChartList: "buyWatch",
   briefingCorrelationMode: "sector",
   briefingCorrelationStock: "NVDA",
   briefingCorrelationSector: "memory",
@@ -832,6 +835,10 @@ function renderAsiaScreening(region) {
 const charts = [];
 let marketRsDetailChart = null;
 let marketRsVolumeChart = null;
+const BRIEFING_RS_CHART_KEYS = ["rsUniverse", "rsSelectedTicker", "rsHistoryRange", "rsPriceChartType", "rsVolumeVisible", "rsChartSeries"];
+const BRIEFING_RS_LISTS = { buyWatch: "Buy Watch", earlyRotation: "Early Rotation", trimWatch: "Trim Watch" };
+let briefingRsSavedState = null;
+let briefingRsChartPreferences = null;
 let marketTrendDetailChart = null;
 
 const searchInput = document.querySelector("#search-input");
@@ -8793,23 +8800,167 @@ function getSignedValueClass(value) {
   return "";
 }
 
-function renderRotationCandidateList(items, emptyText) {
+function hasBriefingRsChart(ticker) {
+  return marketRsRowByTicker.has(ticker) && Boolean(marketRsData.histories?.[ticker]?.price?.some((value) => Number.isFinite(value)));
+}
+
+function getBriefingRsChartSelection() {
+  const candidates = window.marketBriefingData?.rotationSignal?.candidates ?? {};
+  const available = (key) => [...new Set((candidates[key] ?? []).map((item) => item.ticker))]
+    .map((ticker) => marketRsRowByTicker.get(ticker))
+    .filter((row) => row && hasBriefingRsChart(row.ticker));
+  let list = Object.hasOwn(BRIEFING_RS_LISTS, state.briefingRsChartList) ? state.briefingRsChartList : "buyWatch";
+  let rows = available(list);
+  if (!rows.length) {
+    list = Object.keys(BRIEFING_RS_LISTS).find((key) => available(key).length) ?? list;
+    rows = available(list);
+  }
+  const selected = rows.find((row) => row.ticker === state.briefingRsChartTicker) ?? rows[0] ?? null;
+  return { list, rows, selected, navigation: getMarketRsChartNavigation(rows, selected?.ticker) };
+}
+
+function prepareBriefingRsChartRender(force = false) {
+  if (!briefingRsSavedState || (!force && state.tab === "DailyBriefing" && state.briefingRsChartOpen)) return;
+  briefingRsChartPreferences = Object.fromEntries(BRIEFING_RS_CHART_KEYS.slice(2).map((key) => [key, structuredClone(state[key])]));
+  Object.assign(state, briefingRsSavedState);
+  briefingRsSavedState = null;
+}
+
+function enterBriefingRsChartContext(ticker) {
+  // Shared RS callbacks read global chart settings; restore the screening state on exit.
+  if (!briefingRsSavedState) {
+    briefingRsSavedState = Object.fromEntries(BRIEFING_RS_CHART_KEYS.map((key) => [key, structuredClone(state[key])]));
+    Object.assign(state, structuredClone(briefingRsChartPreferences ?? {
+      rsHistoryRange: "1y", rsPriceChartType: "candle", rsVolumeVisible: true,
+      rsChartSeries: { rs: true, ema10: false, ema20: true, ema50: false, ema100: true, ema200: false },
+    }));
+  }
+  state.rsUniverse = "all";
+  state.rsSelectedTicker = ticker;
+}
+
+function destroyBriefingRsCharts(root) {
+  for (let i = charts.length - 1; i >= 0; i -= 1) {
+    const chart = charts[i];
+    if (!root.contains(chart.canvas)) continue;
+    chart.canvas?.__marketRsYAxisDragCleanup?.();
+    if (chart === marketRsDetailChart) marketRsDetailChart = null;
+    if (chart === marketRsVolumeChart) marketRsVolumeChart = null;
+    chart.destroy();
+    charts.splice(i, 1);
+  }
+}
+
+function renderBriefingRsChart() {
+  const root = usOverviewRoot.querySelector("[data-briefing-rs-chart]");
+  if (!root) return;
+  destroyBriefingRsCharts(root);
+  const content = root.querySelector("[data-briefing-rs-chart-content]");
+  const toggle = root.querySelector("[data-briefing-rs-toggle]");
+  const open = state.briefingRsChartOpen;
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.setAttribute("aria-label", open ? "종목 차트 접기" : "종목 차트 펼치기");
+  toggle.title = open ? "종목 차트 접기" : "종목 차트 펼치기";
+  toggle.innerHTML = open ? "&#8722;" : "+";
+  content.hidden = !open;
+  content.innerHTML = "";
+  if (!open) {
+    prepareBriefingRsChartRender();
+  } else {
+    const { list, rows, selected, navigation } = getBriefingRsChartSelection();
+    state.briefingRsChartList = list;
+    state.briefingRsChartTicker = selected?.ticker ?? "";
+    if (!selected) {
+      content.innerHTML = '<p class="market-rs-empty">목록에 표시할 RS 차트 데이터가 없습니다.</p>';
+    } else {
+      enterBriefingRsChartContext(selected.ticker);
+      const navigationMarkup = `<div class="market-rs-chart-navigation" role="group" aria-label="${BRIEFING_RS_LISTS[list]} 종목 이동">
+        <span class="market-rs-chart-navigation-count">${navigation.position} / ${rows.length}</span>
+        <button type="button" data-briefing-rs-navigate="previous" aria-label="이전 종목" title="${navigation.previous ? `이전 종목: ${navigation.previous}` : "이전 종목 없음"}" ${navigation.previous ? "" : "disabled"}>&#8592;</button>
+        <button type="button" data-briefing-rs-navigate="next" aria-label="다음 종목" title="${navigation.next ? `다음 종목: ${navigation.next}` : "다음 종목 없음"}" ${navigation.next ? "" : "disabled"}>&#8594;</button>
+      </div>`;
+      content.innerHTML = `<div class="briefing-rs-chart-heading">
+        <div><span class="briefing-rs-chart-list">${BRIEFING_RS_LISTS[list]}</span><h3>${escapeHtml(selected.ticker)} US <small>${escapeHtml(selected.name)}</small></h3></div>
+        <div class="briefing-rs-chart-summary"><span>Price <b>${formatUsStockPrice(selected.price)}</b></span><span>RS <b>${formatRsNumber(selected.rsRatingAll)}</b></span><span>ATR 21D <b>${formatAtrPercent(selected.atr21Pct)}</b></span></div>
+      </div>${renderMarketRsChartControls(selected, navigationMarkup)}${renderMarketRsChartPanels(selected)}`;
+      content.querySelectorAll("[data-rs-range]").forEach((button) => button.addEventListener("click", () => {
+        state.rsHistoryRange = button.dataset.rsRange;
+        renderBriefingRsChart();
+      }));
+      content.querySelectorAll("[data-rs-price-chart-type]").forEach((button) => button.addEventListener("click", () => {
+        state.rsPriceChartType = button.dataset.rsPriceChartType;
+        renderBriefingRsChart();
+      }));
+      content.querySelectorAll("[data-rs-chart-series]").forEach((button) => button.addEventListener("click", () => {
+        const key = button.dataset.rsChartSeries;
+        state.rsChartSeries = { ...state.rsChartSeries, [key]: !isMarketRsChartSeriesVisible(key) };
+        renderBriefingRsChart();
+      }));
+      content.querySelector("[data-rs-volume-toggle]").addEventListener("change", (event) => {
+        state.rsVolumeVisible = event.target.checked;
+        renderBriefingRsChart();
+      });
+      content.querySelectorAll("[data-briefing-rs-navigate]").forEach((button) => button.addEventListener("click", () => {
+        const direction = button.dataset.briefingRsNavigate;
+        if (!navigation[direction]) return;
+        state.briefingRsChartTicker = navigation[direction];
+        renderBriefingRsChart();
+        content.querySelector(`[data-briefing-rs-navigate="${direction}"]:not(:disabled)`)?.focus({ preventScroll: true });
+      }));
+      content.querySelectorAll("[data-rs-chart-zoom]").forEach((button) => button.addEventListener("click", () => {
+        const action = button.dataset.rsChartZoom;
+        if (action === "reset") {
+          marketRsDetailChart?.resetZoom?.();
+          fitMarketRsChartYToVisible(marketRsDetailChart);
+          syncMarketRsVolumeChartX(marketRsDetailChart);
+        } else zoomMarketRsChartToLatest(action);
+      }));
+      createMarketRsChart(content.querySelector('[data-rs-chart="detail"]'), selected);
+      createMarketRsVolumeChart(content.querySelector('[data-rs-chart="volume"]'), selected);
+      createMarketRsMddChart(content.querySelector('[data-rs-chart="mdd"]'), selected);
+      createMarketRsAtrChart(content.querySelector('[data-rs-chart="atr"]'), selected);
+    }
+  }
+  usOverviewRoot.querySelectorAll("[data-briefing-candidate-ticker]").forEach((button) => {
+    const active = open && button.dataset.briefingCandidateTicker === state.briefingRsChartTicker
+      && button.dataset.briefingCandidateList === state.briefingRsChartList;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function bindBriefingRsChart() {
+  usOverviewRoot.querySelector("[data-briefing-rs-toggle]")?.addEventListener("click", () => {
+    state.briefingRsChartOpen = !state.briefingRsChartOpen;
+    renderBriefingRsChart();
+  });
+  usOverviewRoot.querySelectorAll("[data-briefing-candidate-ticker]").forEach((button) => button.addEventListener("click", () => {
+    state.briefingRsChartList = button.dataset.briefingCandidateList;
+    state.briefingRsChartTicker = button.dataset.briefingCandidateTicker;
+    state.briefingRsChartOpen = true;
+    renderBriefingRsChart();
+    usOverviewRoot.querySelector("[data-briefing-rs-chart]")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+  renderBriefingRsChart();
+}
+
+function renderRotationCandidateList(items, emptyText, list) {
   if (!items?.length) {
     return `<p class="market-rs-empty">${emptyText}</p>`;
   }
   return items
     .map(
       (item) => `
-        <article class="briefing-rotation-name">
-          <div>
+        <button type="button" class="briefing-rotation-name" data-briefing-candidate-ticker="${escapeHtml(item.ticker)}" data-briefing-candidate-list="${list}" aria-controls="briefing-rs-chart-content" aria-pressed="false" title="${hasBriefingRsChart(item.ticker) ? `${escapeHtml(item.label)} 차트` : "RS 차트 데이터 없음"}" ${hasBriefingRsChart(item.ticker) ? "" : "disabled"}>
+          <span>
             <strong>${item.label}</strong>
             <span>${item.sectorLabel}</span>
-          </div>
-          <div class="briefing-rotation-name-stats">
+          </span>
+          <span class="briefing-rotation-name-stats">
             <b class="${getSignedValueClass(item.score)}">Score ${formatSignedScore(item.score)}</b>
             <span class="${getSignedValueClass(item.excessReturns?.["1w"])}">1W vs QQQ ${formatSignedPercent(item.excessReturns?.["1w"])}</span>
-          </div>
-        </article>
+          </span>
+        </button>
       `,
     )
     .join("");
@@ -10055,6 +10206,7 @@ function openMarketRsTicker(ticker) {
   if (!row) {
     return;
   }
+  prepareBriefingRsChartRender(true);
 
   state.tab = "Screening";
   state.screeningView = "RS";
@@ -10590,7 +10742,7 @@ function renderMarketBriefingOverview() {
         <span>섹터와 종목 모두 QQQ 대비 강세</span>
       </div>
       <div class="briefing-rotation-name-list">
-        ${renderRotationCandidateList(rotationCandidates.buyWatch, "아직 뚜렷한 편입 후보가 없습니다.")}
+        ${renderRotationCandidateList(rotationCandidates.buyWatch, "아직 뚜렷한 편입 후보가 없습니다.", "buyWatch")}
       </div>
     </article>
     <article class="briefing-rotation-candidate-card">
@@ -10599,7 +10751,7 @@ function renderMarketBriefingOverview() {
         <span>단기 개선, 중기 회복 초입</span>
       </div>
       <div class="briefing-rotation-name-list">
-        ${renderRotationCandidateList(rotationCandidates.earlyRotation, "초기 로테이션 후보가 없습니다.")}
+        ${renderRotationCandidateList(rotationCandidates.earlyRotation, "초기 로테이션 후보가 없습니다.", "earlyRotation")}
       </div>
     </article>
     <article class="briefing-rotation-candidate-card">
@@ -10608,7 +10760,7 @@ function renderMarketBriefingOverview() {
         <span>QQQ 대비 약세 전환 경계</span>
       </div>
       <div class="briefing-rotation-name-list">
-        ${renderRotationCandidateList(rotationCandidates.trimWatch, "축소 경계 후보가 없습니다.")}
+        ${renderRotationCandidateList(rotationCandidates.trimWatch, "축소 경계 후보가 없습니다.", "trimWatch")}
       </div>
     </article>
   `;
@@ -10752,6 +10904,13 @@ function renderMarketBriefingOverview() {
           <div class="briefing-rotation-quadrants">${rotationQuadrantMarkup}</div>
           <div class="briefing-rotation-candidates">${rotationCandidateMarkup}</div>
         </div>
+        <section class="briefing-rs-chart" data-briefing-rs-chart>
+          <div class="briefing-rs-chart-toggle-row">
+            <h3>종목 차트</h3>
+            <button type="button" data-briefing-rs-toggle aria-expanded="false" aria-controls="briefing-rs-chart-content" aria-label="종목 차트 펼치기" title="종목 차트 펼치기">+</button>
+          </div>
+          <div id="briefing-rs-chart-content" class="market-rs-detail" data-briefing-rs-chart-content hidden></div>
+        </section>
       </article>
 
       <article class="us-panel briefing-total-map-panel">
@@ -10872,6 +11031,7 @@ function renderMarketBriefingOverview() {
     });
   });
   updateRotationView();
+  bindBriefingRsChart();
 }
 
 function formatRsNumber(value, digits = 0) {
@@ -12807,6 +12967,50 @@ function isMarketRsVolumeVisible() {
   return state.rsVolumeVisible !== false;
 }
 
+function renderMarketRsChartControls(selected, navigationMarkup = "") {
+  const historyRangeByKey = new Map((marketRsData.historyRanges ?? []).map((range) => [range.key, range]));
+  const ranges = ["1m", "3m", "6m", "1y", "3y", "ytd"].map((key) => historyRangeByKey.get(key) ?? { key, label: key.toUpperCase() });
+  return `<div class="market-rs-chart-controls">
+    <div class="market-rs-chart-control-row market-rs-chart-range-row">
+      <span>Chart Range</span>
+      <div class="market-rs-chip-row">${ranges.map((range) => `<button type="button" class="market-rs-chip${state.rsHistoryRange === range.key ? " active" : ""}" data-rs-range="${range.key}" aria-pressed="${state.rsHistoryRange === range.key}">${range.label}</button>`).join("")}</div>
+      ${navigationMarkup}
+    </div>
+    <div class="market-rs-chart-control-row">
+      <span>Price</span>
+      <div class="market-rs-price-style-toggle" role="group" aria-label="Price chart style">${MARKET_RS_PRICE_CHART_TYPES.map((type) => `<button type="button" class="market-rs-price-style-button${state.rsPriceChartType === type.key ? " active" : ""}" data-rs-price-chart-type="${type.key}" aria-pressed="${state.rsPriceChartType === type.key}">${type.label}</button>`).join("")}</div>
+    </div>
+    <div class="market-rs-chart-control-row">
+      <span>Volume</span>
+      <label class="market-rs-volume-toggle"><input type="checkbox" data-rs-volume-toggle ${selected?.isIndex ? "disabled" : isMarketRsVolumeVisible() ? "checked" : ""} /><span>${selected?.isIndex ? "지수 거래량 없음" : "Show volume"}</span></label>
+    </div>
+    <div class="market-rs-chart-control-row">
+      <span>Chart Lines</span>
+      <div class="market-rs-chip-row">${MARKET_RS_CHART_SERIES.map((series) => `<button type="button" class="market-rs-chip market-rs-chart-series-chip${isMarketRsChartSeriesVisible(series.key) ? " active" : ""}" data-rs-chart-series="${series.key}" aria-pressed="${isMarketRsChartSeriesVisible(series.key)}" style="--series-color:${series.color}"><i></i>${series.label}</button>`).join("")}</div>
+    </div>
+    <div class="market-rs-chart-zoom-controls" role="group" aria-label="RS chart zoom controls">
+      <button type="button" data-rs-chart-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+      <button type="button" data-rs-chart-zoom="out" aria-label="Zoom out" title="Zoom out">-</button>
+      <button type="button" class="market-rs-chart-zoom-reset" data-rs-chart-zoom="reset">Reset</button>
+    </div>
+  </div>`;
+}
+
+function renderMarketRsChartPanels(selected) {
+  return `<div class="chart-wrap market-rs-chart-wrap">
+    <div class="market-rs-ema-readout" data-rs-ema-readout aria-label="Selected EMA values"></div>
+    <canvas data-rs-chart="detail" aria-label="${escapeHtml(selected?.ticker ?? "")} 가격 및 RS 차트"></canvas>
+  </div>
+  ${isMarketRsVolumeVisible() && !selected?.isIndex ? `<div class="chart-wrap market-rs-volume-chart-wrap">
+    <div class="market-rs-volume-head"><strong>Volume</strong><span>Daily shares</span></div>
+    <canvas data-rs-chart="volume"></canvas>
+  </div>` : ""}
+  <div class="market-rs-risk-chart-grid">
+    <div><div class="chart-wrap market-rs-mdd-chart-wrap"><canvas data-rs-chart="mdd"></canvas></div></div>
+    <div><div class="chart-wrap market-rs-mdd-chart-wrap"><canvas data-rs-chart="atr"></canvas></div></div>
+  </div>`;
+}
+
 function refreshMarketRsChartOnly() {
   const detailCanvas = usOverviewRoot.querySelector('[data-rs-chart="detail"]');
   const volumeCanvas = usOverviewRoot.querySelector('[data-rs-chart="volume"]');
@@ -14126,20 +14330,6 @@ function renderMarketRsOverview() {
       `,
     )
     .join("");
-  const historyRangeByKey = new Map((marketRsData.historyRanges ?? []).map((range) => [range.key, range]));
-  const chartRangeChips = ["1m", "3m", "6m", "1y", "3y", "ytd"]
-    .map((key) => historyRangeByKey.get(key) ?? { key, label: key.toUpperCase() })
-    .map(
-      (range) => `
-        <button
-          type="button"
-          class="market-rs-chip${state.rsHistoryRange === range.key ? " active" : ""}"
-          data-rs-range="${range.key}"
-          aria-pressed="${state.rsHistoryRange === range.key ? "true" : "false"}"
-        >${range.label}</button>
-      `,
-    )
-    .join("");
   const filterChips = `
     <button type="button" class="market-rs-chip${state.rsFilter === "all" ? " active" : ""}" data-rs-filter="all">All Ratings</button>
     <button type="button" class="market-rs-chip${state.rsFilter === "newHigh3m" ? " active" : ""}" data-rs-filter="newHigh3m">RS New High (3M)</button>
@@ -14419,35 +14609,6 @@ function renderMarketRsOverview() {
   const extensionMarkup = ["ema21", "sma50"]
     .map((key) => renderMarketRsExtensionGauge(extension[key], selected?.isIndex))
     .join("");
-  const rsChartSeriesChips = MARKET_RS_CHART_SERIES.map(
-    (series) => `
-      <button
-        type="button"
-        class="market-rs-chip market-rs-chart-series-chip${isMarketRsChartSeriesVisible(series.key) ? " active" : ""}"
-        data-rs-chart-series="${series.key}"
-        style="--series-color:${series.color}"
-      >
-        <i></i>${series.label}
-      </button>
-    `,
-  ).join("");
-  const rsPriceChartTypeButtons = MARKET_RS_PRICE_CHART_TYPES.map(
-    (chartType) => `
-      <button
-        type="button"
-        class="market-rs-price-style-button${state.rsPriceChartType === chartType.key ? " active" : ""}"
-        data-rs-price-chart-type="${chartType.key}"
-        aria-pressed="${state.rsPriceChartType === chartType.key ? "true" : "false"}"
-      >${chartType.label}</button>
-    `,
-  ).join("");
-  const rsChartZoomButtons = `
-    <div class="market-rs-chart-zoom-controls" role="group" aria-label="RS chart zoom controls">
-      <button type="button" data-rs-chart-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
-      <button type="button" data-rs-chart-zoom="out" aria-label="Zoom out" title="Zoom out">-</button>
-      <button type="button" class="market-rs-chart-zoom-reset" data-rs-chart-zoom="reset">Reset</button>
-    </div>
-  `;
 
   usOverviewRoot.innerHTML = `
     <section class="market-rs-overview">
@@ -14629,51 +14790,8 @@ function renderMarketRsOverview() {
               ${extensionMarkup || '<p class="market-rs-empty">Extension data will appear after the next RS data refresh.</p>'}
             </div>
           </div>
-          <div class="market-rs-chart-controls">
-            <div class="market-rs-chart-control-row market-rs-chart-range-row">
-              <span>Chart Range</span>
-              <div class="market-rs-chip-row">${chartRangeChips}</div>
-              ${chartNavigationMarkup}
-            </div>
-            <div class="market-rs-chart-control-row">
-              <span>Price</span>
-              <div class="market-rs-price-style-toggle" role="group" aria-label="Price chart style">${rsPriceChartTypeButtons}</div>
-            </div>
-            <div class="market-rs-chart-control-row">
-              <span>Volume</span>
-              <label class="market-rs-volume-toggle">
-                <input type="checkbox" data-rs-volume-toggle ${selected?.isIndex ? "disabled" : isMarketRsVolumeVisible() ? "checked" : ""} />
-                <span>${selected?.isIndex ? "지수 거래량 없음" : "Show volume"}</span>
-              </label>
-            </div>
-            <div class="market-rs-chart-control-row">
-              <span>Chart Lines</span>
-              <div class="market-rs-chip-row">${rsChartSeriesChips}</div>
-            </div>
-            ${rsChartZoomButtons}
-          </div>
-          <div class="chart-wrap market-rs-chart-wrap">
-            <div class="market-rs-ema-readout" data-rs-ema-readout aria-label="Selected EMA values"></div>
-            <canvas data-rs-chart="detail"></canvas>
-          </div>
-          ${isMarketRsVolumeVisible() && !selected?.isIndex ? `
-            <div class="chart-wrap market-rs-volume-chart-wrap">
-              <div class="market-rs-volume-head"><strong>Volume</strong><span>Daily shares</span></div>
-              <canvas data-rs-chart="volume"></canvas>
-            </div>
-          ` : ""}
-          <div class="market-rs-risk-chart-grid">
-            <div>
-              <div class="chart-wrap market-rs-mdd-chart-wrap">
-                <canvas data-rs-chart="mdd"></canvas>
-              </div>
-            </div>
-            <div>
-              <div class="chart-wrap market-rs-mdd-chart-wrap">
-                <canvas data-rs-chart="atr"></canvas>
-              </div>
-            </div>
-          </div>
+          ${renderMarketRsChartControls(selected, chartNavigationMarkup)}
+          ${renderMarketRsChartPanels(selected)}
         </article>
       </section>
 
@@ -23561,6 +23679,7 @@ function renderOpenrouterOverview() {
 
 function render() {
   prepareCompanyViewRender();
+  prepareBriefingRsChartRender();
   syncDashboardRoute();
   destroyCharts();
   const asiaRegion = getAsiaScreeningRegion();
