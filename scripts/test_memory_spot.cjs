@@ -20,6 +20,7 @@ const rows = [moduleRow(labels[0]), moduleRow(labels[2]),
 const runtime = {loaded: false, loading: false};
 let rendered = 0;
 const context = vm.createContext({
+  state: {memorySpotSeries:{}},
   memorySpotRuntime: runtime, fetch: async () => ({ok:true, text:async () => 'fixture'}),
   parseCsvText: () => rows, createDateLabels: () => labels, formatDateKey: () => labels[2],
   render: () => rendered++,
@@ -39,9 +40,14 @@ vm.runInContext(functionSource('buildMemorySpotSeriesDatasets'), context);
   assert.equal(item.dateBasis, 'sheet_collection_date');
   assert.equal(item.latestHigh, 2370);
   assert.equal(runtime.items.ddr5_16gb.latestValue, 61.333);
-  const datasets = context.buildMemorySpotSeriesDatasets({format:'module_spot',color:'#2563eb'}, item);
+  const metadata = {key:'ddr5_rdimm_32gb',format:'module_spot',color:'#2563eb'};
+  const datasets = context.buildMemorySpotSeriesDatasets(metadata, item);
   assert.deepEqual(Array.from(datasets, series => series.label), ['High','Average','Low']);
   assert.equal(datasets[1].tension, 0);
+  assert.ok(datasets.every(series => !series.hidden));
+  context.state.memorySpotSeries.ddr5_rdimm_32gb = {high:false,low:false};
+  const selected = context.buildMemorySpotSeriesDatasets(metadata, item);
+  assert.deepEqual(Array.from(selected, series => series.hidden), [true,false,true]);
   const legacy = context.buildMemorySpotSeriesDatasets({label:'Chip',color:'#000'}, runtime.items.ddr5_16gb);
   assert.equal(legacy.length, 1);
   assert.equal(legacy[0].tension, 0.2);

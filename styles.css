@@ -3017,6 +3017,24 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.memory-series-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 12px 0 4px;
+}
+
+.memory-series-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.memory-series-controls input {
+  accent-color: #0f766e;
+}
+
 .memory-contract-panel {
   display: grid;
   gap: 14px;

@@ -33,6 +33,7 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
         });
       }
       return {first:chart.data.labels[0],last:chart.data.labels.at(-1),count:chart.data.labels.length,
+        visible:chart.data.datasets.map((_,index) => chart.isDatasetVisible(index)),
         series:chart.data.datasets.map(d => ({label:d.label,points:d.data.filter(Number.isFinite).length})),
         colored,charts:charts.length,instances:Object.keys(Chart.instances).length};
     });
@@ -41,6 +42,22 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.deepEqual(initial.series.map(series => series.label), ['High','Average','Low']);
     assert.ok(initial.series.every(series => series.points >= 222));
     assert.ok(initial.colored.every(count => count > 100), JSON.stringify(initial));
+    assert.deepEqual(initial.visible, [true,true,true]);
+    const high = panel.locator('[data-memory-series-toggle="high"]');
+    const average = panel.locator('[data-memory-series-toggle="average"]');
+    const low = panel.locator('[data-memory-series-toggle="low"]');
+    for(const input of [high,average,low]) assert.ok(await input.isChecked());
+    await high.uncheck();
+    await low.uncheck();
+    assert.deepEqual((await chartInfo()).visible, [false,true,false]);
+    await panel.locator('[data-memory-range="1m"]').click();
+    assert.deepEqual((await chartInfo()).visible, [false,true,false]);
+    assert.equal(await high.isChecked(), false);
+    assert.equal(await low.isChecked(), false);
+    await average.uncheck();
+    assert.deepEqual((await chartInfo()).visible, [false,false,false]);
+    for(const input of [high,average,low]) await input.check();
+    assert.deepEqual((await chartInfo()).visible, [true,true,true]);
     for(const range of ['1m','3m','1y','max']) {
       await panel.locator(`[data-memory-range="${range}"]`).click();
       const info = await chartInfo();

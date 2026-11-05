@@ -555,6 +555,7 @@ const state = {
     "rates:us10y",
   ],
   memorySpotRanges: {},
+  memorySpotSeries: {},
   infraRanges: Object.fromEntries(
     Object.keys(infraGridData?.panels ?? {}).map((key) => [key, infraGridData.defaultRange ?? "3y"]),
   ),
@@ -16400,9 +16401,9 @@ async function loadMemorySpotHistory() {
 function buildMemorySpotSeriesDatasets(item, runtime) {
   const series = item.format === "module_spot"
     ? [
-        { label: "High", data: runtime.highHistory ?? [], color: "#dc2626" },
-        { label: "Average", data: runtime.history ?? [], color: item.color },
-        { label: "Low", data: runtime.lowHistory ?? [], color: "#059669" },
+        { key: "high", label: "High", data: runtime.highHistory ?? [], color: "#dc2626" },
+        { key: "average", label: "Average", data: runtime.history ?? [], color: item.color },
+        { key: "low", label: "Low", data: runtime.lowHistory ?? [], color: "#059669" },
       ]
     : [{ label: item.label, data: runtime.history, color: item.color }];
   return series.map((seriesItem) => ({
@@ -16410,6 +16411,8 @@ function buildMemorySpotSeriesDatasets(item, runtime) {
     data: seriesItem.data,
     borderColor: seriesItem.color,
     backgroundColor: seriesItem.color,
+    memorySeriesKey: seriesItem.key,
+    hidden: item.format === "module_spot" && state.memorySpotSeries?.[item.key]?.[seriesItem.key] === false,
     borderWidth: 2.2,
     tension: item.format === "module_spot" ? 0 : 0.2,
     pointRadius: 0,
@@ -16443,6 +16446,7 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: {
+          display: !canvas.hasAttribute("data-memory-series-controlled"),
           position: "top",
           align: "start",
           labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
@@ -17485,8 +17489,19 @@ function renderMemorySpotOverview() {
             <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">TrendForce 원출처</a> ·
             <a href="${item.archiveUrl}" target="_blank" rel="noreferrer">기존 수집 시트</a>
           </div>` : ""}
+          ${isModule ? `
+          <div class="memory-series-controls" role="group" aria-label="${item.label} 가격 선택">
+            ${buildMemorySpotSeriesDatasets(item, runtime).map((series) => `
+              <label>
+                <input type="checkbox" data-memory-series-toggle="${series.memorySeriesKey}"
+                  data-memory-series-item="${item.key}" ${series.hidden ? "" : "checked"}>
+                <span class="memory-dot" style="background:${series.borderColor}"></span>
+                ${series.label}
+              </label>
+            `).join("")}
+          </div>` : ""}
           <div class="memory-chart-wrap">
-            <canvas data-memory-series="${item.key}"></canvas>
+            <canvas data-memory-series="${item.key}"${isModule ? " data-memory-series-controlled" : ""}></canvas>
           </div>
         </article>`;
     })
@@ -17633,6 +17648,24 @@ function renderMemorySpotOverview() {
       };
       destroyCharts();
       renderMemorySpotOverview();
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-memory-series-toggle]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemKey = input.dataset.memorySeriesItem;
+      const seriesKey = input.dataset.memorySeriesToggle;
+      state.memorySpotSeries = {
+        ...(state.memorySpotSeries ?? {}),
+        [itemKey]: { ...(state.memorySpotSeries?.[itemKey] ?? {}), [seriesKey]: input.checked },
+      };
+      const canvas = usOverviewRoot.querySelector(`[data-memory-series="${itemKey}"]`);
+      const chart = typeof Chart === "undefined" ? null : Chart.getChart(canvas);
+      const index = chart?.data.datasets.findIndex((dataset) => dataset.memorySeriesKey === seriesKey) ?? -1;
+      if (index >= 0) {
+        chart.setDatasetVisibility(index, input.checked);
+        chart.update("none");
+      }
     });
   });
 
