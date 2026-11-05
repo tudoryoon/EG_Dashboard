@@ -12,6 +12,7 @@ window.memoryData = {
     dram: "daily",
     nand: "daily",
     wafer: "weekly",
+    module: "weekly",
   },
   groups: [
     {
@@ -78,6 +79,30 @@ window.memoryData = {
       ],
     },
     {
+      key: "module",
+      label: "DRAM Module Spot",
+      description: "Server memory module spot prices, separate from DRAM chips",
+      items: [
+        {
+          key: "ddr5_rdimm_32gb",
+          label: "DDR5 RDIMM 32GB",
+          benchmarkName: "DDR5 RDIMM 32GB 4800/5600",
+          category: "Server DRAM Module",
+          format: "module_spot",
+          unit: "USD/module",
+          cadence: "weekly",
+          priority: 4.5,
+          color: "#2563eb",
+          sourceUrl: "https://www.trendforce.com/price/dram/module_spot",
+          archiveUrl: "https://docs.google.com/spreadsheets/d/1BsfqsQ3fXN1JGXJlR8mbs2r-lXWt0S3Dcl5OVw1kPXs/edit",
+          note: "주간 현물가격 · USD/모듈. 가로축은 공개 시트 수집일이며 원출처 가격 공표일은 제공되지 않습니다. 같은 주간 가격이 여러 수집일에 반복될 수 있습니다. 계약가격·DRAM 칩 가격과는 별도입니다.",
+          latestValue: null,
+          latestChangePct: null,
+          history: [],
+        },
+      ],
+    },
+    {
       key: "nand",
       label: "NAND Spot",
       description: "Chip spot and wafer spot indicators",
@@ -119,6 +144,7 @@ window.memoryData = {
       "ddr4_16gb",
       "ddr4_8gb",
       "gddr6_8gb",
+      "ddr5_rdimm_32gb",
       "wafer_512gb_tlc",
       "wafer_256gb_tlc",
     ],

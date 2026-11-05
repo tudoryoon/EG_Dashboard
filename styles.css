@@ -3013,6 +3013,10 @@ h1 {
   min-height: 280px;
 }
 
+.memory-module-panel {
+  grid-column: 1 / -1;
+}
+
 .memory-contract-panel {
   display: grid;
   gap: 14px;

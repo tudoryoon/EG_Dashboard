@@ -16317,14 +16317,15 @@ async function loadMemorySpotHistory() {
     );
 
     const allRows = [...parseCsvText(dramCsv), ...parseCsvText(nandCsv)];
-      const targetMap = {
-        ddr5_16gb: "DDR5 16Gb (2Gx8)",
-        ddr4_16gb: "DDR4 16Gb (2Gx8)",
-        ddr4_8gb: "DDR4 8Gb (1Gx8)",
-        gddr6_8gb: "GDDR6 8Gb",
-        wafer_512gb_tlc: "TLC 512Gb",
-        wafer_256gb_tlc: "TLC 256Gb",
-      };
+    const targetMap = {
+      ddr5_16gb: "DDR5 16Gb (2Gx8)",
+      ddr4_16gb: "DDR4 16Gb (2Gx8)",
+      ddr4_8gb: "DDR4 8Gb (1Gx8)",
+      gddr6_8gb: "GDDR6 8Gb",
+      ddr5_rdimm_32gb: "DDR5 RDIMM",
+      wafer_512gb_tlc: "TLC 512Gb",
+      wafer_256gb_tlc: "TLC 256Gb",
+    };
 
     const labels = createDateLabels("2022-01-01", formatDateKey(new Date()));
     const labelIndex = Object.fromEntries(labels.map((label, index) => [label, index]));
@@ -16339,22 +16340,48 @@ async function loadMemorySpotHistory() {
         },
       ]),
     );
+    Object.assign(itemStore.ddr5_rdimm_32gb, {
+      highHistory: new Array(labels.length).fill(null),
+      lowHistory: new Array(labels.length).fill(null),
+      latestHigh: null,
+      latestLow: null,
+      dateBasis: "sheet_collection_date",
+    });
 
     allRows.forEach((row) => {
       const key = Object.keys(targetMap).find((candidate) => targetMap[candidate] === row.Canonical_Product);
       if (!key || !(row.Date in labelIndex)) {
         return;
       }
+      const isModule = key === "ddr5_rdimm_32gb";
+      if (isModule && row.Product?.trim() !== "DDR5 RDIMM 32GB 4800/5600") {
+        return;
+      }
 
       const value = row.Price_Average ? Number(row.Price_Average) : null;
       const change = row.Change_Pct ? Number(row.Change_Pct) : null;
+      const high = row.Price_High ? Number(row.Price_High) : null;
+      const low = row.Price_Low ? Number(row.Price_Low) : null;
+      if (isModule && (!Number.isFinite(value) || value <= 0
+        || (Number.isFinite(high) && high < value)
+        || (Number.isFinite(low) && (low <= 0 || low > value)))) {
+        return;
+      }
       const target = itemStore[key];
       target.history[labelIndex[row.Date]] = Number.isFinite(value) ? Number(value.toFixed(3)) : null;
+      if (isModule) {
+        target.highHistory[labelIndex[row.Date]] = Number.isFinite(high) ? Number(high.toFixed(3)) : null;
+        target.lowHistory[labelIndex[row.Date]] = Number.isFinite(low) ? Number(low.toFixed(3)) : null;
+      }
 
       if (!target.latestDate || row.Date > target.latestDate) {
         target.latestDate = row.Date;
         target.latestValue = Number.isFinite(value) ? Number(value.toFixed(3)) : null;
         target.latestChangePct = Number.isFinite(change) ? Number(change.toFixed(2)) : null;
+        if (isModule) {
+          target.latestHigh = target.highHistory[labelIndex[row.Date]];
+          target.latestLow = target.lowHistory[labelIndex[row.Date]];
+        }
       }
     });
 
@@ -16368,6 +16395,28 @@ async function loadMemorySpotHistory() {
     memorySpotRuntime.loading = false;
     render();
   }
+}
+
+function buildMemorySpotSeriesDatasets(item, runtime) {
+  const series = item.format === "module_spot"
+    ? [
+        { label: "High", data: runtime.highHistory ?? [], color: "#dc2626" },
+        { label: "Average", data: runtime.history ?? [], color: item.color },
+        { label: "Low", data: runtime.lowHistory ?? [], color: "#059669" },
+      ]
+    : [{ label: item.label, data: runtime.history, color: item.color }];
+  return series.map((seriesItem) => ({
+    label: seriesItem.label,
+    data: seriesItem.data,
+    borderColor: seriesItem.color,
+    backgroundColor: seriesItem.color,
+    borderWidth: 2.2,
+    tension: item.format === "module_spot" ? 0 : 0.2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    pointHitRadius: 10,
+    spanGaps: true,
+  }));
 }
 
 function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "1y") {
@@ -17303,9 +17352,9 @@ function renderMemorySpotOverview() {
           <div class="memory-card-value">${formatMemorySpotValue(item.latestValue)}</div>
           <div class="memory-card-meta">
             <span>${item.category}</span>
-            <span>${item.cadence}</span>
+            <span>${item.format === "module_spot" ? "주간 현물 · USD/모듈" : item.cadence}</span>
             <span>${formatMemorySpotChange(item.latestChangePct)}</span>
-            <span>${item.latestDate || "No data"}</span>
+            <span>${item.format === "module_spot" ? "시트 수집일 " : ""}${item.latestDate || "No data"}</span>
           </div>
         </article>`,
     )
@@ -17387,12 +17436,13 @@ function renderMemorySpotOverview() {
         latestDate: runtime.latestDate ?? null,
         history: runtime.history ?? rawItem.history ?? [],
       };
+      const isModule = item.format === "module_spot";
       return `
-        <article class="memory-panel">
+        <article class="memory-panel${isModule ? " memory-module-panel" : ""}">
           <div class="us-panel-head">
             <div>
               <h3>${item.label}</h3>
-              <p>${item.benchmarkName}</p>
+              <p>${item.benchmarkName}${isModule ? " · 주간 현물 · USD/모듈" : ""}</p>
             </div>
             <div class="m7-range-row">
               ${MEMORY_SPOT_RANGE_OPTIONS.map(
@@ -17409,21 +17459,32 @@ function renderMemorySpotOverview() {
             </div>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">Latest</span>
+            <span class="memory-stat-label">${isModule ? "최근 평균 (USD/모듈)" : "Latest"}</span>
             <span class="memory-stat-value">${formatMemorySpotValue(item.latestValue)}</span>
           </div>
+          ${isModule ? `
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">High / Low</span>
+            <span class="memory-stat-value">${formatMemorySpotValue(runtime.latestHigh)} / ${formatMemorySpotValue(runtime.latestLow)}</span>
+          </div>` : ""}
           <div class="memory-stat-row">
             <span class="memory-stat-label">Session Change</span>
             <span class="memory-stat-value">${formatMemorySpotChange(item.latestChangePct)}</span>
           </div>
           <div class="memory-stat-row">
             <span class="memory-stat-label">Cadence</span>
-            <span class="memory-stat-value">${item.cadence}</span>
+            <span class="memory-stat-value">${isModule ? "주간 가격 / 매일 수집 확인" : item.cadence}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">Last Date</span>
+            <span class="memory-stat-label">${isModule ? "시트 수집일" : "Last Date"}</span>
             <span class="memory-stat-value">${item.latestDate || "No data"}</span>
           </div>
+          ${isModule ? `
+          <div class="memory-guide-note">
+            ${item.note}
+            <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">TrendForce 원출처</a> ·
+            <a href="${item.archiveUrl}" target="_blank" rel="noreferrer">기존 수집 시트</a>
+          </div>` : ""}
           <div class="memory-chart-wrap">
             <canvas data-memory-series="${item.key}"></canvas>
           </div>
@@ -17570,6 +17631,7 @@ function renderMemorySpotOverview() {
         ...(state.memorySpotRanges ?? {}),
         [targetKey]: rangeKey,
       };
+      destroyCharts();
       renderMemorySpotOverview();
     });
   });
@@ -17618,24 +17680,15 @@ function renderMemorySpotOverview() {
       return;
     }
 
+    const datasets = buildMemorySpotSeriesDatasets(item, runtime);
+    const firstIndex = item.format === "module_spot"
+      ? Math.max(0, runtime.history.findIndex((value) => Number.isFinite(value)))
+      : 0;
     createMemoryLineChart(
       canvas,
-      memorySpotRuntime.labels,
-      [
-        {
-          label: item.label,
-          data: runtime.history,
-          borderColor: item.color,
-          backgroundColor: item.color,
-          borderWidth: 2.2,
-          tension: 0.2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          pointHitRadius: 10,
-          spanGaps: true,
-        },
-      ],
-      (value) => `$${Number(value).toFixed(2)}`,
+      memorySpotRuntime.labels.slice(firstIndex),
+      datasets.map((dataset) => ({ ...dataset, data: dataset.data.slice(firstIndex) })),
+      (value) => `$${Number(value).toFixed(2)}${item.format === "module_spot" ? " /모듈" : ""}`,
       getMemorySpotRange(`series:${item.key}`),
     );
   });

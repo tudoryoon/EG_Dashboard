@@ -22,6 +22,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test memory price parsing
+        run: python -m unittest discover -s scripts -p test_memory_spot.py
+
       - name: Refresh memory data history
         run: python scripts/update_memory_spot.py
 
