@@ -35,9 +35,13 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     }
     const panel = page.locator('.memory-module-panel');
     assert.match(await panel.innerText(), /2,?165(?:\.00)?/);
-    assert.match(await panel.innerText(), /시트 수집일/);
+    assert.match(await panel.innerText(), /수집일/);
     assert.match(await panel.innerText(), /계약가격/);
-    assert.equal(await panel.locator('a').count(), 2);
+    assert.equal(await panel.locator('a').count(), 1);
+    assert.equal(await panel.locator('a[href="https://www.trendforce.com/price/dram/module_spot"]').count(), 1);
+    const memoryPage = page.locator('.memory-overview');
+    assert.equal(await memoryPage.locator('a[href*="docs.google.com/spreadsheets"], a[href*="memorysupercycle.net"]').count(), 0);
+    assert.doesNotMatch(await memoryPage.innerText(), /memorysupercycle|기존 수집 시트|공개 시트/);
     const chartInfo = () => page.evaluate(() => {
       const canvas = document.querySelector('[data-memory-series="ddr5_rdimm_32gb"]');
       const chart = Chart.getChart(canvas);

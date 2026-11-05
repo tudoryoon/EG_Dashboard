@@ -17358,7 +17358,7 @@ function renderMemorySpotOverview() {
             <span>${item.category}</span>
             <span>${item.format === "module_spot" ? "주간 현물 · USD/모듈" : item.cadence}</span>
             <span>${formatMemorySpotChange(item.latestChangePct)}</span>
-            <span>${item.format === "module_spot" ? "시트 수집일 " : ""}${item.latestDate || "No data"}</span>
+            <span>${item.format === "module_spot" ? "수집일 " : ""}${item.latestDate || "No data"}</span>
           </div>
         </article>`,
     )
@@ -17480,7 +17480,7 @@ function renderMemorySpotOverview() {
             <span class="memory-stat-value">${isModule ? "주간 가격 / 매일 수집 확인" : item.cadence}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">${isModule ? "시트 수집일" : "Last Date"}</span>
+            <span class="memory-stat-label">${isModule ? "수집일" : "Last Date"}</span>
             <span class="memory-stat-value">${item.latestDate || "No data"}</span>
           </div>
           ${runtime.latestSource ? `
@@ -17493,8 +17493,7 @@ function renderMemorySpotOverview() {
           ${isModule ? `
           <div class="memory-guide-note">
             ${item.note}
-            <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">TrendForce 원출처</a> ·
-            <a href="${item.archiveUrl}" target="_blank" rel="noreferrer">기존 수집 시트</a>
+            <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">TrendForce 원출처</a>
           </div>` : ""}
           ${isModule ? `
           <div class="memory-series-controls" role="group" aria-label="${item.label} 가격 선택">

@@ -1,10 +1,9 @@
 window.memoryData = {
   updatedAt: "",
   source: {
-    name: "DRAMeXchange + Public History",
-    note: "DRAM 칩 3종: 과거 날짜는 memorysupercycle.net 공개 시트만 사용하고, 당일값만 TrendForce/DRAMeXchange 공개 표에서 직접 수집합니다. 당일값은 장중 세션 가격이며 원출처 발표시각을 따릅니다. 공개 시트가 아직 제공하지 않은 과거 날짜는 직접 수집값으로 메우지 않습니다. 계약가격 가이드는 별도 공개 기사 기반입니다.",
+    name: "TrendForce / DRAMeXchange",
+    note: "당일 DRAM 칩 가격은 TrendForce/DRAMeXchange 공개 표의 세션 평균을 사용합니다. 과거 이력과 당일 수치는 발표·수집 시점 차이가 있을 수 있으며, 확인되지 않은 과거 날짜는 임의로 메우지 않습니다. 계약가격 가이드는 별도 공개 기사 기반입니다.",
     links: {
-      spotSource: "https://memorysupercycle.net/",
       directDram: "https://www.dramexchange.com/",
       trendforceNews: "https://www.trendforce.com/news/",
     },
@@ -95,8 +94,7 @@ window.memoryData = {
           priority: 4.5,
           color: "#2563eb",
           sourceUrl: "https://www.trendforce.com/price/dram/module_spot",
-          archiveUrl: "https://docs.google.com/spreadsheets/d/1BsfqsQ3fXN1JGXJlR8mbs2r-lXWt0S3Dcl5OVw1kPXs/edit",
-          note: "주간 현물가격 · USD/모듈. 가로축은 공개 시트 수집일이며 원출처 가격 공표일은 제공되지 않습니다. 같은 주간 가격이 여러 수집일에 반복될 수 있습니다. 계약가격·DRAM 칩 가격과는 별도입니다.",
+          note: "주간 현물가격 · USD/모듈. 가로축은 수집일이며 원출처 가격 공표일은 제공되지 않습니다. 같은 주간 가격이 여러 수집일에 반복될 수 있습니다. 계약가격·DRAM 칩 가격과는 별도입니다.",
           latestValue: null,
           latestChangePct: null,
           history: [],
