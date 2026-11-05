@@ -607,6 +607,17 @@
       "sharesOutstanding": 69700000
     },
     {
+      "ticker": "ICLN",
+      "name": "iShares Global Clean Energy ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 120848296
+    },
+    {
       "ticker": "IGM",
       "name": "iShares Expanded Tech Sector ETF",
       "memberships": {
