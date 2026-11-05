@@ -3,9 +3,13 @@ from __future__ import annotations
 import csv
 import json
 import math
+import re
+import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
+
+from bs4 import BeautifulSoup
 
 
 DRAM_SHEET_ID = "1BsfqsQ3fXN1JGXJlR8mbs2r-lXWt0S3Dcl5OVw1kPXs"
@@ -23,6 +27,15 @@ TARGET_MAP = {
 }
 MODULE_KEY = "ddr5_rdimm_32gb"
 MODULE_PRODUCT = "DDR5 RDIMM 32GB 4800/5600"
+DRAMEXCHANGE_URL = "https://www.dramexchange.com/"
+DIRECT_PRODUCTS = {
+    "ddr5_16gb": "DDR5 16Gb (2Gx8) 4800/5600",
+    "ddr4_16gb": "DDR4 16Gb (2Gx8) 3200",
+    "ddr4_8gb": "DDR4 8Gb (1Gx8) 3200",
+}
+SOURCE_TZ = timezone(timedelta(hours=8))
+KST = timezone(timedelta(hours=9))
+OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "memory-data-history.js"
 
 
 def module_price(raw: str | None, digits: int = 3) -> float | None:
@@ -38,10 +51,92 @@ def csv_url(sheet_id: str) -> str:
 
 
 def fetch_rows(url: str) -> list[dict[str, str]]:
+    return list(csv.DictReader(fetch_text(url).splitlines()))
+
+
+def fetch_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(request) as response:  # nosec B310 - fixed public Google Sheets URLs
-        payload = response.read().decode("utf-8-sig")
-    return list(csv.DictReader(payload.splitlines()))
+    with urlopen(request, timeout=30) as response:  # nosec B310 - fixed public source URLs
+        return response.read().decode("utf-8-sig")
+
+
+def parse_direct_dram(html: str, now: datetime) -> dict:
+    soup = BeautifulSoup(html, "html.parser")
+    heading = soup.find(id="NationalDramSpotPrice_show_day")
+    match = re.search(
+        r"([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})\s+(\d{1,2}):(\d{2})\s*\(GMT\+8\)",
+        heading.get_text(" ", strip=True) if heading else "",
+    )
+    if not match:
+        raise ValueError("DRAM source publication timestamp missing or changed")
+    month, day, year, hour, minute = match.groups()
+    month_number = ("jan feb mar apr may jun jul aug sep oct nov dec".split()).index(month.lower()) + 1
+    published = datetime(int(year), month_number, int(day), int(hour), int(minute), tzinfo=SOURCE_TZ)
+    if published > now + timedelta(minutes=5):
+        raise ValueError("DRAM source publication timestamp is in the future")
+
+    products = {product: key for key, product in DIRECT_PRODUCTS.items()}
+    quotes = {}
+    for row in soup.find_all("tr"):
+        cells = row.find_all(["td", "th"], recursive=False)
+        values = [cell.get_text(" ", strip=True) for cell in cells]
+        if not values or values[0] not in products:
+            continue
+        table = row.find_parent("table")
+        headers = []
+        for candidate in table.find_all("tr"):
+            cells = candidate.find_all(["th", "td"], recursive=False)
+            if cells and cells[0].get_text(strip=True) == "Item":
+                headers = [re.sub(r"\s+", "", cell.get_text()) for cell in cells]
+                break
+        expected_headers = ["Item", "DailyHigh", "DailyLow", "SessionHigh", "SessionLow", "SessionAverage", "SessionChange", "History"]
+        if headers != expected_headers or len(values) != len(expected_headers):
+            raise ValueError("DRAM source price columns changed")
+        high, low, average = [module_price(values[index].replace(",", "")) for index in (3, 4, 5)]
+        change = module_price(values[6].replace("%", "").replace(",", "").strip(), 2)
+        if any(value is None or value <= 0 for value in (high, low, average)) or not low <= average <= high or change is None:
+            raise ValueError(f"Invalid DRAM source quote: {values[0]}")
+        quotes[products[values[0]]] = {"average": average, "high": high, "low": low, "changePct": change}
+    if set(quotes) != set(DIRECT_PRODUCTS):
+        raise ValueError("DRAM source did not supply all three exact chip benchmarks")
+    return {
+        "date": published.date().isoformat(),
+        "publishedAt": published.isoformat(),
+        "collectedAt": now.astimezone(timezone.utc).isoformat(timespec="seconds"),
+        "items": quotes,
+    }
+
+
+def merge_direct_dram(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
+    snapshots = dict(previous.get("directDramHistory") or {})
+    if quote:
+        day = quote["date"]
+        existing = snapshots.get(day)
+        if not existing or quote["publishedAt"] >= existing["publishedAt"]:
+            snapshots[day] = quote
+    payload["directDramHistory"] = snapshots
+    label_index = {label: index for index, label in enumerate(payload["labels"])}
+    for day, snapshot in sorted(snapshots.items()):
+        if day not in label_index or day > today.isoformat():
+            continue
+        for key in DIRECT_PRODUCTS:
+            price = snapshot.get("items", {}).get(key)
+            if not price:
+                continue
+            item = payload["items"][key]
+            index = label_index[day]
+            # The sheet supplies the archived daily value once it catches up.
+            if item["history"][index] is not None:
+                continue
+            item["history"][index] = price["average"]
+            if not item["latestDate"] or day >= item["latestDate"]:
+                item.update(
+                    latestDate=day, latestValue=price["average"], latestChangePct=price["changePct"],
+                    latestSource={"name": "DRAMeXchange", "url": DRAMEXCHANGE_URL,
+                                  "publishedAt": snapshot["publishedAt"], "collectedAt": snapshot["collectedAt"]},
+                )
+            payload["updatedAt"] = max(payload["updatedAt"], day)
+            payload["firstObservedDate"] = min(payload["firstObservedDate"] or day, day)
 
 
 def build_labels(start_date: date, end_date: date) -> list[str]:
@@ -132,10 +227,21 @@ def build_payload(rows: list[dict[str, str]], today: date) -> dict:
 
 
 def main() -> None:
+    now = datetime.now(timezone.utc)
+    today = now.astimezone(KST).date()
+    previous = {}
+    if OUTPUT_PATH.exists():
+        previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().removesuffix(";"))
     rows = fetch_rows(csv_url(DRAM_SHEET_ID)) + fetch_rows(csv_url(NAND_SHEET_ID))
-    payload = build_payload(rows, datetime.now(timezone.utc).date())
-    output_path = Path(__file__).resolve().parents[1] / "data" / "memory-data-history.js"
-    output_path.write_text(
+    payload = build_payload(rows, today)
+    quote = None
+    try:
+        quote = parse_direct_dram(fetch_text(DRAMEXCHANGE_URL), now)
+        print(f"DRAMeXchange direct quote: {quote['publishedAt']}")
+    except Exception as error:
+        print(f"::warning::Direct DRAM fetch failed; keeping sheet history and saved direct quotes: {error}", file=sys.stderr)
+    merge_direct_dram(payload, previous, quote, today)
+    OUTPUT_PATH.write_text(
         "window.memoryDataHistoryData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
     )

@@ -16,6 +16,23 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(url, {waitUntil:'load',timeout:120000});
     await page.waitForFunction(() => typeof Chart === 'function' && document.querySelector('[data-memory-series="ddr5_rdimm_32gb"]'));
+    const directQuotes = await page.evaluate(() => Object.fromEntries(
+      ['ddr5_16gb','ddr4_16gb','ddr4_8gb'].map(key => {
+        const item = memorySpotRuntime.items[key];
+        const chart = Chart.getChart(document.querySelector(`[data-memory-series="${key}"]`));
+        const index = chart.data.labels.indexOf(item.latestDate);
+        return [key,{date:item.latestDate,value:item.latestValue,
+          chartValue:chart.data.datasets[0].data[index],source:item.latestSource}];
+      })
+    ));
+    for(const [key,quote] of Object.entries(directQuotes)) {
+      assert.equal(quote.chartValue, quote.value);
+      if(quote.source) {
+        const itemPanel = page.locator(`[data-memory-series="${key}"]`).locator('..').locator('..');
+        assert.match(await itemPanel.innerText(), /원출처 발표 \(KST\)/);
+        assert.equal(await itemPanel.locator(`a[href="${quote.source.url}"]`).count(), 1);
+      }
+    }
     const panel = page.locator('.memory-module-panel');
     assert.match(await panel.innerText(), /2,?165(?:\.00)?/);
     assert.match(await panel.innerText(), /시트 수집일/);
@@ -76,7 +93,7 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.ok((await chartInfo()).colored.every(count => count > 50));
     await panel.screenshot({path:path.join(out,'mobile.png')});
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({desktop:initial,mobile:overflow,errors},null,2));
+    console.log(JSON.stringify({directQuotes,desktop:initial,mobile:overflow,errors},null,2));
   } finally {
     await browser.close();
   }

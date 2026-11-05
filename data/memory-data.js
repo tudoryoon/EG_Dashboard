@@ -1,10 +1,11 @@
 window.memoryData = {
   updatedAt: "",
   source: {
-    name: "Public memory data dashboard",
-    note: "Spot history is built from the public sheets referenced by memorysupercycle.net. Contract-price guide is manually curated from public TrendForce articles and should be read as reported or forecast ranges, not a paid TrendForce price database.",
+    name: "DRAMeXchange + Public History",
+    note: "DRAM 칩 3종의 최신값은 DRAMeXchange 공개 표에서 직접 보완하고, 과거 이력은 memorysupercycle.net 공개 시트를 사용합니다. 당일값은 장중 세션 가격이며 원출처 발표시각을 따릅니다. 계약가격 가이드는 별도 공개 기사 기반입니다.",
     links: {
       spotSource: "https://memorysupercycle.net/",
+      directDram: "https://www.dramexchange.com/",
       trendforceNews: "https://www.trendforce.com/news/",
     },
   },

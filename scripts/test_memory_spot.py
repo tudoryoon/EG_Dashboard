@@ -1,7 +1,20 @@
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 
-from update_memory_spot import MODULE_KEY, MODULE_PRODUCT, TARGET_MAP, build_payload
+from update_memory_spot import (DIRECT_PRODUCTS, MODULE_KEY, MODULE_PRODUCT, TARGET_MAP,
+                                build_payload, merge_direct_dram, parse_direct_dram)
+
+
+def direct_html(stamp="Nov.5 2026 11:00 (GMT+8)"):
+    rows = "".join(
+        f"<tr><td>{product}</td><td>75</td><td>40</td><td>73</td><td>46.2</td>"
+        "<td>60.667</td><td><img src='down.gif'> -1.09 %</td><td></td></tr>"
+        for product in DIRECT_PRODUCTS.values()
+    )
+    return (f"<table><tr><td id='NationalDramSpotPrice_show_day'>Last Update: {stamp}</td></tr></table>"
+            "<table><tr><th>Item</th><th>Daily High</th><th>Daily Low</th><th>Session High</th>"
+            "<th>Session Low</th><th>Session Average</th><th>Session Change</th><th>History</th></tr>"
+            + rows + "</table>")
 
 
 def module_row(day):
@@ -11,6 +24,53 @@ def module_row(day):
 
 
 class MemorySpotTest(unittest.TestCase):
+    now = datetime(2026, 11, 5, 5, tzinfo=timezone.utc)
+
+    def test_direct_parser_uses_session_average_and_source_date(self):
+        quote = parse_direct_dram(direct_html(), self.now)
+        self.assertEqual(quote["date"], "2026-11-05")
+        self.assertEqual(quote["publishedAt"], "2026-11-05T11:00:00+08:00")
+        self.assertEqual(set(quote["items"]), set(DIRECT_PRODUCTS))
+        self.assertEqual(quote["items"]["ddr5_16gb"]["average"], 60.667)
+        self.assertEqual(quote["items"]["ddr5_16gb"]["changePct"], -1.09)
+
+    def test_direct_parser_rejects_future_missing_products_and_changed_columns(self):
+        for html in [direct_html("Nov.6 2026 11:00 (GMT+8)"),
+                     direct_html().replace("DDR4 8Gb (1Gx8) 3200", "DDR4 8Gb eTT"),
+                     direct_html().replace("Session Average", "Other Price"),
+                     direct_html().replace("<th>Session Low</th><th>Session Average</th>", "<th>Session Average</th><th>Session Low</th>"),
+                     direct_html().replace("60.667", "NaN")]:
+            with self.assertRaises(ValueError):
+                parse_direct_dram(html, self.now)
+
+    def test_newest_direct_quote_persists_until_sheet_catches_up(self):
+        quote = parse_direct_dram(direct_html(), self.now)
+        payload = build_payload([], date(2026, 11, 5))
+        merge_direct_dram(payload, {}, quote, date(2026, 11, 5))
+        self.assertEqual(payload["items"]["ddr5_16gb"]["latestDate"], "2026-11-05")
+        self.assertEqual(payload["updatedAt"], "2026-11-05")
+        older = parse_direct_dram(direct_html("Nov.5 2026 10:00 (GMT+8)").replace("60.667", "62"), self.now)
+        next_payload = build_payload([], date(2026, 11, 6))
+        merge_direct_dram(next_payload, payload, older, date(2026, 11, 6))
+        self.assertEqual(next_payload["items"]["ddr5_16gb"]["latestValue"], 60.667)
+        self.assertIsNone(next_payload["items"]["ddr5_16gb"]["history"][-1])
+        final_rows = [dict(Date="2026-11-05", Canonical_Product=TARGET_MAP["ddr5_16gb"],
+                           Price_Average="59", Change_Pct="-2")]
+        final = build_payload(final_rows, date(2026, 11, 6))
+        merge_direct_dram(final, next_payload, None, date(2026, 11, 6))
+        self.assertEqual(final["items"]["ddr5_16gb"]["latestValue"], 59)
+        self.assertNotIn("latestSource", final["items"]["ddr5_16gb"])
+
+    def test_later_session_replaces_intraday_quote_but_not_other_series(self):
+        previous = build_payload([], date(2026, 11, 5))
+        merge_direct_dram(previous, {}, parse_direct_dram(direct_html("Nov.5 2026 10:00 (GMT+8)"), self.now), date(2026, 11, 5))
+        quote = parse_direct_dram(direct_html().replace("60.667", "61"), self.now)
+        payload = build_payload([module_row("2026-11-04")], date(2026, 11, 5))
+        merge_direct_dram(payload, previous, quote, date(2026, 11, 5))
+        self.assertEqual(payload["items"]["ddr5_16gb"]["latestValue"], 61)
+        self.assertEqual(payload["items"][MODULE_KEY]["latestDate"], "2026-11-04")
+        self.assertIsNone(payload["items"]["gddr6_8gb"]["latestDate"])
+
     def test_module_ranges_and_collection_dates(self):
         payload = build_payload([module_row("2026-11-02"), module_row("2026-11-04")], date(2026, 11, 5))
         item = payload["items"][MODULE_KEY]

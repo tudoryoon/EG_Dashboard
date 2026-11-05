@@ -17483,6 +17483,13 @@ function renderMemorySpotOverview() {
             <span class="memory-stat-label">${isModule ? "시트 수집일" : "Last Date"}</span>
             <span class="memory-stat-value">${item.latestDate || "No data"}</span>
           </div>
+          ${runtime.latestSource ? `
+          <div class="memory-stat-row">
+            <span class="memory-stat-label">원출처 발표 (KST)</span>
+            <span class="memory-stat-value">
+              <a href="${runtime.latestSource.url}" target="_blank" rel="noreferrer">${formatKstDateTime(runtime.latestSource.publishedAt)}</a>
+            </span>
+          </div>` : ""}
           ${isModule ? `
           <div class="memory-guide-note">
             ${item.note}
@@ -17536,6 +17543,7 @@ function renderMemorySpotOverview() {
         </div>
       </section>
       ${memorySpotRuntime.error ? `<section class="memory-error">${memorySpotRuntime.error}</section>` : ""}
+      <div class="memory-guide-note">${memorySpotData.source?.note ?? ""}</div>
       <section class="memory-card-grid">
         ${featuredMarkup}
       </section>
