@@ -34,6 +34,16 @@ function newYorkScheduleParts(timestamp) {
 }
 
 function workForScheduledTime(timestamp) {
+  const seoulTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).format(new Date(timestamp));
+  if (seoulTime === "12:28") {
+    return {
+      workflow: "update-dram-spot.yml",
+      label: "dram-spot-follow-up",
+      inputs: { dispatch_source: "cloudflare" },
+    };
+  }
   const { weekday, time } = newYorkScheduleParts(timestamp);
   if (["Sat", "Sun"].includes(weekday)) {
     return null;
@@ -60,7 +70,7 @@ async function dispatchWorkflow(env, work, scheduledTime) {
       },
       body: JSON.stringify({
         ref: "main",
-        inputs: {
+        inputs: work.inputs ?? {
           refresh_if_stale: "true",
           dispatch_source: "cloudflare",
         },

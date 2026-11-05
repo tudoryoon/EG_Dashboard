@@ -1,16 +1,17 @@
-name: Update Memory Data
+name: Update Other Memory Data
 
 on:
   workflow_dispatch:
   schedule:
     # 22:50 UTC = 07:50 KST. Non-critical morning follow-up.
     - cron: "50 22 * * *"
-    # Same-day public DRAM quotes: 12:17 and 19:23 KST.
-    - cron: "17 3 * * *"
-    - cron: "23 10 * * *"
 
 permissions:
   contents: write
+
+concurrency:
+  group: memory-data-update
+  cancel-in-progress: false
 
 jobs:
   update-memory-spot:
@@ -32,7 +33,7 @@ jobs:
         run: python -m unittest discover -s scripts -p test_memory_spot.py
 
       - name: Refresh memory data history
-        run: python scripts/update_memory_spot.py
+        run: python scripts/update_memory_spot.py --scope other
 
       - name: Commit updated memory data history
         run: |

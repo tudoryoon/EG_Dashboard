@@ -1,7 +1,7 @@
 # EG Dashboard Market Refresh Dispatcher
 
-This Cloudflare Worker dispatches the two market-critical GitHub workflows just
-after the New York regular session closes. It is a scheduler only: generation,
+This Cloudflare Worker dispatches the market-critical GitHub workflows after
+the New York close, plus the DRAM Spot workflow at 12:28 KST daily. It is a scheduler only: generation,
 validation, commits, and pushes remain in GitHub Actions.
 
 ## Worker configuration
@@ -22,6 +22,14 @@ US daylight saving time without manually changing cron expressions.
 | 16:57 | `update-market-rs.yml` | RS, Trend Score, CANSLIM primary |
 | 17:12 | `update-market-critical-morning.yml` | Daily Briefing freshness retry |
 | 17:25 | `update-market-rs.yml` | RS, Trend Score, CANSLIM freshness retry |
+
+The separate `update-dram-spot.yml` GitHub cron is 12:17 KST daily. Cloudflare
+dispatches it at 12:28 KST, independent of US daylight saving time and weekends.
+It updates the three mainstream DRAM chip benchmarks only; NAND, GDDR6, and
+RDIMM stay in `update-memory-spot.yml` at 07:50 KST.
+Past DRAM dates always come from the public history sheet. Only the current
+KST date can use a direct TrendForce/DRAMeXchange quote, with its publication time.
+Do not carry yesterday's directly collected quote into missing historical dates.
 
 The retry dispatches use `refresh_if_stale=true`. The workflow exits before
 dependency installation when the latest completed QQQ session is already in

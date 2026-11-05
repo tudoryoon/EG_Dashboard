@@ -2,7 +2,7 @@ import unittest
 from datetime import date, datetime, timezone
 
 from update_memory_spot import (DIRECT_PRODUCTS, MODULE_KEY, MODULE_PRODUCT, TARGET_MAP,
-                                build_payload, merge_direct_dram, parse_direct_dram)
+                                build_payload, build_scoped_payload, merge_direct_dram, parse_direct_dram)
 
 
 def direct_html(stamp="Nov.5 2026 11:00 (GMT+8)"):
@@ -43,16 +43,21 @@ class MemorySpotTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 parse_direct_dram(html, self.now)
 
-    def test_newest_direct_quote_persists_until_sheet_catches_up(self):
+    def test_direct_quotes_persist_only_today_and_past_dates_require_sheet(self):
         quote = parse_direct_dram(direct_html(), self.now)
         payload = build_payload([], date(2026, 11, 5))
         merge_direct_dram(payload, {}, quote, date(2026, 11, 5))
         self.assertEqual(payload["items"]["ddr5_16gb"]["latestDate"], "2026-11-05")
         self.assertEqual(payload["updatedAt"], "2026-11-05")
         older = parse_direct_dram(direct_html("Nov.5 2026 10:00 (GMT+8)").replace("60.667", "62"), self.now)
+        same_day = build_scoped_payload([], date(2026, 11, 5), payload, "dram")
+        merge_direct_dram(same_day, payload, older, date(2026, 11, 5))
+        self.assertEqual(same_day["items"]["ddr5_16gb"]["latestValue"], 60.667)
         next_payload = build_payload([], date(2026, 11, 6))
         merge_direct_dram(next_payload, payload, older, date(2026, 11, 6))
-        self.assertEqual(next_payload["items"]["ddr5_16gb"]["latestValue"], 60.667)
+        self.assertIsNone(next_payload["items"]["ddr5_16gb"]["latestValue"])
+        self.assertIsNone(next_payload["directDramCurrent"])
+        self.assertIsNone(next_payload["items"]["ddr5_16gb"]["history"][-2])
         self.assertIsNone(next_payload["items"]["ddr5_16gb"]["history"][-1])
         final_rows = [dict(Date="2026-11-05", Canonical_Product=TARGET_MAP["ddr5_16gb"],
                            Price_Average="59", Change_Pct="-2")]
@@ -60,6 +65,23 @@ class MemorySpotTest(unittest.TestCase):
         merge_direct_dram(final, next_payload, None, date(2026, 11, 6))
         self.assertEqual(final["items"]["ddr5_16gb"]["latestValue"], 59)
         self.assertNotIn("latestSource", final["items"]["ddr5_16gb"])
+
+    def test_dram_scope_leaves_other_memory_untouched_and_excludes_today_sheet(self):
+        rows = [dict(Date="2026-11-04", Canonical_Product=canonical, Price_Average="50", Change_Pct="0")
+                for key, canonical in TARGET_MAP.items() if key != MODULE_KEY]
+        rows.append(module_row("2026-11-04"))
+        previous = build_payload(rows, date(2026, 11, 5))
+        rows += [dict(Date="2026-11-05", Canonical_Product=TARGET_MAP["ddr5_16gb"],
+                      Price_Average="99", Change_Pct="10")]
+        payload = build_scoped_payload(rows, date(2026, 11, 5), previous, "dram")
+        self.assertIsNone(payload["items"]["ddr5_16gb"]["history"][-1])
+        for key in set(TARGET_MAP) - set(DIRECT_PRODUCTS):
+            self.assertEqual(payload["items"][key], previous["items"][key])
+        merge_direct_dram(payload, {}, parse_direct_dram(direct_html(), self.now), date(2026, 11, 5))
+        self.assertEqual(payload["items"]["ddr5_16gb"]["history"][-1], 60.667)
+        other = build_scoped_payload(rows, date(2026, 11, 5), payload, "other")
+        for key in DIRECT_PRODUCTS:
+            self.assertEqual(other["items"][key], payload["items"][key])
 
     def test_later_session_replaces_intraday_quote_but_not_other_series(self):
         previous = build_payload([], date(2026, 11, 5))

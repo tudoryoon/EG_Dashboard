@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import math
@@ -108,35 +109,27 @@ def parse_direct_dram(html: str, now: datetime) -> dict:
 
 
 def merge_direct_dram(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
-    snapshots = dict(previous.get("directDramHistory") or {})
-    if quote:
-        day = quote["date"]
-        existing = snapshots.get(day)
-        if not existing or quote["publishedAt"] >= existing["publishedAt"]:
-            snapshots[day] = quote
-    payload["directDramHistory"] = snapshots
-    label_index = {label: index for index, label in enumerate(payload["labels"])}
-    for day, snapshot in sorted(snapshots.items()):
-        if day not in label_index or day > today.isoformat():
-            continue
-        for key in DIRECT_PRODUCTS:
-            price = snapshot.get("items", {}).get(key)
-            if not price:
-                continue
-            item = payload["items"][key]
-            index = label_index[day]
-            # The sheet supplies the archived daily value once it catches up.
-            if item["history"][index] is not None:
-                continue
-            item["history"][index] = price["average"]
-            if not item["latestDate"] or day >= item["latestDate"]:
-                item.update(
-                    latestDate=day, latestValue=price["average"], latestChangePct=price["changePct"],
-                    latestSource={"name": "DRAMeXchange", "url": DRAMEXCHANGE_URL,
-                                  "publishedAt": snapshot["publishedAt"], "collectedAt": snapshot["collectedAt"]},
-                )
-            payload["updatedAt"] = max(payload["updatedAt"], day)
-            payload["firstObservedDate"] = min(payload["firstObservedDate"] or day, day)
+    day = today.isoformat()
+    snapshot = previous.get("directDramCurrent") or previous.get("directDramHistory", {}).get(day)
+    if snapshot and snapshot.get("date") != day:
+        snapshot = None
+    if quote and quote["date"] == day and (not snapshot or quote["publishedAt"] >= snapshot["publishedAt"]):
+        snapshot = quote
+    payload["directDramCurrent"] = snapshot
+    if not snapshot:
+        return
+    index = payload["labels"].index(day)
+    for key in DIRECT_PRODUCTS:
+        price = snapshot["items"][key]
+        item = payload["items"][key]
+        item["history"][index] = price["average"]
+        item.update(
+            latestDate=day, latestValue=price["average"], latestChangePct=price["changePct"],
+            latestSource={"name": "DRAMeXchange", "url": DRAMEXCHANGE_URL,
+                          "publishedAt": snapshot["publishedAt"], "collectedAt": snapshot["collectedAt"]},
+        )
+    payload["updatedAt"] = max(payload["updatedAt"], day)
+    payload["firstObservedDate"] = min(payload["firstObservedDate"] or day, day)
 
 
 def build_labels(start_date: date, end_date: date) -> list[str]:
@@ -227,24 +220,63 @@ def build_payload(rows: list[dict[str, str]], today: date) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scope", choices=("all", "dram", "other"), default="all")
+    args = parser.parse_args()
     now = datetime.now(timezone.utc)
     today = now.astimezone(KST).date()
     previous = {}
     if OUTPUT_PATH.exists():
         previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().removesuffix(";"))
-    rows = fetch_rows(csv_url(DRAM_SHEET_ID)) + fetch_rows(csv_url(NAND_SHEET_ID))
-    payload = build_payload(rows, today)
+    rows = fetch_rows(csv_url(DRAM_SHEET_ID))
+    if args.scope != "dram":
+        rows += fetch_rows(csv_url(NAND_SHEET_ID))
+    payload = build_scoped_payload(rows, today, previous, args.scope)
     quote = None
-    try:
-        quote = parse_direct_dram(fetch_text(DRAMEXCHANGE_URL), now)
-        print(f"DRAMeXchange direct quote: {quote['publishedAt']}")
-    except Exception as error:
-        print(f"::warning::Direct DRAM fetch failed; keeping sheet history and saved direct quotes: {error}", file=sys.stderr)
-    merge_direct_dram(payload, previous, quote, today)
+    if args.scope != "other":
+        try:
+            quote = parse_direct_dram(fetch_text(DRAMEXCHANGE_URL), now)
+            print(f"DRAMeXchange direct quote: {quote['publishedAt']}")
+        except Exception as error:
+            print(f"::warning::Direct DRAM fetch failed; keeping sheet history and today's saved quote: {error}", file=sys.stderr)
+        merge_direct_dram(payload, previous, quote, today)
+    else:
+        current = previous.get("directDramCurrent")
+        payload["directDramCurrent"] = current if current and current.get("date") == today.isoformat() else None
     OUTPUT_PATH.write_text(
         "window.memoryDataHistoryData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
     )
+
+
+def build_scoped_payload(rows: list[dict[str, str]], today: date, previous: dict, scope: str) -> dict:
+    selected = set(TARGET_MAP)
+    if scope == "dram":
+        selected = set(DIRECT_PRODUCTS)
+    elif scope == "other":
+        selected -= set(DIRECT_PRODUCTS)
+    selected_names = {TARGET_MAP[key] for key in selected}
+    direct_names = {TARGET_MAP[key] for key in DIRECT_PRODUCTS}
+    # Only the original public source may supply today's three DRAM chip quotes.
+    filtered = [row for row in rows if row.get("Canonical_Product") in selected_names
+                and not (row.get("Date") == today.isoformat()
+                         and row.get("Canonical_Product") in direct_names)]
+    payload = build_payload(filtered, today)
+    for key in set(TARGET_MAP) - selected:
+        old = previous.get("items", {}).get(key)
+        if not old:
+            continue
+        item = dict(old)
+        for field in ("history", "highHistory", "lowHistory"):
+            if field in old:
+                by_date = dict(zip(previous["labels"], old[field]))
+                item[field] = [by_date.get(day) for day in payload["labels"]]
+        payload["items"][key] = item
+    payload["updatedAt"] = max((item.get("latestDate") or "" for item in payload["items"].values()), default="")
+    observed = [day for item in payload["items"].values()
+                for day, value in zip(payload["labels"], item["history"]) if value is not None]
+    payload["firstObservedDate"] = min(observed, default=None)
+    return payload
 
 
 if __name__ == "__main__":
