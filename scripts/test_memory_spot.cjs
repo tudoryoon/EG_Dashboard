@@ -27,6 +27,16 @@ const context = vm.createContext({
 });
 vm.runInContext(functionSource('loadMemorySpotHistory'), context);
 vm.runInContext(functionSource('buildMemorySpotSeriesDatasets'), context);
+vm.runInContext(functionSource('buildMemoryPriceChanges'), context);
+assert.deepEqual(Array.from(context.buildMemoryPriceChanges([null,100,110,null,99,99])), [null,null,10,null,-10,0]);
+assert.deepEqual(Array.from(context.buildMemoryPriceChanges([null,0,-2,NaN,Infinity,10,null,12])), [null,null,null,null,null,null,null,20]);
+assert.deepEqual(Array.from(context.buildMemoryPriceChanges([])), []);
+assert.deepEqual(Array.from(context.buildMemoryPriceChanges([100,100,null,120])).slice(3), [20]);
+context.shiftDateByRange = () => labels[2];
+vm.runInContext(functionSource('buildMemoryChartPayload'), context);
+const sliced = context.buildMemoryChartPayload(labels,
+  [{data:context.buildMemoryPriceChanges([100,110,121])}], '1m');
+assert.deepEqual(Array.from(sliced.datasets[0].data), [10]);
 (async () => {
   await context.loadMemorySpotHistory();
   assert.equal(runtime.error, '');

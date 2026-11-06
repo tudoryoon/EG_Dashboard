@@ -25,6 +25,35 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
           chartValue:chart.data.datasets[0].data[index],source:item.latestSource}];
       })
     ));
+    const combinedCharts = await page.evaluate(() => Array.from(document.querySelectorAll('[data-memory-series]')).map(canvas => {
+      const chart = Chart.getChart(canvas);
+      const changes = chart.data.datasets.find(dataset => dataset.isMemoryDailyChange);
+      const ratio = chart.currentDevicePixelRatio;
+      const pixels = canvas.getContext('2d').getImageData(
+        Math.ceil(chart.chartArea.left * ratio), Math.ceil(chart.scales.yChange.top * ratio),
+        Math.floor(chart.chartArea.width * ratio), Math.floor(chart.scales.yChange.height * ratio)).data;
+      let barPixels = 0;
+      for(let i=0;i<pixels.length;i+=4) {
+        const [red,green,blue,alpha] = pixels.slice(i,i+4);
+        if(alpha && ((green>red*1.4 && green>blue*1.1) || (red>green*1.4 && red>blue*1.1))) barPixels++;
+      }
+      const colors = new Set();
+      for(const value of changes.data) if(Number.isFinite(value) && value !== 0) colors.add(changes.backgroundColor({raw:value}));
+      return {key:canvas.dataset.memorySeries,
+        priceBottom:chart.scales.y.bottom,changeTop:chart.scales.yChange.top,
+        changeHeight:chart.scales.yChange.height,changes:changes.data.filter(Number.isFinite).length,
+        colors:[...colors],lineCount:chart.data.datasets.filter(dataset => dataset.type === 'line').length,
+        changeCount:chart.data.datasets.filter(dataset => dataset.type === 'bar').length,barPixels};
+    }));
+    assert.equal(combinedCharts.length, 7);
+    for(const info of combinedCharts) {
+      assert.equal(info.changeCount, 1);
+      assert.ok(info.priceBottom <= info.changeTop + 1, JSON.stringify(info));
+      assert.ok(info.changeHeight > 40, JSON.stringify(info));
+      assert.ok(info.changes > 0, JSON.stringify(info));
+      assert.ok(info.barPixels > 0, JSON.stringify(info));
+      assert.ok(info.colors.every(color => ['#059669','#dc2626'].includes(color)));
+    }
     for(const [key,quote] of Object.entries(directQuotes)) {
       assert.equal(quote.chartValue, quote.value);
       if(quote.source) {
@@ -54,8 +83,8 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
         });
       }
       return {first:chart.data.labels[0],last:chart.data.labels.at(-1),count:chart.data.labels.length,
-        visible:chart.data.datasets.map((_,index) => chart.isDatasetVisible(index)),
-        series:chart.data.datasets.map(d => ({label:d.label,points:d.data.filter(Number.isFinite).length})),
+        visible:chart.data.datasets.flatMap((dataset,index) => dataset.isMemoryDailyChange ? [] : [chart.isDatasetVisible(index)]),
+        series:chart.data.datasets.filter(dataset => !dataset.isMemoryDailyChange).map(d => ({label:d.label,points:d.data.filter(Number.isFinite).length})),
         colored,charts:charts.length,instances:Object.keys(Chart.instances).length};
     });
     const initial = await chartInfo();
@@ -87,8 +116,24 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
       assert.ok(info.series.every(series => series.points > 0));
       if(range === '1m') assert.ok(info.count <= 32);
     }
+    const changeToggle = panel.locator('[data-memory-change-toggle="ddr5_rdimm_32gb"]');
+    const changesVisible = () => page.evaluate(() => {
+      const chart = Chart.getChart(document.querySelector('[data-memory-series="ddr5_rdimm_32gb"]'));
+      return chart.isDatasetVisible(chart.data.datasets.findIndex(dataset => dataset.isMemoryDailyChange));
+    });
+    assert.ok(await changeToggle.isChecked());
+    await changeToggle.uncheck();
+    assert.equal(await changesVisible(), false);
+    await panel.locator('[data-memory-range="1m"]').click();
+    assert.equal(await changesVisible(), false);
+    await changeToggle.check();
+    assert.equal(await changesVisible(), true);
+    await panel.locator('[data-memory-range="max"]').click();
     await panel.scrollIntoViewIfNeeded();
     await panel.screenshot({path:path.join(out,'desktop.png')});
+    const chipPanel = page.locator('[data-memory-series="ddr5_16gb"]').locator('..').locator('..');
+    await chipPanel.locator('[data-memory-range="3m"]').click();
+    await chipPanel.screenshot({path:path.join(out,'daily-change-desktop.png')});
     await page.setViewportSize({width:390,height:844});
     await page.waitForTimeout(300);
     await panel.scrollIntoViewIfNeeded();
@@ -96,8 +141,9 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.ok(overflow.scroll <= overflow.width + 1, JSON.stringify(overflow));
     assert.ok((await chartInfo()).colored.every(count => count > 50));
     await panel.screenshot({path:path.join(out,'mobile.png')});
+    await chipPanel.screenshot({path:path.join(out,'daily-change-mobile.png')});
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({directQuotes,desktop:initial,mobile:overflow,errors},null,2));
+    console.log(JSON.stringify({directQuotes,combinedCharts,desktop:initial,mobile:overflow,errors},null,2));
   } finally {
     await browser.close();
   }

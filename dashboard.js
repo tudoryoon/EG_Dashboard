@@ -16422,17 +16422,49 @@ function buildMemorySpotSeriesDatasets(item, runtime) {
   }));
 }
 
-function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "1y") {
+function buildMemoryPriceChanges(history) {
+  let previous = null;
+  return (history ?? []).map((value) => {
+    if (!Number.isFinite(value) || value <= 0) {
+      return null;
+    }
+    const change = previous === null ? null : Number(((value / previous - 1) * 100).toFixed(4));
+    previous = value;
+    return change;
+  });
+}
+
+function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "1y", changeSeries = null) {
   if (typeof Chart === "undefined") {
     return;
   }
 
-  const payload = buildMemoryChartPayload(labels, datasets, rangeKey);
-  const allValues = payload.datasets.flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
+  const combinedDatasets = datasets.map((dataset) => ({ ...dataset, type: "line", yAxisID: "y" }));
+  if (changeSeries) {
+    combinedDatasets.push({
+      type: "bar",
+      label: "일별 변화율",
+      data: changeSeries.data,
+      yAxisID: "yChange",
+      isMemoryDailyChange: true,
+      hidden: changeSeries.hidden,
+      backgroundColor: (context) => context.raw > 0 ? "#059669" : context.raw < 0 ? "#dc2626" : "#94a3b8",
+      borderWidth: 0,
+      maxBarThickness: 10,
+      categoryPercentage: 0.9,
+      barPercentage: 0.9,
+      order: 2,
+    });
+  }
+  const payload = buildMemoryChartPayload(labels, combinedDatasets, rangeKey);
+  const allValues = payload.datasets.filter((dataset) => !dataset.isMemoryDailyChange)
+    .flatMap((dataset) => dataset.data.filter((value) => Number.isFinite(value)));
   const minValue = allValues.length ? Math.min(...allValues) : 0;
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const yMin = minValue > 0 ? Math.floor(minValue * 0.9) : Math.floor(minValue * 1.1);
   const yMax = Math.ceil(maxValue * 1.1);
+  const changeValues = payload.datasets.find((dataset) => dataset.isMemoryDailyChange)?.data ?? [];
+  const changeLimit = Math.max(1, ...changeValues.filter(Number.isFinite).map((value) => Math.abs(value) * 1.15));
   const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
   const selectedTickSet = new Set(selectedTickIndexes);
 
@@ -16449,7 +16481,10 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
           display: !canvas.hasAttribute("data-memory-series-controlled"),
           position: "top",
           align: "start",
-          labels: { color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8 },
+          labels: {
+            color: "#66665f", usePointStyle: true, boxWidth: 8, boxHeight: 8,
+            filter: (item, data) => !data.datasets[item.datasetIndex].isMemoryDailyChange,
+          },
         },
         tooltip: {
           enabled: true,
@@ -16458,12 +16493,14 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
               const pointLabel = tooltipItems?.[0]?.label;
               return pointLabel ? pointLabel : "";
             },
-            label: (context) => `${context.dataset.label}: ${formatter(context.parsed.y)}`,
+            label: (context) => `${context.dataset.label}: ${context.dataset.isMemoryDailyChange
+              ? formatMemorySpotChange(context.parsed.y) : formatter(context.parsed.y)}`,
           },
         },
       },
       scales: {
         x: {
+          offset: Boolean(changeSeries),
           grid: { display: false },
           afterBuildTicks: (axis) => {
             axis.ticks = selectedTickIndexes.map((index) => ({ value: index }));
@@ -16482,7 +16519,28 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
           },
           border: { color: "#d8d8d2" },
         },
+        // Left-axis stacks lay out in reverse order: change scale first, price above it.
+        ...(changeSeries ? {
+          yChange: {
+            type: "linear", position: "left", stack: "memory", stackWeight: 1,
+            display: !changeSeries.hidden,
+            min: -changeLimit, max: changeLimit,
+            title: { display: true, text: "변화율 (%)", color: "#66665f", font: { size: 10 } },
+            ticks: {
+              color: "#8d8d86", count: 5, autoSkip: false, font: { size: 10 },
+              callback: (value, index, ticks) => index === 0 || index === ticks.length - 1
+                ? "" : `${value > 0 ? "+" : ""}${Number(value).toFixed(1)}%`,
+            },
+            grid: {
+              color: (context) => context.tick.value === 0 ? "#9ca3af" : "rgba(70, 70, 66, 0.06)",
+            },
+            border: { color: "#d8d8d2" },
+          },
+        } : {}),
         y: {
+          type: "linear",
+          position: "left",
+          ...(changeSeries ? { stack: "memory", stackWeight: 3 } : {}),
           min: yMin,
           max: yMax,
           ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
@@ -17441,6 +17499,8 @@ function renderMemorySpotOverview() {
         history: runtime.history ?? rawItem.history ?? [],
       };
       const isModule = item.format === "module_spot";
+      const dailyChanges = buildMemoryPriceChanges(item.history);
+      const latestDailyChange = [...dailyChanges].reverse().find(Number.isFinite);
       return `
         <article class="memory-panel${isModule ? " memory-module-panel" : ""}">
           <div class="us-panel-head">
@@ -17472,6 +17532,10 @@ function renderMemorySpotOverview() {
             <span class="memory-stat-value">${formatMemorySpotValue(runtime.latestHigh)} / ${formatMemorySpotValue(runtime.latestLow)}</span>
           </div>` : ""}
           <div class="memory-stat-row">
+            <span class="memory-stat-label">일별 변화율</span>
+            <span class="memory-stat-value">${formatMemorySpotChange(latestDailyChange)}</span>
+          </div>
+          <div class="memory-stat-row">
             <span class="memory-stat-label">Session Change</span>
             <span class="memory-stat-value">${formatMemorySpotChange(item.latestChangePct)}</span>
           </div>
@@ -17495,18 +17559,23 @@ function renderMemorySpotOverview() {
             ${item.note}
             <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">TrendForce 원출처</a>
           </div>` : ""}
-          ${isModule ? `
-          <div class="memory-series-controls" role="group" aria-label="${item.label} 가격 선택">
-            ${buildMemorySpotSeriesDatasets(item, runtime).map((series) => `
+          <div class="memory-series-controls" role="group" aria-label="${item.label} 표시 선택">
+            ${isModule ? buildMemorySpotSeriesDatasets(item, runtime).map((series) => `
               <label>
                 <input type="checkbox" data-memory-series-toggle="${series.memorySeriesKey}"
                   data-memory-series-item="${item.key}" ${series.hidden ? "" : "checked"}>
                 <span class="memory-dot" style="background:${series.borderColor}"></span>
                 ${series.label}
               </label>
-            `).join("")}
-          </div>` : ""}
-          <div class="memory-chart-wrap">
+            `).join("") : ""}
+            <label>
+              <input type="checkbox" data-memory-change-toggle="${item.key}"
+                ${state.memorySpotSeries?.[item.key]?.change === false ? "" : "checked"}>
+              일별 변화율
+            </label>
+          </div>
+          <div class="memory-change-note">변화율: 직전 관측일 평균가격 대비 · 미수집일 제외 · 원출처 세션 변화율과 다를 수 있음</div>
+          <div class="memory-chart-wrap memory-price-change-chart">
             <canvas data-memory-series="${item.key}"${isModule ? " data-memory-series-controlled" : ""}></canvas>
           </div>
         </article>`;
@@ -17676,6 +17745,24 @@ function renderMemorySpotOverview() {
     });
   });
 
+  usOverviewRoot.querySelectorAll("[data-memory-change-toggle]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemKey = input.dataset.memoryChangeToggle;
+      state.memorySpotSeries = {
+        ...(state.memorySpotSeries ?? {}),
+        [itemKey]: { ...(state.memorySpotSeries?.[itemKey] ?? {}), change: input.checked },
+      };
+      const chart = typeof Chart === "undefined" ? null
+        : Chart.getChart(usOverviewRoot.querySelector(`[data-memory-series="${itemKey}"]`));
+      const index = chart?.data.datasets.findIndex((dataset) => dataset.isMemoryDailyChange) ?? -1;
+      if (index >= 0) {
+        chart.setDatasetVisibility(index, input.checked);
+        chart.options.scales.yChange.display = input.checked;
+        chart.update("none");
+      }
+    });
+  });
+
   (memorySpotData.dashboards?.basketPanels ?? []).forEach((panel) => {
     const canvas = usOverviewRoot.querySelector(`[data-memory-basket="${panel.key}"]`);
     if (!canvas) {
@@ -17730,6 +17817,10 @@ function renderMemorySpotOverview() {
       datasets.map((dataset) => ({ ...dataset, data: dataset.data.slice(firstIndex) })),
       (value) => `$${Number(value).toFixed(2)}${item.format === "module_spot" ? " /모듈" : ""}`,
       getMemorySpotRange(`series:${item.key}`),
+      {
+        data: buildMemoryPriceChanges(runtime.history).slice(firstIndex),
+        hidden: state.memorySpotSeries?.[item.key]?.change === false,
+      },
     );
   });
 }

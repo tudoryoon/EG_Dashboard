@@ -3256,6 +3256,21 @@ h1 {
   height: 240px;
 }
 
+.memory-price-change-chart {
+  position: relative;
+  height: 360px;
+}
+
+.memory-price-change-chart canvas {
+  height: 100%;
+}
+
+.memory-change-note {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .memory-error {
   padding: 14px 16px;
   border: 1px solid #efc9c9;
