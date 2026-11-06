@@ -16405,14 +16405,15 @@ function buildMemorySpotSeriesDatasets(item, runtime) {
         { key: "average", label: "Average", data: runtime.history ?? [], color: item.color },
         { key: "low", label: "Low", data: runtime.lowHistory ?? [], color: "#059669" },
       ]
-    : [{ label: item.label, data: runtime.history, color: item.color }];
+    : [{ key: "price", label: item.label, data: runtime.history, color: item.color }];
   return series.map((seriesItem) => ({
     label: seriesItem.label,
     data: seriesItem.data,
     borderColor: seriesItem.color,
     backgroundColor: seriesItem.color,
     memorySeriesKey: seriesItem.key,
-    hidden: item.format === "module_spot" && state.memorySpotSeries?.[item.key]?.[seriesItem.key] === false,
+    hidden: state.memorySpotSeries?.[item.key]?.price === false
+      || (item.format === "module_spot" && state.memorySpotSeries?.[item.key]?.[seriesItem.key] === false),
     borderWidth: 2.2,
     tension: item.format === "module_spot" ? 0 : 0.2,
     pointRadius: 0,
@@ -16432,6 +16433,21 @@ function buildMemoryPriceChanges(history) {
     previous = value;
     return change;
   });
+}
+
+function syncMemoryChartLayout(chart) {
+  if (!chart.options.scales.yChange) {
+    return;
+  }
+  const priceVisible = chart.data.datasets.some((dataset, index) => !dataset.isMemoryDailyChange && chart.isDatasetVisible(index));
+  const changeVisible = chart.data.datasets.some((dataset, index) => dataset.isMemoryDailyChange && chart.isDatasetVisible(index));
+  const stack = priceVisible && changeVisible ? "memory" : undefined;
+  chart.options.scales.y.display = priceVisible;
+  chart.options.scales.y.stack = stack;
+  chart.options.scales.y.stackWeight = 1;
+  chart.options.scales.yChange.display = changeVisible;
+  chart.options.scales.yChange.stack = stack;
+  chart.options.scales.yChange.stackWeight = 1;
 }
 
 function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "1y", changeSeries = null) {
@@ -16464,7 +16480,9 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
   const yMin = minValue > 0 ? Math.floor(minValue * 0.9) : Math.floor(minValue * 1.1);
   const yMax = Math.ceil(maxValue * 1.1);
   const changeValues = payload.datasets.find((dataset) => dataset.isMemoryDailyChange)?.data ?? [];
-  const changeLimit = Math.max(1, ...changeValues.filter(Number.isFinite).map((value) => Math.abs(value) * 1.15));
+  const changeLimit = Math.max(0.25, ...changeValues.filter(Number.isFinite).map((value) => Math.abs(value) * 1.1));
+  const priceVisible = payload.datasets.some((dataset) => !dataset.isMemoryDailyChange && !dataset.hidden);
+  const changeVisible = Boolean(changeSeries && !changeSeries.hidden);
   const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
   const selectedTickSet = new Set(selectedTickIndexes);
 
@@ -16522,14 +16540,15 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
         // Left-axis stacks lay out in reverse order: change scale first, price above it.
         ...(changeSeries ? {
           yChange: {
-            type: "linear", position: "left", stack: "memory", stackWeight: 1,
-            display: !changeSeries.hidden,
+            type: "linear", position: "left",
+            ...(priceVisible && changeVisible ? { stack: "memory", stackWeight: 1 } : {}),
+            display: changeVisible,
             min: -changeLimit, max: changeLimit,
             title: { display: true, text: "변화율 (%)", color: "#66665f", font: { size: 10 } },
             ticks: {
               color: "#8d8d86", count: 5, autoSkip: false, font: { size: 10 },
               callback: (value, index, ticks) => index === 0 || index === ticks.length - 1
-                ? "" : `${value > 0 ? "+" : ""}${Number(value).toFixed(1)}%`,
+                ? "" : `${value > 0 ? "+" : ""}${Number(value).toFixed(changeLimit < 1 ? 2 : 1)}%`,
             },
             grid: {
               color: (context) => context.tick.value === 0 ? "#9ca3af" : "rgba(70, 70, 66, 0.06)",
@@ -16540,7 +16559,10 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
         y: {
           type: "linear",
           position: "left",
-          ...(changeSeries ? { stack: "memory", stackWeight: 3 } : {}),
+          ...(changeSeries ? {
+            display: priceVisible,
+            ...(priceVisible && changeVisible ? { stack: "memory", stackWeight: 1 } : {}),
+          } : {}),
           min: yMin,
           max: yMax,
           ticks: { color: "#8d8d86", callback: (value) => formatter(value), maxTicksLimit: 6 },
@@ -17560,10 +17582,17 @@ function renderMemorySpotOverview() {
             <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">TrendForce 원출처</a>
           </div>` : ""}
           <div class="memory-series-controls" role="group" aria-label="${item.label} 표시 선택">
+            <label>
+              <input type="checkbox" data-memory-price-toggle="${item.key}"
+                ${state.memorySpotSeries?.[item.key]?.price === false ? "" : "checked"}>
+              가격 선
+            </label>
             ${isModule ? buildMemorySpotSeriesDatasets(item, runtime).map((series) => `
               <label>
                 <input type="checkbox" data-memory-series-toggle="${series.memorySeriesKey}"
-                  data-memory-series-item="${item.key}" ${series.hidden ? "" : "checked"}>
+                  data-memory-series-item="${item.key}"
+                  ${state.memorySpotSeries?.[item.key]?.[series.memorySeriesKey] === false ? "" : "checked"}
+                  ${state.memorySpotSeries?.[item.key]?.price === false ? "disabled" : ""}>
                 <span class="memory-dot" style="background:${series.borderColor}"></span>
                 ${series.label}
               </label>
@@ -17576,7 +17605,7 @@ function renderMemorySpotOverview() {
           </div>
           <div class="memory-change-note">변화율: 직전 관측일 평균가격 대비 · 미수집일 제외 · 원출처 세션 변화율과 다를 수 있음</div>
           <div class="memory-chart-wrap memory-price-change-chart">
-            <canvas data-memory-series="${item.key}"${isModule ? " data-memory-series-controlled" : ""}></canvas>
+            <canvas data-memory-series="${item.key}" data-memory-series-controlled></canvas>
           </div>
         </article>`;
     })
@@ -17739,7 +17768,32 @@ function renderMemorySpotOverview() {
       const chart = typeof Chart === "undefined" ? null : Chart.getChart(canvas);
       const index = chart?.data.datasets.findIndex((dataset) => dataset.memorySeriesKey === seriesKey) ?? -1;
       if (index >= 0) {
-        chart.setDatasetVisibility(index, input.checked);
+        chart.setDatasetVisibility(index, input.checked && state.memorySpotSeries?.[itemKey]?.price !== false);
+        syncMemoryChartLayout(chart);
+        chart.update("none");
+      }
+    });
+  });
+
+  usOverviewRoot.querySelectorAll("[data-memory-price-toggle]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const itemKey = input.dataset.memoryPriceToggle;
+      state.memorySpotSeries = {
+        ...(state.memorySpotSeries ?? {}),
+        [itemKey]: { ...(state.memorySpotSeries?.[itemKey] ?? {}), price: input.checked },
+      };
+      usOverviewRoot.querySelectorAll(`[data-memory-series-item="${itemKey}"]`).forEach((control) => {
+        control.disabled = !input.checked;
+      });
+      const chart = typeof Chart === "undefined" ? null
+        : Chart.getChart(usOverviewRoot.querySelector(`[data-memory-series="${itemKey}"]`));
+      if (chart) {
+        chart.data.datasets.forEach((dataset, index) => {
+          if (!dataset.isMemoryDailyChange) {
+            chart.setDatasetVisibility(index, input.checked && state.memorySpotSeries?.[itemKey]?.[dataset.memorySeriesKey] !== false);
+          }
+        });
+        syncMemoryChartLayout(chart);
         chart.update("none");
       }
     });
@@ -17757,7 +17811,7 @@ function renderMemorySpotOverview() {
       const index = chart?.data.datasets.findIndex((dataset) => dataset.isMemoryDailyChange) ?? -1;
       if (index >= 0) {
         chart.setDatasetVisibility(index, input.checked);
-        chart.options.scales.yChange.display = input.checked;
+        syncMemoryChartLayout(chart);
         chart.update("none");
       }
     });

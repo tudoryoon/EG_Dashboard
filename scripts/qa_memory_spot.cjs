@@ -41,7 +41,8 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
       for(const value of changes.data) if(Number.isFinite(value) && value !== 0) colors.add(changes.backgroundColor({raw:value}));
       return {key:canvas.dataset.memorySeries,
         priceBottom:chart.scales.y.bottom,changeTop:chart.scales.yChange.top,
-        changeHeight:chart.scales.yChange.height,changes:changes.data.filter(Number.isFinite).length,
+        changeHeight:chart.scales.yChange.height,areaHeight:chart.chartArea.height,
+        changes:changes.data.filter(Number.isFinite).length,
         colors:[...colors],lineCount:chart.data.datasets.filter(dataset => dataset.type === 'line').length,
         changeCount:chart.data.datasets.filter(dataset => dataset.type === 'bar').length,barPixels};
     }));
@@ -49,7 +50,8 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     for(const info of combinedCharts) {
       assert.equal(info.changeCount, 1);
       assert.ok(info.priceBottom <= info.changeTop + 1, JSON.stringify(info));
-      assert.ok(info.changeHeight > 40, JSON.stringify(info));
+      assert.ok(info.changeHeight > 140, JSON.stringify(info));
+      assert.ok(info.changeHeight / info.areaHeight > 0.48, JSON.stringify(info));
       assert.ok(info.changes > 0, JSON.stringify(info));
       assert.ok(info.barPixels > 0, JSON.stringify(info));
       assert.ok(info.colors.every(color => ['#059669','#dc2626'].includes(color)));
@@ -117,6 +119,22 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
       if(range === '1m') assert.ok(info.count <= 32);
     }
     const changeToggle = panel.locator('[data-memory-change-toggle="ddr5_rdimm_32gb"]');
+    const priceToggle = panel.locator('[data-memory-price-toggle="ddr5_rdimm_32gb"]');
+    const layoutInfo = key => page.evaluate(key => {
+      const canvas = document.querySelector(`[data-memory-series="${key}"]`);
+      const chart = Chart.getChart(canvas);
+      const pixels = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+      let barPixels = 0;
+      for(let i=0;i<pixels.length;i+=4) {
+        const [r,g,b,a] = pixels.slice(i,i+4);
+        if(a && ((g>r*1.4 && g>b*1.1) || (r>g*1.4 && r>b*1.1))) barPixels++;
+      }
+      return {priceHeight:chart.scales.y.height,changeHeight:chart.scales.yChange.height,
+        areaHeight:chart.chartArea.height,priceVisible:chart.options.scales.y.display,
+        changeVisible:chart.options.scales.yChange.display,
+        barPixels,
+        pricesVisible:chart.data.datasets.flatMap((dataset,index) => dataset.isMemoryDailyChange ? [] : [chart.isDatasetVisible(index)])};
+    },key);
     const changesVisible = () => page.evaluate(() => {
       const chart = Chart.getChart(document.querySelector('[data-memory-series="ddr5_rdimm_32gb"]'));
       return chart.isDatasetVisible(chart.data.datasets.findIndex(dataset => dataset.isMemoryDailyChange));
@@ -124,16 +142,46 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.ok(await changeToggle.isChecked());
     await changeToggle.uncheck();
     assert.equal(await changesVisible(), false);
+    let solo = await layoutInfo('ddr5_rdimm_32gb');
+    assert.ok(solo.priceHeight / solo.areaHeight > 0.95, JSON.stringify(solo));
     await panel.locator('[data-memory-range="1m"]').click();
     assert.equal(await changesVisible(), false);
     await changeToggle.check();
     assert.equal(await changesVisible(), true);
+    await priceToggle.uncheck();
+    solo = await layoutInfo('ddr5_rdimm_32gb');
+    assert.ok(solo.changeHeight / solo.areaHeight > 0.95, JSON.stringify(solo));
+    assert.ok(solo.barPixels > 100, JSON.stringify(solo));
+    assert.ok(solo.pricesVisible.every(visible => !visible));
+    assert.ok(await high.isDisabled());
+    await panel.locator('[data-memory-range="3m"]').click();
+    assert.equal(await priceToggle.isChecked(), false);
+    assert.ok((await layoutInfo('ddr5_rdimm_32gb')).changeHeight > 300);
+    await changeToggle.uncheck();
+    const empty = await layoutInfo('ddr5_rdimm_32gb');
+    assert.equal(empty.priceVisible, false);
+    assert.equal(empty.changeVisible, false);
+    assert.ok(Number.isFinite(empty.areaHeight));
+    await priceToggle.check();
+    assert.ok((await layoutInfo('ddr5_rdimm_32gb')).priceHeight > 300);
+    assert.equal(await high.isDisabled(), false);
+    assert.deepEqual((await chartInfo()).visible, [true,true,true]);
+    await changeToggle.check();
     await panel.locator('[data-memory-range="max"]').click();
     await panel.scrollIntoViewIfNeeded();
     await panel.screenshot({path:path.join(out,'desktop.png')});
     const chipPanel = page.locator('[data-memory-series="ddr5_16gb"]').locator('..').locator('..');
     await chipPanel.locator('[data-memory-range="3m"]').click();
     await chipPanel.screenshot({path:path.join(out,'daily-change-desktop.png')});
+    const chipPrice = chipPanel.locator('[data-memory-price-toggle="ddr5_16gb"]');
+    await chipPrice.uncheck();
+    await chipPanel.locator('[data-memory-range="1m"]').click();
+    solo = await layoutInfo('ddr5_16gb');
+    assert.ok(solo.changeHeight / solo.areaHeight > 0.95, JSON.stringify(solo));
+    assert.ok(solo.barPixels > 100, JSON.stringify(solo));
+    assert.equal(solo.priceVisible, false);
+    await chipPanel.screenshot({path:path.join(out,'change-only-desktop.png')});
+    await chipPrice.check();
     await page.setViewportSize({width:390,height:844});
     await page.waitForTimeout(300);
     await panel.scrollIntoViewIfNeeded();
@@ -142,6 +190,11 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.ok((await chartInfo()).colored.every(count => count > 50));
     await panel.screenshot({path:path.join(out,'mobile.png')});
     await chipPanel.screenshot({path:path.join(out,'daily-change-mobile.png')});
+    await chipPrice.uncheck();
+    solo = await layoutInfo('ddr5_16gb');
+    assert.ok(solo.changeHeight > 300, JSON.stringify(solo));
+    assert.ok(solo.barPixels > 100, JSON.stringify(solo));
+    await chipPanel.screenshot({path:path.join(out,'change-only-mobile.png')});
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({directQuotes,combinedCharts,desktop:initial,mobile:overflow,errors},null,2));
   } finally {

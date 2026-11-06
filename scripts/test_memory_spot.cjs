@@ -28,6 +28,19 @@ const context = vm.createContext({
 vm.runInContext(functionSource('loadMemorySpotHistory'), context);
 vm.runInContext(functionSource('buildMemorySpotSeriesDatasets'), context);
 vm.runInContext(functionSource('buildMemoryPriceChanges'), context);
+vm.runInContext(functionSource('syncMemoryChartLayout'), context);
+for(const [priceVisible,changeVisible] of [[true,true],[false,true],[true,false],[false,false]]) {
+  const visibility = [priceVisible,changeVisible];
+  const chart = {data:{datasets:[{}, {isMemoryDailyChange:true}]},
+    options:{scales:{y:{},yChange:{}}},isDatasetVisible:index => visibility[index]};
+  context.syncMemoryChartLayout(chart);
+  assert.equal(chart.options.scales.y.display, priceVisible);
+  assert.equal(chart.options.scales.yChange.display, changeVisible);
+  assert.equal(chart.options.scales.y.stackWeight, 1);
+  assert.equal(chart.options.scales.yChange.stackWeight, 1);
+  assert.equal(chart.options.scales.y.stack, priceVisible && changeVisible ? 'memory' : undefined);
+  assert.equal(chart.options.scales.yChange.stack, priceVisible && changeVisible ? 'memory' : undefined);
+}
 assert.deepEqual(Array.from(context.buildMemoryPriceChanges([null,100,110,null,99,99])), [null,null,10,null,-10,0]);
 assert.deepEqual(Array.from(context.buildMemoryPriceChanges([null,0,-2,NaN,Infinity,10,null,12])), [null,null,null,null,null,null,null,20]);
 assert.deepEqual(Array.from(context.buildMemoryPriceChanges([])), []);
@@ -58,6 +71,10 @@ assert.deepEqual(Array.from(sliced.datasets[0].data), [10]);
   context.state.memorySpotSeries.ddr5_rdimm_32gb = {high:false,low:false};
   const selected = context.buildMemorySpotSeriesDatasets(metadata, item);
   assert.deepEqual(Array.from(selected, series => series.hidden), [true,false,true]);
+  context.state.memorySpotSeries.ddr5_rdimm_32gb.price = false;
+  assert.ok(context.buildMemorySpotSeriesDatasets(metadata, item).every(series => series.hidden));
+  context.state.memorySpotSeries.CHIP = {price:false};
+  assert.equal(context.buildMemorySpotSeriesDatasets({key:'CHIP'}, runtime.items.ddr5_16gb)[0].hidden, true);
   const legacy = context.buildMemorySpotSeriesDatasets({label:'Chip',color:'#000'}, runtime.items.ddr5_16gb);
   assert.equal(legacy.length, 1);
   assert.equal(legacy[0].tension, 0.2);
