@@ -424,14 +424,14 @@ window.llmDashboardData = {
     }
   ],
   "arrRefresh": {
-    "checkedAt": "2026-11-05T08:44:04.178578+00:00",
+    "checkedAt": "2026-11-06T08:45:01.027935+00:00",
     "sources": [
       {
         "key": "tickertrends",
         "url": "https://blog.tickertrends.io/feed",
         "status": "ok",
         "observations": 2,
-        "reviewWarnings": 2
+        "reviewWarnings": 3
       },
       {
         "key": "epoch",
