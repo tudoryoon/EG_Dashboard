@@ -106,6 +106,24 @@
       "dateBasis": "publication",
       "sourceUrl": "https://blog.tickertrends.io/p/openai-and-anthropic-arr-tracking",
       "sourceTitle": "OpenAI and Anthropic ARR Tracking"
+    },
+    {
+      "provider": "anthropic",
+      "kind": "reported",
+      "value": 81.0,
+      "date": "2026-10-31",
+      "asOf": null,
+      "observationMonth": "2026-10",
+      "publishedAt": "2026-11-06",
+      "dateBasis": "month-via-epoch",
+      "sourceUrl": "https://www.ft.com/content/314e17df-e7af-4814-b208-70a0557cb452?syn-25a6b1a6=1",
+      "sourceTitle": "Epoch AI: October 2026 81B",
+      "verificationUrl": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
+      "sourceName": "Epoch AI 공개 집계",
+      "qualifier": "approximately",
+      "note": "Epoch AI가 원문 출처와 함께 제공한 회사 전체 런레이트입니다. 기준 월만 표시하며 데이터셋의 일자를 정확한 관측일로 단정하지 않습니다.",
+      "originalSourceNotes": "Annualised revenue run rate is $81bn, per FT. Presume this refers to last day of October, since Anthropic plans to report a revenue run rate amount as of Oct 31 in its S-1 filing, so FT's sources are most likely conveying this figure.",
+      "confidence": "Likely"
     }
   ]
 }

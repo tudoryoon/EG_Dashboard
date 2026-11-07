@@ -1,5 +1,5 @@
 window.llmDashboardData = {
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-11-06",
   "colors": {
     "openai": "#111827",
     "anthropic": "#d97745"
@@ -16,10 +16,12 @@ window.llmDashboardData = {
     },
     {
       "provider": "Anthropic",
+      "kind": "reported",
       "metric": "보도된 연환산 매출 런레이트",
-      "value": "$65B+",
-      "asOf": "2026-07 말 기준 · Reuters 8/17 보도",
-      "tone": "anthropic"
+      "value": "$81B 내외",
+      "asOf": "2026-10 기준 · 2026-11-06 보도",
+      "tone": "anthropic",
+      "sourceUrl": "https://www.ft.com/content/314e17df-e7af-4814-b208-70a0557cb452?syn-25a6b1a6=1"
     },
     {
       "provider": "OpenAI",
@@ -60,7 +62,8 @@ window.llmDashboardData = {
       "2026-06",
       "2026-07",
       "2026-08",
-      "2026-09"
+      "2026-09",
+      "2026-10"
     ],
     "series": [
       {
@@ -84,7 +87,8 @@ window.llmDashboardData = {
           null,
           30,
           null,
-          50
+          50,
+          null
         ],
         "observations": {
           "2026-07": {
@@ -150,7 +154,8 @@ window.llmDashboardData = {
           null,
           "Epoch AI 공개 집계 · 2026-10-08 · 2026-07 기준",
           null,
-          "Axios / FT 정정 보도 · 2026-10-08 · 2026-09 기준"
+          "Axios / FT 정정 보도 · 2026-10-08 · 2026-09 기준",
+          null
         ]
       },
       {
@@ -174,7 +179,8 @@ window.llmDashboardData = {
           37.3,
           42.6,
           44.3,
-          50.44
+          50.44,
+          null
         ],
         "sourceLabels": [
           null,
@@ -193,7 +199,8 @@ window.llmDashboardData = {
           "TickerTrends · Jun 25",
           "TickerTrends 추정 · 기준일 2026-07-29",
           "TickerTrends 추정 · 기준일 2026-08-12",
-          "TickerTrends 추정 · 게시일 기준 · 관측일 미공개 2026-09-29"
+          "TickerTrends 추정 · 게시일 기준 · 관측일 미공개 2026-09-29",
+          null
         ],
         "observations": {
           "2026-07": {
@@ -252,7 +259,8 @@ window.llmDashboardData = {
           null,
           65,
           null,
-          null
+          null,
+          81.0
         ],
         "observations": {
           "2026-07": {
@@ -262,6 +270,26 @@ window.llmDashboardData = {
             "qualifier": "more-than",
             "sourceUrl": "https://www.aol.com/articles/anthropic-revenue-run-rate-tops-213602000.html",
             "note": "Reuters가 투자자에게 공유된 수치를 관계자에게 확인. Bloomberg 최초 보도. 공식 공시나 감사된 연매출이 아님."
+          },
+          "2026-10": {
+            "provider": "anthropic",
+            "kind": "reported",
+            "value": 81.0,
+            "date": "2026-10-31",
+            "asOf": null,
+            "observationMonth": "2026-10",
+            "publishedAt": "2026-11-06",
+            "dateBasis": "month-via-epoch",
+            "sourceUrl": "https://www.ft.com/content/314e17df-e7af-4814-b208-70a0557cb452?syn-25a6b1a6=1",
+            "sourceTitle": "Epoch AI: October 2026 81B",
+            "verificationUrl": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
+            "sourceName": "Epoch AI 공개 집계",
+            "qualifier": "approximately",
+            "note": "Epoch AI가 원문 출처와 함께 제공한 회사 전체 런레이트입니다. 기준 월만 표시하며 데이터셋의 일자를 정확한 관측일로 단정하지 않습니다.",
+            "originalSourceNotes": "Annualised revenue run rate is $81bn, per FT. Presume this refers to last day of October, since Anthropic plans to report a revenue run rate amount as of Oct 31 in its S-1 filing, so FT's sources are most likely conveying this figure.",
+            "confidence": "Likely",
+            "status": "reported",
+            "reportedAt": "2026-11-06"
           }
         },
         "sourceLabels": [
@@ -281,7 +309,8 @@ window.llmDashboardData = {
           null,
           "Reuters / Bloomberg · 2026-08-17 보도 · $65B 초과",
           null,
-          null
+          null,
+          "Epoch AI 공개 집계 · 2026-11-06 · 2026-10 기준"
         ]
       },
       {
@@ -305,7 +334,8 @@ window.llmDashboardData = {
           69.6,
           74.1,
           null,
-          76.8
+          76.8,
+          null
         ],
         "sourceLabels": [
           null,
@@ -324,7 +354,8 @@ window.llmDashboardData = {
           "TickerTrends · Jun 27",
           "TickerTrends 추정 · 게시일 기준 · 관측일 미공개 2026-07-23",
           null,
-          "TickerTrends 추정 · 게시일 기준 · 관측일 미공개 2026-09-29"
+          "TickerTrends 추정 · 게시일 기준 · 관측일 미공개 2026-09-29",
+          null
         ],
         "observations": {
           "2026-07": {
@@ -421,10 +452,14 @@ window.llmDashboardData = {
     {
       "label": "OpenAI annualized revenue $20 billion less than previously reported",
       "url": "https://www.axios.com/2026/10/08/openai-50-billion-arr-anthropic-revenue-accounting"
+    },
+    {
+      "label": "Epoch AI: October 2026 81B",
+      "url": "https://www.ft.com/content/314e17df-e7af-4814-b208-70a0557cb452?syn-25a6b1a6=1"
     }
   ],
   "arrRefresh": {
-    "checkedAt": "2026-11-06T08:45:01.027935+00:00",
+    "checkedAt": "2026-11-07T07:59:31.478490+00:00",
     "sources": [
       {
         "key": "tickertrends",
@@ -437,7 +472,7 @@ window.llmDashboardData = {
         "key": "epoch",
         "url": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
         "status": "ok",
-        "observations": 2,
+        "observations": 3,
         "reviewWarnings": 1
       }
     ]
