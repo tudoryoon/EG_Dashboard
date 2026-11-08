@@ -260,7 +260,7 @@ window.llmDashboardData = {
           65,
           null,
           null,
-          81.0
+          81
         ],
         "observations": {
           "2026-07": {
@@ -274,7 +274,7 @@ window.llmDashboardData = {
           "2026-10": {
             "provider": "anthropic",
             "kind": "reported",
-            "value": 81.0,
+            "value": 81,
             "date": "2026-10-31",
             "asOf": null,
             "observationMonth": "2026-10",
@@ -459,7 +459,7 @@ window.llmDashboardData = {
     }
   ],
   "arrRefresh": {
-    "checkedAt": "2026-11-07T07:59:31.478490+00:00",
+    "checkedAt": "2026-11-08T08:18:03.619689+00:00",
     "sources": [
       {
         "key": "tickertrends",
