@@ -47,6 +47,8 @@ jobs:
   update-market-rs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    env:
+      MARKET_CANSLIM_EARNINGS_EXTRA_TICKERS: "DUOL"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -118,6 +120,7 @@ jobs:
         env:
           MARKET_RS_FINANCIALS_MAX_COMPANIES: "35"
           MARKET_RS_FINANCIALS_STALE_DAYS: "14"
+          MARKET_RS_FINANCIALS_EXTRA_TICKERS: "DUOL"
         run: |
           python scripts/test_financial_earnings_priority.py
           python scripts/test_financial_statement_overlay.py
@@ -127,7 +130,9 @@ jobs:
         id: earnings-all
         if: steps.refresh-guard.outputs.refresh_earnings_all == 'true'
         continue-on-error: true
-        run: python scripts/update_market_canslim_earnings.py --scope all
+        run: |
+          python scripts/test_canslim_earnings.py
+          python scripts/update_market_canslim_earnings.py --scope all
 
       - name: Commit updated market RS history
         run: |

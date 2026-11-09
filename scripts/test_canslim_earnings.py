@@ -1,6 +1,21 @@
 import unittest
+from unittest.mock import patch
 import pandas as pd
-from update_market_canslim_earnings import build_quarters
+from update_market_canslim_earnings import build_quarters, load_extra_tickers, merge_ticker_lists
+
+
+class EarningsUniverseTest(unittest.TestCase):
+    @patch('update_market_canslim_earnings.parse_js_payload')
+    def test_extra_tickers_require_rs_membership_and_are_normalized(self, load_payload):
+        load_payload.return_value = {'rows': [{'ticker': 'DUOL'}, {'ticker': 'AAPL'}, None]}
+        with patch.dict('os.environ', {'MARKET_CANSLIM_EARNINGS_EXTRA_TICKERS': 'duol, DUOL,UNKNOWN,,aapl'}):
+            self.assertEqual(load_extra_tickers(), ['DUOL', 'AAPL'])
+        self.assertEqual(merge_ticker_lists(['AAPL'], ['DUOL', 'AAPL']), ['AAPL', 'DUOL'])
+
+    @patch('update_market_canslim_earnings.parse_js_payload', return_value={'rows': [{'ticker': 'DUOL'}]})
+    def test_no_extras_keeps_existing_universe(self, load_payload):
+        with patch.dict('os.environ', {'MARKET_CANSLIM_EARNINGS_EXTRA_TICKERS': ''}):
+            self.assertEqual(load_extra_tickers(), [])
 
 
 class EarningsPeriodTest(unittest.TestCase):
