@@ -1,18 +1,18 @@
 window.studyCalendarData = {
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-09",
   "timezone": "America/New_York",
   "displayTimezone": "Asia/Seoul",
-  "calendarToday": "2026-11-08",
+  "calendarToday": "2026-11-09",
   "coverage": {
     "dailyBriefingUniverse": 224,
-    "matchedEarnings": 88,
+    "matchedEarnings": 44,
     "matchedMacro": 8,
-    "windowStart": "2026-11-02",
-    "windowEnd": "2026-11-29",
+    "windowStart": "2026-11-09",
+    "windowEnd": "2026-12-06",
     "earningsEligible": 223
   },
   "earningsAudit": {
-    "collectionEnd": "2026-12-27",
+    "collectionEnd": "2027-01-03",
     "symbols": [
       {
         "ticker": "AA",
@@ -25,21 +25,15 @@ window.studyCalendarData = {
       {
         "ticker": "AAOI",
         "name": "Applied Optoelectronics",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "AAPL",
         "name": "Apple",
-        "date": "2026-11-02",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-02"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-01-28"
         ]
       },
       {
@@ -51,12 +45,8 @@ window.studyCalendarData = {
       {
         "ticker": "ABNB",
         "name": "Airbnb",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "ACN",
@@ -81,22 +71,14 @@ window.studyCalendarData = {
       {
         "ticker": "AKAM",
         "name": "Akamai Technologies",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "ALAB",
         "name": "Astera Labs",
-        "date": "2026-11-03",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-03"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "AMAT",
@@ -111,21 +93,17 @@ window.studyCalendarData = {
       {
         "ticker": "AMD",
         "name": "AMD",
-        "date": "2026-11-03",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-03"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
         "ticker": "AMGN",
         "name": "Amgen",
-        "date": "2026-11-03",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-03"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
@@ -143,12 +121,8 @@ window.studyCalendarData = {
       {
         "ticker": "ANET",
         "name": "Arista Networks",
-        "date": "2026-11-03",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-03"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "ANF",
@@ -179,21 +153,15 @@ window.studyCalendarData = {
       {
         "ticker": "APP",
         "name": "AppLovin",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "ARM",
         "name": "Arm",
-        "date": "2026-11-04",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-04"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-03"
         ]
       },
       {
@@ -327,12 +295,8 @@ window.studyCalendarData = {
       {
         "ticker": "BWXT",
         "name": "BWX Technologies",
-        "date": "2026-11-02",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-02"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "C",
@@ -403,11 +367,9 @@ window.studyCalendarData = {
       {
         "ticker": "COHR",
         "name": "Coherent",
-        "date": "2026-11-04",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-04"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-03"
         ]
       },
       {
@@ -419,11 +381,9 @@ window.studyCalendarData = {
       {
         "ticker": "COP",
         "name": "ConocoPhillips",
-        "date": "2026-11-05",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-05"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-04"
         ]
       },
       {
@@ -439,18 +399,14 @@ window.studyCalendarData = {
       {
         "ticker": "CRCL",
         "name": "Circle",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "CRDO",
         "name": "Credo",
         "date": "2026-11-30",
-        "status": "outside-window",
+        "status": "conflict",
         "verificationStatus": "conflict",
         "candidateDates": [
           "2026-11-30",
@@ -461,7 +417,7 @@ window.studyCalendarData = {
         "ticker": "CRM",
         "name": "Salesforce",
         "date": "2026-12-02",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-02"
@@ -479,7 +435,7 @@ window.studyCalendarData = {
         "ticker": "CRWD",
         "name": "CrowdStrike",
         "date": "2026-12-01",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-01"
@@ -514,12 +470,8 @@ window.studyCalendarData = {
       {
         "ticker": "CVS",
         "name": "CVS Health",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "CVX",
@@ -546,12 +498,8 @@ window.studyCalendarData = {
       {
         "ticker": "DDOG",
         "name": "Datadog",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "DECK",
@@ -595,53 +543,36 @@ window.studyCalendarData = {
       {
         "ticker": "ECHO",
         "name": "EchoStar",
-        "date": "2026-11-03",
-        "status": "conflict",
-        "verificationStatus": "conflict",
-        "candidateDates": [
-          "2026-11-03",
-          "2026-11-06"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "EL",
         "name": "Estee Lauder",
-        "date": "2026-11-02",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-02"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-03"
         ]
       },
       {
         "ticker": "ELF",
         "name": "e.l.f. Beauty",
-        "date": "2026-11-04",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-04"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-03"
         ]
       },
       {
         "ticker": "EOSE",
         "name": "Eos Energy",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "EPAM",
         "name": "EPAM Systems",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "EQT",
@@ -652,22 +583,16 @@ window.studyCalendarData = {
       {
         "ticker": "ETN",
         "name": "Eaton",
-        "date": "2026-11-03",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-03"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
         "ticker": "EXPE",
         "name": "Expedia",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "F",
@@ -726,11 +651,9 @@ window.studyCalendarData = {
       {
         "ticker": "G",
         "name": "Genpact",
-        "date": "2026-11-05",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-05"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-04"
         ]
       },
       {
@@ -760,12 +683,8 @@ window.studyCalendarData = {
       {
         "ticker": "GH",
         "name": "Guardant Health",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "GLOB",
@@ -877,21 +796,15 @@ window.studyCalendarData = {
       {
         "ticker": "IONQ",
         "name": "IonQ",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "IREN",
         "name": "Iris Energy",
-        "date": "2026-11-05",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-05"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-04"
         ]
       },
       {
@@ -905,11 +818,9 @@ window.studyCalendarData = {
       {
         "ticker": "IT",
         "name": "Gartner",
-        "date": "2026-11-03",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-03"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
@@ -953,32 +864,20 @@ window.studyCalendarData = {
       {
         "ticker": "KRMN",
         "name": "Karman",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "KTOS",
         "name": "Kratos",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "LEU",
         "name": "Centrus Energy",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "LHX",
@@ -991,11 +890,9 @@ window.studyCalendarData = {
       {
         "ticker": "LITE",
         "name": "Lumentum",
-        "date": "2026-11-02",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-02"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
@@ -1057,18 +954,14 @@ window.studyCalendarData = {
       {
         "ticker": "MCD",
         "name": "McDonald's",
-        "date": "2026-11-04",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-04"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "MDB",
         "name": "MongoDB",
         "date": "2026-12-01",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-01"
@@ -1085,31 +978,21 @@ window.studyCalendarData = {
       {
         "ticker": "MNST",
         "name": "Monster Beverage",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "MP",
         "name": "MP Materials",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "MPC",
         "name": "Marathon Petroleum",
-        "date": "2026-11-03",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-03"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
@@ -1121,18 +1004,14 @@ window.studyCalendarData = {
       {
         "ticker": "MRNA",
         "name": "Moderna",
-        "date": "2026-11-06",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-06"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "MRVL",
         "name": "Marvell",
         "date": "2026-12-01",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-01"
@@ -1198,12 +1077,8 @@ window.studyCalendarData = {
       {
         "ticker": "NET",
         "name": "Cloudflare",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "NFLX",
@@ -1243,7 +1118,7 @@ window.studyCalendarData = {
         "ticker": "NTAP",
         "name": "NetApp",
         "date": "2026-12-01",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-01"
@@ -1252,12 +1127,8 @@ window.studyCalendarData = {
       {
         "ticker": "NTRA",
         "name": "Natera",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "NVDA",
@@ -1272,11 +1143,9 @@ window.studyCalendarData = {
       {
         "ticker": "NVO",
         "name": "Novo Nordisk",
-        "date": "2026-11-04",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-04"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-03"
         ]
       },
       {
@@ -1294,12 +1163,8 @@ window.studyCalendarData = {
       {
         "ticker": "NVTS",
         "name": "Navitas",
-        "date": "2026-11-03",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-03"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "NXPI",
@@ -1318,18 +1183,14 @@ window.studyCalendarData = {
       {
         "ticker": "OKLO",
         "name": "Oklo",
-        "date": "2026-11-06",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-06"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "OKTA",
         "name": "Okta",
         "date": "2026-12-01",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-01"
@@ -1338,12 +1199,8 @@ window.studyCalendarData = {
       {
         "ticker": "ON",
         "name": "ON Semiconductor",
-        "date": "2026-11-02",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-02"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "ORCL",
@@ -1409,11 +1266,9 @@ window.studyCalendarData = {
       {
         "ticker": "PLTR",
         "name": "Palantir",
-        "date": "2026-11-02",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-02"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-01"
         ]
       },
       {
@@ -1425,12 +1280,8 @@ window.studyCalendarData = {
       {
         "ticker": "PURR",
         "name": "Hyperliquid Strategies",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "PWR",
@@ -1451,11 +1302,9 @@ window.studyCalendarData = {
       {
         "ticker": "QCOM",
         "name": "Qualcomm",
-        "date": "2026-11-04",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-04"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-03"
         ]
       },
       {
@@ -1468,7 +1317,7 @@ window.studyCalendarData = {
         "ticker": "RBRK",
         "name": "Rubrik",
         "date": "2026-12-03",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-03"
@@ -1559,22 +1408,14 @@ window.studyCalendarData = {
       {
         "ticker": "SERV",
         "name": "Serve Robotics",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "SHOP",
         "name": "Shopify",
-        "date": "2026-11-03",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-03"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "SLB",
@@ -1587,22 +1428,16 @@ window.studyCalendarData = {
       {
         "ticker": "SMCI",
         "name": "Super Micro",
-        "date": "2026-11-03",
-        "status": "single-source",
-        "verificationStatus": "single-source",
-        "candidateDates": [
-          "2026-11-03"
+        "status": "outside-window",
+        "dateRange": [
+          "2027-02-02"
         ]
       },
       {
         "ticker": "SMR",
         "name": "NuScale Power",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "SNDK",
@@ -1614,7 +1449,7 @@ window.studyCalendarData = {
         "ticker": "SNOW",
         "name": "Snowflake",
         "date": "2026-12-02",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-02"
@@ -1680,12 +1515,8 @@ window.studyCalendarData = {
       {
         "ticker": "TEM",
         "name": "Tempus AI",
-        "date": "2026-11-02",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-02"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "TER",
@@ -1708,12 +1539,8 @@ window.studyCalendarData = {
       {
         "ticker": "TLN",
         "name": "Talen Energy",
-        "date": "2026-11-03",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-03"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "TSLA",
@@ -1750,12 +1577,8 @@ window.studyCalendarData = {
       {
         "ticker": "TXG",
         "name": "10x Genomics",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "TXN",
@@ -1768,12 +1591,8 @@ window.studyCalendarData = {
       {
         "ticker": "U",
         "name": "Unity",
-        "date": "2026-11-05",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-05"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "UAL",
@@ -1798,7 +1617,7 @@ window.studyCalendarData = {
         "ticker": "ULTA",
         "name": "Ulta Beauty",
         "date": "2026-12-03",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-03"
@@ -1879,12 +1698,8 @@ window.studyCalendarData = {
       {
         "ticker": "VST",
         "name": "Vistra",
-        "date": "2026-11-06",
-        "status": "cross-checked",
-        "verificationStatus": "cross-checked",
-        "candidateDates": [
-          "2026-11-06"
-        ]
+        "status": "unconfirmed",
+        "dateRange": []
       },
       {
         "ticker": "WDC",
@@ -1934,7 +1749,7 @@ window.studyCalendarData = {
         "ticker": "ZS",
         "name": "Zscaler",
         "date": "2026-12-02",
-        "status": "outside-window",
+        "status": "cross-checked",
         "verificationStatus": "cross-checked",
         "candidateDates": [
           "2026-12-02"
@@ -1943,30 +1758,32 @@ window.studyCalendarData = {
     ],
     "sources": {
       "Nasdaq": {
-        "successfulChecks": 36,
-        "failedChecks": 4,
-        "lastSuccessAt": "2026-11-08T17:16:59+09:00",
+        "successfulChecks": 34,
+        "failedChecks": 6,
+        "lastSuccessAt": "2026-11-09T17:51:15+09:00",
         "warnings": [
           "2026-11-26: RuntimeError: Nasdaq earnings request failed for 2026-11-26: Nasdaq missing rows; not a verified empty day",
           "2026-12-23: RuntimeError: Nasdaq earnings request failed for 2026-12-23: Nasdaq missing rows; not a verified empty day",
           "2026-12-24: RuntimeError: Nasdaq earnings request failed for 2026-12-24: Nasdaq missing rows; not a verified empty day",
-          "2026-12-25: RuntimeError: Nasdaq earnings request failed for 2026-12-25: Nasdaq missing rows; not a verified empty day"
+          "2026-12-25: RuntimeError: Nasdaq earnings request failed for 2026-12-25: Nasdaq missing rows; not a verified empty day",
+          "2026-12-31: RuntimeError: Nasdaq earnings request failed for 2026-12-31: Nasdaq missing rows; not a verified empty day",
+          "2027-01-01: RuntimeError: Nasdaq earnings request failed for 2027-01-01: Nasdaq missing rows; not a verified empty day"
         ]
       },
       "Yahoo": {
         "successfulChecks": 223,
         "failedChecks": 0,
-        "lastSuccessAt": "2026-11-08T17:16:59+09:00",
+        "lastSuccessAt": "2026-11-09T17:51:15+09:00",
         "warnings": []
       }
     },
-    "checkedAt": "2026-11-08T17:16:59+09:00",
+    "checkedAt": "2026-11-09T17:51:15+09:00",
     "counts": {
-      "outside-window": 88,
-      "cross-checked": 65,
-      "single-source": 20,
-      "unconfirmed": 47,
+      "outside-window": 95,
+      "unconfirmed": 84,
+      "cross-checked": 39,
       "conflict": 3,
+      "single-source": 2,
       "excluded-etf": 1
     }
   },
@@ -1981,1997 +1798,8 @@ window.studyCalendarData = {
     {
       "key": "this-week",
       "label": "이번 주",
-      "range": "2026.11.02 - 11.08",
-      "status": "진행 중",
-      "events": [
-        {
-          "date": "2026-11-02",
-          "time": "00:00",
-          "kind": "macro",
-          "title": "ISM 제조업 PMI",
-          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
-          "sourceLabel": "ISM",
-          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-03"
-        },
-        {
-          "ticker": "AAPL",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Apple (AAPL) 실적 발표",
-          "sector": "M7 빅테크",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.98",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "BWXT",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "BWX Technologies (BWXT) 실적 발표",
-          "sector": "원전, SMR",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.19",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/BWXT/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "EL",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Estee Lauder (EL) 실적 발표",
-          "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.52",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "LITE",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Lumentum (LITE) 실적 발표",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.82",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ON",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "ON Semiconductor (ON) 실적 발표",
-          "sector": "전력 반도체",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.88",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/ON/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "PLTR",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Palantir (PLTR) 실적 발표",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.32",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "TEM",
-          "date": "2026-11-02",
-          "usDate": "2026-11-02",
-          "kstDate": "2026-11-02",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Tempus AI (TEM) 실적 발표",
-          "sector": "AI바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.32)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-02",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-02",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/TEM/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "date": "2026-11-03",
-          "time": "00:00",
-          "kind": "macro",
-          "title": "JOLTS 구인·이직 보고서",
-          "note": "구인·채용·퇴직 · September 2026 · BLS 2026 공식 발표 일정 · 미국 10:00 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-04"
-        },
-        {
-          "ticker": "ALAB",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Astera Labs (ALAB) 실적 발표",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.83",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/ALAB/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "AMD",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "AMD (AMD) 실적 발표",
-          "sector": "반도체(대형주)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.68",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "AMGN",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Amgen (AMGN) 실적 발표",
-          "sector": "바이오",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $5.74",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ANET",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Arista Networks (ANET) 실적 발표",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.99",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/ANET/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ECHO",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "EchoStar (ECHO) 실적 발표",
-          "sector": "우주",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "conflict",
-          "verificationLabel": "날짜 불일치·재확인",
-          "stale": false,
-          "note": "날짜 불일치·재확인 · Nasdaq + Yahoo · Nasdaq 2026-11-03, Yahoo 2026-11-03, Nasdaq 2026-11-06 · Yahoo 비추정 단일 날짜 우선 (기업 공식 확정은 아님) · 회계분기 종료 Sep/2026",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/ECHO/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            },
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-06",
-              "session": "B",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ETN",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Eaton (ETN) 실적 발표",
-          "sector": "전력",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.54",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "IT",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Gartner (IT) 실적 발표",
-          "sector": "IT 컨설팅",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.86",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "MPC",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Marathon Petroleum (MPC) 실적 발표",
-          "sector": "정유",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $25.74",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "NVTS",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Navitas (NVTS) 실적 발표",
-          "sector": "전력 반도체",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.08)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/NVTS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "SHOP",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Shopify (SHOP) 실적 발표",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.33",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/SHOP/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "SMCI",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Super Micro (SMCI) 실적 발표",
-          "sector": "PC/서버 OEM",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.04",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "TLN",
-          "date": "2026-11-03",
-          "usDate": "2026-11-03",
-          "kstDate": "2026-11-03",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Talen Energy (TLN) 실적 발표",
-          "sector": "전력",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $8.26",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-03",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-03",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/TLN/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "date": "2026-11-04",
-          "time": "00:00",
-          "kind": "macro",
-          "title": "ISM 서비스업 PMI",
-          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
-          "sourceLabel": "ISM",
-          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-05"
-        },
-        {
-          "ticker": "APP",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "AppLovin (APP) 실적 발표",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.94",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/APP/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ARM",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Arm (ARM) 실적 발표",
-          "sector": "CPU",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.22",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "COHR",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Coherent (COHR) 실적 발표",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.80",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "CRCL",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Circle (CRCL) 실적 발표",
-          "sector": "크립토",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.42",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/CRCL/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "CVS",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "CVS Health (CVS) 실적 발표",
-          "sector": "바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.62",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/CVS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "DDOG",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Datadog (DDOG) 실적 발표",
-          "sector": "S/W & 플랫폼",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.18",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/DDOG/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ELF",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "e.l.f. Beauty (ELF) 실적 발표",
-          "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.37",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "EXPE",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Expedia (EXPE) 실적 발표",
-          "sector": "여행 & 레저",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $8.09",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/EXPE/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "LEU",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Centrus Energy (LEU) 실적 발표",
-          "sector": "원전, SMR",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.36)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/LEU/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "MCD",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "McDonald's (MCD) 실적 발표",
-          "sector": "경기 소비재",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.36",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/MCD/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "NVO",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Novo Nordisk (NVO) 실적 발표",
-          "sector": "바이오",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.81",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "QCOM",
-          "date": "2026-11-04",
-          "usDate": "2026-11-04",
-          "kstDate": "2026-11-04",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Qualcomm (QCOM) 실적 발표",
-          "sector": "반도체 설계/IP",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $1.46",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-04",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-04",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "AAOI",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Applied Optoelectronics (AAOI) 실적 발표",
-          "sector": "통신 인프라",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.08",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/AAOI/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "ABNB",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Airbnb (ABNB) 실적 발표",
-          "sector": "여행 & 레저",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.86",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/ABNB/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "AKAM",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Akamai Technologies (AKAM) 실적 발표",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.92",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/AKAM/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "COP",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "ConocoPhillips (COP) 실적 발표",
-          "sector": "전통에너지(원유, 천연가스)",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $3.06",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "EOSE",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Eos Energy (EOSE) 실적 발표",
-          "sector": "전력",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.37)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/EOSE/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "EPAM",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "EPAM Systems (EPAM) 실적 발표",
-          "sector": "IT 컨설팅",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.76",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/EPAM/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "G",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Genpact (G) 실적 발표",
-          "sector": "IT 컨설팅",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.93",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "GH",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Guardant Health (GH) 실적 발표",
-          "sector": "AI바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.68)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/GH/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "IONQ",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "IonQ (IONQ) 실적 발표",
-          "sector": "양자컴퓨터",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.79)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/IONQ/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "IREN",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Iris Energy (IREN) 실적 발표",
-          "sector": "네오클라우드",
-          "sourceLabel": "Nasdaq",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "single-source",
-          "verificationLabel": "예상·단일 출처",
-          "stale": false,
-          "note": "예상·단일 출처 · Nasdaq · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.49)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "KRMN",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Karman (KRMN) 실적 발표",
-          "sector": "방산",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.16",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/KRMN/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "KTOS",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Kratos (KTOS) 실적 발표",
-          "sector": "방산",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.15",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/KTOS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "MNST",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Monster Beverage (MNST) 실적 발표",
-          "sector": "필수 소비재",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.30",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/MNST/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "MP",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "MP Materials (MP) 실적 발표",
-          "sector": "원자재",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.05)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/MP/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "NET",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Cloudflare (NET) 실적 발표",
-          "sector": "사이버보안",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.02",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/NET/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "NTRA",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Natera (NTRA) 실적 발표",
-          "sector": "AI바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.17)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/NTRA/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "PURR",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Hyperliquid Strategies (PURR) 실적 발표",
-          "sector": "크립토",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.10",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/PURR/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "SERV",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Serve Robotics (SERV) 실적 발표",
-          "sector": "로봇",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.77)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/SERV/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "SMR",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "NuScale Power (SMR) 실적 발표",
-          "sector": "원전, SMR",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.11)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/SMR/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "TXG",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "10x Genomics (TXG) 실적 발표",
-          "sector": "AI바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.29)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/TXG/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "U",
-          "date": "2026-11-05",
-          "usDate": "2026-11-05",
-          "kstDate": "2026-11-05",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Unity (U) 실적 발표",
-          "sector": "엔터테인먼트",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $0.18",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-05",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-05",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/U/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "date": "2026-11-06",
-          "time": "22:30",
-          "kind": "macro",
-          "title": "미국 고용보고서",
-          "note": "비농업고용·실업률·시간당 평균임금 · October 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
-          "sourceLabel": "BLS",
-          "sourceUrl": "https://www.bls.gov/schedule/2026/",
-          "usDate": "2026-11-06",
-          "kstDate": "2026-11-06"
-        },
-        {
-          "ticker": "VST",
-          "date": "2026-11-06",
-          "usDate": "2026-11-06",
-          "kstDate": "2026-11-06",
-          "time": "23:30 이전",
-          "session": "B",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Vistra (VST) 실적 발표",
-          "sector": "전력",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 $2.94",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-06",
-              "session": "B",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-06",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/VST/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "MRNA",
-          "date": "2026-11-06",
-          "usDate": "2026-11-06",
-          "kstDate": "2026-11-06",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Moderna (MRNA) 실적 발표",
-          "sector": "바이오",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($1.10)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-06",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-06",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/MRNA/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        },
-        {
-          "ticker": "OKLO",
-          "date": "2026-11-06",
-          "usDate": "2026-11-06",
-          "kstDate": "2026-11-06",
-          "time": "시간 미정",
-          "session": "",
-          "kind": "earnings",
-          "confirmed": false,
-          "title": "Oklo (OKLO) 실적 발표",
-          "sector": "원전, SMR",
-          "sourceLabel": "Nasdaq + Yahoo",
-          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-          "verificationStatus": "cross-checked",
-          "verificationLabel": "예상·교차 확인",
-          "stale": false,
-          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Sep/2026 · EPS 컨센서스 ($0.29)",
-          "evidence": [
-            {
-              "source": "Nasdaq",
-              "date": "2026-11-06",
-              "session": "",
-              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-06",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": null,
-              "dateRange": null
-            },
-            {
-              "source": "Yahoo",
-              "date": "2026-11-06",
-              "session": "",
-              "url": "https://finance.yahoo.com/quote/OKLO/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
-              "providerEstimate": false,
-              "dateRange": null
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "key": "next-week",
-      "label": "다음 주",
       "range": "2026.11.09 - 11.15",
-      "status": "예정",
+      "status": "진행 중",
       "events": [
         {
           "ticker": "ASTS",
@@ -3996,7 +1824,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4005,7 +1833,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ASTS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4034,7 +1862,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4043,7 +1871,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RKLB/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4072,7 +1900,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4081,7 +1909,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/USAR/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4110,7 +1938,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4119,7 +1947,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/B/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4148,7 +1976,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-09",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4157,7 +1985,7 @@ window.studyCalendarData = {
               "date": "2026-11-09",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CEG/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4186,7 +2014,7 @@ window.studyCalendarData = {
               "date": "2026-11-10",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4195,7 +2023,7 @@ window.studyCalendarData = {
               "date": "2026-11-10",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CRWV/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4224,7 +2052,7 @@ window.studyCalendarData = {
               "date": "2026-11-10",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4233,7 +2061,7 @@ window.studyCalendarData = {
               "date": "2026-11-10",
               "session": "",
               "url": "https://finance.yahoo.com/quote/RGTI/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4273,7 +2101,7 @@ window.studyCalendarData = {
               "date": "2026-11-10",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-10",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4282,7 +2110,7 @@ window.studyCalendarData = {
               "date": "2026-11-10",
               "session": "",
               "url": "https://finance.yahoo.com/quote/QBTS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4311,7 +2139,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4320,7 +2148,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://finance.yahoo.com/quote/AMAT/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4349,7 +2177,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4358,7 +2186,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://finance.yahoo.com/quote/CSCO/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4387,7 +2215,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4396,7 +2224,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://finance.yahoo.com/quote/LUNR/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4425,7 +2253,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4434,7 +2262,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NBIS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4463,7 +2291,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4472,7 +2300,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TWST/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4501,7 +2329,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4510,7 +2338,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://finance.yahoo.com/quote/XE/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4530,8 +2358,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-3",
-      "label": "3주차",
+      "key": "next-week",
+      "label": "다음 주",
       "range": "2026.11.16 - 11.22",
       "status": "예정",
       "events": [
@@ -4558,7 +2386,7 @@ window.studyCalendarData = {
               "date": "2026-11-16",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-16",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4567,7 +2395,7 @@ window.studyCalendarData = {
               "date": "2026-11-16",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BIDU/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4596,7 +2424,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-17",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4605,7 +2433,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "",
               "url": "https://finance.yahoo.com/quote/NVDA/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4634,7 +2462,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-17",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4643,7 +2471,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DIS/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4672,7 +2500,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-17",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4681,7 +2509,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HD/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4710,7 +2538,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-17",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4719,7 +2547,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "",
               "url": "https://finance.yahoo.com/quote/VIK/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4748,7 +2576,7 @@ window.studyCalendarData = {
               "date": "2026-11-17",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-17",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -4777,7 +2605,7 @@ window.studyCalendarData = {
               "date": "2026-11-18",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-18",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4786,7 +2614,7 @@ window.studyCalendarData = {
               "date": "2026-11-18",
               "session": "",
               "url": "https://finance.yahoo.com/quote/P/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4815,7 +2643,7 @@ window.studyCalendarData = {
               "date": "2026-11-18",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-18",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4824,7 +2652,7 @@ window.studyCalendarData = {
               "date": "2026-11-18",
               "session": "",
               "url": "https://finance.yahoo.com/quote/PANW/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4853,7 +2681,7 @@ window.studyCalendarData = {
               "date": "2026-11-18",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-18",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4862,7 +2690,7 @@ window.studyCalendarData = {
               "date": "2026-11-18",
               "session": "",
               "url": "https://finance.yahoo.com/quote/TGT/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4891,7 +2719,7 @@ window.studyCalendarData = {
               "date": "2026-11-19",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-19",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4900,7 +2728,7 @@ window.studyCalendarData = {
               "date": "2026-11-19",
               "session": "",
               "url": "https://finance.yahoo.com/quote/WMT/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -4929,7 +2757,7 @@ window.studyCalendarData = {
               "date": "2026-11-19",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BABA/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             },
@@ -4938,7 +2766,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             }
@@ -4967,7 +2795,7 @@ window.studyCalendarData = {
               "date": "2026-11-12",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-12",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -4976,7 +2804,7 @@ window.studyCalendarData = {
               "date": "2026-11-19",
               "session": "",
               "url": "https://finance.yahoo.com/quote/GLOB/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5005,7 +2833,7 @@ window.studyCalendarData = {
               "date": "2026-11-20",
               "session": "",
               "url": "https://finance.yahoo.com/quote/BMNR/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": true,
               "dateRange": null
             }
@@ -5014,8 +2842,8 @@ window.studyCalendarData = {
       ]
     },
     {
-      "key": "week-4",
-      "label": "4주차",
+      "key": "week-3",
+      "label": "3주차",
       "range": "2026.11.23 - 11.29",
       "status": "예정",
       "events": [
@@ -5042,7 +2870,7 @@ window.studyCalendarData = {
               "date": "2026-11-23",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5051,7 +2879,7 @@ window.studyCalendarData = {
               "date": "2026-11-23",
               "session": "",
               "url": "https://finance.yahoo.com/quote/HPE/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5080,7 +2908,7 @@ window.studyCalendarData = {
               "date": "2026-11-23",
               "session": "A",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5089,7 +2917,7 @@ window.studyCalendarData = {
               "date": "2026-11-23",
               "session": "",
               "url": "https://finance.yahoo.com/quote/SYM/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5118,7 +2946,7 @@ window.studyCalendarData = {
               "date": "2026-11-23",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-23",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5127,7 +2955,7 @@ window.studyCalendarData = {
               "date": "2026-11-23",
               "session": "",
               "url": "https://finance.yahoo.com/quote/FLNC/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5156,7 +2984,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5165,7 +2993,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ADI/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5194,7 +3022,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "B",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5203,7 +3031,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "",
               "url": "https://finance.yahoo.com/quote/ANF/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5232,7 +3060,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "",
               "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-11-24",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": null,
               "dateRange": null
             },
@@ -5241,7 +3069,7 @@ window.studyCalendarData = {
               "date": "2026-11-24",
               "session": "",
               "url": "https://finance.yahoo.com/quote/DELL/",
-              "fetchedAt": "2026-11-08T17:16:59+09:00",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
               "providerEstimate": false,
               "dateRange": null
             }
@@ -5268,6 +3096,476 @@ window.studyCalendarData = {
           "sourceUrl": "https://www.bea.gov/news/schedule",
           "usDate": "2026-11-25",
           "kstDate": "2026-11-25"
+        }
+      ]
+    },
+    {
+      "key": "week-4",
+      "label": "4주차",
+      "range": "2026.11.30 - 12.06",
+      "status": "예정",
+      "events": [
+        {
+          "ticker": "CRDO",
+          "date": "2026-11-30",
+          "usDate": "2026-11-30",
+          "kstDate": "2026-11-30",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Credo (CRDO) 실적 발표",
+          "sector": "통신 인프라",
+          "sourceLabel": "Yahoo",
+          "sourceUrl": "https://finance.yahoo.com/quote/CRDO/",
+          "verificationStatus": "conflict",
+          "verificationLabel": "날짜 불일치·재확인",
+          "stale": false,
+          "note": "날짜 불일치·재확인 · Yahoo · Yahoo 2026-11-30, Nasdaq 2026-12-07",
+          "evidence": [
+            {
+              "source": "Yahoo",
+              "date": "2026-11-30",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/CRDO/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": true,
+              "dateRange": null
+            },
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-07",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-07",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "date": "2026-12-01",
+          "time": "00:00",
+          "kind": "macro",
+          "title": "ISM 제조업 PMI",
+          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "ISM",
+          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-02"
+        },
+        {
+          "date": "2026-12-01",
+          "time": "00:00",
+          "kind": "macro",
+          "title": "JOLTS 구인·이직 보고서",
+          "note": "구인·채용·퇴직 · October 2026 · BLS 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-02"
+        },
+        {
+          "ticker": "CRWD",
+          "date": "2026-12-01",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-02",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "CrowdStrike (CRWD) 실적 발표",
+          "sector": "사이버보안",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $0",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-01",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-01",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/CRWD/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "MDB",
+          "date": "2026-12-01",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-02",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "MongoDB (MDB) 실적 발표",
+          "sector": "S/W & 플랫폼",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $0.08",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-01",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-01",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/MDB/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "NTAP",
+          "date": "2026-12-01",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-02",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "NetApp (NTAP) 실적 발표",
+          "sector": "S/W & 플랫폼",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $2.13",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-01",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-01",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/NTAP/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "OKTA",
+          "date": "2026-12-01",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-02",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Okta (OKTA) 실적 발표",
+          "sector": "사이버보안",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $0.43",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-01",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-01",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/OKTA/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "MRVL",
+          "date": "2026-12-01",
+          "usDate": "2026-12-01",
+          "kstDate": "2026-12-01",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Marvell (MRVL) 실적 발표",
+          "sector": "반도체(대형주)",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $0.79",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-01",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-01",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-01",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/MRVL/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "SNOW",
+          "date": "2026-12-02",
+          "usDate": "2026-12-02",
+          "kstDate": "2026-12-03",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Snowflake (SNOW) 실적 발표",
+          "sector": "S/W & 플랫폼",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 ($0.32)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-02",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-02",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/SNOW/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "ZS",
+          "date": "2026-12-02",
+          "usDate": "2026-12-02",
+          "kstDate": "2026-12-03",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Zscaler (ZS) 실적 발표",
+          "sector": "사이버보안",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $0.12",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-02",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-02",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/ZS/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "CRM",
+          "date": "2026-12-02",
+          "usDate": "2026-12-02",
+          "kstDate": "2026-12-02",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Salesforce (CRM) 실적 발표",
+          "sector": "S/W & 플랫폼",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $2.41",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-02",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-02",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-02",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/CRM/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": true,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "date": "2026-12-03",
+          "time": "00:00",
+          "kind": "macro",
+          "title": "ISM 서비스업 PMI",
+          "note": "ISM 2026 공식 발표 일정 · 미국 10:00 ET",
+          "sourceLabel": "ISM",
+          "sourceUrl": "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
+          "usDate": "2026-12-03",
+          "kstDate": "2026-12-04"
+        },
+        {
+          "ticker": "ULTA",
+          "date": "2026-12-03",
+          "usDate": "2026-12-03",
+          "kstDate": "2026-12-04",
+          "time": "06:00 이후",
+          "session": "A",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Ulta Beauty (ULTA) 실적 발표",
+          "sector": "경기 소비재",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-03",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 $5.60",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-03",
+              "session": "A",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-03",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-03",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/ULTA/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": false,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "ticker": "RBRK",
+          "date": "2026-12-03",
+          "usDate": "2026-12-03",
+          "kstDate": "2026-12-03",
+          "time": "시간 미정",
+          "session": "",
+          "kind": "earnings",
+          "confirmed": false,
+          "title": "Rubrik (RBRK) 실적 발표",
+          "sector": "사이버보안",
+          "sourceLabel": "Nasdaq + Yahoo",
+          "sourceUrl": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-03",
+          "verificationStatus": "cross-checked",
+          "verificationLabel": "예상·교차 확인",
+          "stale": false,
+          "note": "예상·교차 확인 · Nasdaq + Yahoo · 회계분기 종료 Oct/2026 · EPS 컨센서스 ($0.38)",
+          "evidence": [
+            {
+              "source": "Nasdaq",
+              "date": "2026-12-03",
+              "session": "",
+              "url": "https://www.nasdaq.com/market-activity/earnings?date=2026-12-03",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": null,
+              "dateRange": null
+            },
+            {
+              "source": "Yahoo",
+              "date": "2026-12-03",
+              "session": "",
+              "url": "https://finance.yahoo.com/quote/RBRK/",
+              "fetchedAt": "2026-11-09T17:51:15+09:00",
+              "providerEstimate": true,
+              "dateRange": null
+            }
+          ]
+        },
+        {
+          "date": "2026-12-04",
+          "time": "22:30",
+          "kind": "macro",
+          "title": "미국 고용보고서",
+          "note": "비농업고용·실업률·시간당 평균임금 · November 2026 · BLS 2026 공식 발표 일정 · 미국 08:30 ET",
+          "sourceLabel": "BLS",
+          "sourceUrl": "https://www.bls.gov/schedule/2026/",
+          "usDate": "2026-12-04",
+          "kstDate": "2026-12-04"
         }
       ]
     }
