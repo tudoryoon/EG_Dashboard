@@ -32,7 +32,7 @@ jobs:
       - name: Test memory price parsing
         run: python -m unittest discover -s scripts -p test_memory_spot.py
 
-      - name: Refresh memory data history
+      - name: Refresh NAND wafer and GDDR history (DRAM and RDIMM run separately)
         run: python scripts/update_memory_spot.py --scope other
 
       - name: Commit updated memory data history

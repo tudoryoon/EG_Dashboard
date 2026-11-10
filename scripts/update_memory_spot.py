@@ -61,20 +61,25 @@ def fetch_text(url: str) -> str:
         return response.read().decode("utf-8-sig")
 
 
-def parse_direct_dram(html: str, now: datetime) -> dict:
-    soup = BeautifulSoup(html, "html.parser")
-    heading = soup.find(id="NationalDramSpotPrice_show_day")
+def parse_publication_timestamp(text: str, now: datetime) -> datetime:
     match = re.search(
         r"([A-Za-z]{3})\.?\s*(\d{1,2})\s+(\d{4})\s+(\d{1,2}):(\d{2})\s*\(GMT\+8\)",
-        heading.get_text(" ", strip=True) if heading else "",
+        text,
     )
     if not match:
-        raise ValueError("DRAM source publication timestamp missing or changed")
+        raise ValueError("Source publication timestamp missing or changed")
     month, day, year, hour, minute = match.groups()
     month_number = ("jan feb mar apr may jun jul aug sep oct nov dec".split()).index(month.lower()) + 1
     published = datetime(int(year), month_number, int(day), int(hour), int(minute), tzinfo=SOURCE_TZ)
     if published > now + timedelta(minutes=5):
-        raise ValueError("DRAM source publication timestamp is in the future")
+        raise ValueError("Source publication timestamp is in the future")
+    return published
+
+
+def parse_direct_dram(html: str, now: datetime) -> dict:
+    soup = BeautifulSoup(html, "html.parser")
+    heading = soup.find(id="NationalDramSpotPrice_show_day")
+    published = parse_publication_timestamp(heading.get_text(" ", strip=True) if heading else "", now)
 
     products = {product: key for key, product in DIRECT_PRODUCTS.items()}
     quotes = {}
@@ -106,6 +111,63 @@ def parse_direct_dram(html: str, now: datetime) -> dict:
         "collectedAt": now.astimezone(timezone.utc).isoformat(timespec="seconds"),
         "items": quotes,
     }
+
+
+def parse_direct_module(html: str, now: datetime) -> dict:
+    soup = BeautifulSoup(html, "html.parser")
+    for row in soup.find_all("tr"):
+        cells = row.find_all(["td", "th"], recursive=False)
+        values = [cell.get_text(" ", strip=True) for cell in cells]
+        if not values or values[0] != MODULE_PRODUCT:
+            continue
+        table = row.find_parent("table")
+        section = table.find_parent("div", class_="left_tab")
+        heading = section.select_one(".tab_time") if section else None
+        published = parse_publication_timestamp(heading.get_text(" ", strip=True) if heading else "", now)
+        header = next((candidate for candidate in table.find_all("tr")
+                       if candidate.find(["td", "th"]) and candidate.find(["td", "th"]).get_text(strip=True) == "Item"), None)
+        headers = [re.sub(r"\s+", "", cell.get_text()) for cell in header.find_all(["td", "th"], recursive=False)] if header else []
+        expected = ["Item", "WeeklyHigh", "WeeklyLow", "SessionHigh", "SessionLow", "SessionAverage", "AverageChange", "History"]
+        if headers != expected or len(values) != len(expected):
+            raise ValueError("RDIMM source price columns changed")
+        high, low, average = [module_price(values[index].replace(",", "")) for index in (3, 4, 5)]
+        change = module_price(values[6].replace("%", "").replace(",", "").strip(), 2)
+        if any(value is None or value <= 0 for value in (high, low, average)) or not low <= average <= high or change is None:
+            raise ValueError("Invalid RDIMM source quote")
+        return {
+            "date": published.date().isoformat(),
+            "observedDate": now.astimezone(KST).date().isoformat(),
+            "publishedAt": published.isoformat(),
+            "collectedAt": now.astimezone(timezone.utc).isoformat(timespec="seconds"),
+            "items": {MODULE_KEY: {"average": average, "high": high, "low": low, "changePct": change}},
+        }
+    raise ValueError("RDIMM source did not supply the exact 32GB 4800/5600 benchmark")
+
+
+def merge_direct_module(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
+    day = today.isoformat()
+    snapshot = previous.get("directModuleCurrent")
+    if snapshot and snapshot.get("observedDate") != day:
+        snapshot = None
+    if quote and quote["observedDate"] == day and (not snapshot or quote["publishedAt"] >= snapshot["publishedAt"]):
+        snapshot = quote
+    payload["directModuleCurrent"] = snapshot
+    if not snapshot:
+        return
+    # Weekly prices are recorded on their collection date, not relabeled as a new daily publication.
+    index = payload["labels"].index(day)
+    item = payload["items"][MODULE_KEY]
+    price = snapshot["items"][MODULE_KEY]
+    for field, value in (("history", price["average"]), ("highHistory", price["high"]), ("lowHistory", price["low"])):
+        item[field][index] = value
+    item.update(
+        latestDate=day, latestValue=price["average"], latestHigh=price["high"], latestLow=price["low"],
+        latestChangePct=price["changePct"], dateBasis="collection_date",
+        latestSource={"name": "DRAMeXchange", "url": DRAMEXCHANGE_URL,
+                      "publishedAt": snapshot["publishedAt"], "collectedAt": snapshot["collectedAt"]},
+    )
+    payload["updatedAt"] = max(payload["updatedAt"], day)
+    payload["firstObservedDate"] = min(payload["firstObservedDate"] or day, day)
 
 
 def merge_direct_dram(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
@@ -232,17 +294,27 @@ def main() -> None:
     if args.scope != "dram":
         rows += fetch_rows(csv_url(NAND_SHEET_ID))
     payload = build_scoped_payload(rows, today, previous, args.scope)
-    quote = None
     if args.scope != "other":
+        html = ""
         try:
-            quote = parse_direct_dram(fetch_text(DRAMEXCHANGE_URL), now)
-            print(f"DRAMeXchange direct quote: {quote['publishedAt']}")
+            html = fetch_text(DRAMEXCHANGE_URL)
         except Exception as error:
-            print(f"::warning::Direct DRAM fetch failed; keeping sheet history and today's saved quote: {error}", file=sys.stderr)
-        merge_direct_dram(payload, previous, quote, today)
+            print(f"::warning::Direct source fetch failed; keeping history and today's saved quotes: {error}", file=sys.stderr)
+        for label, parser_fn, merge_fn in (("DRAM", parse_direct_dram, merge_direct_dram),
+                                           ("RDIMM", parse_direct_module, merge_direct_module)):
+            quote = None
+            if html:
+                try:
+                    quote = parser_fn(html, now)
+                    print(f"DRAMeXchange {label} quote: {quote['publishedAt']}")
+                except Exception as error:
+                    print(f"::warning::Direct {label} parse failed; keeping history and today's saved quote: {error}", file=sys.stderr)
+            merge_fn(payload, previous, quote, today)
     else:
         current = previous.get("directDramCurrent")
         payload["directDramCurrent"] = current if current and current.get("date") == today.isoformat() else None
+        current_module = previous.get("directModuleCurrent")
+        payload["directModuleCurrent"] = current_module if current_module and current_module.get("observedDate") == today.isoformat() else None
     OUTPUT_PATH.write_text(
         "window.memoryDataHistoryData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
@@ -252,12 +324,12 @@ def main() -> None:
 def build_scoped_payload(rows: list[dict[str, str]], today: date, previous: dict, scope: str) -> dict:
     selected = set(TARGET_MAP)
     if scope == "dram":
-        selected = set(DIRECT_PRODUCTS)
+        selected = set(DIRECT_PRODUCTS) | {MODULE_KEY}
     elif scope == "other":
-        selected -= set(DIRECT_PRODUCTS)
+        selected -= set(DIRECT_PRODUCTS) | {MODULE_KEY}
     selected_names = {TARGET_MAP[key] for key in selected}
-    direct_names = {TARGET_MAP[key] for key in DIRECT_PRODUCTS}
-    # Only the original public source may supply today's three DRAM chip quotes.
+    direct_names = {TARGET_MAP[key] for key in [*DIRECT_PRODUCTS, MODULE_KEY]}
+    # History comes from the existing source; today's chip/module observations are direct only.
     filtered = [row for row in rows if row.get("Canonical_Product") in selected_names
                 and not (row.get("Date") == today.isoformat()
                          and row.get("Canonical_Product") in direct_names)]

@@ -65,11 +65,16 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
       }
     }
     const panel = page.locator('.memory-module-panel');
-    assert.match(await panel.innerText(), /2,?165(?:\.00)?/);
+    const moduleQuote = await page.evaluate(() => memorySpotRuntime.items.ddr5_rdimm_32gb);
+    assert.ok((await panel.innerText()).includes(`$${moduleQuote.latestValue.toFixed(3)}`));
     assert.match(await panel.innerText(), /수집일/);
     assert.match(await panel.innerText(), /계약가격/);
-    assert.equal(await panel.locator('a').count(), 1);
+    assert.equal(await panel.locator('a').count(), moduleQuote.latestSource ? 2 : 1);
     assert.equal(await panel.locator('a[href="https://www.trendforce.com/price/dram/module_spot"]').count(), 1);
+    if(moduleQuote.latestSource) {
+      assert.match(await panel.innerText(), /원출처 발표 \(KST\)/);
+      assert.equal(await panel.locator(`a[href="${moduleQuote.latestSource.url}"]`).count(), 1);
+    }
     const memoryPage = page.locator('.memory-overview');
     assert.equal(await memoryPage.locator('a[href*="docs.google.com/spreadsheets"], a[href*="memorysupercycle.net"]').count(), 0);
     assert.doesNotMatch(await memoryPage.innerText(), /memorysupercycle|기존 수집 시트|공개 시트/);
