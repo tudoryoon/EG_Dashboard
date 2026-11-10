@@ -132,11 +132,17 @@ NASDAQ100_SNAPSHOT_PATH = Path(__file__).resolve().parents[1] / "data" / "market
 SYMBOL_ALIASES = {
     # Same Class B security transferred to NYSE on 2026-10-06.
     "PSKY": "SKYD",
+    # TXSE alert #2026-073: Texas Capital changed TCBI to TXCP on 2026-11-09.
+    # Preserve the same security's TCBI price history.
+    "TCBI": "TXCP",
     "CRDA": "CRD-A",
     "GEFB": "GEF-B",
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # Nasdaq Corporate Actions Alert #2026-796: merger closed 2026-11-06;
+    # BWMN last traded 2026-11-05 and was suspended effective 2026-11-09.
+    "BWMN",
     # CRH completed the Arcosa merger before the 2026-10-23 NYSE session
     # (SEC 8-K 0001140361-26-040596, Items 2.01 and 3.01).
     "ACA",
@@ -1106,11 +1112,11 @@ def merge_existing_history_window(
 
 
 def load_existing_rows() -> dict[str, dict[str, object]]:
-    if not OUTPUT_PATH.exists():
-        return {}
-    text = OUTPUT_PATH.read_text(encoding="utf-8")
-    payload = json.loads(re.sub(r"^window\.marketRsData = |;\s*$", "", text))
-    return {row["ticker"]: row for row in payload.get("rows", [])}
+    return {
+        normalize_ticker(row["ticker"]): row
+        for row in load_existing_payload().get("rows", [])
+        if isinstance(row, dict) and row.get("ticker")
+    }
 
 
 def normalize_positive_int(value: object) -> int | None:

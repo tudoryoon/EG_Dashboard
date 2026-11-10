@@ -69,11 +69,21 @@ class ManualCapExemptionTests(unittest.TestCase):
     def test_ticker_transfer_resolves_to_skyd_not_wbd(self):
         self.assertEqual(rs.normalize_ticker("PSKY"), "SKYD")
         self.assertFalse(rs.is_terminal_symbol("PSKY"))
+        self.assertEqual(rs.normalize_ticker("TCBI"), "TXCP")
+        self.assertFalse(rs.is_terminal_symbol("TCBI"))
         self.assertEqual(rs.normalize_ticker("WBD"), "WBD")
         self.assertTrue(rs.is_terminal_symbol("WBD"))
 
+    def test_renamed_security_keeps_existing_share_count(self):
+        old_row = {"ticker": "TCBI", "sharesOutstanding": 43_670_939, "price": 101.03}
+        with patch.object(rs, "load_existing_payload", return_value={"rows": [old_row]}):
+            existing = rs.load_existing_rows()
+        with patch.object(rs, "get_manual_shares_outstanding", return_value={}):
+            shares = rs.build_shares_cache(["TXCP"], existing)
+        self.assertEqual(shares["TXCP"], 43_670_939)
+
     def test_completed_merger_tickers_leave_the_rs_universe(self):
-        for ticker in ("ACA", "ACVA", "ATKR", "BZH", "WEAV", "NATH"):
+        for ticker in ("ACA", "ACVA", "ATKR", "BWMN", "BZH", "WEAV", "NATH"):
             self.assertTrue(rs.is_terminal_symbol(ticker))
             self.assertFalse(rs.passes_market_cap_filter(ticker, 1_000_000_000, {ticker}))
 
