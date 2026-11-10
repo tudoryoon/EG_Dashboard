@@ -36,14 +36,16 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
       assert.ok(chart.ticks.includes('2026(E)'), JSON.stringify(chart.ticks));
       assert.ok(chart.pixels > 200);
     }
-    assert.deepEqual(desktop[0].datasets.map(s=>s.last), [750,81.9]);
-    assert.deepEqual(desktop[1].datasets.map(s=>s.last), [190,200,140,220,null]);
+    assert.deepEqual(desktop[0].datasets.map(s=>s.last), [730,77.1]);
+    assert.deepEqual(desktop[1].datasets.map(s=>s.last), [170,200,140,220,null]);
     for(const dataset of desktop[1].datasets) {
       assert.notEqual(dataset.color.at(-1), dataset.color.at(-2));
       assert.equal(dataset.border.at(-1), 1.5);
     }
-    assert.equal(await annual.locator('a').count(), 4);
+    assert.equal(await annual.locator('a').count(), 6);
     assert.match(await annual.innerText(), /\$170B/);
+    assert.match(await annual.innerText(), /7월 \$175B/);
+    assert.doesNotMatch(await annual.innerText(), /기존 추정치 유지|기존 2Q 추정치/);
     assert.match(await total.innerText(), /전년 동일 4사/);
     await annual.screenshot({path:path.join(out,'annual-desktop.png')});
     await total.screenshot({path:path.join(out,'total-desktop.png')});

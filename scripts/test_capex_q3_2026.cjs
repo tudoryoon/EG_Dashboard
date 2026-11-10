@@ -87,5 +87,5 @@ const metaSum4 = key => data[key].series.find(series => series.key === 'meta').v
 assert.equal(ttm.series.find(series => series.key === 'meta').values[quarter],
   oneDecimal(metaSum4('quarterlyCapex') / metaSum4('quarterlyOcf') * 100));
 const annual = vm.runInContext('buildAnnualBig5CapexPanel()', context);
-assert.equal(annual.totals.at(-1), 750);
+assert.equal(annual.totals.at(-1), 730);
 console.log('PASS: CY 3Q26 actuals, MSFT lease/cash distinction, FCF, ratios and alignment.');

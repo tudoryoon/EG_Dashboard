@@ -143,7 +143,7 @@ window.capexDashboardData = {
   },
   annualCapex: {
     title: "Annual Capex",
-    subtitle: "CY 연간 CAPEX · 2026(E)는 3Q26 발표 가이던스 중간값·단일값 기준 (MSFT는 기존 추정치 유지) · ORCL 제외",
+    subtitle: "CY 연간 CAPEX · 2026(E)는 3Q26 최신 공식 가이던스 중간값·단일값 기준 · ORCL 제외",
     checkedAt: "2026-11-10",
     guidance: {
       msft: {
@@ -151,12 +151,33 @@ window.capexDashboardData = {
         releaseDate: "2026-10-28",
         period: "CY2026",
         reportingQuarter: "FY2027 Q1 = CY2026 Q3",
-        estimate: 190,
-        priorQ2Estimate: 190,
+        estimate: 170,
+        priorDashboardEstimate: 190,
+        priorQ2OfficialGuidance: 175,
         officialGuidance: 170,
-        estimateMethod: "prior-q2-estimate-retained-no-upward-revision",
-        basis: "CAPEX including finance leases at commencement; not cash PP&E alone",
-        note: "3Q 콜은 3P 용량 인도 지연으로 CY2026 약 $170B를 명시. 차트는 상향분만 반영하는 기준에 따라 기존 2Q 추정치 $190B 유지; 회사의 최신 공식 가이던스와 다름.",
+        estimateMethod: "official-approximate-guidance",
+        basis: "CAPEX includes finance leases at commencement but excludes operating leases under the FY27 classification; not cash PP&E alone",
+        revisions: [
+          {
+            releaseDate: "2026-04-29",
+            estimate: 190,
+            sourceUrl: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3",
+            note: "CY2026 최초 비교 가이던스. 부품가격 상승 영향 약 $25B 포함.",
+          },
+          {
+            releaseDate: "2026-07-29",
+            estimate: 175,
+            sourceUrl: "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q4",
+            note: "데이터센터·건물 내용연수 15년에서 25년으로 변경. 일부 신규 리스가 금융리스에서 운영리스로 분류되어 보고 CAPEX에서 제외. 이 효과 외 CY2026 투자 기대는 불변.",
+          },
+          {
+            releaseDate: "2026-10-28",
+            estimate: 170,
+            sourceUrl: "https://www.microsoft.com/en-us/investor/events/fy-2027/earnings-fy-2027-q1",
+            note: "3P 용량 인도 지연으로 CY2026 약 $170B. 지연된 인도는 FY27 하반기(2027년 1-6월)로 이동. 직전 공식 $175B 대비 약 $5B 감소.",
+          },
+        ],
+        note: "4월 $190B → 7월 $175B(리스 재분류) → 10월 $170B(3P 인도 지연). $20B 전부를 투자 취소로 해석하면 안 됩니다. 최신 공식 CY2026 약 $170B 반영.",
       },
       googl: {
         sourceUrl: "https://abc.xyz/investor/events/event-details/2026/2026-Q3-Earnings-Call-2026-Ujou16CTw9/default.aspx",
@@ -193,10 +214,10 @@ window.capexDashboardData = {
         note: "3Q 실적 발표에서 2026 cash CAPEX 약 $220B 유지.",
       },
     },
-    sourceNote: "CY 3Q26 발표 기준. <a href='https://www.microsoft.com/en-us/investor/events/fy-2027/earnings-fy-2027-q1' target='_blank' rel='noopener noreferrer'>MSFT</a>: 차트는 기존 2Q 추정치 $190B 유지(상향 없음). 최신 공식 CY2026 가이던스는 3P 용량 인도 지연으로 약 $170B이며 차트 추정치와 다릅니다. <a href='https://abc.xyz/investor/events/event-details/2026/2026-Q3-Earnings-Call-2026-Ujou16CTw9/default.aspx' target='_blank' rel='noopener noreferrer'>GOOGL</a>: $195-205B 중간값 $200B. <a href='https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-Third-Quarter-2026-Results/default.aspx' target='_blank' rel='noopener noreferrer'>META</a>: $135-145B 중간값 $140B. <a href='https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Third-Quarter-Results/default.aspx' target='_blank' rel='noopener noreferrer'>AMZN</a>: cash CAPEX 약 $220B. MSFT는 금융리스 개시액, META는 금융리스 원금상환을 포함하며 GOOGL·AMZN은 각 회사가 공시한 현금 CAPEX 기준입니다. ORCL은 동일 CY2026 전망이 없어 제외하며 FY 가이던스를 CY로 혼용하지 않습니다.",
+    sourceNote: "CY 3Q26 최신 공식 발표 기준. MSFT: <a href='https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q3' target='_blank' rel='noopener noreferrer'>4월 $190B</a> → <a href='https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q4' target='_blank' rel='noopener noreferrer'>7월 $175B(리스 재분류)</a> → <a href='https://www.microsoft.com/en-us/investor/events/fy-2027/earnings-fy-2027-q1' target='_blank' rel='noopener noreferrer'>10월 $170B(3P 인도 지연)</a>. $20B 전부가 투자 취소는 아니며 직전 공식 가이드 대비 감소는 $5B입니다. <a href='https://abc.xyz/investor/events/event-details/2026/2026-Q3-Earnings-Call-2026-Ujou16CTw9/default.aspx' target='_blank' rel='noopener noreferrer'>GOOGL</a>: $195-205B 중간값 $200B. <a href='https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-Third-Quarter-2026-Results/default.aspx' target='_blank' rel='noopener noreferrer'>META</a>: $135-145B 중간값 $140B. <a href='https://ir.aboutamazon.com/news-release/news-release-details/2026/Amazon-com-Announces-Third-Quarter-Results/default.aspx' target='_blank' rel='noopener noreferrer'>AMZN</a>: cash CAPEX 약 $220B. MSFT는 금융리스 개시액(운영리스 제외), META는 금융리스 원금상환을 포함하며 GOOGL·AMZN은 각 회사가 공시한 현금 CAPEX 기준입니다. ORCL은 동일 CY2026 전망이 없어 제외하며 FY 가이던스를 CY로 혼용하지 않습니다.",
     unit: "$B",
     series: [
-      { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 190.0] },
+      { key: "msft", name: "MSFT", values: [11.4, 15.8, 18.0, 20.6, 27.5, 28.4, 41.2, 75.6, 118.0, 170.0] },
       { key: "googl", name: "GOOGL", values: [13.2, 25.1, 23.5, 22.3, 24.6, 31.5, 32.3, 52.5, 91.4, 200.0] },
       { key: "meta", name: "META", values: [6.7, 14.0, 15.7, 15.7, 19.2, 32.0, 28.1, 39.2, 72.2, 140.0] },
       { key: "amzn", name: "AMZN", values: [12.0, 13.4, 16.9, 40.1, 61.1, 63.6, 52.7, 83.0, 130.7, 220.0] },
