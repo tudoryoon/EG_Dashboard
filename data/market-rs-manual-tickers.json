@@ -640,6 +640,17 @@
       "sharesOutstanding": 7700000
     },
     {
+      "ticker": "IHE",
+      "name": "iShares U.S. Pharmaceuticals ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 15194242
+    },
+    {
       "ticker": "ILMN",
       "name": "Illumina, Inc.",
       "memberships": {
