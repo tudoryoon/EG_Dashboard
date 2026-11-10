@@ -7309,7 +7309,7 @@ function createCapexLineChart(canvas, labels, panel, formatter, minOverride = nu
 
 function isCapexEstimateLabel(label) {
   const text = Array.isArray(label) ? label.join(" ") : String(label ?? "");
-  return text.startsWith("2026E");
+  return /^\d{4}\s*\(?E\)?(?:\s|$)/i.test(text);
 }
 
 function darkenCapexColor(color, factor = 0.25) {
@@ -7319,6 +7319,14 @@ function darkenCapexColor(color, factor = 0.25) {
   }
   const channels = [0, 2, 4].map((offset) => Math.max(0, Math.round(parseInt(hex.slice(offset, offset + 2), 16) * (1 - factor))));
   return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function thinCapexAnnualTicks(scale) {
+  const ticks = scale.ticks;
+  const count = Math.min(ticks.length, Math.max(2, Math.floor(scale.width / 75)));
+  if (ticks.length <= count) return;
+  // Keep both endpoints so the estimate year stays visible on narrow screens.
+  scale.ticks = Array.from({ length: count }, (_, index) => ticks[Math.round(index * (ticks.length - 1) / (count - 1))]);
 }
 
 function createCapexBarChart(canvas, labels, panel, formatter) {
@@ -7346,6 +7354,7 @@ function createCapexBarChart(canvas, labels, panel, formatter) {
   const maxValue = allValues.length ? Math.max(...allValues) : 100;
   const yMin = minValue < 0 ? Math.floor((minValue * 1.1) / 10) * 10 : 0;
   const yMax = Math.ceil((maxValue * 1.1) / 10) * 10;
+  const hasAnnualEstimate = labels.some(isCapexEstimateLabel);
 
   const chart = new Chart(canvas, {
     type: "bar",
@@ -7369,7 +7378,8 @@ function createCapexBarChart(canvas, labels, panel, formatter) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 10, maxRotation: 0 },
+          afterBuildTicks: hasAnnualEstimate ? thinCapexAnnualTicks : undefined,
+          ticks: { color: "#8d8d86", autoSkip: !hasAnnualEstimate, maxTicksLimit: 10, maxRotation: 0 },
           border: { color: "#d8d8d2" },
         },
         y: {
@@ -7410,11 +7420,18 @@ function buildAnnualBig5CapexPanel() {
     ),
   );
   const yoy = totals.map((value, index) => {
-    const priorIndex = isCapexEstimateLabel(labels[index]) ? labels.indexOf("2025") : index - 1;
-    if (priorIndex < 0 || !Number.isFinite(value) || !Number.isFinite(totals[priorIndex]) || totals[priorIndex] === 0) {
+    const priorIndex = index - 1;
+    if (priorIndex < 0 || !Number.isFinite(value)) {
       return null;
     }
-    return Number((((value - totals[priorIndex]) / totals[priorIndex]) * 100).toFixed(1));
+    // An estimate excluding ORCL must compare against the same companies in the prior year.
+    const priorTotal = series.reduce((sum, companySeries) => {
+      const current = companySeries.values[index];
+      const prior = companySeries.values[priorIndex];
+      return sum + (Number.isFinite(current) && Number.isFinite(prior) ? prior : 0);
+    }, 0);
+    if (priorTotal === 0) return null;
+    return Number((((value - priorTotal) / priorTotal) * 100).toFixed(1));
   });
 
   return {
@@ -7525,7 +7542,8 @@ function createCapexAggregateComboChart(canvas, panel) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#8d8d86", autoSkip: true, maxTicksLimit: 10, maxRotation: 0 },
+          afterBuildTicks: thinCapexAnnualTicks,
+          ticks: { color: "#8d8d86", autoSkip: false, maxTicksLimit: 10, maxRotation: 0 },
           border: { color: "#d8d8d2" },
         },
         yCapex: {
@@ -17896,9 +17914,9 @@ function renderCapexOverview() {
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
             <div>
-              <h3>Annual BIG5 Capex Total (리스 포함, CY기준)</h3>
-              <p>Annual big tech capex sum; both 2026E vintages show growth versus 2025 actual</p>
-              <p>*2026E 합산은 ORCL 제외 (공식 연간 Capex 가이던스 미공개)</p>
+              <h3>Annual Big Tech Capex Total (CY 기준)</h3>
+              <p>2026(E) · CY 3Q26 발표 기준 연간 전망 · 확인 ${capexDashboardData.annualCapex?.checkedAt ?? "-"}</p>
+              <p>*2026(E) 합산·YoY는 ORCL 제외 · 전년 동일 4사 기준 · 회사별 리스 포함 기준은 아래 출처 참고</p>
             </div>
           </div>
           <div class="cloud-chart-wrap cloud-chart-wrap-tall">
@@ -17949,6 +17967,7 @@ function renderCapexOverview() {
           <div class="cloud-chart-wrap">
             <canvas data-capex-chart="annual-capex"></canvas>
           </div>
+          ${capexDashboardData.annualCapex.sourceNote ? `<p class="capex-source-note">${capexDashboardData.annualCapex.sourceNote}</p>` : ""}
         </article>
         <article class="cloud-panel cloud-panel-wide">
           <div class="us-panel-head">
