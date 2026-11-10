@@ -12,7 +12,7 @@ window.studyAmznBondData = {
     "name": "Amazon 2.100% Senior Unsecured Notes 2031"
   },
   "updatedAt": "2026-11-06",
-  "checkedAt": "2026-11-09T01:00:55+00:00",
+  "checkedAt": "2026-11-10T03:38:59+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyAmznBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-06",
+    "endDate": "2026-11-09",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -37,7 +37,8 @@ window.studyAmznBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07"
+      "2026-09-07",
+      "2026-11-09"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -49,7 +50,8 @@ window.studyAmznBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07"
+      "2026-09-07",
+      "2026-11-09"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3316,9 +3318,9 @@ window.studyAmznBondData = {
       "pricePer100": 87.37,
       "sourceSha256": "257322f323f58163a43786ab368443d6baa683393e3c267f3e6c998c14c05330",
       "yieldToWorstPct": 5.28,
-      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261106",
+      "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-09T01:00:55+00:00",
-      "lastCollectedAt": "2026-11-09T01:00:55+00:00"
+      "lastCollectedAt": "2026-11-10T03:38:59+00:00"
     }
   ]
 };
