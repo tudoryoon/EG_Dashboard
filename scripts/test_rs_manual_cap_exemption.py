@@ -71,6 +71,8 @@ class ManualCapExemptionTests(unittest.TestCase):
         self.assertFalse(rs.is_terminal_symbol("PSKY"))
         self.assertEqual(rs.normalize_ticker("TCBI"), "TXCP")
         self.assertFalse(rs.is_terminal_symbol("TCBI"))
+        self.assertEqual(rs.normalize_ticker("ACHV"), "QUIT")
+        self.assertFalse(rs.is_terminal_symbol("ACHV"))
         self.assertEqual(rs.normalize_ticker("WBD"), "WBD")
         self.assertTrue(rs.is_terminal_symbol("WBD"))
 
@@ -81,6 +83,14 @@ class ManualCapExemptionTests(unittest.TestCase):
         with patch.object(rs, "get_manual_shares_outstanding", return_value={}):
             shares = rs.build_shares_cache(["TXCP"], existing)
         self.assertEqual(shares["TXCP"], 43_670_939)
+
+    def test_achv_rename_keeps_existing_share_count(self):
+        old_row = {"ticker": "ACHV", "sharesOutstanding": 102_659_057, "price": 6.78}
+        with patch.object(rs, "load_existing_payload", return_value={"rows": [old_row]}):
+            existing = rs.load_existing_rows()
+        with patch.object(rs, "get_manual_shares_outstanding", return_value={}):
+            shares = rs.build_shares_cache(["QUIT"], existing)
+        self.assertEqual(shares["QUIT"], 102_659_057)
 
     def test_completed_merger_tickers_leave_the_rs_universe(self):
         for ticker in ("ACA", "ACVA", "ATKR", "BWMN", "BZH", "WEAV", "NATH"):

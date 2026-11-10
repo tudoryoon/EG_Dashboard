@@ -132,6 +132,8 @@ NASDAQ100_SNAPSHOT_PATH = Path(__file__).resolve().parents[1] / "data" / "market
 SYMBOL_ALIASES = {
     # Same Class B security transferred to NYSE on 2026-10-06.
     "PSKY": "SKYD",
+    # AchieveRx issuer release: unchanged CUSIP, ACHV -> QUIT on 2026-11-10.
+    "ACHV": "QUIT",
     # TXSE alert #2026-073: Texas Capital changed TCBI to TXCP on 2026-11-09.
     # Preserve the same security's TCBI price history.
     "TCBI": "TXCP",
