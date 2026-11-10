@@ -16,6 +16,9 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(url, {waitUntil:'load',timeout:120000});
     await page.waitForFunction(() => typeof Chart === 'function' && document.querySelector('[data-memory-series="ddr5_rdimm_32gb"]'));
+    const defaults = await page.locator('[data-memory-range].active').evaluateAll(buttons => buttons.map(button => button.dataset.memoryRange));
+    assert.ok(defaults.length > 0);
+    assert.ok(defaults.every(range => range === 'ytd'), JSON.stringify(defaults));
     const directQuotes = await page.evaluate(() => Object.fromEntries(
       ['ddr5_16gb','ddr4_16gb','ddr4_8gb'].map(key => {
         const item = memorySpotRuntime.items[key];
@@ -95,9 +98,9 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
         colored,charts:charts.length,instances:Object.keys(Chart.instances).length};
     });
     const initial = await chartInfo();
-    assert.equal(initial.first, '2025-11-24');
+    assert.equal(initial.first, `${Number(initial.last.slice(0,4))-1}-12-31`);
     assert.deepEqual(initial.series.map(series => series.label), ['High','Average','Low']);
-    assert.ok(initial.series.every(series => series.points >= 222));
+    assert.ok(initial.series.every(series => series.points > 0));
     assert.ok(initial.colored.every(count => count > 100), JSON.stringify(initial));
     assert.deepEqual(initial.visible, [true,true,true]);
     const high = panel.locator('[data-memory-series-toggle="high"]');
@@ -122,6 +125,10 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
       assert.equal(info.instances, initial.instances);
       assert.ok(info.series.every(series => series.points > 0));
       if(range === '1m') assert.ok(info.count <= 32);
+      if(range === 'max') {
+        assert.equal(info.first, '2025-11-24');
+        assert.ok(info.series.every(series => series.points >= 222));
+      }
     }
     const changeToggle = panel.locator('[data-memory-change-toggle="ddr5_rdimm_32gb"]');
     const priceToggle = panel.locator('[data-memory-price-toggle="ddr5_rdimm_32gb"]');

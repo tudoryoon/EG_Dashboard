@@ -29,6 +29,13 @@ vm.runInContext(functionSource('loadMemorySpotHistory'), context);
 vm.runInContext(functionSource('buildMemorySpotSeriesDatasets'), context);
 vm.runInContext(functionSource('buildMemoryPriceChanges'), context);
 vm.runInContext(functionSource('syncMemoryChartLayout'), context);
+vm.runInContext(functionSource('getMemorySpotRange'), context);
+for(const key of ['series:ddr5_rdimm_32gb','series:ddr5_16gb','basket:dram']) {
+  assert.equal(context.getMemorySpotRange(key), 'ytd');
+}
+context.state.memorySpotRanges = {'series:ddr5_rdimm_32gb':'3m'};
+assert.equal(context.getMemorySpotRange('series:ddr5_rdimm_32gb'), '3m');
+assert.equal(context.getMemorySpotRange('series:ddr5_16gb'), 'ytd');
 for(const [priceVisible,changeVisible] of [[true,true],[false,true],[true,false],[false,false]]) {
   const visibility = [priceVisible,changeVisible];
   const chart = {data:{datasets:[{}, {isMemoryDailyChange:true}]},

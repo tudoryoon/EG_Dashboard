@@ -16239,7 +16239,7 @@ const MEMORY_SPOT_RANGE_OPTIONS = [
 ];
 
 function getMemorySpotRange(targetKey) {
-  return state.memorySpotRanges?.[targetKey] ?? "3y";
+  return state.memorySpotRanges?.[targetKey] ?? "ytd";
 }
 
 function buildMemoryChartPayload(labels, datasets, rangeKey) {
