@@ -60,7 +60,7 @@ class TrendHistoryTests(unittest.TestCase):
         self.assertEqual(full["AAA"]["score"][-53:], recent["AAA"]["score"][-53:])
 
     def test_new_listing_keeps_existing_readiness_rules(self):
-        source, market = fixture(tickers=("IPO", "DRAM", "SPCX"))
+        source, market = fixture(tickers=("IPO", "DRAM", "SPCX", "QNDX"))
         for history in source["histories"].values():
             history["price"][:350] = [None] * 350
         rows, histories = build(source, market)
@@ -69,7 +69,24 @@ class TrendHistoryTests(unittest.TestCase):
         self.assertIsNotNone(histories["DRAM"]["score"][399])
         self.assertIsNone(histories["SPCX"]["score"][368])
         self.assertIsNotNone(histories["SPCX"]["score"][369])
+        self.assertIsNone(histories["QNDX"]["score"][398])
+        self.assertIsNotNone(histories["QNDX"]["score"][399])
+        qndx = next(row for row in rows if row["ticker"] == "QNDX")
+        self.assertEqual(qndx["scoreBasis"], "available-history-provisional")
+        self.assertEqual(qndx["historySessions"], 72)
         self.assertIsNone(next(row["score"] for row in rows if row["ticker"] == "IPO"))
+
+    def test_qndx_provisional_converges_to_standard_after_200_sessions(self):
+        source, market = fixture(sessions=260, tickers=("QNDX",))
+        rows, histories = build(source, market)
+        self.assertNotIn("scoreBasis", rows[0])
+        self.assertIsNone(histories["QNDX"]["score"][48])
+        self.assertIsNotNone(histories["QNDX"]["score"][49])
+        dates = source["historyDates"]
+        prices = trend.as_numeric_series(source["histories"]["QNDX"]["price"], dates)
+        benchmark = trend.build_benchmark_series(market, "sp500")
+        standard = trend.build_score_frame(prices, prices.div(benchmark))
+        self.assertEqual(histories["QNDX"]["score"][199:], trend.serialize_series(standard["score"], 0)[199:])
 
     def test_priority_refresh_aligns_untouched_dates_and_preserves_global_rank(self):
         source, market = fixture()

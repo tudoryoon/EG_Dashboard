@@ -916,6 +916,17 @@
       "sharesOutstanding": 356402526
     },
     {
+      "ticker": "QNDX",
+      "name": "State Street SPDR Portfolio Nasdaq 100 ETF",
+      "memberships": {
+        "sp500": false,
+        "nasdaq100": false,
+        "dowjones": false,
+        "russell2000": false
+      },
+      "sharesOutstanding": 28377573
+    },
+    {
       "ticker": "QQQ",
       "name": "Invesco QQQ Trust",
       "memberships": {

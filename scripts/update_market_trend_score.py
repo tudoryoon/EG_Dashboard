@@ -25,10 +25,11 @@ HISTORY_RANGES = [
 ]
 ATR_MIN_PERIODS = 2
 # Newly listed names can be scored before a full 200-session history is
-# available. Keep DRAM's established 50-session threshold, while SPCX only
+# available. DRAM and QNDX use a 50-session threshold, while SPCX only
 # needs enough sessions for its 20-day trend inputs to be meaningful.
 PROVISIONAL_LONG_TREND_MIN_PERIODS_BY_TICKER = {
     "DRAM": 50,
+    "QNDX": 50,
     "SPCX": 20,
 }
 PROVISIONAL_LONG_TREND_TICKERS = set(PROVISIONAL_LONG_TREND_MIN_PERIODS_BY_TICKER)
@@ -731,7 +732,7 @@ def build_payload() -> dict:
         "scoring": {
             "label": "Trend Score",
             "description": "Price trend 4 points, benchmark-relative RS line trend 4 points, and short-term momentum 2 points. NASDAQ100, S&P500, and Russell 2000 use their own index benchmarks; ALL uses the S&P500 benchmark.",
-            "provisionalNote": "DRAM and newly listed SPCX use available-history long-term averages until a full 200-session history is available (DRAM: 50 sessions, SPCX: 20 sessions).",
+            "provisionalNote": "DRAM, QNDX and SPCX use available-history long-term averages until a full 200-session history is available (DRAM/QNDX: 50 sessions, SPCX: 20 sessions).",
             "absolute": [
                 "Price > 200DMA",
                 "50DMA > 200DMA",
@@ -835,7 +836,7 @@ def build_daily_briefing_priority_payload() -> dict:
         "scoring": {
             "label": "Trend Score",
             "description": "Price trend 4 points, benchmark-relative RS line trend 4 points, and short-term momentum 2 points. NASDAQ100, S&P500, and Russell 2000 use their own index benchmarks; ALL uses the S&P500 benchmark.",
-            "provisionalNote": "DRAM and newly listed SPCX use available-history long-term averages until a full 200-session history is available (DRAM: 50 sessions, SPCX: 20 sessions).",
+            "provisionalNote": "DRAM, QNDX and SPCX use available-history long-term averages until a full 200-session history is available (DRAM/QNDX: 50 sessions, SPCX: 20 sessions).",
             "absolute": ["Price > 200DMA", "50DMA > 200DMA", "Price > 50DMA", "50DMA rising versus 5 sessions ago"],
             "relative": ["Universe RS rating > RS 200DMA", "RS 50DMA > RS 200DMA", "Universe RS rating > RS 50DMA", "RS 50DMA rising versus 5 sessions ago"],
             "momentum": ["Price > 20DMA", "Universe RS rating > RS 20DMA"],
