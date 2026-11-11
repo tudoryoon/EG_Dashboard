@@ -459,7 +459,7 @@ window.llmDashboardData = {
     }
   ],
   "arrRefresh": {
-    "checkedAt": "2026-11-10T08:58:07.253016+00:00",
+    "checkedAt": "2026-11-11T08:38:31.251372+00:00",
     "sources": [
       {
         "key": "tickertrends",
@@ -472,7 +472,7 @@ window.llmDashboardData = {
         "key": "epoch",
         "url": "https://epoch.ai/data/ai_companies_revenue_reports.csv",
         "status": "ok",
-        "observations": 3,
+        "observations": 2,
         "reviewWarnings": 1
       }
     ]
