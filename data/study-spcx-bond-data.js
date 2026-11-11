@@ -12,8 +12,8 @@ window.studySpcxBondData = {
     "maturityDate": "2031-07-15",
     "name": "SpaceX 5.350% Senior Unsecured Notes 2031 (144A)"
   },
-  "updatedAt": "2026-11-06",
-  "checkedAt": "2026-11-10T03:38:59+00:00",
+  "updatedAt": "2026-11-09",
+  "checkedAt": "2026-11-11T01:18:28+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -27,16 +27,16 @@ window.studySpcxBondData = {
   },
   "coverage": {
     "startDate": "2026-06-26",
-    "endDate": "2026-11-09",
+    "endDate": "2026-11-10",
     "missingWeekdays": [
       "2026-07-03",
       "2026-09-07",
-      "2026-11-09"
+      "2026-11-10"
     ],
     "unavailableDates": [
       "2026-07-03",
       "2026-09-07",
-      "2026-11-09"
+      "2026-11-10"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -982,6 +982,16 @@ window.studySpcxBondData = {
       "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-09T01:00:55+00:00",
       "lastCollectedAt": "2026-11-10T03:38:59+00:00"
+    },
+    {
+      "date": "2026-11-09",
+      "ytmPct": 7.09,
+      "pricePer100": 93.14,
+      "sourceSha256": "92b5ab0e038bc5a4bf452f6b4d1c85e52e3ad695a3f64385c1b0f4a57216a3ea",
+      "yieldToWorstPct": 7.09,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261109",
+      "firstCollectedAt": "2026-11-11T01:18:28+00:00",
+      "lastCollectedAt": "2026-11-11T01:18:28+00:00"
     }
   ]
 };
