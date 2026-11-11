@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import re
 import time
 from dataclasses import dataclass
@@ -593,28 +594,52 @@ def merge_latest_bls_fallback(parsed: dict[str, Any], source_id: str) -> dict[st
     }
 
 
-def build_bls_official_yoy_values(dates: list[str], source_id: str) -> list[float | None] | None:
-    bls_series_id = BLS_CPI_OFFICIAL_YOY.get(source_id)
-    if not bls_series_id or not dates:
-        return None
-
-    start_year = int(dates[0][:4]) - 1
-    current_year = datetime.now(timezone.utc).year
-    try:
-        bls = parse_bls_series_range(bls_series_id, start_year, current_year)
-    except Exception:
-        return None
-    by_month = dict(zip(bls["dates"], bls["values"]))
+def compute_bls_cpi_yoy(dates: list[str], by_month: dict[str, float], series_id: str) -> dict[str, Any]:
     yoy_values: list[float | None] = []
+    estimates: dict[str, Any] = {}
     for month in dates:
         previous_month = f"{int(month[:4]) - 1}-{month[5:7]}"
         current_value = by_month.get(month)
         previous_value = by_month.get(previous_month)
-        if current_value is None or previous_value in {None, 0}:
-            yoy_values.append(None)
-        else:
-            yoy_values.append(safe_round(((current_value / previous_value) - 1) * 100, 2))
-    return yoy_values
+        estimate = None
+        # Only bridge the documented October 2025 shutdown gap, never other missing months.
+        if month == "2026-10" and current_value is not None and previous_value is None:
+            before, after = by_month.get("2025-09"), by_month.get("2025-11")
+            if before is not None and after is not None and before > 0 and after > 0:
+                previous_value = math.sqrt(before * after)
+                estimate = {
+                    "status": "estimate",
+                    "method": "nsa_geometric_base",
+                    "reference": month,
+                    "releaseDate": "2026-11-10",
+                    "sourceId": series_id,
+                    "sourceUrl": "https://www.bls.gov/news.release/archives/cpi_11102026.htm",
+                    "methodologyUrl": "https://www.bls.gov/cpi/factsheets/approximating-missing-data.htm",
+                    "currentIndexValue": current_value,
+                    "baseReference": previous_month,
+                    "estimatedBaseValue": previous_value,
+                    "baseNeighbors": {"2025-09": before, "2025-11": after},
+                    "note": "2025-10 기준지수 미공표로 2025-09·11 비계절조정 지수의 기하평균을 사용한 비공식 YoY 추정치입니다. BLS 공식 YoY가 아닙니다.",
+                }
+        value = None if current_value is None or previous_value in {None, 0} else safe_round(((current_value / previous_value) - 1) * 100, 2)
+        yoy_values.append(value)
+        if estimate is not None and value is not None:
+            estimates[month] = {**estimate, "value": value}
+    return {"yoyValues": yoy_values, "yoyEstimates": estimates}
+
+
+def build_bls_cpi_yoy_data(dates: list[str], source_id: str) -> dict[str, Any] | None:
+    bls_series_id = BLS_CPI_OFFICIAL_YOY.get(source_id)
+    if not bls_series_id or not dates:
+        return None
+
+    current_year = datetime.now(timezone.utc).year
+    try:
+        # Keep the latest year outside the public API's silently truncated long ranges.
+        bls = parse_bls_series(bls_series_id, current_year - 1, current_year)
+    except Exception:
+        return None
+    return compute_bls_cpi_yoy(dates, dict(zip(bls["dates"], bls["values"])), bls_series_id)
 
 
 def safe_round(value: float | None, digits: int = 2) -> float | None:
@@ -936,12 +961,26 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                 release_history = append_fallback_release_if_needed(release_history, series, snapshot)
             latest_release = release_history[-1] if release_history else None
             yoy_values = compute_yoy_values(parsed["dates"], parsed["values"])
-            official_yoy_values = build_bls_official_yoy_values(parsed["dates"], series.source_id)
-            if official_yoy_values:
+            bls_yoy_data = build_bls_cpi_yoy_data(parsed["dates"], series.source_id)
+            yoy_estimates = {}
+            existing_yoy = dict(zip(existing_series.get("dates", []), existing_series.get("yoyValues", [])))
+            if series.source_id in BLS_CPI_OFFICIAL_YOY:
+                yoy_values = [
+                    existing_yoy[reference] if existing_yoy.get(reference) is not None else fallback_value
+                    for reference, fallback_value in zip(parsed["dates"], yoy_values)
+                ]
+            if bls_yoy_data is not None:
                 yoy_values = [
                     official_value if official_value is not None else fallback_value
-                    for official_value, fallback_value in zip(official_yoy_values, yoy_values)
+                    for official_value, fallback_value in zip(bls_yoy_data["yoyValues"], yoy_values)
                 ]
+                yoy_estimates = bls_yoy_data["yoyEstimates"]
+            for reference, estimate in existing_series.get("yoyEstimates", {}).items():
+                if reference in parsed["dates"]:
+                    position = parsed["dates"].index(reference)
+                    if bls_yoy_data is None or bls_yoy_data["yoyValues"][position] is None:
+                        yoy_values[position] = estimate["value"]
+                        yoy_estimates[reference] = estimate
             if yoy_values:
                 snapshot["yoyPct"] = yoy_values[-1]
             payload_series = {
@@ -959,6 +998,8 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
             }
             if yoy_values:
                 payload_series["yoyValues"] = yoy_values
+            if yoy_estimates:
+                payload_series["yoyEstimates"] = yoy_estimates
             if release_fetch_error:
                 payload_series["releaseFetchStatus"] = "stale"
                 payload_series["releaseFetchError"] = release_fetch_error
@@ -981,6 +1022,7 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                     "deltaValue": existing_series.get("deltaValue"),
                     "momPct": existing_series.get("momPct"),
                     "yoyPct": existing_series.get("yoyPct"),
+                    **{key: existing_series[key] for key in ("yoyValues", "yoyEstimates") if key in existing_series},
                     "fetchStatus": "stale",
                     "fetchError": str(error),
                 }
@@ -1024,14 +1066,18 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
     }
 
 
-def build_payload() -> dict[str, Any]:
+def build_payload(selected_indicators: set[str] | None = None) -> dict[str, Any]:
     existing_payload = load_existing_payload()
     existing_by_key = {
         str(indicator.get("key")): indicator
         for indicator in existing_payload.get("indicators", [])
         if isinstance(indicator, dict)
     }
-    indicators = [build_indicator_payload(config, existing_by_key.get(config["key"])) for config in INDICATORS]
+    indicators = [
+        build_indicator_payload(config, existing_by_key.get(config["key"]))
+        if selected_indicators is None or config["key"] in selected_indicators else existing_by_key[config["key"]]
+        for config in INDICATORS
+    ]
     categories = [
         {"key": "inflation", "label": "Inflation", "items": ["CPI", "PPI", "PCE / Core PCE"]},
         {"key": "labor", "label": "Labor", "items": ["Employment Situation", "JOLTS"]},
@@ -1052,8 +1098,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--release-dates-only", action="store_true")
     parser.add_argument("--backfill-release-dates", action="store_true")
+    parser.add_argument("--indicators", nargs="+", choices=[config["key"] for config in INDICATORS])
     args = parser.parse_args()
-    payload = load_existing_payload() if args.release_dates_only else build_payload()
+    payload = load_existing_payload() if args.release_dates_only else build_payload(set(args.indicators) if args.indicators else None)
     enrich_release_calendar(payload, backfill=args.backfill_release_dates)
     OUTPUT_PATH.write_text(
         "window.macroIndicatorsData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",

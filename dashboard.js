@@ -4131,6 +4131,7 @@ function buildTotalDashboardPayload(rangeKey) {
       }
       return item.fillForward && Number.isFinite(carriedRawValue) ? carriedRawValue : null;
     });
+    const estimateDates = new Set((item.releasePoints ?? []).filter((point) => point.estimate).map((point) => point.date));
 
     return {
       key: item.key,
@@ -4147,7 +4148,8 @@ function buildTotalDashboardPayload(rangeKey) {
       borderDash: item.isRate ? [7, 5] : [],
       stepped: item.releaseAligned ? "before" : false,
       tension: 0.18,
-      pointRadius: 0,
+      pointRadius: (context) => estimateDates.has(selectedLabels[context.dataIndex]) ? 4 : 0,
+      pointStyle: (context) => estimateDates.has(selectedLabels[context.dataIndex]) ? "triangle" : "circle",
       pointHoverRadius: 4,
       pointHitRadius: 10,
       spanGaps: true,
@@ -5733,14 +5735,16 @@ function buildMacroChartPayload(indicator, series, mode) {
   const derivedValues = getMacroDerivedValues(series, kind);
   const labels = [];
   const values = [];
+  const estimates = [];
   (series.dates ?? []).forEach((dateText, index) => {
     if (startMonth && dateText < startMonth) {
       return;
     }
     labels.push(dateText);
     values.push(derivedValues[index] ?? null);
+    estimates.push(kind === "yoy" ? series.yoyEstimates?.[dateText] ?? null : null);
   });
-  return { labels, values, kind, viewLabel: getMacroChartKindLabel(kind) };
+  return { labels, values, estimates, kind, viewLabel: getMacroChartKindLabel(kind) };
 }
 
 function createMacroIndicatorChart(canvas, indicator, series, mode) {
@@ -5762,9 +5766,11 @@ function createMacroIndicatorChart(canvas, indicator, series, mode) {
           backgroundColor: series.color ?? "#111827",
           borderWidth: 2.5,
           tension: 0.18,
-          pointRadius: 0,
+          pointRadius: (context) => payload.estimates[context.dataIndex] ? 4 : 0,
+          pointStyle: (context) => payload.estimates[context.dataIndex] ? "triangle" : "circle",
           pointHoverRadius: 4,
           spanGaps: false,
+          segment: { borderDash: (context) => payload.estimates[context.p0DataIndex] || payload.estimates[context.p1DataIndex] ? [3, 3] : [] },
         },
       ],
     },
@@ -5787,7 +5793,8 @@ function createMacroIndicatorChart(canvas, indicator, series, mode) {
         tooltip: {
           callbacks: {
             title: (items) => formatMonthLabel(items[0]?.label ?? ""),
-            label: (context) => `${series.label}: ${formatMacroChartValue(payload.kind, series.unit, context.parsed.y)}`,
+            label: (context) => `${series.label}: ${formatMacroChartValue(payload.kind, series.unit, context.parsed.y)}${payload.estimates[context.dataIndex] ? " · 추정 YoY (BLS 공식값 아님)" : ""}`,
+            afterLabel: (context) => payload.estimates[context.dataIndex]?.note ?? "",
           },
         },
       },
@@ -5945,7 +5952,8 @@ function alignPublishedMacroSeries(series, group, historicalReference = false) {
     const release = calendar[reference.slice(0, 7)];
     if (value === null || value === undefined || !Number.isFinite(Number(value))) return;
     if (release?.releaseDate) {
-      points.push({ reference: reference.slice(0, 7), date: release.releaseDate, value: Number(value) });
+      points.push({ reference: reference.slice(0, 7), date: release.releaseDate, value: Number(value),
+        ...(series.yoyEstimates?.[reference] ? { estimate: series.yoyEstimates[reference] } : {}) });
     } else if (historicalReference && ["cpi", "pce"].includes(group)
       && firstReleaseReference && reference.slice(0, 7) < firstReleaseReference) {
       // Restore old observations without inventing publication dates or filling recent calendar gaps.
@@ -5976,7 +5984,15 @@ function macroValueBefore(item, startDate) {
 function macroReleaseTooltip(dataset, date) {
   const point = (dataset.releasePoints ?? []).filter((entry) => entry.date <= date).at(-1);
   if (point?.dateBasis === "reference-month") return ` | 대상 ${point.reference} · 대상월 기준(발표일 미확인)`;
-  return point ? ` | 대상 ${point.reference} · 발표 ${point.date} (미국)` : "";
+  return point ? ` | 대상 ${point.reference} · 발표 ${point.date} (미국)${point.estimate ? " · 추정 YoY: 전년 기준지수 기하평균 보간, BLS 공식 YoY 아님" : ""}` : "";
+}
+
+function renderMacroEstimateNotes(items, endDate = "") {
+  return items.map((item) => {
+    const point = (item.releasePoints ?? []).filter((entry) => !endDate || entry.date <= endDate).at(-1);
+    if (!point?.estimate) return "";
+    return `<p class="market-rs-chart-caption" data-macro-estimate-note><strong>${escapeHtml(item.label)} · ${point.reference} ${point.value.toFixed(2)}% 추정</strong> · 2025-10 기준지수를 전후 월 기하평균으로 보간. BLS 공식 YoY가 아닙니다. <a href="${escapeHtml(point.estimate.methodologyUrl)}" target="_blank" rel="noopener noreferrer">산출 근거</a></p>`;
+  }).join("");
 }
 
 function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, axis = "percent", formatter = null, historicalReference = false }) {
@@ -5987,7 +6003,8 @@ function buildMacroIndicatorDashboardItem({ key, label, seriesKey, kind, color, 
   const values = getMacroDerivedValues(series, kind);
   const group = (macroIndicatorsData.indicators ?? []).find((indicator) =>
     (indicator.series ?? []).some((entry) => entry.key === seriesKey))?.key;
-  const published = alignPublishedMacroSeries({ dates: series.dates, values }, group, historicalReference);
+  const published = alignPublishedMacroSeries({ dates: series.dates, values,
+    yoyEstimates: kind === "yoy" ? series.yoyEstimates : undefined }, group, historicalReference);
   return {
     key,
     label,
@@ -6266,6 +6283,7 @@ function buildMacroDashboardChartPayload(rangeKey) {
   const customEnd = state.macroDashboardCustomEnd || latestDate;
   const labels = allDates.filter((date) => toDateKey(date) >= toDateKey(customStart) && toDateKey(date) <= toDateKey(customEnd));
   const datasets = items.map((item) => {
+    const estimateDates = new Set((item.releasePoints ?? []).filter((point) => point.estimate).map((point) => point.date));
     const dateIndex = new Map();
     item.dates.forEach((date, index) => dateIndex.set(date, index));
     const baseDate = labels.find((date) => dateIndex.has(date) && Number.isFinite(Number(item.values[dateIndex.get(date)])));
@@ -6308,7 +6326,8 @@ function buildMacroDashboardChartPayload(rangeKey) {
       stepped: item.releaseAligned ? "before" : false,
       releasePoints: item.releasePoints,
       tension: 0.18,
-      pointRadius: 0,
+      pointRadius: (context) => estimateDates.has(labels[context.dataIndex]) ? 4 : 0,
+      pointStyle: (context) => estimateDates.has(labels[context.dataIndex]) ? "triangle" : "circle",
       pointHoverRadius: 4,
       pointHitRadius: 10,
       spanGaps: true,
@@ -20796,6 +20815,7 @@ function renderMarketOverview() {
         <div class="us-price-chart-wrap">
           <canvas data-market-total="overview"></canvas>
         </div>
+        ${renderMacroEstimateNotes(getTotalDashboardSelectedItems(), state.totalDashboardCustomEnd)}
         ${
           selectedTotalBarItems.length
             ? `
@@ -20983,6 +21003,7 @@ function renderMarketMacroOverview() {
           const itemKoLabel = getMacroKoreanLabel(item);
           const itemKoNote = getMacroKoreanNote(item);
           const chartKind = getMacroSeriesChartKind(item);
+          const estimateLabel = item.yoyEstimates?.[item.latestDate] ? " 추정" : "";
           const primaryValue =
             chartKind === "yoy"
               ? formatMacroChangePercent(item.yoyPct)
@@ -21002,9 +21023,9 @@ function renderMarketMacroOverview() {
           return `
             <div class="macro-snapshot-stat">
               <span>${item.label}${itemKoLabel ? `<em class="macro-ko-label">${itemKoLabel}</em>` : ""}</span>
-              <strong>${primaryValue}</strong>
+              <strong>${primaryValue}${chartKind === "yoy" ? estimateLabel : ""}</strong>
               <small>${primaryLabel} focus | raw ${formatMacroIndicatorValue(item.unit, item.latestValue)}</small>
-              <small>MoM ${formatMacroChangePercent(item.momPct)} | YoY ${formatMacroChangePercent(item.yoyPct)}</small>
+              <small>MoM ${formatMacroChangePercent(item.momPct)} | YoY ${formatMacroChangePercent(item.yoyPct)}${estimateLabel}</small>
               <small>${latestRelease ? `Released ${latestRelease.releaseDate ?? "-"} | ${getMacroReleaseBasis(item, latestRelease)}` : "release date pending"}</small>
               <small>${latestRelease ? `Actual ${latestRelease.actual ?? "-"} / Cons ${latestRelease.consensus ?? "-"} / Surprise ${latestRelease.surprise ?? "-"}` : "consensus pending"}</small>
               ${itemKoNote ? `<small class="macro-ko-note">${itemKoNote}</small>` : ""}
@@ -21080,6 +21101,7 @@ function renderMarketMacroOverview() {
   const selectedKoLabel = getMacroKoreanLabel(series);
   const selectedKoNote = getMacroKoreanNote(series);
   const selectedReleaseBasis = getMacroReleaseBasis(series);
+  const selectedYoyEstimate = series?.yoyEstimates?.[series.latestDate];
 
   const chartMetaMarkup =
     indicator && series
@@ -21090,7 +21112,7 @@ function renderMarketMacroOverview() {
             <strong>${getMacroChartKindLabel(selectedChartKind)}</strong>
           </div>
           <div class="market-rs-metric">
-            <span>YoY</span>
+            <span>YoY${selectedYoyEstimate ? " (추정)" : ""}</span>
             <strong>${formatMacroChangePercent(series.yoyPct)}</strong>
           </div>
           <div class="market-rs-metric">
@@ -21160,6 +21182,7 @@ function renderMarketMacroOverview() {
           ${indicator?.title ?? "-"} / ${series?.label ?? "-"}${selectedKoLabel ? ` (${selectedKoLabel})` : ""} / ${getMacroChartKindLabel(selectedChartKind)} / ${state.macroHistoryMode === "common" ? "2016-01+ common view" : "full history"}
         </p>
         ${selectedKoNote ? `<p class="macro-ko-chart-note">${selectedKoNote}</p>` : ""}
+        ${selectedYoyEstimate ? `<p class="macro-ko-chart-note" data-macro-estimate-note>${escapeHtml(selectedYoyEstimate.note)} <a href="${escapeHtml(selectedYoyEstimate.methodologyUrl)}" target="_blank" rel="noopener noreferrer">산출 근거</a></p>` : ""}
         <div class="macro-release-table-wrap">
           <div class="us-section-head macro-release-head">
             <div>
@@ -21266,6 +21289,7 @@ function renderMarketMacroOverview() {
         <div class="macro-dashboard-chart-wrap">
           <canvas data-macro-dashboard-chart></canvas>
         </div>
+        ${renderMacroEstimateNotes(macroDashboardItems.filter((item) => state.macroDashboardSelection.includes(item.key)), state.macroDashboardCustomEnd)}
       </section>
 
       <section class="us-panel macro-panel">

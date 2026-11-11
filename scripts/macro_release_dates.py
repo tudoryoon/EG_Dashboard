@@ -19,6 +19,7 @@ ISM_2026 = [(1, 5, 7), (2, 2, 4), (3, 2, 4), (4, 1, 6), (5, 1, 5),
             (11, 2, 4), (12, 1, 3)]
 MONTHS = {datetime(2000, m, 1).strftime("%B").lower(): m for m in range(1, 13)}
 RELEASE_EXCEPTIONS = [
+    ("cpi", "2026-10", "2026-11-10", "https://www.bls.gov/news.release/archives/cpi_11102026.htm"),
     ("pce", "2019-01", "2019-03-29", "https://www.bea.gov/news/2019/personal-income-february-2019-personal-outlays-january-2019"),
     ("pce", "2019-02", "2019-04-29", "https://www.bea.gov/news/2019/personal-income-and-outlays-march-2019"),
     ("ppi", "2025-10", "2026-01-14", "https://www.bls.gov/bls/2025-lapse-revised-release-dates.htm"),
