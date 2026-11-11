@@ -38,7 +38,7 @@ run('companyFinancialRange = "4"; COMPANY_FINANCIAL_METRICS.forEach(metric => co
 model = run('companyFinancialModel(financialItem)');
 assert.equal(model.quarters.length, 4);
 assert.equal(model.datasets.length, 8);
-assert.equal(model.datasets.find(item => item.metricKey === 'grossMarginPct').data.at(-1), 48.1);
+assert.equal(model.datasets.find(item => item.metricKey === 'grossMarginPct').data.at(-1), data.financials.AAPL.quarters[0].grossMarginPct);
 assert.equal(model.datasets.find(item => item.metricKey === 'epsDiluted').yAxisID, 'eps');
 assert.equal(model.datasets.find(item => item.metricKey === 'operatingMarginYoyPp').yAxisID, 'pct');
 
@@ -76,7 +76,7 @@ let updates = 0;
 currentChart = {
   data: { datasets: [
     { label: 'Stock Price(R)', data: [100, 110], borderColor: '#111827', ohlc: [{ o: 100, c: 110 }] },
-    { label: '20EMA', data: [95, 96], hidden: true },
+    { label: '20SMA', data: [95, 96], hidden: true },
     { label: '1D Return', isDailyReturn: true, borderColor: 'transparent', data: [1, 2] },
   ] },
   options: {
@@ -95,6 +95,7 @@ assert.equal(updates, 1);
 assert.equal(currentChart.data.datasets[0].borderColor, '#ecf0ed');
 assert.equal(currentChart.data.datasets[0].candleColors.up, '#39d3a1');
 assert.equal(currentChart.data.datasets[1].hidden, true);
+assert.equal(currentChart.data.datasets[1].borderColor, '#ffb641');
 assert.equal(currentChart.data.datasets[2].borderColor, 'transparent');
 assert.deepEqual(currentChart.data.datasets[0].data, [100, 110]);
 assert.equal(currentChart.options.scales.y1.min, 80);

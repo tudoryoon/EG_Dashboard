@@ -288,7 +288,7 @@ const TOTAL_DASHBOARD_COLOR_BY_KEY = {
   "indicator:final_demand_ppi_yoy": "#f97316",
   "indicator:core_ppi_yoy": "#dc2626",
 };
-const MARKET_PRICE_EMA_OPTIONS = [20, 50, 100, 200];
+const MARKET_PRICE_SMA_OPTIONS = [20, 50, 100, 200];
 const YIELD_CURVE_WINDOWS = [
   { sessions: 1, label: "1D" },
   { sessions: 5, label: "1W" },
@@ -438,7 +438,7 @@ const state = {
   marketTrendRange: "3y",
   marketTrendIndex: "sp500",
   marketTrendChartType: "candle",
-  marketTrendEmas: [20, 100],
+  marketTrendSmas: [20, 50, 200],
   marketTrendCustomStart: "",
   marketTrendCustomEnd: "",
   marketVixMetricsRange: "3y",
@@ -515,11 +515,11 @@ const state = {
   rsVolumeVisible: true,
   rsChartSeries: {
     rs: true,
-    ema10: false,
-    ema20: true,
-    ema50: false,
-    ema100: true,
-    ema200: false,
+    sma10: false,
+    sma20: true,
+    sma50: true,
+    sma100: false,
+    sma200: true,
   },
   trendScoreUniverse: "all",
   trendScoreRange: "max",
@@ -2215,6 +2215,25 @@ function calculateEmaSeries(values, period) {
   return result;
 }
 
+function calculateSmaSeries(values, period) {
+  if (!Array.isArray(values) || !Number.isInteger(period) || period < 1) {
+    return [];
+  }
+  let sum = 0;
+  let validCount = 0;
+  return values.map((value, index) => {
+    if (Number.isFinite(value)) {
+      sum += value;
+      validCount += 1;
+    }
+    if (index >= period && Number.isFinite(values[index - period])) {
+      sum -= values[index - period];
+      validCount -= 1;
+    }
+    return validCount === period ? Number((sum / period).toFixed(4)) : null;
+  });
+}
+
 function calculateAtrPercentSeries(values, highs, lows, period = 21) {
   if (!Array.isArray(values) || !Array.isArray(highs) || !Array.isArray(lows) || !values.length) {
     return [];
@@ -2359,16 +2378,15 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   const drawdownPctFull = calculateDrawdownPercentSeries(fullValues);
   const rollingDrawdown60PctFull = calculateRollingDrawdownPercentSeries(fullValues, 60);
   const rollingDrawdownAtrFull = calculateAtrDrawdownMultipleSeries(rollingDrawdown60PctFull, atrPctFull);
-  const emaReferenceSeries = Object.fromEntries(
-    MARKET_PRICE_EMA_OPTIONS.map((period) => [period, calculateEmaSeries(fullValues, period).slice(startIndex, sliceEnd)]),
+  const smaReferenceSeries = Object.fromEntries(
+    MARKET_PRICE_SMA_OPTIONS.map((period) => [period, calculateSmaSeries(fullValues, period).slice(startIndex, sliceEnd)]),
   );
-  const emaDatasets = (state.marketTrendEmas ?? [])
-    .filter((period) => MARKET_PRICE_EMA_OPTIONS.includes(period))
+  const smaDatasets = (state.marketTrendSmas ?? [])
+    .filter((period) => MARKET_PRICE_SMA_OPTIONS.includes(period))
     .map((period) => {
-      const emaFull = calculateEmaSeries(fullValues, period);
       return {
-        label: `EMA ${period}`,
-        data: emaFull.slice(startIndex, sliceEnd),
+        label: `SMA ${period}`,
+        data: smaReferenceSeries[period],
         borderColor:
           period === 10
             ? "#dc2626"
@@ -2426,12 +2444,12 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
             pointHoverRadius: 4,
             spanGaps: false,
           },
-      ...emaDatasets,
+      ...smaDatasets,
     ],
     item,
     candlestickData,
     useCandlestick,
-    emaReferenceSeries,
+    smaReferenceSeries,
     riskSeries: {
       atrPct: atrPctFull.slice(startIndex, sliceEnd),
       drawdownPct: drawdownPctFull.slice(startIndex, sliceEnd),
@@ -2441,11 +2459,11 @@ function buildMarketTrendChartPayload(rangeKey, indexKey, customStart = "", cust
   };
 }
 
-function calculateMarketTrendGap(indexValue, emaValue) {
-  if (!Number.isFinite(indexValue) || !Number.isFinite(emaValue) || emaValue === 0) {
+function calculateMarketTrendGap(indexValue, smaValue) {
+  if (!Number.isFinite(indexValue) || !Number.isFinite(smaValue) || smaValue === 0) {
     return null;
   }
-  return (indexValue / emaValue - 1) * 100;
+  return (indexValue / smaValue - 1) * 100;
 }
 
 function formatMarketTrendGap(value) {
@@ -2474,13 +2492,13 @@ function buildMarketTrendGapSummary() {
     return [];
   }
   const latestIndexValue = Number(indexValues[latestIndex]);
-  return MARKET_PRICE_EMA_OPTIONS.map((period) => {
-    const emaValue = Number(payload.emaReferenceSeries?.[period]?.[latestIndex]);
-    const gap = calculateMarketTrendGap(latestIndexValue, emaValue);
+  return MARKET_PRICE_SMA_OPTIONS.map((period) => {
+    const smaValue = payload.smaReferenceSeries?.[period]?.[latestIndex] ?? null;
+    const gap = calculateMarketTrendGap(latestIndexValue, smaValue);
     return {
       period,
       gap,
-      emaValue,
+      smaValue,
       indexValue: latestIndexValue,
       date: payload.labels?.[latestIndex] ?? "",
     };
@@ -2768,11 +2786,11 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       if (!ctx || !chartArea || !xScale) {
         return;
       }
-      const ema20 = payload.emaReferenceSeries?.[20] ?? [];
-      const ema50 = payload.emaReferenceSeries?.[50] ?? [];
-      const ema100 = payload.emaReferenceSeries?.[100] ?? [];
-      const ema200 = payload.emaReferenceSeries?.[200] ?? [];
-      if (!ema20.length || !ema50.length || !ema100.length || !ema200.length) {
+      const sma20 = payload.smaReferenceSeries?.[20] ?? [];
+      const sma50 = payload.smaReferenceSeries?.[50] ?? [];
+      const sma100 = payload.smaReferenceSeries?.[100] ?? [];
+      const sma200 = payload.smaReferenceSeries?.[200] ?? [];
+      if (!sma20.length || !sma50.length || !sma100.length || !sma200.length) {
         return;
       }
       let segmentStart = null;
@@ -2796,23 +2814,23 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
       let fullBullStart = null;
       for (let index = 0; index < payload.labels.length; index += 1) {
         const isFullBearish =
-          Number.isFinite(ema20[index]) &&
-          Number.isFinite(ema50[index]) &&
-          Number.isFinite(ema100[index]) &&
-          Number(ema20[index]) < Number(ema50[index]) &&
-          Number(ema50[index]) < Number(ema100[index]);
+          Number.isFinite(sma20[index]) &&
+          Number.isFinite(sma50[index]) &&
+          Number.isFinite(sma100[index]) &&
+          Number(sma20[index]) < Number(sma50[index]) &&
+          Number(sma50[index]) < Number(sma100[index]);
         const isWeakBearish =
-          Number.isFinite(ema20[index]) &&
-          Number.isFinite(ema50[index]) &&
-          Number(ema20[index]) < Number(ema50[index]);
+          Number.isFinite(sma20[index]) &&
+          Number.isFinite(sma50[index]) &&
+          Number(sma20[index]) < Number(sma50[index]);
         const isFullBullish =
-          Number.isFinite(ema20[index]) &&
-          Number.isFinite(ema50[index]) &&
-          Number.isFinite(ema100[index]) &&
-          Number.isFinite(ema200[index]) &&
-          Number(ema20[index]) > Number(ema50[index]) &&
-          Number(ema50[index]) > Number(ema100[index]) &&
-          Number(ema100[index]) > Number(ema200[index]);
+          Number.isFinite(sma20[index]) &&
+          Number.isFinite(sma50[index]) &&
+          Number.isFinite(sma100[index]) &&
+          Number.isFinite(sma200[index]) &&
+          Number(sma20[index]) > Number(sma50[index]) &&
+          Number(sma50[index]) > Number(sma100[index]) &&
+          Number(sma100[index]) > Number(sma200[index]);
 
         if (isFullBullish && fullBullStart === null) {
           fullBullStart = index;
@@ -2895,8 +2913,8 @@ function createMarketTrendChart(canvas, rangeKey, indexKey, customStart = "", cu
               }
               const value = Number(context.parsed.y);
               const baseText = `${context.dataset.label}: ${payload.item?.closeOnly ? `${value.toFixed(2)} pt` : formatIndexValue(value, 2)}`;
-              const emaMatch = String(context.dataset.label ?? "").match(/^EMA\s+(\d+)/);
-              if (!emaMatch) {
+              const smaMatch = String(context.dataset.label ?? "").match(/^SMA\s+(\d+)/);
+              if (!smaMatch) {
                 return baseText;
               }
               const indexValue = Number(payload.datasets?.[0]?.data?.[context.dataIndex]);
@@ -8851,7 +8869,7 @@ function enterBriefingRsChartContext(ticker) {
     briefingRsSavedState = Object.fromEntries(BRIEFING_RS_CHART_KEYS.map((key) => [key, structuredClone(state[key])]));
     Object.assign(state, structuredClone(briefingRsChartPreferences ?? {
       rsHistoryRange: "1y", rsPriceChartType: "candle", rsVolumeVisible: true,
-      rsChartSeries: { rs: true, ema10: false, ema20: true, ema50: false, ema100: true, ema200: false },
+      rsChartSeries: { rs: true, sma10: false, sma20: true, sma50: true, sma100: false, sma200: true },
     }));
   }
   state.rsUniverse = "all";
@@ -12901,11 +12919,11 @@ function calculateEmaSeries(values, period) {
 
 const MARKET_RS_CHART_SERIES = [
   { key: "rs", label: "RS Rating(L)", color: "#d93025" },
-  { key: "ema10", label: "10EMA", period: 10, color: "#2563eb" },
-  { key: "ema20", label: "20EMA", period: 20, color: "#d97706" },
-  { key: "ema50", label: "50EMA", period: 50, color: "#16a34a" },
-  { key: "ema100", label: "100EMA", period: 100, color: "#0f766e" },
-  { key: "ema200", label: "200EMA", period: 200, color: "#7c3aed" },
+  { key: "sma10", label: "10SMA", period: 10, color: "#2563eb" },
+  { key: "sma20", label: "20SMA", period: 20, color: "#d97706" },
+  { key: "sma50", label: "50SMA", period: 50, color: "#16a34a" },
+  { key: "sma100", label: "100SMA", period: 100, color: "#0f766e" },
+  { key: "sma200", label: "200SMA", period: 200, color: "#7c3aed" },
 ];
 
 const MARKET_RS_PRICE_CHART_TYPES = [
@@ -13017,7 +13035,7 @@ function renderMarketRsChartControls(selected, navigationMarkup = "") {
 
 function renderMarketRsChartPanels(selected) {
   return `<div class="chart-wrap market-rs-chart-wrap">
-    <div class="market-rs-ema-readout" data-rs-ema-readout aria-label="Selected EMA values"></div>
+    <div class="market-rs-sma-readout" data-rs-sma-readout aria-label="Selected SMA values"></div>
     <canvas data-rs-chart="detail" aria-label="${escapeHtml(selected?.ticker ?? "")} 가격 및 RS 차트"></canvas>
   </div>
   ${isMarketRsVolumeVisible() && !selected?.isIndex ? `<div class="chart-wrap market-rs-volume-chart-wrap">
@@ -13070,8 +13088,8 @@ function syncMarketRsChartRangeButtons() {
   });
 }
 
-function updateMarketRsEmaReadout(labels, emaSeries, priceSeries, index) {
-  const readout = usOverviewRoot.querySelector("[data-rs-ema-readout]");
+function updateMarketRsSmaReadout(labels, smaSeries, priceSeries, index) {
+  const readout = usOverviewRoot.querySelector("[data-rs-sma-readout]");
   if (!readout) {
     return;
   }
@@ -13088,17 +13106,17 @@ function updateMarketRsEmaReadout(labels, emaSeries, priceSeries, index) {
   const safeIndex = Math.max(Math.max(0, firstPriceIndex), Math.min(Math.max(0, lastPriceIndex), Number.isFinite(index) ? index : lastPriceIndex));
   const stockPrice = priceSeries?.[safeIndex] == null ? NaN : Number(priceSeries[safeIndex]);
   const items = selectedSeries.map((series) => {
-    const rawValue = emaSeries[series.key]?.[safeIndex];
+    const rawValue = smaSeries[series.key]?.[safeIndex];
     const value = rawValue == null ? NaN : Number(rawValue);
     const gap = Number.isFinite(stockPrice) && stockPrice > 0 && Number.isFinite(value) && value > 0
       ? ((stockPrice / value) - 1) * 100
       : null;
     const gapClass = Number(gap) > 0 ? "positive" : Number(gap) < 0 ? "negative" : "neutral";
     return `
-      <span class="market-rs-ema-readout-item" style="--ema-color:var(--rs-${series.key}-color,${series.color})">
+      <span class="market-rs-sma-readout-item" style="--sma-color:var(--rs-${series.key}-color,${series.color})">
         <i></i><b>${series.label}</b>
         <span>${Number.isFinite(value) ? (marketRsRowByTicker.get(state.rsSelectedTicker)?.isIndex ? `${value.toFixed(2)} pt` : formatUsStockPrice(value)) : "-"}</span>
-        <em class="market-rs-ema-gap ${gapClass}">Gap ${Number.isFinite(gap) ? formatSignedPercent(gap) : "-"}</em>
+        <em class="market-rs-sma-gap ${gapClass}">Gap ${Number.isFinite(gap) ? formatSignedPercent(gap) : "-"}</em>
       </span>
     `;
   }).join("");
@@ -13578,10 +13596,10 @@ function createMarketRsChart(canvas, row) {
   }));
   const useCandlestick = state.rsPriceChartType !== "line"
     && candlestickData.some((candle) => [candle.o, candle.h, candle.l, candle.c].every(Number.isFinite));
-  const emaSeries = Object.fromEntries(
+  const smaSeries = Object.fromEntries(
     MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => [
       series.key,
-      calculateEmaSeries(fullPrice, series.period).slice(startIndex),
+      calculateSmaSeries(fullPrice, series.period).slice(startIndex),
     ]),
   );
   const edgePaddingCount = Math.max(1, Math.min(10, Math.round(selectedLabels.length * 0.012)));
@@ -13595,8 +13613,8 @@ function createMarketRsChart(canvas, row) {
     ...selectedLabels,
     ...Array.from({ length: edgePaddingCount }, (_, index) => `__rs_right_${index}`),
   ];
-  const paddedEmaSeries = Object.fromEntries(
-    Object.entries(emaSeries).map(([key, values]) => [key, padSeries(values)]),
+  const paddedSmaSeries = Object.fromEntries(
+    Object.entries(smaSeries).map(([key, values]) => [key, padSeries(values)]),
   );
   const paddedPrice = padSeries(selectedPrice);
   const firstDataIndex = edgePaddingCount;
@@ -13606,7 +13624,7 @@ function createMarketRsChart(canvas, row) {
     ...selectedPrice,
     ...(useCandlestick ? selectedHigh : []),
     ...(useCandlestick ? selectedLow : []),
-    ...MARKET_RS_CHART_SERIES.filter((series) => series.period && isMarketRsChartSeriesVisible(series.key)).flatMap((series) => emaSeries[series.key] ?? []),
+    ...MARKET_RS_CHART_SERIES.filter((series) => series.period && isMarketRsChartSeriesVisible(series.key)).flatMap((series) => smaSeries[series.key] ?? []),
   ].filter((value) => Number.isFinite(value));
   let ratingMin = ratingValues.length ? Math.floor((Math.min(...ratingValues) - 3) / 5) * 5 : 1;
   let ratingMax = ratingValues.length ? Math.ceil((Math.max(...ratingValues) + 3) / 5) * 5 : 99;
@@ -13701,14 +13719,14 @@ function createMarketRsChart(canvas, row) {
     ...(dailyReturnDataset ? [dailyReturnDataset] : []),
     ...MARKET_RS_CHART_SERIES.filter((series) => series.period).map((series) => ({
       label: series.label,
-      data: paddedEmaSeries[series.key] ?? [],
+      data: paddedSmaSeries[series.key] ?? [],
       borderColor: series.color,
       backgroundColor: series.color,
       borderWidth: series.period >= 50 ? 1.8 : 1.6,
       borderDash: [5, 5],
       tension: 0.18,
       spanGaps: true,
-      pointRadius: (context) => (context.dataIndex === getLastFiniteSeriesIndex(emaSeries[series.key]) + firstDataIndex ? 2 : 0),
+      pointRadius: (context) => (context.dataIndex === getLastFiniteSeriesIndex(smaSeries[series.key]) + firstDataIndex ? 2 : 0),
       pointHoverRadius: 3,
       yAxisID: "y1",
       hidden: !isMarketRsChartSeriesVisible(series.key),
@@ -13754,7 +13772,7 @@ function createMarketRsChart(canvas, row) {
           ? activeDataset.data?.[activeElement?.index]?.chartDate
           : "";
         const hoveredIndex = earningsDate ? chartLabels.indexOf(earningsDate) : activeElement?.index;
-        updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, paddedPrice, hoveredIndex);
+        updateMarketRsSmaReadout(chartLabels, paddedSmaSeries, paddedPrice, hoveredIndex);
       },
       plugins: {
         legend: {
@@ -13918,7 +13936,7 @@ function createMarketRsChart(canvas, row) {
   };
   marketRsDetailChart = chart;
   attachMarketRsYAxisDrag(chart);
-  updateMarketRsEmaReadout(chartLabels, paddedEmaSeries, paddedPrice, latestDataIndex);
+  updateMarketRsSmaReadout(chartLabels, paddedSmaSeries, paddedPrice, latestDataIndex);
   charts.push(chart);
 }
 
@@ -20424,22 +20442,24 @@ function renderIndexTrendOverview() {
       <button type="button" class="market-rs-chart-zoom-reset" data-market-trend-chart-zoom="reset">Reset</button>
     </div>
   `;
-  const marketTrendEmaMarkup = MARKET_PRICE_EMA_OPTIONS.map(
+  const marketTrendSmaMarkup = MARKET_PRICE_SMA_OPTIONS.map(
     (period) => `
       <button
         type="button"
-        class="total-series-chip${(state.marketTrendEmas ?? []).includes(period) ? " active" : ""}"
-        data-market-trend-ema="${period}"
+        class="total-series-chip${(state.marketTrendSmas ?? []).includes(period) ? " active" : ""}"
+        data-market-trend-sma="${period}"
       >
-        EMA ${period}
+        SMA ${period}
       </button>`,
   ).join("");
   const marketTrendGapMarkup = buildMarketTrendGapSummary()
     .map((item) => {
       const gapClass = item.gap === null ? "neutral" : Number(item.gap) >= 0 ? "positive" : "negative";
+      const smaText = !Number.isFinite(item.smaValue) ? "-" : marketTrendItem?.isIndex
+        ? `${item.smaValue.toFixed(2)} pt` : formatUsStockPrice(item.smaValue, 2);
       return `
-        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${marketTrendItem?.isIndex ? `${item.indexValue?.toFixed(2)} pt` : formatUsStockPrice(item.indexValue, 2)} / EMA ${item.period} ${marketTrendItem?.isIndex ? `${item.emaValue?.toFixed(2)} pt` : formatUsStockPrice(item.emaValue, 2)}">
-          <span>EMA ${item.period}</span>
+        <span class="market-trend-gap-pill ${gapClass}" title="${item.date} index ${marketTrendItem?.isIndex ? `${item.indexValue?.toFixed(2)} pt` : formatUsStockPrice(item.indexValue, 2)} / SMA ${item.period} ${smaText}">
+          <span>SMA ${item.period}</span>
           <strong>${formatMarketTrendGap(item.gap)}</strong>
         </span>`;
     })
@@ -20459,7 +20479,7 @@ function renderIndexTrendOverview() {
       <section class="us-panel us-price-panel">
         <div class="us-section-head us-price-head">
           <div>
-            <h2>Index Trend & EMA</h2>
+            <h2>Index Trend & SMA</h2>
             <p>NASDAQ Composite · NASDAQ 100 · S&P 500 · Dow Jones · SOX · Russell 2000 · VKOSPI · VIXEQ · MSCI ACWI NTR USD</p>
           </div>
           <div class="us-price-controls">
@@ -20501,11 +20521,11 @@ function renderIndexTrendOverview() {
           ${marketTrendChartZoomButtons}
         </div>
         <div class="total-series-row total-series-row-left">
-          ${marketTrendEmaMarkup}
+          ${marketTrendSmaMarkup}
         </div>
         <div class="market-trend-meta">
           <span>Coverage from ${marketTrendBounds.min || "2000-01-01"}</span>
-          <span>Gap = Index / EMA - 1</span>
+          <span>Gap = Index / SMA - 1</span>
           ${marketTrendCloseOnly && !marketTrendItem?.msciIndexCode ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">Cboe 공식 종가</a> · ${marketTrendItem.dates.at(-1)} · OHLC 미제공: Candle·ATR 미산출</span>` : ""}
           ${marketTrendItem?.msciIndexCode ? `<span><a href="${marketTrendItem.sourceUrl}" target="_blank" rel="noopener noreferrer">MSCI ACWI · 배당 원천세 차감 후 재투자 · USD · ${marketTrendItem.priceStatus === "official_eod" ? "MSCI 공식 EOD 종가" : marketTrendItem.providerSymbol ? `Yahoo Finance${marketTrendItem.priceStatus === "provider_snapshot" ? " · 잠정 시세" : ""}` : marketTrendItem.closeOnly ? "MSCI 공식 EOD 종가" : "Investing.com"}</a> · ${marketTrendItem.dates.at(-1)}</span>` : ""}
         </div>
@@ -20515,19 +20535,19 @@ function renderIndexTrendOverview() {
         <div class="market-trend-legend">
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-weak"></span>
-            EMA 20 &lt; EMA 50
+            SMA 20 &lt; SMA 50
           </span>
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-full"></span>
-            EMA 20 &lt; EMA 50 &lt; EMA 100
+            SMA 20 &lt; SMA 50 &lt; SMA 100
           </span>
           <span class="market-trend-legend-item">
             <span class="market-trend-legend-swatch market-trend-legend-swatch-bull"></span>
-            EMA 20 &gt; EMA 50 &gt; EMA 100 &gt; EMA 200
+            SMA 20 &gt; SMA 50 &gt; SMA 100 &gt; SMA 200
           </span>
         </div>
         <div class="us-price-chart-wrap us-price-chart-wrap-large">
-          <canvas data-market-trend="ema"></canvas>
+          <canvas data-market-trend="sma"></canvas>
         </div>
         <div class="market-trend-risk-block">
           <div class="market-trend-meta">
@@ -20621,13 +20641,13 @@ function renderIndexTrendOverview() {
     });
   });
 
-  usOverviewRoot.querySelectorAll("[data-market-trend-ema]").forEach((button) => {
+  usOverviewRoot.querySelectorAll("[data-market-trend-sma]").forEach((button) => {
     button.addEventListener("click", () => {
-      const period = Number(button.dataset.marketTrendEma);
+      const period = Number(button.dataset.marketTrendSma);
       if (!Number.isFinite(period)) {
         return;
       }
-      const current = new Set(state.marketTrendEmas ?? []);
+      const current = new Set(state.marketTrendSmas ?? []);
       if (current.has(period)) {
         if (current.size === 1) {
           return;
@@ -20636,7 +20656,7 @@ function renderIndexTrendOverview() {
       } else {
         current.add(period);
       }
-      state.marketTrendEmas = [...current].sort((a, b) => a - b);
+      state.marketTrendSmas = [...current].sort((a, b) => a - b);
       render();
     });
   });
@@ -20667,7 +20687,7 @@ function renderIndexTrendOverview() {
     });
   }
 
-  const trendCanvas = usOverviewRoot.querySelector('[data-market-trend="ema"]');
+  const trendCanvas = usOverviewRoot.querySelector('[data-market-trend="sma"]');
   if (trendCanvas) {
     createMarketTrendChart(
       trendCanvas,
@@ -23163,7 +23183,7 @@ function renderSummary(list) {
     if (state.marketView === "Index") {
       summaryText.textContent =
         state.marketIndexView === "Trend"
-          ? "Major index trend dashboard with EMA, ATR, drawdown, and rolling MDD"
+          ? "Major index trend dashboard with SMA, ATR, drawdown, and rolling MDD"
           : "Price dashboard for major indexes and the cross-asset total dashboard";
       return;
     }

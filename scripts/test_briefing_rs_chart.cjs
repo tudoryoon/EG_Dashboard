@@ -13,7 +13,7 @@ const stockRows = ['AAA', 'BBB', 'CCC'].map(ticker => ({ticker}));
 const state = {
   tab: 'DailyBriefing', briefingRsChartOpen: false, briefingRsChartList: 'buyWatch', briefingRsChartTicker: '',
   rsUniverse: 'nasdaq100', rsSelectedTicker: 'AAPL', rsHistoryRange: '6m', rsPriceChartType: 'line',
-  rsVolumeVisible: false, rsChartSeries: {rs: false, ema20: true}, rsBriefingSector: 'software', rsFilter: 'newHigh1y',
+  rsVolumeVisible: false, rsChartSeries: {rs: false, sma20: true}, rsBriefingSector: 'software', rsFilter: 'newHigh1y',
 };
 const original = structuredClone(state);
 const context = vm.createContext({
@@ -55,7 +55,7 @@ assert.equal(state.rsHistoryRange, '1y');
 assert.equal(state.rsPriceChartType, 'candle');
 assert.equal(state.rsBriefingSector, original.rsBriefingSector);
 state.rsHistoryRange = '3m';
-state.rsChartSeries.ema20 = false;
+state.rsChartSeries.sma20 = false;
 context.prepareBriefingRsChartRender();
 assert.equal(state.rsSelectedTicker, 'AAA');
 state.briefingRsChartOpen = false;
@@ -66,7 +66,7 @@ for (const key of ['rsUniverse','rsSelectedTicker','rsHistoryRange','rsPriceChar
 state.briefingRsChartOpen = true;
 context.enterBriefingRsChartContext('CCC');
 assert.equal(state.rsHistoryRange, '3m');
-assert.equal(state.rsChartSeries.ema20, false);
+assert.equal(state.rsChartSeries.sma20, false);
 state.tab = 'Screening';
 context.prepareBriefingRsChartRender();
 assert.equal(state.rsSelectedTicker, 'AAPL');

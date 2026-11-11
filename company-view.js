@@ -83,7 +83,7 @@ function applyCompanyChartTheme(canvas) {
   if (!chart) return;
   const colors = { "Rank": "#39d3a1", "Trend Score": "#ecf0ed", "Climax Score": "#ffb641",
     "Stock MDD": "#ff756e", "21D ATR%": "#87b7ff", "Selected-period avg": "#a6b1a9",
-    "10EMA": "#87b7ff", "20EMA": "#ffb641", "50EMA": "#39d3a1", "100EMA": "#52c6bb", "200EMA": "#b59af6" };
+    "10SMA": "#87b7ff", "20SMA": "#ffb641", "50SMA": "#39d3a1", "100SMA": "#52c6bb", "200SMA": "#b59af6" };
   for (const dataset of chart.data.datasets) {
     if (dataset.isDailyReturn) continue;
     const label = dataset.label ?? "";
@@ -184,7 +184,7 @@ function enterCompanyChartContext(ticker) {
     companySavedChartState = Object.fromEntries(COMPANY_CHART_KEYS.map((key) => [key, structuredClone(state[key])]));
     Object.assign(state, companyChartPreferences ?? {
       rsHistoryRange: "1y", rsPriceChartType: "candle", rsVolumeVisible: true,
-      rsChartSeries: { rs: true, ema10: false, ema20: true, ema50: false, ema100: true, ema200: false },
+      rsChartSeries: { rs: true, sma10: false, sma20: true, sma50: true, sma100: false, sma200: true },
     });
   }
   state.rsSelectedTicker = ticker;
@@ -414,7 +414,7 @@ function renderCompanyDialog(ticker) {
     </div>
     <section class="company-price-section"><div class="company-section-title"><h3>Price & RS</h3><span>RS · All universe</span></div>
       <div data-company-controls>${renderCompanyChartControls()}</div>
-      <div class="chart-wrap market-rs-chart-wrap company-price-chart"><div class="market-rs-ema-readout" data-rs-ema-readout></div><canvas data-rs-chart="detail" aria-label="${meta.name} 주가와 RS Rating"></canvas></div>
+      <div class="chart-wrap market-rs-chart-wrap company-price-chart"><div class="market-rs-sma-readout" data-rs-sma-readout></div><canvas data-rs-chart="detail" aria-label="${meta.name} 주가와 RS Rating"></canvas></div>
       <div class="chart-wrap market-rs-volume-chart-wrap company-volume-chart" ${state.rsVolumeVisible ? "" : "hidden"}><canvas data-rs-chart="volume" aria-label="${meta.name} 거래량"></canvas></div>
     </section>
     <section class="company-risk-grid" data-company-lazy="risk">

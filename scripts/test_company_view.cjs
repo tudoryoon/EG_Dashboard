@@ -11,7 +11,7 @@ const originalState = {
   tab: 'Screening', screeningView: 'Company', companyTicker: 'NVDA',
   rsUniverse: 'nasdaq100', rsSelectedTicker: 'MU', rsHistoryRange: '6m',
   rsPriceChartType: 'line', rsVolumeVisible: false,
-  rsChartSeries: { rs: true, ema20: false, ema100: true },
+  rsChartSeries: { rs: true, sma20: false, sma100: true },
   trendScoreUniverse: 'dailyBriefing', trendScoreRange: '3m', canslimUniverse: 'dailyBriefing',
   query: 'micron', rsBriefingSector: 'memory', rsNewHighBriefingOnly: false,
 };
@@ -50,9 +50,9 @@ assert.equal(state.rsHistoryRange, '1y');
 assert.equal(state.rsPriceChartType, 'candle');
 assert.equal(state.rsVolumeVisible, true);
 assert.deepEqual(structuredClone(state.rsChartSeries),
-  { rs: true, ema10: false, ema20: true, ema50: false, ema100: true, ema200: false });
+  { rs: true, sma10: false, sma20: true, sma50: true, sma100: false, sma200: true });
 state.rsHistoryRange = '3m';
-state.rsChartSeries.ema50 = true;
+state.rsChartSeries.sma10 = true;
 state.companyTicker = 'AAPL';
 run('prepareCompanyViewRender(); enterCompanyChartContext("AAPL")');
 assert.equal(state.rsHistoryRange, '3m');
@@ -65,7 +65,7 @@ assert.deepEqual(state, { ...originalState, companyTicker: '' });
 state.companyTicker = 'MSFT';
 run('enterCompanyChartContext("MSFT")');
 assert.equal(state.rsHistoryRange, '3m');
-assert.equal(state.rsChartSeries.ema50, true);
+assert.equal(state.rsChartSeries.sma10, true);
 state.screeningView = 'RS';
 run('prepareCompanyViewRender()');
 assert.deepEqual(state, { ...originalState, companyTicker: 'MSFT', screeningView: 'RS' });

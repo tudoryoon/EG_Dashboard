@@ -11,7 +11,7 @@ body.company-workspace .header-calendar-link { background: #292b2a; color: #b4bf
 body.company-workspace .country-button:hover, body.company-workspace .subtab-chip:hover { background: #323a34; color: #ecf0ed; }
 body.company-workspace .country-button.active, body.company-workspace .subtab-chip.active { color: #ffbc50; background: #393326; border-color: #806534; box-shadow: inset 0 1px #9b794033; }
 body.company-workspace .summary-row { display: none; }
-.company-overview, .company-dialog { --rs-rs-color: #ff756e; --rs-ema10-color: #87b7ff; --rs-ema20-color: #ffb641; --rs-ema50-color: #39d3a1; --rs-ema100-color: #52c6bb; --rs-ema200-color: #b59af6; }
+.company-overview, .company-dialog { --rs-rs-color: #ff756e; --rs-sma10-color: #87b7ff; --rs-sma20-color: #ffb641; --rs-sma50-color: #39d3a1; --rs-sma100-color: #52c6bb; --rs-sma200-color: #b59af6; }
 .company-overview { padding: 4px 0 32px; color: #ecf0ed; }
 .company-list-head, .company-list-toolbar, .company-section-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .company-list-head { padding: 0 0 20px; border-bottom: 1px solid #3b3e3c; }
@@ -82,7 +82,7 @@ body.company-focus .page-shell { transform: perspective(1600px) translateY(4px) 
 .company-series label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 .company-series i { width: 7px; height: 7px; background: var(--line-color); border-radius: 50%; }
 .company-price-chart.market-rs-chart-wrap { height: 440px; min-height: 0; margin-top: 0; }
-.company-price-chart .market-rs-ema-readout { min-height: 30px; }
+.company-price-chart .market-rs-sma-readout { min-height: 30px; }
 .company-volume-chart.market-rs-volume-chart-wrap { height: 110px; min-height: 0; margin-top: 10px; }
 .company-volume-chart[hidden] { display: none; }
 .company-dialog section { min-width: 0; }
@@ -177,12 +177,12 @@ body.company-focus .page-shell { transform: perspective(1600px) translateY(4px) 
 .company-overview .company-card-top > img, .company-dialog .company-icon-button img { filter: invert(1); }
 .company-overview .company-card-price b, .company-dialog-quote strong { font-variant-numeric: tabular-nums; }
 .company-icon-button { box-shadow: inset 0 1px #ffffff09; }
-.company-dialog .market-rs-ema-readout { background: #272e28ed; border-color: #424c45; color: #c2ccc5; }
-.company-dialog .market-rs-ema-readout b { color: #ecf0ed; }
-.company-dialog .market-rs-ema-readout time { color: #a6b1a9; }
-.company-dialog .market-rs-ema-gap.positive, .company-dialog .is-positive { color: #39d3a1; }
-.company-dialog .market-rs-ema-gap.negative, .company-dialog .is-negative { color: #ff756e; }
-.company-dialog .market-rs-ema-gap.neutral { color: #a6b1a9; }
+.company-dialog .market-rs-sma-readout { background: #272e28ed; border-color: #424c45; color: #c2ccc5; }
+.company-dialog .market-rs-sma-readout b { color: #ecf0ed; }
+.company-dialog .market-rs-sma-readout time { color: #a6b1a9; }
+.company-dialog .market-rs-sma-gap.positive, .company-dialog .is-positive { color: #39d3a1; }
+.company-dialog .market-rs-sma-gap.negative, .company-dialog .is-negative { color: #ff756e; }
+.company-dialog .market-rs-sma-gap.neutral { color: #a6b1a9; }
 .company-dialog .market-rs-financial-table-wrap { background: #272b28; border-color: #414642; }
 .company-dialog .market-rs-financial-table th { background: #303731; color: #c5d0c8; }
 .company-dialog .market-rs-financial-table th, .company-dialog .market-rs-financial-table td { border-color: #3a443c; }

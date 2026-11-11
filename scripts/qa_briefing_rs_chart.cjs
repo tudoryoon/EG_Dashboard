@@ -68,8 +68,8 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.equal(await page.evaluate(() => marketRsDetailChart.data.datasets.some(dataset => dataset.isCandlestick)), false);
     await content.locator('[data-rs-volume-toggle]').uncheck();
     assert.equal(await content.locator('[data-rs-chart="volume"]').count(), 0);
-    await content.locator('[data-rs-chart-series="ema10"]').click();
-    assert.equal(await page.evaluate(() => state.rsChartSeries.ema10), true);
+    await content.locator('[data-rs-chart-series="sma10"]').click();
+    assert.equal(await page.evaluate(() => state.rsChartSeries.sma10), true);
     assert.ok(await unchangedRotation());
     const ownChartCount = await page.evaluate(() => charts.length - window.__rotationChartIds.length);
     assert.equal(ownChartCount, 3);

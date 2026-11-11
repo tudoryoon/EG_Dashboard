@@ -20,7 +20,7 @@ assert.match(source, /getMarketRsChartNavigation\(leaderRows, selected\?\.ticker
 
 // Execute the actual click binding, checking that filters and chart preferences survive.
 const binding = source.slice(source.indexOf('  usOverviewRoot.querySelectorAll("[data-rs-chart-navigate]")'), source.indexOf('  usOverviewRoot.querySelectorAll("[data-rs-chart-zoom]")'));
-const state = {rsSelectedTicker: 'MSFT', rsMonitorSelectedTicker: 'OUTSIDE', rsBriefingSector: 'briefingAll', rsUniverse: 'all', rsHistoryRange: '1y', rsLeaderSort: 'rs', rsChartSeries: {ema20: true}, rsPriceChartType: 'candle'};
+const state = {rsSelectedTicker: 'MSFT', rsMonitorSelectedTicker: 'OUTSIDE', rsBriefingSector: 'briefingAll', rsUniverse: 'all', rsHistoryRange: '1y', rsLeaderSort: 'rs', rsChartSeries: {sma20: true}, rsPriceChartType: 'candle'};
 const before = structuredClone(state);
 let click;
 let renders = 0;
