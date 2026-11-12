@@ -11,8 +11,8 @@ window.studyMsftBondData = {
     "maturityDate": "2035-02-12",
     "name": "Microsoft 3.500% Senior Unsecured Notes 2035"
   },
-  "updatedAt": "2026-11-09",
-  "checkedAt": "2026-11-11T01:18:27+00:00",
+  "updatedAt": "2026-11-10",
+  "checkedAt": "2026-11-12T02:19:02+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyMsftBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-10",
+    "endDate": "2026-11-11",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyMsftBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-10"
+      "2026-11-11"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyMsftBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-10"
+      "2026-11-11"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3331,6 +3331,16 @@ window.studyMsftBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261109",
       "firstCollectedAt": "2026-11-11T01:18:27+00:00",
       "lastCollectedAt": "2026-11-11T01:18:27+00:00"
+    },
+    {
+      "date": "2026-11-10",
+      "ytmPct": 5.26,
+      "pricePer100": 88.36,
+      "sourceSha256": "9f23d4e3f6688d7d1a6d248d19ac700d76a758e223b0259f8c08714243b1bd32",
+      "yieldToWorstPct": 5.26,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261110",
+      "firstCollectedAt": "2026-11-12T02:19:02+00:00",
+      "lastCollectedAt": "2026-11-12T02:19:02+00:00"
     }
   ]
 };

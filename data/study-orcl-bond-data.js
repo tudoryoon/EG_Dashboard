@@ -11,8 +11,8 @@ window.studyOrclBondData = {
     "maturityDate": "2031-02-04",
     "name": "Oracle 4.950% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-11-09",
-  "checkedAt": "2026-11-11T01:18:24+00:00",
+  "updatedAt": "2026-11-10",
+  "checkedAt": "2026-11-12T02:18:59+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,14 +26,14 @@ window.studyOrclBondData = {
   },
   "coverage": {
     "startDate": "2026-02-04",
-    "endDate": "2026-11-10",
+    "endDate": "2026-11-11",
     "missingWeekdays": [
       "2026-02-16",
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-10"
+      "2026-11-11"
     ],
     "unavailableDates": [
       "2026-02-16",
@@ -41,7 +41,7 @@ window.studyOrclBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-10"
+      "2026-11-11"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -1991,6 +1991,16 @@ window.studyOrclBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261109",
       "firstCollectedAt": "2026-11-11T01:18:24+00:00",
       "lastCollectedAt": "2026-11-11T01:18:24+00:00"
+    },
+    {
+      "date": "2026-11-10",
+      "ytmPct": 7.47,
+      "pricePer100": 90.98,
+      "sourceSha256": "9f23d4e3f6688d7d1a6d248d19ac700d76a758e223b0259f8c08714243b1bd32",
+      "yieldToWorstPct": 7.47,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261110",
+      "firstCollectedAt": "2026-11-12T02:18:59+00:00",
+      "lastCollectedAt": "2026-11-12T02:18:59+00:00"
     }
   ]
 };
