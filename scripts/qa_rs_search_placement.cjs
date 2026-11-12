@@ -63,17 +63,32 @@ const base = process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     await input.fill('');
     await page.waitForFunction(() => state.query === '' && document.querySelectorAll('.market-rs-leaders [data-rs-ticker]').length > 1);
     await page.setViewportSize({width: 1600, height: 1000});
-    for (const view of ['TrendScore', 'Canslim']) {
-      await page.evaluate(view => {state.screeningView = view; render();}, view);
-      assert.equal(await page.locator('.toolbar-row-filters #search-input').isVisible(), true);
-      assert.equal(await page.evaluate(() => document.querySelector('#search-input') === window.__originalSearch), true);
-      assert.equal(await page.locator('[data-rs-search-slot]').count(), 0);
-      await input.fill('NVDA');
-      await page.waitForTimeout(250);
-      assert.equal(await page.evaluate(() => state.query), 'NVDA');
-      await input.fill('');
-      await page.waitForTimeout(250);
-    }
+    await page.evaluate(() => {state.screeningView = 'TrendScore'; render();});
+    await assertPosition();
+    await search('AAPL');
+    assert.equal(await page.locator('.trend-score-card-grid .market-rs-card').count(), 1);
+    await input.fill('');
+    await page.waitForFunction(() => state.query === '' && document.querySelectorAll('.trend-score-card-grid .market-rs-card').length > 1);
+    await page.evaluate(() => {const el = document.querySelector('[data-rs-search-slot]'); window.scrollBy(0, el.getBoundingClientRect().top - 180);});
+    await page.screenshot({path: path.join(out, 'trend-desktop.png')});
+    await page.setViewportSize({width: 390, height: 844});
+    await page.waitForTimeout(250);
+    await search('RBRK');
+    const trendBounds = await slot.boundingBox();
+    assert.ok(trendBounds.x >= 0 && trendBounds.x + trendBounds.width <= 391);
+    await page.screenshot({path: path.join(out, 'trend-mobile.png')});
+    await input.fill('');
+    await page.waitForFunction(() => state.query === '' && document.querySelectorAll('.trend-score-card-grid .market-rs-card').length > 1);
+    await page.setViewportSize({width: 1600, height: 1000});
+    await page.evaluate(() => {state.screeningView = 'Canslim'; render();});
+    assert.equal(await page.locator('.toolbar-row-filters #search-input').isVisible(), true);
+    assert.equal(await page.evaluate(() => document.querySelector('#search-input') === window.__originalSearch), true);
+    assert.equal(await page.locator('[data-rs-search-slot]').count(), 0);
+    await input.fill('NVDA');
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => state.query), 'NVDA');
+    await input.fill('');
+    await page.waitForTimeout(250);
     await page.evaluate(() => {state.screeningView = 'RS'; render();});
     await assertPosition();
     await search('AAPL');
@@ -103,7 +118,7 @@ const base = process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     await page.waitForFunction(() => document.querySelector('.market-rs-detail h2')?.textContent === 'NVDA');
     assert.equal(await input.evaluate(element => document.activeElement === element), true);
     assert.deepEqual(errors, []);
-    console.log('Browser QA passed: Leaders/search/detail order, single persistent input, slow typing, viewport/caret continuity, empty results, mobile and other Screening tabs.');
+    console.log('Browser QA passed: RS/Trend Leaders/search/detail order, single persistent input, slow typing, viewport/caret continuity, empty results, desktop/mobile and CANSLIM restoration.');
     console.log(out);
   } finally {
     await browser.close();

@@ -25,6 +25,8 @@ assert.deepEqual([...options.matchAll(/period: (\d+)/g)].map(match => Number(mat
 const rsChart = section('function createMarketRsChart(', 'function createMarketRsVolumeChart(');
 assert.ok(rsChart.includes('calculateSmaSeries(fullPrice, series.period).slice(startIndex)'));
 assert.ok(!rsChart.includes('calculateEmaSeries'));
+assert.ok(rsChart.includes('borderDash: []'), 'SMA overlays use solid lines');
+assert.ok(!rsChart.includes('borderDash: [5, 5]'));
 const indexChart = section('function createMarketTrendChart(', 'function createMarketTrendRiskChart(');
 assert.ok(indexChart.includes('payload.smaReferenceSeries'));
 assert.ok(!indexChart.includes('emaReferenceSeries'));

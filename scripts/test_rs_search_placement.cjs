@@ -46,5 +46,12 @@ const rs = source.slice(source.indexOf('function renderMarketRsOverview('), sour
 assert.ok(rs.indexOf('class="us-panel market-rs-leaders"') < rs.indexOf('data-rs-search-slot'));
 assert.ok(rs.indexOf('data-rs-search-slot') < rs.indexOf('class="us-panel market-rs-detail"'));
 assert.ok(rs.includes('mountMarketRsSearchBox();'));
+const trendStart = source.indexOf('function renderMarketTrendScoreOverview(');
+const trend = source.slice(trendStart, source.indexOf('\nfunction ', trendStart + 1));
+assert.ok(trend.indexOf('class="us-panel market-rs-leaders"') < trend.indexOf('data-rs-search-slot'));
+assert.ok(trend.indexOf('data-rs-search-slot') < trend.indexOf('class="us-panel market-rs-detail"'));
+assert.ok(trend.includes('mountMarketRsSearchBox();'));
+assert.ok(trend.includes('market-rs-screening-layout trend-score-layout'));
+assert.ok(source.includes('["RS", "TrendScore"].includes(state.screeningView)'));
 assert.ok(source.includes('(!showRsToolbar || inlineRsSearch)'));
 console.log('RS search: one persistent input, Leaders/detail placement, caret/focus/scroll continuity and toolbar restoration passed.');

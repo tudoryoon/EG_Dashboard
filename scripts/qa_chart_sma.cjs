@@ -25,11 +25,12 @@ const base = process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
           const window = prices.slice(-period);
           const expected = window.length === period && window.every(Number.isFinite)
             ? Number((window.reduce((sum, value) => sum + value, 0) / period).toFixed(4)) : null;
-          return {label: dataset.label, expected, actual: dataset.data[chart.$marketRsDataBounds.latestIndex], visible: chart.isDatasetVisible(chart.data.datasets.indexOf(dataset))};
+          return {label: dataset.label, expected, actual: dataset.data[chart.$marketRsDataBounds.latestIndex], visible: chart.isDatasetVisible(chart.data.datasets.indexOf(dataset)), dash: Array.from(dataset.borderDash ?? [])};
         });
       });
       for (const item of result) {
         assert.ok(item.label.endsWith('SMA'));
+        assert.deepEqual(item.dash, [], 'SMA lines remain solid in RS and Company');
         assert.ok(item.expected === null ? item.actual === null : Math.abs(item.actual - item.expected) <= 0.000101, JSON.stringify(item));
       }
       return result;

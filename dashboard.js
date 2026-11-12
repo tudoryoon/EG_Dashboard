@@ -13743,7 +13743,7 @@ function createMarketRsChart(canvas, row) {
       borderColor: series.color,
       backgroundColor: series.color,
       borderWidth: series.period >= 50 ? 1.8 : 1.6,
-      borderDash: [5, 5],
+      borderDash: [],
       tension: 0.18,
       spanGaps: true,
       pointRadius: (context) => (context.dataIndex === getLastFiniteSeriesIndex(smaSeries[series.key]) + firstDataIndex ? 2 : 0),
@@ -15772,7 +15772,7 @@ function renderMarketTrendScoreOverview() {
 
       ${signalMonitorMarkup}
 
-      <section class="market-rs-layout trend-score-layout">
+      <section class="market-rs-layout market-rs-screening-layout trend-score-layout">
         <article class="us-panel market-rs-leaders">
           <div class="us-section-head">
             <div>
@@ -15786,6 +15786,10 @@ function renderMarketTrendScoreOverview() {
           <div class="market-rs-card-grid trend-score-card-grid">${leaderCards || '<p class="market-rs-empty">검색 결과가 없습니다.</p>'}</div>
           ${leaderCardMoreMarkup}
         </article>
+
+        <div class="market-rs-search-row" data-rs-search-slot>
+          <span class="market-rs-control-label">종목 검색</span>
+        </div>
 
         <article class="us-panel market-rs-detail">
           <div class="us-section-head">
@@ -15911,6 +15915,7 @@ function renderMarketTrendScoreOverview() {
     </section>
   `;
 
+  mountMarketRsSearchBox();
   usOverviewRoot.querySelectorAll("[data-trend-score-universe]").forEach((button) => {
     button.addEventListener("click", () => {
       state.trendScoreUniverse = button.dataset.trendScoreUniverse || "all";
@@ -24023,7 +24028,7 @@ function render() {
   else if (asiaReady) setScreeningContext(asiaRegion);
   ensureValidSelection();
   const showRsToolbar = Boolean(asiaRegion) || (state.tab === "Screening" && ["RS", "TrendScore", "Canslim"].includes(state.screeningView));
-  const inlineRsSearch = !asiaRegion && state.tab === "Screening" && state.screeningView === "RS";
+  const inlineRsSearch = !asiaRegion && state.tab === "Screening" && ["RS", "TrendScore"].includes(state.screeningView);
   if (toolbarRow) {
     toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && (!showRsToolbar || inlineRsSearch));
   }
