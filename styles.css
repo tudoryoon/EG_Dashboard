@@ -9248,6 +9248,31 @@ h1 {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.market-rs-search-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  min-width: 0;
+}
+
+.market-rs-search-row .searchbox {
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 720px;
+}
+
+.market-rs-search-row .searchbox input {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.market-rs-search-row .searchbox input:focus {
+  border-color: #d97706;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.12);
+}
+
 .market-rs-screening-layout .market-rs-card-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   max-height: 470px;

@@ -843,6 +843,7 @@ let briefingRsChartPreferences = null;
 let marketTrendDetailChart = null;
 
 const searchInput = document.querySelector("#search-input");
+let rsSearchFocusSnapshot = null;
 const sortSelect = document.querySelector("#sort-select");
 const sortBox = document.querySelector(".sortbox");
 const countrySwitch = document.querySelector("#country-switch");
@@ -14787,6 +14788,10 @@ function renderMarketRsOverview() {
           ${leaderCardMoreMarkup}
         </article>
 
+        <div class="market-rs-search-row" data-rs-search-slot>
+          <span class="market-rs-control-label">종목 검색</span>
+        </div>
+
         <article class="us-panel market-rs-detail">
           <div class="us-section-head">
             <div>
@@ -14885,6 +14890,7 @@ function renderMarketRsOverview() {
     </section>
   `;
 
+  mountMarketRsSearchBox();
   usOverviewRoot.querySelectorAll("[data-rs-universe]").forEach((button) => {
     button.addEventListener("click", () => {
       state.rsUniverse = button.dataset.rsUniverse;
@@ -23978,9 +23984,37 @@ function renderOpenrouterOverview() {
   });
 }
 
+function prepareMarketRsSearchBox() {
+  const box = searchInput?.closest(".searchbox");
+  rsSearchFocusSnapshot = document.activeElement === searchInput && box ? {
+    start: searchInput.selectionStart,
+    end: searchInput.selectionEnd,
+    direction: searchInput.selectionDirection,
+    top: box.getBoundingClientRect().top,
+  } : null;
+  // Keep the original input and its listeners alive when the RS markup is replaced.
+  if (box && toolbarRow && box.parentElement !== toolbarRow) toolbarRow.prepend(box);
+}
+
+function mountMarketRsSearchBox() {
+  const box = searchInput?.closest(".searchbox");
+  const slot = usOverviewRoot.querySelector("[data-rs-search-slot]");
+  if (!box || !slot) return;
+  slot.appendChild(box);
+  if (rsSearchFocusSnapshot) {
+    const snapshot = rsSearchFocusSnapshot;
+    searchInput.focus({ preventScroll: true });
+    searchInput.setSelectionRange(snapshot.start, snapshot.end, snapshot.direction);
+    window.scrollTo({ left: window.scrollX,
+      top: window.scrollY + box.getBoundingClientRect().top - snapshot.top, behavior: "instant" });
+  }
+  rsSearchFocusSnapshot = null;
+}
+
 function render() {
   prepareCompanyViewRender();
   prepareBriefingRsChartRender();
+  prepareMarketRsSearchBox();
   syncDashboardRoute();
   destroyCharts();
   const asiaRegion = getAsiaScreeningRegion();
@@ -23989,8 +24023,9 @@ function render() {
   else if (asiaReady) setScreeningContext(asiaRegion);
   ensureValidSelection();
   const showRsToolbar = Boolean(asiaRegion) || (state.tab === "Screening" && ["RS", "TrendScore", "Canslim"].includes(state.screeningView));
+  const inlineRsSearch = !asiaRegion && state.tab === "Screening" && state.screeningView === "RS";
   if (toolbarRow) {
-    toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && !showRsToolbar);
+    toolbarRow.classList.toggle("hidden", state.tab !== "Taiwan" && (!showRsToolbar || inlineRsSearch));
   }
   if (sortBox) {
     sortBox.classList.toggle("hidden", state.tab !== "Taiwan" || Boolean(asiaRegion));
@@ -24147,6 +24182,7 @@ searchInput.addEventListener("input", (event) => {
     window.clearTimeout(searchRenderTimer);
     searchRenderTimer = null;
   }
+  if (event.isComposing) return;
   if (state.tab === "Screening" || getAsiaScreeningRegion()) {
     searchRenderTimer = window.setTimeout(() => {
       searchRenderTimer = null;
