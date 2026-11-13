@@ -3036,8 +3036,71 @@ h1 {
 }
 
 .memory-contract-panel {
+  display: block;
+}
+
+.memory-contract-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.memory-contract-summary::-webkit-details-marker {
+  display: none;
+}
+
+.memory-contract-summary:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 6px;
+}
+
+.memory-contract-summary-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.memory-contract-summary-copy strong {
+  font-size: 1rem;
+}
+
+.memory-contract-summary-copy > span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.memory-contract-summary .memory-card-meta {
+  margin: 0;
+}
+
+.memory-contract-panel[open] > .memory-contract-summary > img {
+  transform: rotate(90deg);
+}
+
+.memory-contract-content {
   display: grid;
   gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 700px) {
+  .memory-contract-summary {
+    grid-template-columns: minmax(0, 1fr) 18px;
+  }
+
+  .memory-contract-summary .memory-card-meta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .memory-contract-summary > img {
+    grid-column: 2;
+    grid-row: 1;
+  }
 }
 
 .memory-contract-grid {

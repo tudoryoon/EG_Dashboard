@@ -556,6 +556,7 @@ const state = {
   ],
   memorySpotRanges: {},
   memorySpotSeries: {},
+  memoryContractGuideOpen: false,
   infraRanges: Object.fromEntries(
     Object.keys(infraGridData?.panels ?? {}).map((key) => [key, infraGridData.defaultRange ?? "3y"]),
   ),
@@ -16215,6 +16216,24 @@ function createMemoryContractGuideChart(canvas, rows) {
   charts.push(chart);
 }
 
+function bindMemoryContractGuideToggle(rows) {
+  const panel = usOverviewRoot.querySelector("[data-memory-contract-panel]");
+  const canvas = panel?.querySelector('[data-memory-contract-guide="trendforce"]');
+  if (!panel || !canvas) return;
+  const ensureChart = () => {
+    if (!panel.open || !memorySpotRuntime.loaded || typeof Chart === "undefined") return;
+    const chart = Chart.getChart(canvas);
+    if (chart) chart.resize();
+    else createMemoryContractGuideChart(canvas, rows);
+  };
+  panel.addEventListener("toggle", () => {
+    if (!panel.isConnected) return;
+    state.memoryContractGuideOpen = panel.open;
+    ensureChart();
+  });
+  ensureChart();
+}
+
 function parseCsvLine(line) {
   const values = [];
   let current = "";
@@ -17710,17 +17729,19 @@ function renderMemorySpotOverview() {
       <section class="memory-card-grid">
         ${featuredMarkup}
       </section>
-      <section class="memory-panel memory-contract-panel">
-        <div class="us-panel-head">
-          <div>
-            <h3>${contractGuide.title ?? "TrendForce Memory Contract Price Guide"}</h3>
-            <p>${contractGuide.subtitle ?? "Quarterly contract-price momentum from public TrendForce articles"}</p>
-          </div>
-          <div class="memory-card-meta gpu-term-meta">
+      <details class="memory-panel memory-contract-panel" data-memory-contract-panel ${state.memoryContractGuideOpen ? "open" : ""}>
+        <summary class="memory-contract-summary">
+          <span class="memory-contract-summary-copy">
+            <strong>${contractGuide.title ?? "TrendForce Memory Contract Price Guide"}</strong>
+            <span>${contractGuide.subtitle ?? "Quarterly contract-price momentum from public TrendForce articles"}</span>
+          </span>
+          <span class="memory-card-meta">
             <span>Updated ${contractGuide.updatedAt ?? "-"}</span>
             <span>${contractGuide.unit ?? "% QoQ"}</span>
-          </div>
-        </div>
+          </span>
+          <img src="./assets/lucide/chevron-right.svg" width="18" height="18" alt="" aria-hidden="true" />
+        </summary>
+        <div class="memory-contract-content">
         <div class="memory-contract-grid">
           <div class="memory-chart-wrap">
             <canvas data-memory-contract-guide="trendforce"></canvas>
@@ -17754,7 +17775,8 @@ function renderMemorySpotOverview() {
             ${monthlyWatchRows}
           </div>
         ` : ""}
-      </section>
+        </div>
+      </details>
       <section class="memory-panel memory-spot-contract-panel">
         <div class="us-panel-head">
           <div>
@@ -17796,13 +17818,9 @@ function renderMemorySpotOverview() {
     </section>
   `;
 
+  bindMemoryContractGuideToggle(contractRows);
   if (!memorySpotRuntime.loaded) {
     return;
-  }
-
-  const contractCanvas = usOverviewRoot.querySelector('[data-memory-contract-guide="trendforce"]');
-  if (contractCanvas) {
-    createMemoryContractGuideChart(contractCanvas, contractRows);
   }
 
   usOverviewRoot.querySelectorAll("[data-memory-range]").forEach((button) => {
