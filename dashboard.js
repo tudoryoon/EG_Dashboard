@@ -17448,6 +17448,7 @@ function renderMemorySpotOverview() {
             <strong>${row.period}</strong>
             <small>${row.basis}</small>
             <a href="${row.sourceUrl}" target="_blank" rel="noreferrer">${row.sourceTitle}</a>
+            ${row.secondarySourceUrl ? `<a href="${row.secondarySourceUrl}" target="_blank" rel="noreferrer">${row.secondarySourceTitle}</a>` : ""}
             ${row.nandSourceUrl ? `<a href="${row.nandSourceUrl}" target="_blank" rel="noreferrer">${row.nandSourceTitle}</a>` : ""}
             ${row.blendedSourceUrl ? `<a href="${row.blendedSourceUrl}" target="_blank" rel="noreferrer">${row.blendedSourceTitle}</a>` : ""}
           </span>
@@ -17493,6 +17494,7 @@ function renderMemorySpotOverview() {
           <span>
             <strong>${row.item}</strong>
             <small>${row.note}</small>
+            ${row.contractSourceUrl ? `<a href="${row.contractSourceUrl}" target="_blank" rel="noreferrer">${row.contractSourceTitle}</a>` : ""}
           </span>
           <span>
             <strong>${formatMemoryDollar(check.spotPrice, row.spotUnit)}</strong>
@@ -17501,6 +17503,7 @@ function renderMemorySpotOverview() {
           <span>
             <strong>${formatMemoryDollar(row.contractPrice, row.contractUnit)}</strong>
             <small>${row.contractDate ?? "not public"}</small>
+            ${row.contractBasis ? `<small>${row.contractBasis}</small>` : ""}
           </span>
           <span>${formatMemoryPremium(check.premiumPct)}</span>
         </div>`;
@@ -17769,7 +17772,7 @@ function renderMemorySpotOverview() {
         ${monthlyWatchRows ? `
           <div class="memory-monthly-watch">
             <div class="memory-list-head memory-note-head">
-              <span>Monthly watch</span>
+              <span>품목별 계약가격 업데이트</span>
               <span>Move</span>
             </div>
             ${monthlyWatchRows}

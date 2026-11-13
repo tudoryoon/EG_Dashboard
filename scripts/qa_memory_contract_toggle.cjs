@@ -18,6 +18,15 @@ const base = process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     const panel = page.locator('[data-memory-contract-panel]');
     const summary = panel.locator('summary');
     const canvas = panel.locator('canvas');
+    const dollarRows = page.locator('.memory-spot-contract-row');
+    const checks = await page.evaluate(() => memorySpotData.spotContractChecks);
+    assert.equal(await dollarRows.count(), checks.rows.length);
+    for (const [index, row] of checks.rows.entries()) {
+      assert.ok((await dollarRows.nth(index).innerText()).includes(row.contractDate));
+      assert.ok((await dollarRows.nth(index).innerText()).includes(row.contractBasis));
+      assert.ok((await dollarRows.nth(index).innerText()).includes(`$${row.contractPrice.toFixed(3)}`));
+      assert.equal(await dollarRows.nth(index).locator('a').getAttribute('href'), row.contractSourceUrl);
+    }
     const chartId = () => canvas.evaluate(canvas => Chart.getChart(canvas)?.id ?? null);
     const isOpen = () => panel.evaluate(panel => panel.open);
     assert.equal(await isOpen(), false);
