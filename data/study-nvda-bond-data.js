@@ -11,8 +11,8 @@ window.studyNvdaBondData = {
     "maturityDate": "2031-06-15",
     "name": "NVIDIA 2.000% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-11-10",
-  "checkedAt": "2026-11-12T02:19:03+00:00",
+  "updatedAt": "2026-11-11",
+  "checkedAt": "2026-11-13T01:57:11+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyNvdaBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-11",
+    "endDate": "2026-11-12",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyNvdaBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-11"
+      "2026-11-12"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyNvdaBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-11"
+      "2026-11-12"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3341,6 +3341,16 @@ window.studyNvdaBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261110",
       "firstCollectedAt": "2026-11-12T02:19:03+00:00",
       "lastCollectedAt": "2026-11-12T02:19:03+00:00"
+    },
+    {
+      "date": "2026-11-11",
+      "ytmPct": 5.46,
+      "pricePer100": 86.11,
+      "sourceSha256": "191cb625881ff839cfe8d04bcb562bfb853d24fe13fc5b8fa196877dd7793fea",
+      "yieldToWorstPct": 5.46,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261111",
+      "firstCollectedAt": "2026-11-13T01:57:11+00:00",
+      "lastCollectedAt": "2026-11-13T01:57:11+00:00"
     }
   ]
 };
