@@ -67,6 +67,18 @@ def main() -> None:
         latest_ohlc_count >= len(rs_histories) - 10,
         f"Latest RS candle coverage is too small: {latest_ohlc_count} / {len(rs_histories)}",
     )
+    for ticker, history in rs_histories.items():
+        values = [(history.get(key) or [None])[-1] for key in ("price", "open", "high", "low")]
+        if not all(isinstance(value, (int, float)) for value in values):
+            continue
+        close, opening, high, low = values
+        # Stored quotes are rounded to cents, while the provider may retain
+        # sub-cent trades. Tolerate only that display rounding.
+        tolerance = 0.011
+        require(
+            low - tolerance <= min(opening, close) <= max(opening, close) <= high + tolerance,
+            f"Latest RS candle has an impossible OHLC range for {ticker}.",
+        )
     for row in rs_rows:
         ticker = row.get("ticker")
         if not ticker or row.get("isIndex"):

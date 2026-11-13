@@ -963,6 +963,93 @@ def fill_closed_session_ohlcv_gaps_from_chart(
     )
 
 
+def fetch_regular_minute_ohlc(symbol: str, target_date: pd.Timestamp, daily_close: float) -> tuple[str, dict[str, float]] | None:
+    """Recover a malformed Yahoo daily range from its completed regular-session bars."""
+    day = pd.Timestamp(target_date).normalize()
+    start = (day + pd.Timedelta(hours=9, minutes=30)).tz_localize("America/New_York")
+    end = (day + pd.Timedelta(hours=16, minutes=1)).tz_localize("America/New_York")
+    if pd.Timestamp.now(tz="UTC") < end.tz_convert("UTC"):
+        return None
+    try:
+        response = requests.get(
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(symbol, safe='')}",
+            params={"period1": int(start.timestamp()), "period2": int(end.timestamp()),
+                    "interval": "1m", "includePrePost": "false"},
+            headers=WIKI_HEADERS,
+            timeout=30,
+        )
+        response.raise_for_status()
+        result = (response.json().get("chart", {}).get("result") or [None])[0]
+        if not result or (result.get("meta") or {}).get("exchangeTimezoneName") != "America/New_York":
+            return None
+        stamps = result.get("timestamp") or []
+        quotes = ((result.get("indicators") or {}).get("quote") or [{}])[0]
+        if len(stamps) < 100:
+            return None
+        local_times = pd.to_datetime(stamps, unit="s", utc=True).tz_convert("America/New_York")
+        # Thinly traded securities may have no 09:30 print and may finish
+        # trading well before 16:00. Yahoo pads some minutes with null bars.
+        if (local_times[0].date() != day.date() or local_times[-1].date() != day.date()
+                or local_times[0].strftime("%H:%M") < "09:30"
+                or local_times[-1].strftime("%H:%M") > "16:00"):
+            return None
+        values = {key: [safe_float(v) for v in quotes.get(key) or []] for key in ("open", "high", "low", "close")}
+        if any(len(series) != len(stamps) for series in values.values()):
+            return None
+        highs = [value for value in values["high"] if value is not None]
+        lows = [value for value in values["low"] if value is not None]
+        openings = [value for value in values["open"] if value is not None]
+        closes = [value for value in values["close"] if value is not None]
+        if not highs or not lows or not openings or not closes:
+            return None
+        first_open, final_close = openings[0], closes[-1]
+        if abs(final_close - daily_close) > max(0.02, daily_close * 0.0002):
+            return None
+        high, low = max(highs), min(lows)
+        if not (0 < low <= min(first_open, final_close) <= max(first_open, final_close) <= high):
+            return None
+        return symbol, {"open": first_open, "high": high, "low": low}
+    except Exception:
+        return None
+
+
+def repair_invalid_latest_daily_ranges(
+    raw_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+) -> None:
+    """Use observed minute bars only when a provider daily candle is impossible."""
+    target_date = raw_close_frame.dropna(how="all").index.max()
+    candidates = []
+    for symbol in raw_close_frame.columns.intersection(open_frame.columns).intersection(high_frame.columns).intersection(low_frame.columns):
+        try:
+            close, opening, high, low = (float(frame.at[target_date, symbol]) for frame in
+                                         (raw_close_frame, open_frame, high_frame, low_frame))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if all(math.isfinite(value) and value > 0 for value in (close, opening, high, low)) and not (
+            low <= opening <= high and low <= close <= high
+        ):
+            candidates.append((symbol, close))
+    if not candidates:
+        return
+    repaired = []
+    with ThreadPoolExecutor(max_workers=min(OHLC_FALLBACK_WORKERS, len(candidates))) as executor:
+        futures = [executor.submit(fetch_regular_minute_ohlc, symbol, target_date, close) for symbol, close in candidates]
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                repaired.append(result)
+    for symbol, values in repaired:
+        for frame, key in ((open_frame, "open"), (high_frame, "high"), (low_frame, "low")):
+            frame.at[target_date, symbol] = values[key]
+    unresolved = sorted({symbol for symbol, _ in candidates} - {symbol for symbol, _ in repaired})
+    print(f"Repaired {len(repaired)} / {len(candidates)} invalid Yahoo daily ranges from completed 1m bars.", flush=True)
+    if unresolved:
+        raise RuntimeError(f"Unverified latest regular-session OHLC: {', '.join(unresolved)}")
+
+
 def ensure_symbol_price_frames(
     symbols: list[str],
     raw_close_frame: pd.DataFrame,
@@ -1981,6 +2068,7 @@ def refresh_daily_briefing_priority() -> dict[str, object]:
         low_frame,
         volume_frame,
     )
+    repair_invalid_latest_daily_ranges(raw_close_frame, open_frame, high_frame, low_frame)
     rows_by_ticker = {
         normalize_ticker(row.get("ticker")): row
         for row in existing.get("rows", [])
@@ -2067,6 +2155,7 @@ def main() -> None:
             volume_frame,
         )
     )
+    repair_invalid_latest_daily_ranges(raw_close_frame, open_frame, high_frame, low_frame)
     raw_close_frame, adjusted_close_frame = fill_closed_session_close_gaps_from_spark(
         symbols + [BENCHMARK_SYMBOL],
         raw_close_frame,
