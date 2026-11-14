@@ -11,8 +11,8 @@ window.studyGooglBondData = {
     "maturityDate": "2030-08-15",
     "name": "Alphabet 1.100% Senior Unsecured Notes 2030"
   },
-  "updatedAt": "2026-11-11",
-  "checkedAt": "2026-11-13T01:57:11+00:00",
+  "updatedAt": "2026-11-12",
+  "checkedAt": "2026-11-14T01:29:45+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyGooglBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-12",
+    "endDate": "2026-11-13",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyGooglBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-12"
+      "2026-11-13"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyGooglBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-12"
+      "2026-11-13"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3351,6 +3351,16 @@ window.studyGooglBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261111",
       "firstCollectedAt": "2026-11-13T01:57:11+00:00",
       "lastCollectedAt": "2026-11-13T01:57:11+00:00"
+    },
+    {
+      "date": "2026-11-12",
+      "ytmPct": 5.31,
+      "pricePer100": 85.82,
+      "sourceSha256": "0c282c6dfe0844f879c292d7e7deac6c2ccc8be78770338881ffbfde7ab07216",
+      "yieldToWorstPct": 5.31,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261112",
+      "firstCollectedAt": "2026-11-14T01:29:45+00:00",
+      "lastCollectedAt": "2026-11-14T01:29:45+00:00"
     }
   ]
 };

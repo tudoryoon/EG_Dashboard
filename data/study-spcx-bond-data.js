@@ -12,8 +12,8 @@ window.studySpcxBondData = {
     "maturityDate": "2031-07-15",
     "name": "SpaceX 5.350% Senior Unsecured Notes 2031 (144A)"
   },
-  "updatedAt": "2026-11-11",
-  "checkedAt": "2026-11-13T01:57:12+00:00",
+  "updatedAt": "2026-11-12",
+  "checkedAt": "2026-11-14T01:29:47+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -27,16 +27,16 @@ window.studySpcxBondData = {
   },
   "coverage": {
     "startDate": "2026-06-26",
-    "endDate": "2026-11-12",
+    "endDate": "2026-11-13",
     "missingWeekdays": [
       "2026-07-03",
       "2026-09-07",
-      "2026-11-12"
+      "2026-11-13"
     ],
     "unavailableDates": [
       "2026-07-03",
       "2026-09-07",
-      "2026-11-12"
+      "2026-11-13"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -1012,6 +1012,16 @@ window.studySpcxBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261111",
       "firstCollectedAt": "2026-11-13T01:57:12+00:00",
       "lastCollectedAt": "2026-11-13T01:57:12+00:00"
+    },
+    {
+      "date": "2026-11-12",
+      "ytmPct": 7.25,
+      "pricePer100": 92.55,
+      "sourceSha256": "0c282c6dfe0844f879c292d7e7deac6c2ccc8be78770338881ffbfde7ab07216",
+      "yieldToWorstPct": 7.25,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261112",
+      "firstCollectedAt": "2026-11-14T01:29:47+00:00",
+      "lastCollectedAt": "2026-11-14T01:29:47+00:00"
     }
   ]
 };
