@@ -61,8 +61,10 @@ jobs:
         id: refresh-guard
         shell: bash
         env:
-          REFRESH_IF_STALE: ${{ inputs.refresh_if_stale }}
-          PRICES_ONLY: ${{ inputs.prices_only }}
+          # Collector-code pushes verify already published closes without forcing
+          # a full universe or unrelated financial/news recollection.
+          REFRESH_IF_STALE: ${{ github.event_name == 'push' && 'true' || inputs.refresh_if_stale }}
+          PRICES_ONLY: ${{ github.event_name == 'push' && 'true' || inputs.prices_only }}
           FULL_EARNINGS_ALLOWED: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '45 21 * * *' }}
         run: |
           python scripts/test_market_rs_refresh_guard.py

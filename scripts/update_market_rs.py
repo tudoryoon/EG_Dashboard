@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 from xml.etree import ElementTree as ET
 
 import pandas as pd
@@ -30,6 +31,7 @@ SHARES_REFRESH_RATIO_LOW = 0.70
 SHARES_REFRESH_RATIO_HIGH = 1.45
 BATCH_SIZE = int(os.getenv("MARKET_RS_BATCH_SIZE", "15"))
 BATCH_WORKERS = max(1, int(os.getenv("MARKET_RS_BATCH_WORKERS", "4")))
+YFINANCE_DOWNLOAD_LOCK = Lock()
 BATCH_SLEEP = float(os.getenv("MARKET_RS_BATCH_SLEEP", "0.6"))
 RETRY_SLEEP = float(os.getenv("MARKET_RS_RETRY_SLEEP", "1.0"))
 RETRY_ATTEMPTS = int(os.getenv("MARKET_RS_RETRY_ATTEMPTS", "4"))
@@ -566,6 +568,13 @@ def fetch_universe_frame() -> pd.DataFrame:
     return pd.DataFrame(merged.values()).sort_values("ticker").reset_index(drop=True)
 
 
+def serialized_yfinance_download(**kwargs) -> pd.DataFrame:
+    """Protect yfinance's process-global result dictionary across batch workers."""
+    with YFINANCE_DOWNLOAD_LOCK:
+        return yf.download(**kwargs)
+
+
+
 def download_batch(
     symbols: list[str],
     period: str = PRICE_PERIOD,
@@ -581,7 +590,7 @@ def download_batch(
     symbols = [symbol for symbol in symbols if not is_terminal_symbol(symbol)]
     if not symbols:
         return {}, {}, {}, {}, {}, {}
-    history = yf.download(
+    history = serialized_yfinance_download(
         tickers=symbols,
         period=period,
         auto_adjust=False,
@@ -645,7 +654,7 @@ def download_batch(
             continue
         for attempt in range(RETRY_ATTEMPTS):
             try:
-                single = yf.download(
+                single = serialized_yfinance_download(
                     tickers=symbol,
                     period=period,
                     auto_adjust=False,
@@ -961,6 +970,101 @@ def fill_closed_session_ohlcv_gaps_from_chart(
         low_frame.sort_index(),
         volume_frame.sort_index(),
     )
+
+
+def repair_cask_rename_history(
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+    volume_frame: pd.DataFrame,
+) -> None:
+    """Restore CASK's Nov 9-11 trades lost in Yahoo's MGPI ticker transition.
+
+    Sempreon's issuer confirms MGPI became CASK on Nov 2. Nasdaq publishes
+    CASK's actual trades for these days, while Yahoo's CASK chart has null
+    bars and its MGPI chart still contains the adjusted-close history.
+    """
+    dates = [pd.Timestamp(day) for day in ("2026-11-09", "2026-11-10", "2026-11-11")]
+    frames = (raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
+    if "CASK" not in raw_close_frame.columns or any(day not in raw_close_frame.index for day in dates):
+        return
+    if all("CASK" in frame.columns and safe_float(frame.at[day, "CASK"]) is not None
+           for frame in frames for day in dates):
+        return
+
+    nasdaq = requests.get(
+        "https://api.nasdaq.com/api/quote/CASK/historical",
+        params={"assetclass": "stocks", "limit": "10", "fromdate": "2026-11-09", "todate": "2026-11-12"},
+        headers={**WIKI_HEADERS, "Accept": "application/json"}, timeout=30,
+    )
+    nasdaq.raise_for_status()
+    official = nasdaq.json()
+    if (official.get("status") or {}).get("rCode") != 200:
+        raise RuntimeError("Nasdaq CASK historical trades are unavailable")
+    official_rows = {}
+    for row in ((official.get("data") or {}).get("tradesTable") or {}).get("rows") or []:
+        day = pd.Timestamp(datetime.strptime(row["date"], "%m/%d/%Y"))
+        if day not in dates + [pd.Timestamp("2026-11-12")]:
+            continue
+        values = {key: safe_float(str(row[key]).replace("$", "").replace(",", ""))
+                  for key in ("open", "high", "low", "close", "volume")}
+        if any(values[key] is None or values[key] <= 0 for key in values):
+            raise RuntimeError(f"Nasdaq CASK has incomplete OHLCV for {day.date()}")
+        if not values["low"] <= min(values["open"], values["close"]) <= max(values["open"], values["close"]) <= values["high"]:
+            raise RuntimeError(f"Nasdaq CASK has invalid OHLCV for {day.date()}")
+        official_rows[day] = values
+
+    yahoo = requests.get(
+        "https://query1.finance.yahoo.com/v8/finance/chart/MGPI",
+        params={"period1": int(pd.Timestamp("2026-11-08", tz="UTC").timestamp()),
+                "period2": int(pd.Timestamp("2026-11-13", tz="UTC").timestamp()),
+                "interval": "1d", "events": "history", "includePrePost": "false"},
+        headers=WIKI_HEADERS, timeout=30,
+    )
+    yahoo.raise_for_status()
+    chart = yahoo.json().get("chart") or {}
+    results = chart.get("result") or []
+    if chart.get("error") or len(results) != 1:
+        raise RuntimeError("Yahoo MGPI historical chart is unavailable")
+    result = results[0]
+    meta = result.get("meta") or {}
+    if (meta.get("symbol") != "MGPI" or meta.get("instrumentType") != "EQUITY"
+            or meta.get("currency") != "USD" or meta.get("exchangeTimezoneName") != "America/New_York"):
+        raise RuntimeError("Yahoo MGPI historical identity mismatch")
+    quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
+    adjusted = ((result.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose") or []
+    yahoo_rows = {}
+    for index, stamp in enumerate(result.get("timestamp") or []):
+        day = pd.to_datetime(int(stamp), unit="s", utc=True).tz_convert("America/New_York").tz_localize(None).normalize()
+        if day not in dates + [pd.Timestamp("2026-11-12")]:
+            continue
+        values = {key: safe_float((quote.get(key) or [])[index]) for key in ("open", "high", "low", "close", "volume")}
+        values["adjusted_close"] = safe_float(adjusted[index]) if index < len(adjusted) else None
+        yahoo_rows[day] = values
+
+    overlap = pd.Timestamp("2026-11-12")
+    if (overlap not in official_rows or overlap not in yahoo_rows
+            or overlap not in raw_close_frame.index
+            or abs(official_rows[overlap]["close"] - float(raw_close_frame.at[overlap, "CASK"])) > 0.02
+            or abs(yahoo_rows[overlap]["close"] - official_rows[overlap]["close"]) > 0.02):
+        raise RuntimeError("CASK/MGPI overlap does not identify the same security")
+    for day in dates:
+        source, alias = official_rows.get(day), yahoo_rows.get(day)
+        if not source or not alias or alias["adjusted_close"] is None or alias["adjusted_close"] <= 0:
+            raise RuntimeError(f"CASK/MGPI lacks verified trading history for {day.date()}")
+        if any(alias[key] is None or abs(alias[key] - source[key]) > 0.02
+               for key in ("open", "high", "low", "close")):
+            raise RuntimeError(f"CASK/MGPI OHLC disagreement for {day.date()}")
+        if alias["volume"] is None or abs(alias["volume"] - source["volume"]) > max(3, source["volume"] * 0.0001):
+            raise RuntimeError(f"CASK/MGPI volume disagreement for {day.date()}")
+    for day in dates:
+        source, alias = official_rows[day], yahoo_rows[day]
+        for frame, key in ((raw_close_frame, "close"), (adjusted_close_frame, "adjusted_close"),
+                           (open_frame, "open"), (high_frame, "high"), (low_frame, "low"), (volume_frame, "volume")):
+            frame.at[day, "CASK"] = alias[key] if key == "adjusted_close" else source[key]
+    print("Restored CASK Nov 9-11 OHLCV from Nasdaq and verified MGPI adjusted history.", flush=True)
 
 
 def fetch_regular_minute_ohlc(symbol: str, target_date: pd.Timestamp, daily_close: float) -> tuple[str, dict[str, float]] | None:
@@ -2069,6 +2173,7 @@ def refresh_daily_briefing_priority() -> dict[str, object]:
         volume_frame,
     )
     repair_invalid_latest_daily_ranges(raw_close_frame, open_frame, high_frame, low_frame)
+    repair_cask_rename_history(raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
     rows_by_ticker = {
         normalize_ticker(row.get("ticker")): row
         for row in existing.get("rows", [])
@@ -2156,6 +2261,7 @@ def main() -> None:
         )
     )
     repair_invalid_latest_daily_ranges(raw_close_frame, open_frame, high_frame, low_frame)
+    repair_cask_rename_history(raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
     raw_close_frame, adjusted_close_frame = fill_closed_session_close_gaps_from_spark(
         symbols + [BENCHMARK_SYMBOL],
         raw_close_frame,

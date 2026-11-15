@@ -150,6 +150,28 @@ class RefreshPlanTest(unittest.TestCase):
         self.assertFalse(result['refresh_rs'])
         self.assertTrue(result['refresh_earnings_all'])
 
+    def test_collector_push_checks_only_missing_prices(self):
+        workflow = (ROOT / '.github/workflows/update-market-rs.yml').read_text(encoding='utf-8')
+        self.assertIn("REFRESH_IF_STALE: ${{ github.event_name == 'push' && 'true' || inputs.refresh_if_stale }}", workflow)
+        self.assertIn("PRICES_ONLY: ${{ github.event_name == 'push' && 'true' || inputs.prices_only }}", workflow)
+        with patch('market_rs_refresh_guard.latest_completed_session', return_value='2026-11-02'):
+            current = evaluate_refresh(
+                self.rs, self.trend, self.financials, self.earnings,
+                event_name='push', refresh_if_stale=True, prices_only=True,
+                full_earnings_allowed=False, now=datetime(2026, 11, 2, 22, 0, tzinfo=timezone.utc),
+            )
+            self.trend['updatedAt'] = '2026-10-30'
+            stale = evaluate_refresh(
+                self.rs, self.trend, self.financials, self.earnings,
+                event_name='push', refresh_if_stale=True, prices_only=True,
+                full_earnings_allowed=False, now=datetime(2026, 11, 2, 22, 0, tzinfo=timezone.utc),
+            )
+        self.assertFalse(current['should_run'])
+        self.assertTrue(stale['refresh_trend'])
+        self.assertFalse(stale['refresh_rs'])
+        self.assertFalse(stale['refresh_financials'])
+        self.assertFalse(stale['refresh_earnings_daily'])
+
     def test_qqq_date_selection_handles_winter_close(self):
         dates = ['2026-10-30T13:30:00+00:00', '2026-11-02T14:30:00+00:00']
         response = {'chart': {'result': [{'timestamp': [int(datetime.fromisoformat(d).timestamp()) for d in dates]}]}}
