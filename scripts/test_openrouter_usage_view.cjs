@@ -103,4 +103,20 @@ assert.equal(clipped.data.labels.length, 5);
 assert.equal(clipped.data.datasets[1].data[0], 100);
 assert.ok(clipped.options.plugins.tooltip.callbacks.label({dataset: {yAxisID: 'yGrowth'}, parsed: {y: 25}}).includes('+25.00%'));
 assert.ok(source.indexOf('${renderOpenrouterUsageSection()}') < source.indexOf('<h3>Top Models</h3>'));
+data.companies.push({key: 'meta', label: 'Meta', tokens: 125, modelCount: 2,
+  authors: ['meta', 'meta-llama'], models: [
+    {key: 'meta/muse', label: 'Muse', tokens: 100},
+    {key: 'meta-llama/llama', label: 'Llama', tokens: 25},
+  ]});
+data.companyHistory.series.meta = [null, 120, null, 125, null, null];
+context.state.openrouterUsageCompany = 'meta';
+context.state.openrouterUsageModel = 'all';
+const meta = context.getOpenrouterUsageSelection();
+assert.equal(meta.company.models.length, 2);
+assert.equal(JSON.stringify(context.getOpenrouterUsageHistory(data, meta.company).values), '[null,120,null,125,null,null]');
+html = context.renderOpenrouterUsageSection();
+assert.ok(html.includes('meta, meta-llama'));
+assert.ok(html.includes('Muse') && html.includes('Llama'));
+context.state.openrouterUsageModel = 'meta-llama/llama';
+assert.equal(context.getOpenrouterUsageSelection().model.label, 'Llama');
 console.log('OpenRouter combined companies, mixed charts, WoW, partial weeks, gaps and selection tests passed');

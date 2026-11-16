@@ -23762,14 +23762,14 @@ function renderOpenrouterUsageSection() {
       <div class="market-rs-chip-row">${[["1m", "1M"], ["3m", "3M"], ["6m", "6M"], ["1y", "1Y"]].map(([key, label]) => `<button type="button" class="market-rs-chip${state.openrouterUsageRange === key ? " active" : ""}" data-openrouter-usage-range="${key}">${label}</button>`).join("")}</div>
     </div>
     <div class="openrouter-usage-chart"><canvas id="openrouter-company-usage-chart"></canvas></div>
-    ${hasHistory ? "" : '<p class="openrouter-caption">선택 항목의 주별 이력은 원천에서 미공개입니다. 위 최근 7일 합계와 아래 모델별 사용량은 전체 주간 데이터 기준입니다.</p>'}
+    ${hasHistory ? "" : '<p class="openrouter-caption">선택 항목의 주별 이력은 원천에서 미공개입니다. 위 최근 7일 합계와 아래 모델별 사용량은 공개된 전체 주간 모델 데이터 기준입니다.</p>'}
     <p class="openrouter-caption">막대: 주간 토큰(왼쪽) · 선: WoW 성장률(오른쪽, 전주 대비 %). 진행 중인 주는 연한 막대만 표시하며 WoW는 제외합니다. 추이는 원천의 주별 구간이라 최근 7일 합계와 기간이 다릅니다. 미공개 값은 비워두며 합산은 두 회사 값이 모두 있는 주만 표시합니다.</p>
     <div class="openrouter-usage-table-head"><h4>${escapeHtml(company.label)} 모델별 최근 7일</h4><span>사용량 내림차순 · 전체 ${company.modelCount}개</span></div>
     <div class="openrouter-usage-table-wrap"><table class="openrouter-usage-table">
       <thead><tr><th>모델</th><th>주간 토큰</th><th>회사 내 비중</th></tr></thead><tbody>
       ${company.models.map((item) => `<tr class="${model?.key === item.key ? "is-selected" : ""}"><td><button type="button" data-openrouter-model="${escapeHtml(item.key)}">${escapeHtml(item.label)}</button></td><td>${formatOpenrouterCount(item.tokens)}</td><td>${company.tokens > 0 ? (item.tokens / company.tokens * 100).toFixed(2) : "0.00"}%</td></tr>`).join("")}
       </tbody></table></div>
-    <p class="openrouter-caption">회사 합계는 상위 100개로 자르기 전 전체 모델 데이터를 합산합니다. 각 회사의 전체 API·ChatGPT·Claude 이용량이나 이용자 수가 아닙니다. Source: <a href="https://openrouter.ai/rankings" target="_blank" rel="noreferrer">OpenRouter</a> · CC BY 4.0</p>
+    <p class="openrouter-caption">회사 합계는 상위 100개로 자르기 전 공개된 전체 모델/variant 데이터를 합산하며, 동일 회사의 namespace를 통합합니다.${company.authors?.length > 1 ? ` ${escapeHtml(company.label)} 포함: ${company.authors.map(escapeHtml).join(", ")}.` : ""} 과거 그래프는 원천이 상위 회사/모델만 개별 공개하므로 순위 밖 기간은 빈칸입니다. 각 회사의 전체 API·ChatGPT·Claude 이용량이나 이용자 수가 아닙니다. Source: <a href="https://openrouter.ai/rankings" target="_blank" rel="noreferrer">OpenRouter</a> · CC BY 4.0</p>
   </article>`;
 }
 

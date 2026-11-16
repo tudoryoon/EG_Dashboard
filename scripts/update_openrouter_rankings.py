@@ -260,10 +260,21 @@ def load_existing_payload() -> dict[str, Any]:
 AUTHOR_LABELS = {
     "openai": "OpenAI", "anthropic": "Anthropic", "google": "Google",
     "deepseek": "DeepSeek", "x-ai": "xAI", "qwen": "Qwen / Alibaba",
-    "meta-llama": "Meta", "microsoft": "Microsoft", "nvidia": "NVIDIA",
+    "meta": "Meta", "microsoft": "Microsoft", "nvidia": "NVIDIA",
     "moonshotai": "Moonshot AI", "z-ai": "Z.ai", "minimax": "MiniMax",
     "mistralai": "Mistral AI", "tencent": "Tencent", "stepfun": "StepFun",
+    "bytedance": "ByteDance",
 }
+COMPANY_ALIASES = {
+    "meta-llama": "meta",
+    "alibaba": "qwen",
+    "bytedance-seed": "bytedance",
+}
+
+
+def company_key(author: str) -> str:
+    normalized = str(author or "").strip().lower()
+    return COMPANY_ALIASES.get(normalized, normalized)
 
 
 def weekly_history(raw: dict[str, Any]) -> dict[str, Any]:
@@ -281,18 +292,28 @@ def weekly_history(raw: dict[str, Any]) -> dict[str, Any]:
 
 def build_weekly_usage(rows: list[dict[str, Any]], author_raw: dict[str, Any],
                        model_raw: dict[str, Any], model_names: dict[str, str]) -> dict[str, Any]:
+    ignored_empty_rows = sum(not row["variantId"] and row["tokens"] == 0 and row["requests"] == 0 for row in rows)
+    rows = [row for row in rows if row["variantId"] or row["tokens"] != 0 or row["requests"] != 0]
     if not rows:
         raise ValueError("Empty weekly model usage; refusing to replace stored totals")
     as_of = max(row["date"] for row in rows if row.get("date"))
     date.fromisoformat(as_of)
     companies: dict[str, Any] = {}
+    seen_models: set[str] = set()
     for row in rows:
-        company = companies.setdefault(row["author"], {
-            "key": row["author"], "label": AUTHOR_LABELS.get(row["author"], row["author"]),
-            "tokens": 0, "requests": 0, "models": {},
-        })
         # Keep disjoint variants explicit so their history matches the source chart.
         model_id = row["variantId"]
+        if not model_id or model_id in seen_models:
+            raise ValueError(f"Missing or duplicate weekly model variant: {model_id}")
+        seen_models.add(model_id)
+        if row["tokens"] < 0 or row["requests"] < 0:
+            raise ValueError(f"Negative weekly usage: {model_id}")
+        key = company_key(row["author"])
+        company = companies.setdefault(key, {
+            "key": key, "label": AUTHOR_LABELS.get(key, key),
+            "tokens": 0, "requests": 0, "models": {}, "authors": set(),
+        })
+        company["authors"].add(row["author"])
         variant = row.get("variant") or ""
         label = display_name(row["modelId"], model_names)
         if variant and variant != "standard":
@@ -309,19 +330,21 @@ def build_weekly_usage(rows: list[dict[str, Any]], author_raw: dict[str, Any],
     for company in companies.values():
         company["models"] = sorted(company["models"].values(), key=lambda item: item["tokens"], reverse=True)
         company["modelCount"] = len(company["models"])
+        company["authors"] = sorted(company["authors"])
     return {
         "asOf": as_of,
         "windowStart": (date.fromisoformat(as_of) - timedelta(days=6)).isoformat(),
         "totalTokens": sum(company["tokens"] for company in companies.values()),
         "modelCount": sum(company["modelCount"] for company in companies.values()),
+        "ignoredEmptyRows": ignored_empty_rows,
         "companies": sorted(companies.values(), key=lambda item: item["tokens"], reverse=True),
         "companyHistory": weekly_history(author_raw),
         "modelHistory": weekly_history(model_raw),
         "sourceUrl": BASE_URL + "/rankings",
         "authorHistoryUrl": BASE_URL + RANKINGS_API_BASE + "/author-market-share",
         "modelHistoryUrl": BASE_URL + CHART_ENDPOINTS["models"]["endpoint"],
-        "scope": "OpenRouter public traffic only; prompt + completion tokens, not users or revenue.",
-        "historyCoverage": "Weekly chart buckets are distinct from the trailing 7-day summary. Missing named series are unreported, not zero. The latest week is in progress.",
+        "scope": "OpenRouter public traffic only; all returned model variants, prompt + completion tokens, not users or revenue. Model-author namespaces belonging to the same company are combined.",
+        "historyCoverage": "Weekly chart buckets are distinct from the trailing 7-day summary. Historical charts name only top authors/models and group the remainder into Others; missing named series are unreported, not zero. The latest week may be in progress.",
     }
 
 

@@ -52,6 +52,49 @@ class WeeklyUsageTests(unittest.TestCase):
         self.assertNotIn("Others", data["series"])
         self.assertEqual(data["cachedAt"], 123)
 
+    def test_company_aliases_match_canonical_author_history_and_preserve_models(self):
+        raw = [raw_row("meta/muse", 100), raw_row("meta-llama/llama", 25),
+               raw_row("qwen/qwen-test", 50), raw_row("Qwen/embedding", 10),
+               raw_row("alibaba/wan", 0), raw_row("bytedance-seed/seed", 20),
+               raw_row("bytedance/ui-tars", 5)]
+        rows = [usage.normalize_leaderboard_row(row, i + 1, {}) for i, row in enumerate(raw)]
+        # The source author chart already uses corporate keys, not model prefixes.
+        authors = {"data": {"data": [{"x": "2026-10-19", "ys": {"meta": 120, "qwen": 60}}]}}
+        data = usage.build_weekly_usage(rows, authors, {}, {})
+        companies = {company["key"]: company for company in data["companies"]}
+        self.assertEqual(set(companies), {"meta", "qwen", "bytedance"})
+        self.assertEqual(companies["meta"]["tokens"], 125)
+        self.assertEqual(companies["meta"]["label"], "Meta")
+        self.assertEqual(companies["meta"]["modelCount"], 2)
+        self.assertEqual(companies["meta"]["authors"], ["meta", "meta-llama"])
+        self.assertEqual(companies["qwen"]["tokens"], 60)
+        self.assertEqual(companies["qwen"]["modelCount"], 3)
+        self.assertEqual(companies["bytedance"]["tokens"], 25)
+        self.assertEqual(data["totalTokens"], 210)
+        self.assertIn("meta-llama/llama", [model["key"] for model in companies["meta"]["models"]])
+        self.assertEqual(data["companyHistory"]["series"]["meta"], [120])
+
+    def test_duplicate_variants_and_negative_usage_are_rejected(self):
+        row = usage.normalize_leaderboard_row(raw_row("openai/test", 100), 1, {})
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            usage.build_weekly_usage([row, row], {}, {}, {})
+        with self.assertRaisesRegex(ValueError, "Negative"):
+            usage.build_weekly_usage([{**row, "tokens": -1}], {}, {}, {})
+        with self.assertRaisesRegex(ValueError, "Missing"):
+            usage.build_weekly_usage([{**row, "variantId": ""}], {}, {}, {})
+
+    def test_zero_activity_empty_source_placeholder_is_not_a_company_or_model(self):
+        row = usage.normalize_leaderboard_row(raw_row("openai/test", 100), 1, {})
+        empty = {**row, "variantId": "", "modelId": "", "author": "openrouter",
+                 "tokens": 0, "requests": 0, "date": "2026-10-28"}
+        data = usage.build_weekly_usage([row, empty], {}, {}, {})
+        self.assertEqual(data["ignoredEmptyRows"], 1)
+        self.assertEqual(data["modelCount"], 1)
+        self.assertEqual(data["asOf"], "2026-10-27")
+        self.assertEqual([company["key"] for company in data["companies"]], ["openai"])
+        with self.assertRaisesRegex(ValueError, "Empty"):
+            usage.build_weekly_usage([empty], {}, {}, {})
+
     def test_empty_source_does_not_create_zero_company(self):
         with self.assertRaises(ValueError):
             usage.build_weekly_usage([], {}, {}, {})
