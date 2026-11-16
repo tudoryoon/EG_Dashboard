@@ -11,6 +11,7 @@ from io import StringIO
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
+from zoneinfo import ZoneInfo
 from xml.etree import ElementTree as ET
 
 import pandas as pd
@@ -139,11 +140,17 @@ SYMBOL_ALIASES = {
     # TXSE alert #2026-073: Texas Capital changed TCBI to TXCP on 2026-11-09.
     # Preserve the same security's TCBI price history.
     "TCBI": "TXCP",
+    # Bright Horizon Energy issuer release and SEC 8-K: Black Hills kept the
+    # same common shares under HZN from the 2026-11-16 NYSE session.
+    "BKH": "HZN",
     "CRDA": "CRD-A",
     "GEFB": "GEF-B",
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # NorthWestern's NWE shares converted into 0.98 HZN shares after the
+    # 2026-11-13 merger close; Nasdaq trading ended before 2026-11-16.
+    "NWE",
     # Nasdaq Corporate Actions Alert #2026-796: merger closed 2026-11-06;
     # BWMN last traded 2026-11-05 and was suspended effective 2026-11-09.
     "BWMN",
@@ -1067,6 +1074,70 @@ def repair_cask_rename_history(
     print("Restored CASK Nov 9-11 OHLCV from Nasdaq and verified MGPI adjusted history.", flush=True)
 
 
+def repair_hzn_first_session(
+    raw_close_frame: pd.DataFrame,
+    adjusted_close_frame: pd.DataFrame,
+    open_frame: pd.DataFrame,
+    high_frame: pd.DataFrame,
+    low_frame: pd.DataFrame,
+    volume_frame: pd.DataFrame,
+) -> None:
+    """Replace BKH's carried close with HZN's first actual NYSE session."""
+    day = pd.Timestamp("2026-11-16")
+    prior_day = pd.Timestamp("2026-11-13")
+    frames = (raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
+    if "HZN" not in raw_close_frame.columns or day not in raw_close_frame.index:
+        return
+    if all("HZN" in frame.columns and safe_float(frame.at[day, "HZN"]) is not None
+           for frame in frames) and abs(float(raw_close_frame.at[day, "HZN"]) - 86.7) > 0.02:
+        return
+    if prior_day not in raw_close_frame.index or "HZN" not in raw_close_frame.columns:
+        raise RuntimeError("HZN rename lacks the verified BKH prior close")
+    previous_close = safe_float(raw_close_frame.at[prior_day, "HZN"])
+    if previous_close is None or abs(previous_close - 86.7) > 0.02:
+        raise RuntimeError("HZN/BKH prior close does not match the last BKH trade")
+    response = requests.get(
+        "https://query1.finance.yahoo.com/v8/finance/chart/HZN",
+        params={"range": "10d", "interval": "1d"}, headers=WIKI_HEADERS, timeout=20,
+    )
+    response.raise_for_status()
+    results = ((response.json().get("chart") or {}).get("result") or [])
+    if len(results) != 1:
+        raise RuntimeError("Yahoo HZN daily chart is unavailable")
+    result = results[0]
+    meta = result.get("meta") or {}
+    if (meta.get("symbol") != "HZN" or meta.get("instrumentType") != "EQUITY"
+            or meta.get("currency") != "USD" or meta.get("exchangeName") != "NYQ"
+            or meta.get("exchangeTimezoneName") != "America/New_York"
+            or "Bright Horizon Energy" not in str(meta.get("longName"))
+            or abs(float(meta.get("chartPreviousClose") or 0) - previous_close) > 0.02):
+        raise RuntimeError("HZN chart identity or BKH prior close does not match")
+    quotes = ((result.get("indicators") or {}).get("quote") or [])
+    adjusted = ((result.get("indicators") or {}).get("adjclose") or [])
+    if len(quotes) != 1 or len(adjusted) != 1:
+        raise RuntimeError("HZN chart lacks real OHLCV or adjusted close")
+    matches = []
+    for i, stamp in enumerate(result.get("timestamp") or []):
+        trade_time = datetime.fromtimestamp(int(stamp), timezone.utc).astimezone(ZoneInfo("America/New_York"))
+        if trade_time.date().isoformat() == "2026-11-16":
+            matches.append((i, trade_time))
+    if len(matches) != 1 or matches[0][1].hour < 16 or datetime.now(timezone.utc) <= datetime.fromtimestamp(int(result["timestamp"][matches[0][0]]), timezone.utc):
+        raise RuntimeError("HZN first regular session has not completed")
+    i = matches[0][0]
+    values = {key: safe_float((quotes[0].get(key) or [])[i])
+              for key in ("open", "high", "low", "close", "volume")}
+    values["adjusted_close"] = safe_float((adjusted[0].get("adjclose") or [])[i])
+    if (any(value is None or value <= 0 for value in values.values())
+            or not values["low"] <= min(values["open"], values["close"])
+            or not values["high"] >= max(values["open"], values["close"])):
+        raise RuntimeError("HZN first regular-session OHLCV is invalid")
+    for frame, key in ((raw_close_frame, "close"), (adjusted_close_frame, "adjusted_close"),
+                       (open_frame, "open"), (high_frame, "high"),
+                       (low_frame, "low"), (volume_frame, "volume")):
+        frame.at[day, "HZN"] = values[key]
+    print("Restored HZN Nov 16 NYSE OHLCV with verified BKH prior close.", flush=True)
+
+
 def fetch_regular_minute_ohlc(symbol: str, target_date: pd.Timestamp, daily_close: float) -> tuple[str, dict[str, float]] | None:
     """Recover a malformed Yahoo daily range from its completed regular-session bars."""
     day = pd.Timestamp(target_date).normalize()
@@ -1377,6 +1448,11 @@ def detect_share_refresh_symbols(
     for symbol in symbols:
         row = existing_rows.get(symbol)
         if not row or symbol not in raw_close_frame.columns:
+            continue
+        if normalize_ticker(row.get("ticker")) == symbol and row.get("ticker") != symbol:
+            # A corporate action can change share count even when price barely
+            # moves. Refresh the new listing's fundamentals when available.
+            refresh.append(symbol)
             continue
         previous_price = safe_float(row.get("price"))
         prices = raw_close_frame[symbol].dropna()
@@ -1799,7 +1875,7 @@ def build_payload(
 
         row = {
             "ticker": ticker,
-            "name": str(member["name"]),
+            "name": "Bright Horizon Energy Corporation" if ticker == "HZN" else str(member["name"]),
             "price": round(current_price, 2),
             "marketCap": market_cap,
             "sharesOutstanding": shares_outstanding,
@@ -2174,6 +2250,7 @@ def refresh_daily_briefing_priority() -> dict[str, object]:
     )
     repair_invalid_latest_daily_ranges(raw_close_frame, open_frame, high_frame, low_frame)
     repair_cask_rename_history(raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
+    repair_hzn_first_session(raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
     rows_by_ticker = {
         normalize_ticker(row.get("ticker")): row
         for row in existing.get("rows", [])
@@ -2262,6 +2339,7 @@ def main() -> None:
     )
     repair_invalid_latest_daily_ranges(raw_close_frame, open_frame, high_frame, low_frame)
     repair_cask_rename_history(raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
+    repair_hzn_first_session(raw_close_frame, adjusted_close_frame, open_frame, high_frame, low_frame, volume_frame)
     raw_close_frame, adjusted_close_frame = fill_closed_session_close_gaps_from_spark(
         symbols + [BENCHMARK_SYMBOL],
         raw_close_frame,

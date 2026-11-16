@@ -73,6 +73,8 @@ class ManualCapExemptionTests(unittest.TestCase):
         self.assertFalse(rs.is_terminal_symbol("TCBI"))
         self.assertEqual(rs.normalize_ticker("ACHV"), "QUIT")
         self.assertFalse(rs.is_terminal_symbol("ACHV"))
+        self.assertEqual(rs.normalize_ticker("BKH"), "HZN")
+        self.assertFalse(rs.is_terminal_symbol("BKH"))
         self.assertEqual(rs.normalize_ticker("WBD"), "WBD")
         self.assertTrue(rs.is_terminal_symbol("WBD"))
 
@@ -92,8 +94,22 @@ class ManualCapExemptionTests(unittest.TestCase):
             shares = rs.build_shares_cache(["QUIT"], existing)
         self.assertEqual(shares["QUIT"], 102_659_057)
 
+    def test_bkh_merger_keeps_continuing_security_and_excludes_nwe(self):
+        old_rows = [
+            {"ticker": "BKH", "name": "Black Hills", "sharesOutstanding": 80_000_000,
+             "price": 86.7, "memberships": {"russell2000": True}},
+            {"ticker": "NWE", "name": "NorthWestern", "sharesOutstanding": 80_000_000,
+             "price": 84.91, "memberships": {"russell2000": True}},
+        ]
+        universe = rs.read_cached_universe({"rows": old_rows})
+        self.assertEqual(universe["ticker"].tolist(), ["HZN"])
+        with patch.object(rs, "load_existing_payload", return_value={"rows": old_rows}):
+            existing = rs.load_existing_rows()
+        prices = pd.DataFrame({"HZN": [85.42]}, index=pd.to_datetime(["2026-11-16"]))
+        self.assertEqual(rs.detect_share_refresh_symbols(["HZN"], existing, prices), ["HZN"])
+
     def test_completed_merger_tickers_leave_the_rs_universe(self):
-        for ticker in ("ACA", "ACVA", "ATKR", "BWMN", "BZH", "WEAV", "NATH"):
+        for ticker in ("ACA", "ACVA", "ATKR", "BWMN", "BZH", "WEAV", "NATH", "NWE"):
             self.assertTrue(rs.is_terminal_symbol(ticker))
             self.assertFalse(rs.passes_market_cap_filter(ticker, 1_000_000_000, {ticker}))
 
