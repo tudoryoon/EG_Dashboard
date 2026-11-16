@@ -11220,6 +11220,13 @@ h1 {
   }
 }
 
+.nebius-spot-panel { min-width: 0; }
+.nebius-spot-panel .total-series-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.nebius-spot-chart { height: 360px; min-width: 0; }
+@media (max-width: 720px) {
+  .nebius-spot-chart { height: 280px; }
+}
+
 .openrouter-page {
   display: flex;
   flex-direction: column;

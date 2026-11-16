@@ -92,6 +92,7 @@ const gpuCloudData = window.gpuCloudData ?? { updatedAt: "", source: {}, items: 
 const gpuCloudHistoryData = window.gpuCloudHistoryData ?? null;
 const ornnGpuIndexData = window.ornnGpuIndexData ?? { updatedAt: "", source: {}, defaultGpu: "h100_sxm", defaultRange: "3m", ranges: [], series: {} };
 const egGpuRentalIndexData = window.egGpuRentalIndexData ?? { updatedAt: "", source: {}, methodology: {}, labels: [], indexValues: [], models: {} };
+const nebiusSpotData = window.nebiusSpotData ?? { updatedAt: "", source: {}, methodology: {}, labels: [], series: {} };
 const infraGridData = window.infraGridData ?? { updatedAt: "", source: {}, items: [], fuelColors: {} };
 const openrouterRankingsData = window.openrouterRankingsData ?? {
   updatedAt: "",
@@ -568,6 +569,8 @@ const state = {
   ),
   ornnGpuKey: ornnGpuIndexData.defaultGpu ?? "h100_sxm",
   ornnGpuRange: "3y",
+  nebiusSpotRange: "max",
+  nebiusSpotSeries: {},
   openrouterLeaderboardView: openrouterRankingsData.defaultLeaderboard ?? "week",
   openrouterOpennessFilter: "all",
   openrouterScale: "linear",
@@ -17156,6 +17159,52 @@ function createOrnnGpuIndexChart(canvas, series) {
   charts.push(chart);
 }
 
+function renderNebiusSpotPanel() {
+  const series = Object.values(nebiusSpotData.series ?? {});
+  if (!series.length) return "";
+  return `<article class="memory-panel nebius-spot-panel">
+    <div class="us-panel-head"><div><h3>Nebius GPU 스팟 임대료 추이</h3>
+      <p>지역별 일평균의 단순평균 · USD / GPU-hour · UTC 날짜 기준</p></div>
+      <div class="m7-range-row">${[["1m","1M"],["3m","3M"],["6m","6M"],["ytd","YTD"],["max","Max"]].map(([key,label]) =>
+        `<button type="button" class="m7-range-chip${state.nebiusSpotRange === key ? " active" : ""}" data-nebius-range="${key}">${label}</button>`).join("")}</div>
+    </div>
+    <div class="total-series-chips">${series.map(item => `<button type="button"
+      class="total-series-chip${state.nebiusSpotSeries[item.key] !== false ? " active" : ""}"
+      data-nebius-series="${item.key}" aria-pressed="${state.nebiusSpotSeries[item.key] !== false}">
+      <span class="total-series-dot" style="background:${item.color}"></span>${item.label}</button>`).join("")}</div>
+    <div class="memory-card-meta gpu-term-meta"><span>일평균 기준 ${nebiusSpotData.updatedAt} UTC</span>
+      ${series.map(item => `<span style="color:${item.color}" title="고정 집계 지역: ${item.regions.join(", ")}"><strong>${item.label} ${Number.isFinite(item.latestValue) ? `$${item.latestValue.toFixed(2)}` : "N/A"}</strong> · ${item.regions.length}지역${item.latestDate !== nebiusSpotData.updatedAt ? ` · ${item.latestDate}` : ""}</span>`).join("")}
+    </div>
+    <div class="memory-chart-wrap nebius-spot-chart"><canvas data-nebius-spot-chart></canvas></div>
+    <div class="gpu-rental-source-note"><a href="${nebiusSpotData.source.url}" target="_blank" rel="noreferrer">Nebius 공식 가격</a>
+      <a href="${nebiusSpotData.source.docsUrl}" target="_blank" rel="noreferrer">공식 API · 집계 정의</a></div>
+    <p class="openrouter-caption">${nebiusSpotData.methodology.note}</p>
+    <p class="openrouter-caption">${nebiusSpotData.methodology.coverage} 확보 이력: ${nebiusSpotData.labels[0]} ~ ${nebiusSpotData.updatedAt} UTC.</p>
+  </article>`;
+}
+
+function createNebiusSpotChart() {
+  const canvas = usOverviewRoot.querySelector('[data-nebius-spot-chart]');
+  if (!canvas || typeof Chart === "undefined") return;
+  const payload = buildMemoryChartPayload(nebiusSpotData.labels, Object.values(nebiusSpotData.series).map(item => ({
+    label: item.label, data: item.values, borderColor: item.color, backgroundColor: item.color,
+    hidden: state.nebiusSpotSeries[item.key] === false, borderWidth: 2.2, tension: 0,
+    pointRadius: 2, pointHoverRadius: 5, spanGaps: false,
+  })), state.nebiusSpotRange);
+  const chart = new Chart(canvas, {type: "line", data: payload,
+    options: {responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: {mode: "index", intersect: false}, plugins: {legend: {display: false},
+        tooltip: {callbacks: {title: items => `${items[0]?.label ?? ""} UTC`,
+          label: context => `${context.dataset.label}: $${context.parsed.y.toFixed(2)} / GPU-hour`}}},
+      scales: {x: {grid: {display: false}, ticks: {maxRotation: 0, maxTicksLimit: 7,
+        callback: value => payload.labels[value]?.slice(5) ?? ""}},
+        y: {title: {display: true, text: "USD / GPU-hour"},
+          ticks: {callback: value => `$${Number(value).toFixed(2)}`, maxTicksLimit: 6},
+          grid: {color: "rgba(70,70,66,0.10)"}}}},
+  });
+  charts.push(chart);
+}
+
 function renderGpuCloudOverview() {
   usOverviewRoot.classList.remove("hidden");
   companyGrid.innerHTML = "";
@@ -17247,6 +17296,7 @@ function renderGpuCloudOverview() {
           <span>Public chart approximation</span>
         </div>
       </section>
+      ${renderNebiusSpotPanel()}
       <section class="memory-panel-grid memory-panel-grid-wide gpu-rental-chart-grid">
         <article class="memory-panel">
           <div class="us-panel-head">
@@ -17348,6 +17398,20 @@ function renderGpuCloudOverview() {
     </section>
   `;
 
+  createNebiusSpotChart();
+  usOverviewRoot.querySelectorAll('[data-nebius-series]').forEach(button => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.nebiusSeries;
+      state.nebiusSpotSeries[key] = state.nebiusSpotSeries[key] === false;
+      render();
+    });
+  });
+  usOverviewRoot.querySelectorAll('[data-nebius-range]').forEach(button => {
+    button.addEventListener("click", () => {
+      state.nebiusSpotRange = button.dataset.nebiusRange;
+      render();
+    });
+  });
   const semiCanvas = usOverviewRoot.querySelector('[data-gpu-basket="semi-h100-1y"]');
 
   if (semiCanvas && semiSeries) {

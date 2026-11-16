@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: gpu-price-indexes
+  cancel-in-progress: false
+
 jobs:
   update-gpu-price-indexes:
     runs-on: ubuntu-latest
@@ -16,28 +20,73 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+      - name: Set up Node for chart validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test Nebius daily aggregation and chart
+        id: tests
+        run: |
+          python -m unittest discover -s scripts -p test_nebius_spot.py
+          node scripts/test_nebius_spot_view.cjs
+
       - name: Refresh Ornn GPU index history
+        id: ornn
+        continue-on-error: true
         run: python scripts/update_ornn_gpu_index.py
 
       - name: Refresh independent EG GPU Rental Index
+        id: eg
+        continue-on-error: true
         run: python scripts/update_eg_gpu_rental_index.py
 
+      - name: Refresh official Nebius daily spot prices
+        id: nebius
+        continue-on-error: true
+        run: python scripts/update_nebius_spot.py
+
       - name: Commit updated GPU index histories
+        if: always() && !cancelled() && steps.tests.outcome == 'success'
         run: |
-          if git diff --quiet -- data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js; then
+          files=(data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js data/nebius-spot-data.js)
+          if git diff --quiet -- "${files[@]}"; then
             echo "No GPU index changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js
+          python scripts/bump_data_cache_versions.py "${files[@]}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/ornn-gpu-index-data.js data/eg-gpu-rental-index-data.js index.html
+          git add -- "${files[@]}" index.html
           git commit -m "Update GPU price index histories" || exit 0
-          git pull --rebase origin main
-          git push
+          for attempt in 1 2 3; do
+            if ! git pull --rebase origin main; then
+              conflicts=$(git diff --name-only --diff-filter=U)
+              if [[ "$conflicts" != "index.html" ]]; then
+                echo "::error::Data conflict requires review; refusing to overwrite newer data."
+                exit 1
+              fi
+              git show :2:index.html > index.html
+              python scripts/bump_data_cache_versions.py "${files[@]}"
+              git add index.html
+              GIT_EDITOR=true git rebase --continue
+            fi
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Report collection failures after publishing successes
+        if: always() && (steps.ornn.outcome == 'failure' || steps.eg.outcome == 'failure' || steps.nebius.outcome == 'failure')
+        run: |
+          echo "::error::A GPU collector failed. Successful datasets were sent to the publish step; see its result."
+          exit 1
