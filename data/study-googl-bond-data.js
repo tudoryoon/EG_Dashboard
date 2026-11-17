@@ -12,7 +12,7 @@ window.studyGooglBondData = {
     "name": "Alphabet 1.100% Senior Unsecured Notes 2030"
   },
   "updatedAt": "2026-11-13",
-  "checkedAt": "2026-11-17T03:59:38+00:00",
+  "checkedAt": "2026-11-17T04:08:09+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -3370,7 +3370,7 @@ window.studyGooglBondData = {
       "yieldToWorstPct": 5.33,
       "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-16T01:08:51+00:00",
-      "lastCollectedAt": "2026-11-17T03:59:38+00:00"
+      "lastCollectedAt": "2026-11-17T04:08:09+00:00"
     }
   ]
 };

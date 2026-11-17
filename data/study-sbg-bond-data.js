@@ -13,7 +13,7 @@ window.studySbgBondData = {
     "name": "SoftBank Group 9.250% Senior Unsecured Notes 2032 (144A)"
   },
   "updatedAt": "2026-11-13",
-  "checkedAt": "2026-11-17T04:06:19+00:00",
+  "checkedAt": "2026-11-17T04:08:11+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -377,7 +377,7 @@ window.studySbgBondData = {
       "yieldToWorstPct": 10.11,
       "sourceUrl": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-17T03:59:46+00:00",
-      "lastCollectedAt": "2026-11-17T04:06:19+00:00"
+      "lastCollectedAt": "2026-11-17T04:08:11+00:00"
     }
   ]
 };
