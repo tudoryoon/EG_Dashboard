@@ -89,6 +89,17 @@ PROFILES.update({
         "issueDate": "2026-06-26", "maturityDate": "2031-07-15",
         "name": "SpaceX 5.350% Senior Unsecured Notes 2031 (144A)",
     }, "termsUrl": "https://www.sec.gov/Archives/edgar/data/1181412/000162828026052535/spcx-20260630.htm"},
+    "SBG": {"bond": {
+        "issuer": "SoftBank Group", "ticker": "SBG", "tabLabel": "SoftBank",
+        "cusip": "83408KAB5", "isin": "US83408KAB52", "couponPct": 9.25, "currency": "USD",
+        "issueDate": "2026-09-29", "maturityDate": "2032-04-01",
+        "name": "SoftBank Group 9.250% Senior Unsecured Notes 2032 (144A)",
+    }, "fund": "HYG", "pageUrl": PAGE_URL, "url": SOURCE_URL,
+       "historyUrlTemplate": HISTORY_URL, "dataPath": ROOT / "data/study-sbg-bond-data.js",
+       "export": "window.studySbgBondData = ", "startDate": "2026-09-29",
+       "cacheDir": ROOT / "output/sbg-bond-holdings-cache",
+       "rawCacheDir": ROOT / "output/credit-bond-holdings-raw/239565",
+       "termsUrl": "https://group.softbank/en/news/press/20260924"},
 })
 for _ticker in ("ORCL", "EQIX", "GOOGL", "MSFT", "NVDA", "META", "AMZN", "SPCX"):
     PROFILES[_ticker].update({

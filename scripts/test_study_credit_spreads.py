@@ -89,6 +89,14 @@ class SpreadTests(unittest.TestCase):
                 spreads.main()
         write.assert_not_called()
 
+    def test_softbank_2032_matches_remaining_maturity_not_constant_five_year(self):
+        result = spreads.treasury_benchmark("2026-11-13", bonds.PROFILES["SBG"]["bond"]["maturityDate"],
+                                           {"2026-11-13": {5: 4.98, 7: 5.05}})
+        self.assertEqual((result["lowerTenorYears"], result["upperTenorYears"]), (5, 7))
+        self.assertAlmostEqual(result["remainingYears"], 5.38261465)
+        self.assertAlmostEqual(result["benchmarkPct"], 4.99339151)
+        self.assertAlmostEqual((10.11 - result["benchmarkPct"]) * 100, 511.6608, places=3)
+
     def test_published_data_reconciles_and_all_cds_issuers_included(self):
         payload = bonds.load_existing(spreads.DATA_PATH, spreads.EXPORT)
         self.assertEqual(set(payload["items"]), set(bonds.PROFILES))
@@ -96,7 +104,9 @@ class SpreadTests(unittest.TestCase):
             self.assertEqual(item["bond"], bonds.PROFILES[ticker]["bond"])
             original = bonds.load_existing(bonds.PROFILES[ticker]["dataPath"], bonds.PROFILES[ticker]["export"])
             by_date = {row["date"]: row for row in original["observations"]}
-            self.assertGreater(item["coverage"]["matchedDays"], 50)
+            self.assertGreater(item["coverage"]["matchedDays"], 20 if ticker == "SBG" else 50)
+            if ticker == "SBG":
+                self.assertTrue(all(row["date"] >= "2026-09-29" for row in item["observations"]))
             for row in item["observations"]:
                 self.assertEqual(row["ytmPct"], by_date[row["date"]]["ytmPct"])
                 if row["spreadBps"] is None:

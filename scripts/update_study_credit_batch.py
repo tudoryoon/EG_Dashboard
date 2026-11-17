@@ -14,7 +14,7 @@ def main(backfill=False):
                  script_args=["--ticker", "EQIX"]),
         *[run_task(f"{ticker} bond valuation", "update_study_crwv_bond.py",
                    [f"data/study-{ticker.lower()}-bond-data.js"], 180,
-                   script_args=["--ticker", ticker]) for ticker in ["GOOGL", "MSFT", "NVDA", "META", "AMZN", "SPCX"]],
+                   script_args=["--ticker", ticker]) for ticker in ["GOOGL", "MSFT", "NVDA", "META", "AMZN", "SPCX", "SBG"]],
         run_task("Treasury-matched G-spreads", "update_study_credit_spreads.py", ["data/study-credit-spreads-data.js"], 180),
         run_task("DTCC CDS", "update_study_cds.py", ["data/study-cds-data.js"], 1080,
                  script_args=["--backfill"] if backfill else []),

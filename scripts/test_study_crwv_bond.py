@@ -74,6 +74,26 @@ class BondTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.parse(fixture(**{"ISIN":"-","Effective Date":"-","CUSIP":"another bond"}))
 
+    def test_softbank_group_usd_senior_bond_uses_hyg_and_exact_identity(self):
+        profile = bond.PROFILES["SBG"]
+        item = bond.parse_holdings(profile_fixture("SBG", ytm="10.11"), bond=profile["bond"])
+        self.assertEqual(item["ytmPct"], 10.11)
+        self.assertEqual(profile["bond"]["cusip"], "83408KAB5")
+        self.assertEqual(profile["bond"]["maturityDate"], "2032-04-01")
+        self.assertEqual(profile["bond"]["issueDate"], "2026-09-29")
+        self.assertEqual(bond.profile_source(profile)["fund"], "HYG")
+        self.assertEqual(profile["export"], "window.studySbgBondData = ")
+        for field, value in [("Name", "SOFTBANK CORP 144A"), ("CUSIP", "83408KAC3"),
+                             ("ISIN", "US83408KAC36"), ("Coupon (%)", "9.75"),
+                             ("Maturity", "Apr 01, 2034"), ("Market Currency", "JPY")]:
+            content = profile_fixture("SBG").decode("utf-8-sig")
+            rows = list(csv.reader(io.StringIO(content)))
+            rows[-1][rows[-2].index(field)] = value
+            out = io.StringIO()
+            csv.writer(out).writerows(rows)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                bond.parse_holdings(out.getvalue().encode(), bond=profile["bond"])
+
     def test_two_lqd_bonds_share_only_date_verified_raw_disclosure(self):
         content = profile_fixture("EQIX",ytm="5.80") + profile_fixture("ORCL").splitlines()[-1] + b"\n"
         with tempfile.TemporaryDirectory() as folder, patch.object(bond,"fetch_holdings",return_value=content) as fetch:
@@ -216,8 +236,8 @@ class BondTests(unittest.TestCase):
                 bond.load_existing(path)
 
     def test_one_failed_collector_still_publishes_other_output(self):
-        for failed_index in range(11):
-            tickers = ["crwv", "orcl", "eqix", "googl", "msft", "nvda", "meta", "amzn", "spcx"]
+        for failed_index in range(12):
+            tickers = ["crwv", "orcl", "eqix", "googl", "msft", "nvda", "meta", "amzn", "spcx", "sbg"]
             files=[f"data/study-{ticker}-bond-data.js" for ticker in tickers] + ["data/study-credit-spreads-data.js", "data/study-cds-data.js"]
             results = [{"name": file, "status": "updated", "changed": [file]} for file in files]
             results[failed_index] = {"name": "Failed", "status": "failed", "changed": []}
@@ -236,7 +256,8 @@ class BondTests(unittest.TestCase):
                 self.assertEqual(collect.call_args_list[1].kwargs["script_args"], ["--ticker","ORCL"])
                 self.assertEqual(collect.call_args_list[2].kwargs["script_args"], ["--ticker","EQIX"])
                 self.assertEqual(collect.call_args_list[8].kwargs["script_args"], ["--ticker","SPCX"])
-                self.assertEqual(collect.call_args_list[9].args[1], "update_study_credit_spreads.py")
+                self.assertEqual(collect.call_args_list[9].kwargs["script_args"], ["--ticker","SBG"])
+                self.assertEqual(collect.call_args_list[-2].args[1], "update_study_credit_spreads.py")
                 self.assertNotIn("script_args", collect.call_args_list[0].kwargs)
 
     def test_failed_collector_partial_write_is_restored(self):

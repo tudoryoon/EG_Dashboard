@@ -34,6 +34,7 @@ const studyCreditBondData = {
   META: window.studyMetaBondData ?? { observations: [], source: {}, bond: { ticker: "META", issuer: "Meta" } },
   AMZN: window.studyAmznBondData ?? { observations: [], source: {}, bond: { ticker: "AMZN", issuer: "Amazon" } },
   SPCX: window.studySpcxBondData ?? { observations: [], source: {}, bond: { ticker: "SPCX", issuer: "SpaceX" } },
+  SBG: window.studySbgBondData ?? { observations: [], source: {}, bond: { ticker: "SBG", issuer: "SoftBank Group", tabLabel: "SoftBank" } },
 };
 const studyCalendarData = window.studyCalendarData ?? {
   updatedAt: "",
@@ -18513,7 +18514,7 @@ function isStudyCreditSpreadMode() {
 
 function getStudyCreditBondColor(ticker) {
   return { CRWV: "#a45b13", ORCL: "#b34736", EQIX: "#1c7666", GOOGL: "#2563eb", MSFT: "#0f766e",
-    NVDA: "#16a34a", META: "#7c3aed", AMZN: "#d97706", SPCX: "#20201d" }[ticker] || "#a45b13";
+    NVDA: "#16a34a", META: "#7c3aed", AMZN: "#d97706", SPCX: "#20201d", SBG: "#526477" }[ticker] || "#a45b13";
 }
 
 function getStudySelectedCreditBond() {
@@ -18600,7 +18601,7 @@ function renderStudyCrwvBondSection() {
         <div class="study-bond-ticker-tabs" role="tablist" aria-label="채권 종목">
           ${Object.keys(studyCreditBondData).map((key) => `<button type="button" role="tab" id="study-bond-tab-${key}"
             data-study-bond-ticker="${key}" aria-selected="${ticker === key}" aria-controls="study-bond-content"
-            tabindex="${ticker === key ? "0" : "-1"}">${key}</button>`).join("")}
+            tabindex="${ticker === key ? "0" : "-1"}">${escapeHtml(studyCreditBondData[key].bond?.tabLabel || key)}</button>`).join("")}
         </div>
       </header>
       <div id="study-bond-content" role="tabpanel" aria-labelledby="study-bond-tab-${escapeHtml(ticker)}">
@@ -18631,7 +18632,7 @@ function renderStudyCrwvBondSection() {
         <div><span>누적 관측</span><strong>${all.length}일</strong></div>`}
       </div>
       ${spreadMode ? `<p class="study-bond-history-note">G-spread(bp) = [채권 YTM(%) − 동일일·동일 잔존만기의 미 국채 보간금리(%)] × 100. 국채가 없는 날짜는 공백이며 이월하지 않습니다.</p>
-        <p class="study-bond-history-note">각 기업의 고정 대표채권입니다. 동일 만기 5Y 지수·기업 전체 스프레드·OAS·CDS가 아니며, 옵션 및 유동성 영향이 포함됩니다.${ticker === "MSFT" ? " MSFT는 2035년물로 다른 기업의 2030~31년물과 만기가 다릅니다." : ""}</p>` : ""}
+        <p class="study-bond-history-note">각 기업의 고정 대표채권입니다. 동일 만기 5Y 지수·기업 전체 스프레드·OAS·CDS가 아니며, 옵션 및 유동성 영향이 포함됩니다.${ticker === "MSFT" ? " MSFT는 2035년물로 다른 기업의 2030~31년물과 만기가 다릅니다." : ""}${ticker === "SBG" ? " SoftBank Group의 2032년물이며 통신 자회사 SoftBank Corp. 채권이 아닙니다. 2026-09-29 발행 이후 이력만 표시합니다." : ""}</p>` : ""}
       ${spreadMode && latest && sourceUpdatedAt > latest.date ? `<p class="study-bond-warning">최신 채권 공시 ${escapeHtml(sourceUpdatedAt)}의 동일일 스프레드는 아직 미확인입니다. 스프레드 최신 관측일은 ${escapeHtml(latest.date)}이며, 다른 날짜의 국채금리로 대체하지 않습니다.</p>` : ""}
       ${ageDays > 4 ? `<p class="study-bond-warning">공시 기준일이 ${ageDays}일 전입니다. 새 자료 미확인 시 이전 값만 유지하며 오늘 값으로 이월하지 않습니다.</p>` : ""}
       <p class="study-bond-history-note">${!latest ? (spreadMode ? "동일일 국채금리와 매칭된 스프레드 자료가 아직 없습니다." : "선택 채권의 검증된 수익률 자료가 아직 없습니다.") : limited
