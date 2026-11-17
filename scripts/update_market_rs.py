@@ -148,6 +148,12 @@ SYMBOL_ALIASES = {
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # Nasdaq Corporate Actions Alert #2026-809: PCRX was halted before the
+    # 2026-11-17 open following its merger with Viatris; last trade Nov 16.
+    "PCRX",
+    # Integer's Nov 17 SEC 8-K: its KKR acquisition closed and NYSE trading
+    # was suspended before the opening on 2026-11-17.
+    "ITGR",
     # NorthWestern's NWE shares converted into 0.98 HZN shares after the
     # 2026-11-13 merger close; Nasdaq trading ended before 2026-11-16.
     "NWE",
