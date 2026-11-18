@@ -459,7 +459,7 @@ window.llmDashboardData = {
     }
   ],
   "arrRefresh": {
-    "checkedAt": "2026-11-17T09:54:12.757808+00:00",
+    "checkedAt": "2026-11-18T09:29:30.480982+00:00",
     "sources": [
       {
         "key": "tickertrends",
