@@ -11,8 +11,8 @@ window.studyCrwvBondData = {
     "maturityDate": "2031-02-01",
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)"
   },
-  "updatedAt": "2026-11-13",
-  "checkedAt": "2026-11-17T04:08:06+00:00",
+  "updatedAt": "2026-11-16",
+  "checkedAt": "2026-11-18T02:57:39+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -26,7 +26,7 @@ window.studyCrwvBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-16",
+    "endDate": "2026-11-17",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyCrwvBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-16"
+      "2026-11-17"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyCrwvBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-16"
+      "2026-11-17"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3367,6 +3367,16 @@ window.studyCrwvBondData = {
       "sourceUrl": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-16T01:08:48+00:00",
       "lastCollectedAt": "2026-11-17T04:08:06+00:00"
+    },
+    {
+      "date": "2026-11-16",
+      "ytmPct": 15.39,
+      "pricePer100": 80.69,
+      "sourceSha256": "2c4800965615730a4af09a19367d75704315e649c51b9d1594cee7569b80e7e6",
+      "yieldToWorstPct": 15.39,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261116",
+      "firstCollectedAt": "2026-11-18T02:57:39+00:00",
+      "lastCollectedAt": "2026-11-18T02:57:39+00:00"
     }
   ]
 };

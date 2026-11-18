@@ -12,8 +12,8 @@ window.studySbgBondData = {
     "maturityDate": "2032-04-01",
     "name": "SoftBank Group 9.250% Senior Unsecured Notes 2032 (144A)"
   },
-  "updatedAt": "2026-11-13",
-  "checkedAt": "2026-11-17T04:08:11+00:00",
+  "updatedAt": "2026-11-16",
+  "checkedAt": "2026-11-18T02:57:48+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -27,12 +27,12 @@ window.studySbgBondData = {
   },
   "coverage": {
     "startDate": "2026-09-29",
-    "endDate": "2026-11-16",
+    "endDate": "2026-11-17",
     "missingWeekdays": [
-      "2026-11-16"
+      "2026-11-17"
     ],
     "unavailableDates": [
-      "2026-11-16"
+      "2026-11-17"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -378,6 +378,16 @@ window.studySbgBondData = {
       "sourceUrl": "https://www.ishares.com/us/products/239565/ishares-iboxx-high-yield-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-17T03:59:46+00:00",
       "lastCollectedAt": "2026-11-17T04:08:11+00:00"
+    },
+    {
+      "date": "2026-11-16",
+      "ytmPct": 10.27,
+      "pricePer100": 95.85,
+      "sourceSha256": "2c4800965615730a4af09a19367d75704315e649c51b9d1594cee7569b80e7e6",
+      "yieldToWorstPct": 10.27,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261116",
+      "firstCollectedAt": "2026-11-18T02:57:48+00:00",
+      "lastCollectedAt": "2026-11-18T02:57:48+00:00"
     }
   ]
 };
