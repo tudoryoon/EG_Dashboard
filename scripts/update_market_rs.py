@@ -148,6 +148,9 @@ SYMBOL_ALIASES = {
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # Luxfer's Nov 19 SEC 8-K: the cash acquisition closed and NYSE trading
+    # was suspended before the 2026-11-19 open; last trade Nov 18.
+    "LXFR",
     # Nasdaq Corporate Actions Alert #2026-809: PCRX was halted before the
     # 2026-11-17 open following its merger with Viatris; last trade Nov 16.
     "PCRX",
