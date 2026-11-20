@@ -11,8 +11,8 @@ window.studyEqixBondData = {
     "maturityDate": "2031-05-15",
     "name": "Equinix 2.500% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-11-17",
-  "checkedAt": "2026-11-19T02:39:53+00:00",
+  "updatedAt": "2026-11-18",
+  "checkedAt": "2026-11-20T02:25:32+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyEqixBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-18",
+    "endDate": "2026-11-19",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyEqixBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-18"
+      "2026-11-19"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyEqixBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-18"
+      "2026-11-19"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3391,6 +3391,16 @@ window.studyEqixBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261117",
       "firstCollectedAt": "2026-11-19T02:39:53+00:00",
       "lastCollectedAt": "2026-11-19T02:39:53+00:00"
+    },
+    {
+      "date": "2026-11-18",
+      "ytmPct": 5.85,
+      "pricePer100": 86.95,
+      "sourceSha256": "a002ef49b84586eb5b1bda7494a89b46a9c9d841844fe3a84579032e0d46251e",
+      "yieldToWorstPct": 5.85,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261118",
+      "firstCollectedAt": "2026-11-20T02:25:32+00:00",
+      "lastCollectedAt": "2026-11-20T02:25:32+00:00"
     }
   ]
 };
