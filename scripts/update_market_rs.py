@@ -148,6 +148,9 @@ SYMBOL_ALIASES = {
     "MOGA": "MOG-A",
 }
 TERMINAL_SKIP_TICKERS = {
+    # SEC 8-K 0001104659-26-129929: BIPC shares suspended before the
+    # 2026-11-23 NYSE session after the Nov 19 Brookfield simplification.
+    "BIPC",
     # Luxfer's Nov 19 SEC 8-K: the cash acquisition closed and NYSE trading
     # was suspended before the 2026-11-19 open; last trade Nov 18.
     "LXFR",

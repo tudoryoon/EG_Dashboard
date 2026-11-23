@@ -20,6 +20,7 @@ class TerminalAcquisitionTests(unittest.TestCase):
 
     def test_closed_names_cannot_reenter_through_manual_universe(self):
         self.assertTrue(rs.is_terminal_symbol("LXFR"))
+        self.assertTrue(rs.is_terminal_symbol("BIPC"))
         self.assertTrue(rs.is_terminal_symbol("PCRX"))
         self.assertTrue(rs.is_terminal_symbol("ITGR"))
         self.assertFalse(rs.is_terminal_symbol("HZN"))
