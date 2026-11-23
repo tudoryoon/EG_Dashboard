@@ -11,8 +11,8 @@ window.studyCrwvBondData = {
     "maturityDate": "2031-02-01",
     "name": "CoreWeave 9.000% Senior Notes 2031 (144A)"
   },
-  "updatedAt": "2026-11-19",
-  "checkedAt": "2026-11-21T02:31:05+00:00",
+  "updatedAt": "2026-11-20",
+  "checkedAt": "2026-11-23T01:50:16+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -37,8 +37,7 @@ window.studyCrwvBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07",
-      "2026-11-20"
+      "2026-09-07"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -50,8 +49,7 @@ window.studyCrwvBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07",
-      "2026-11-20"
+      "2026-09-07"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3407,6 +3405,16 @@ window.studyCrwvBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261119",
       "firstCollectedAt": "2026-11-21T02:31:05+00:00",
       "lastCollectedAt": "2026-11-21T02:31:05+00:00"
+    },
+    {
+      "date": "2026-11-20",
+      "ytmPct": 16.79,
+      "pricePer100": 77.14,
+      "sourceSha256": "47e40af14ed6a9cf138c772e10e91126704fddec3bfc7759b0a2da243343fef4",
+      "yieldToWorstPct": 16.79,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261120",
+      "firstCollectedAt": "2026-11-23T01:50:16+00:00",
+      "lastCollectedAt": "2026-11-23T01:50:16+00:00"
     }
   ]
 };

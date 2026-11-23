@@ -12,8 +12,8 @@ window.studySbgBondData = {
     "maturityDate": "2032-04-01",
     "name": "SoftBank Group 9.250% Senior Unsecured Notes 2032 (144A)"
   },
-  "updatedAt": "2026-11-19",
-  "checkedAt": "2026-11-21T02:31:14+00:00",
+  "updatedAt": "2026-11-20",
+  "checkedAt": "2026-11-23T01:50:23+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares HYG official holdings",
@@ -28,12 +28,8 @@ window.studySbgBondData = {
   "coverage": {
     "startDate": "2026-09-29",
     "endDate": "2026-11-20",
-    "missingWeekdays": [
-      "2026-11-20"
-    ],
-    "unavailableDates": [
-      "2026-11-20"
-    ],
+    "missingWeekdays": [],
+    "unavailableDates": [],
     "notHeldDates": [],
     "errors": [],
     "lastFullBackfillAt": "2026-11-17T03:59:46+00:00"
@@ -418,6 +414,16 @@ window.studySbgBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261119",
       "firstCollectedAt": "2026-11-21T02:31:14+00:00",
       "lastCollectedAt": "2026-11-21T02:31:14+00:00"
+    },
+    {
+      "date": "2026-11-20",
+      "ytmPct": 10.46,
+      "pricePer100": 95.09,
+      "sourceSha256": "47e40af14ed6a9cf138c772e10e91126704fddec3bfc7759b0a2da243343fef4",
+      "yieldToWorstPct": 10.46,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239565&userType=individual&component=holdings&asOfDate=20261120",
+      "firstCollectedAt": "2026-11-23T01:50:23+00:00",
+      "lastCollectedAt": "2026-11-23T01:50:23+00:00"
     }
   ]
 };

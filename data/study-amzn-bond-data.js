@@ -11,8 +11,8 @@ window.studyAmznBondData = {
     "maturityDate": "2031-05-12",
     "name": "Amazon 2.100% Senior Unsecured Notes 2031"
   },
-  "updatedAt": "2026-11-19",
-  "checkedAt": "2026-11-21T02:31:14+00:00",
+  "updatedAt": "2026-11-20",
+  "checkedAt": "2026-11-23T01:50:22+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -37,8 +37,7 @@ window.studyAmznBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07",
-      "2026-11-20"
+      "2026-09-07"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -50,8 +49,7 @@ window.studyAmznBondData = {
       "2026-04-03",
       "2026-05-25",
       "2026-07-03",
-      "2026-09-07",
-      "2026-11-20"
+      "2026-09-07"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3411,6 +3409,16 @@ window.studyAmznBondData = {
       "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261119",
       "firstCollectedAt": "2026-11-21T02:31:14+00:00",
       "lastCollectedAt": "2026-11-21T02:31:14+00:00"
+    },
+    {
+      "date": "2026-11-20",
+      "ytmPct": 5.39,
+      "pricePer100": 87.06,
+      "sourceSha256": "d0cda811e2b46f0c78023e600a0ba808db00d8218ed7016e8f8a0329ae77a1fc",
+      "yieldToWorstPct": 5.39,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261120",
+      "firstCollectedAt": "2026-11-23T01:50:22+00:00",
+      "lastCollectedAt": "2026-11-23T01:50:22+00:00"
     }
   ]
 };
