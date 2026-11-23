@@ -12100,3 +12100,45 @@ h1 {
   overflow-wrap: anywhere;
 }
 .asia-screening-sources summary { cursor: pointer; }
+
+.asset-returns { min-width: 0; padding: 12px 0 20px; }
+.asset-returns-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.asset-returns-head h2 { margin: 0; font-size: 22px; }
+.asset-returns-head p { margin: 4px 0 0; font-size: 13px; color: #5e6866; }
+.asset-returns-head label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.asset-returns-head select { padding: 6px 10px; font: inherit; background: white; color: inherit; border: 1px solid #cdd7d9; border-radius: 6px; }
+.asset-returns-scroll { max-height: min(70vh, 1200px); overflow: auto; border: 1px solid #cdd7d9; border-radius: 6px; }
+.asset-returns-table {
+  width: 100%;
+  min-width: 850px;
+  border-spacing: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  background: white;
+}
+.asset-returns-table thead { position: sticky; top: 0; z-index: 2; background: #153e70; color: white; }
+.asset-returns-table :is(td, th) { padding: 6px 9px; white-space: nowrap; text-align: right; border-bottom: 1px solid #e4e9e8; }
+.asset-returns-table thead th { padding: 0; text-align: inherit; border-color: #42648b; }
+.asset-returns-table thead button { width: 100%; padding: 9px 8px; font: inherit; font-weight: 700; color: inherit; background: transparent; border: 0; cursor: pointer; }
+.asset-returns-table thead button:is(:hover,:focus-visible) { background: #245184; }
+.asset-returns-table tbody th { text-align: left; font-weight: 700; }
+.asset-returns-table tbody td:nth-child(-n+2) { text-align: center; }
+.asset-returns-table tbody td:nth-child(4) { text-align: center; color: #4f6267; }
+.asset-returns-table tbody td:nth-child(5) { text-align: center; }
+.asset-returns-table tbody a { color: #224c78; text-decoration: none; }
+.asset-returns-table tbody a:hover { text-decoration: underline; }
+.asset-returns-table tbody tr:nth-child(even) { background: #f8faf9; }
+.asset-returns-table tbody tr.asset-returns-top { background: #eaf2f8; }
+.asset-returns-table .asset-returns-score { font-weight: 700; }
+.asset-move-up { color: #993b2e; }
+.asset-move-down { color: #184b8c; }
+.asset-move-flat { color: #5b6767; }
+.asset-returns-method { margin-top: 10px; font-size: 12px; line-height: 1.7; color: #4f6267; }
+.asset-returns-method summary { cursor: pointer; width: fit-content; }

@@ -168,6 +168,7 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
+  AssetReturns: { label: "자산군 수익률" },
   MuseAI: { label: "Muse AI 스터디" },
   BriefingPrint: { label: "브리핑 PDF" },
   MemoryCapa: { label: "Memory CAPA" },
@@ -647,6 +648,7 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
+      AssetReturns: "asset-returns",
       MuseAI: "muse-ai",
       BriefingPrint: "briefing-pdf",
       MemoryCapa: "memory-capa",
@@ -19108,6 +19110,103 @@ function renderStudyMuseAIOverview() {
   }, { once: true });
 }
 
+function renderStudyAssetReturnsOverview() {
+  destroyCharts();
+  usOverviewRoot.classList.remove("hidden");
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+  const snapshot = window.studyAssetReturnsData;
+  if (!snapshot?.rows?.length) {
+    renderPlaceholderOverview("자산군 수익률", "표시할 데이터가 없습니다.");
+    return;
+  }
+  const { rows, periods, asOfDate, previousDate } = snapshot;
+  const groups = [...new Set(rows.map((row) => row.group))];
+  const keys = ["score", ...periods];
+  const maxima = Object.fromEntries(keys.map((key) => [key, Math.max(1e-9,
+    ...rows.map((row) => Math.abs(key === "score" ? row.score : row.returns[key])),
+  )]));
+  const heat = (value, key) => {
+    const mix = (Math.sqrt(Math.abs(value) / maxima[key]) * 78).toFixed(1);
+    return `background:color-mix(in srgb, ${value < 0 ? "#8db8e5" : "#f29b84"} ${mix}%, white)`;
+  };
+  const headers = [["rank", "순위"], ["rankChange", "직전 대비"], ["name", "자산"],
+    ["group", "자산군"], ["ticker", "티커"], ["score", "모멘텀 점수"],
+    ...periods.map((period) => [period, period])];
+  usOverviewRoot.innerHTML = `
+    <section class="asset-returns">
+      <div class="asset-returns-head">
+        <div>
+          <h2>자산군 수익률</h2>
+          <p>미국 ${asOfDate} 종가 · 직전 ${previousDate} · USD 수정종가</p>
+        </div>
+        <label>자산군 <select data-asset-returns-group>
+          <option value="">전체</option>
+          ${groups.map((group) => `<option>${escapeHtml(group)}</option>`).join("")}
+        </select></label>
+      </div>
+      <div class="asset-returns-scroll" tabindex="0" role="region" aria-label="자산군 수익률 표">
+        <table class="asset-returns-table" aria-label="자산군 수익률">
+          <thead><tr>${headers.map(([key, label]) => `<th scope="col">
+            <button type="button" data-asset-sort="${key}">${label}<span aria-hidden="true"></span></button>
+          </th>`).join("")}</tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <details class="asset-returns-method">
+        <summary>출처 및 산식</summary>
+        수익률은 <a href="https://finance.yahoo.com/quote/SPY/history/" target="_blank" rel="noreferrer">Yahoo Finance</a>의
+        USD 수정종가 기준으로, 분배금·분할을 반영합니다. 각 기간의 시작일이 휴장일이면 직전 거래일 종가를 사용합니다.
+        모멘텀은 각 기간 수익률을 38개 자산 내에서 표준화한 점수(z-score) 5개의 동일가중 평균입니다.
+        직전 대비는 직전 거래일과 비교한 전체 순위 변화입니다. 상품은 현물이나 지수가 아닌 표에 적힌 상장 상품 수익률입니다.
+      </details>
+    </section>`;
+  const tbody = usOverviewRoot.querySelector(".asset-returns-table tbody");
+  const filter = usOverviewRoot.querySelector("[data-asset-returns-group]");
+  const buttons = [...usOverviewRoot.querySelectorAll("[data-asset-sort]")];
+  let sortKey = "score";
+  let ascending = false;
+  const read = (row) => periods.includes(sortKey) ? row.returns[sortKey] : row[sortKey];
+  const renderRows = () => {
+    const sorted = rows.filter((row) => !filter.value || row.group === filter.value).sort((a, b) => {
+      const left = read(a);
+      const right = read(b);
+      const compare = typeof left === "string" ? left.localeCompare(right, "ko") : left - right;
+      return (ascending ? compare : -compare) || a.rank - b.rank;
+    });
+    buttons.forEach((button) => {
+      const active = button.dataset.assetSort === sortKey;
+      button.parentElement.setAttribute("aria-sort", active ? (ascending ? "ascending" : "descending") : "none");
+      button.querySelector("span").textContent = active ? (ascending ? " ▲" : " ▼") : "";
+    });
+    tbody.innerHTML = sorted.map((row) => {
+      const move = row.rankChange;
+      const direction = move > 0 ? "up" : move < 0 ? "down" : "flat";
+      const change = move ? `${move > 0 ? "▲" : "▼"}${Math.abs(move)}` : "—";
+      return `<tr class="${row.rank <= 10 ? "asset-returns-top" : ""}">
+        <td>${row.rank}</td>
+        <td class="asset-move-${direction}" title="${move ? (move > 0 ? "상승" : "하락") : "변동 없음"}">${change}</td>
+        <th scope="row">${escapeHtml(row.name)}</th>
+        <td>${escapeHtml(row.group)}</td>
+        <td><a href="https://finance.yahoo.com/quote/${encodeURIComponent(row.ticker)}/history/" target="_blank" rel="noreferrer">${escapeHtml(row.ticker)}</a></td>
+        <td class="asset-returns-score" style="${heat(row.score, "score")}">${row.score.toFixed(2)}</td>
+        ${periods.map((period) => {
+          const value = row.returns[period];
+          return `<td style="${heat(value, period)}">${value > 0 ? "+" : ""}${value.toFixed(1)}%</td>`;
+        }).join("")}
+      </tr>`;
+    }).join("");
+  };
+  filter.addEventListener("change", renderRows);
+  buttons.forEach((button) => button.addEventListener("click", () => {
+    const next = button.dataset.assetSort;
+    ascending = next === sortKey ? !ascending : ["rank", "name", "group", "ticker"].includes(next);
+    sortKey = next;
+    renderRows();
+  }));
+  renderRows();
+}
+
 function renderStudyCalendarOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -23361,7 +23460,7 @@ function renderSummary(list) {
   if (state.tab === "Research") {
     if (state.researchView === "DataCenter") {
       summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
-    } else if (state.researchView === "MuseAI") {
+    } else if (state.researchView === "MuseAI" || state.researchView === "AssetReturns") {
       summaryText.textContent = "";
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
@@ -24228,6 +24327,10 @@ function render() {
 
   if (state.tab === "Research") {
     renderSummary([]);
+    if (state.researchView === "AssetReturns") {
+      renderStudyAssetReturnsOverview();
+      return;
+    }
     if (state.researchView === "BriefingPrint") {
       renderStudyBriefingPrintOverview();
       return;
