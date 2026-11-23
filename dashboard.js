@@ -17492,6 +17492,7 @@ function renderMemorySpotOverview() {
             latestValue: runtime.latestValue ?? item.latestValue,
             latestChangePct: runtime.latestChangePct ?? item.latestChangePct,
             latestDate: runtime.latestDate ?? null,
+            dateBasis: runtime.dateBasis,
             history: runtime.history ?? item.history ?? [],
           }
         : null;
@@ -17591,7 +17592,7 @@ function renderMemorySpotOverview() {
             <span>${item.category}</span>
             <span>${item.format === "module_spot" ? "주간 현물 · USD/모듈" : item.cadence}</span>
             <span>${formatMemorySpotChange(item.latestChangePct)}</span>
-            <span>${item.format === "module_spot" ? "수집일 " : ""}${item.latestDate || "No data"}</span>
+            <span>${item.format === "module_spot" ? (item.dateBasis === "publication_date" ? "발표일 " : "수집일 ") : ""}${item.latestDate || "No data"}</span>
           </div>
         </article>`,
     )
@@ -17719,7 +17720,7 @@ function renderMemorySpotOverview() {
             <span class="memory-stat-value">${isModule ? "주간 가격 / 매일 수집 확인" : item.cadence}</span>
           </div>
           <div class="memory-stat-row">
-            <span class="memory-stat-label">${isModule ? "수집일" : "Last Date"}</span>
+            <span class="memory-stat-label">${isModule ? (runtime.dateBasis === "publication_date" ? "발표일" : "수집일") : "Last Date"}</span>
             <span class="memory-stat-value">${item.latestDate || "No data"}</span>
           </div>
           ${runtime.latestSource ? `

@@ -70,7 +70,7 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     const panel = page.locator('.memory-module-panel');
     const moduleQuote = await page.evaluate(() => memorySpotRuntime.items.ddr5_rdimm_32gb);
     assert.ok((await panel.innerText()).includes(`$${moduleQuote.latestValue.toFixed(3)}`));
-    assert.match(await panel.innerText(), /수집일/);
+    assert.ok((await panel.innerText()).includes(moduleQuote.dateBasis === 'publication_date' ? '발표일' : '수집일'));
     assert.match(await panel.innerText(), /계약가격/);
     assert.equal(await panel.locator('a').count(), moduleQuote.latestSource ? 2 : 1);
     assert.equal(await panel.locator('a[href="https://www.trendforce.com/price/dram/module_spot"]').count(), 1);

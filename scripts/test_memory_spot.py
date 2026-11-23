@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 from update_memory_spot import (DIRECT_PRODUCTS, MODULE_KEY, MODULE_PRODUCT, TARGET_MAP,
                                 build_payload, build_scoped_payload, merge_direct_dram, merge_direct_module,
-                                main, parse_direct_dram, parse_direct_module)
+                                main, parse_direct_dram, parse_direct_module, update_rdimm_only)
 
 
 def direct_html(stamp="Nov.5 2026 11:00 (GMT+8)"):
@@ -143,23 +143,24 @@ class MemorySpotTest(unittest.TestCase):
                     main()
                 output.write_text.assert_called_once()
                 payload = json.loads(output.write_text.call_args.args[0].split('=', 1)[1].strip().removesuffix(';'))
-                self.assertEqual(payload['items'][successful_key]['latestDate'], '2026-11-05')
+                expected = '2026-11-02' if successful_key == MODULE_KEY else '2026-11-05'
+                self.assertEqual(payload['items'][successful_key]['latestDate'], expected)
                 self.assertEqual(payload['items'][failed_key]['latestDate'], '2026-11-04')
 
     def test_module_direct_observations_do_not_rewrite_history_or_fake_daily_publications(self):
         today = date(2026, 11, 5)
-        rows = [module_row("2026-11-04")]
+        rows = [module_row("2026-10-30"), module_row("2026-11-04")]
         payload = build_scoped_payload(rows, today, {}, "dram")
         quote = parse_direct_module(module_html(), self.now)
         merge_direct_module(payload, {}, quote, today)
         item = payload["items"][MODULE_KEY]
-        self.assertEqual(item["history"][-2:], [2165, 2025])
-        self.assertEqual(item["highHistory"][-1], 2120)
-        self.assertEqual(item["lowHistory"][-1], 1930)
-        self.assertEqual(item["dateBasis"], "collection_date")
-        self.assertEqual(item["latestDate"], "2026-11-05")
+        self.assertEqual(item["history"][-7:], [2165, None, None, 2025, None, None, None])
+        self.assertEqual(item["highHistory"][-4], 2120)
+        self.assertEqual(item["lowHistory"][-4], 1930)
+        self.assertEqual(item["dateBasis"], "publication_date")
+        self.assertEqual(item["latestDate"], "2026-11-02")
         self.assertEqual(item["latestSource"]["publishedAt"], "2026-11-02T14:40:00+08:00")
-        self.assertEqual(payload["updatedAt"], "2026-11-05")
+        self.assertEqual(payload["updatedAt"], "2026-11-02")
         retry = build_scoped_payload(rows, today, payload, "dram")
         merge_direct_module(retry, payload, None, today)
         self.assertEqual(retry["items"][MODULE_KEY], item)
@@ -168,9 +169,21 @@ class MemorySpotTest(unittest.TestCase):
         self.assertEqual(retry["items"][MODULE_KEY]["latestValue"], 2025)
         next_day = build_scoped_payload(rows, date(2026, 11, 6), payload, "dram")
         merge_direct_module(next_day, payload, quote, date(2026, 11, 6))
-        self.assertIsNone(next_day["directModuleCurrent"])
-        self.assertIsNone(next_day["items"][MODULE_KEY]["history"][-2])
-        self.assertNotIn("latestSource", next_day["items"][MODULE_KEY])
+        self.assertEqual(next_day["directModuleCurrent"], quote)
+        self.assertEqual(next_day["items"][MODULE_KEY]["history"][-5:], [2025, None, None, None, None])
+
+    def test_rdimm_only_archives_new_publication_without_changing_chip_values(self):
+        now = datetime(2026, 11, 9, 8, tzinfo=timezone.utc)
+        payload = build_payload([], self.now.date())
+        merge_direct_dram(payload, {}, parse_direct_dram(direct_html(), self.now), self.now.date())
+        old_chip = payload["items"]["ddr5_16gb"]["history"][:]
+        payload["directModuleCurrent"] = parse_direct_module(module_html(), self.now)
+        newer = parse_direct_module(module_html("Nov.9 2026 14:40 (GMT+8)").replace("2,025.000", "2000"), now)
+        self.assertTrue(update_rdimm_only(payload, newer, now))
+        self.assertEqual(payload["items"]["ddr5_16gb"]["history"], old_chip + [None] * 4)
+        self.assertEqual(payload["items"][MODULE_KEY]["history"][-1], 2000)
+        self.assertEqual(set(payload["directModuleHistory"]), {"2026-11-02", "2026-11-09"})
+        self.assertFalse(update_rdimm_only(payload, {**newer, "observedDate": "2026-11-10"}, now))
 
     def test_later_session_replaces_intraday_quote_but_not_other_series(self):
         previous = build_payload([], date(2026, 11, 5))

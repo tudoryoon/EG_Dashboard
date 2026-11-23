@@ -145,29 +145,40 @@ def parse_direct_module(html: str, now: datetime) -> dict:
 
 
 def merge_direct_module(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
-    day = today.isoformat()
-    snapshot = previous.get("directModuleCurrent")
-    if snapshot and snapshot.get("observedDate") != day:
-        snapshot = None
-    if quote and quote["observedDate"] == day and (not snapshot or quote["publishedAt"] >= snapshot["publishedAt"]):
-        snapshot = quote
-    payload["directModuleCurrent"] = snapshot
-    if not snapshot:
+    history = dict(previous.get("directModuleHistory") or {})
+    indices = {day: index for index, day in enumerate(payload["labels"])}
+    for snapshot in (previous.get("directModuleCurrent"), quote):
+        if not snapshot or snapshot["date"] not in indices or snapshot["date"] > today.isoformat():
+            continue
+        day = snapshot["date"]
+        saved = history.get(day)
+        if not saved or snapshot["publishedAt"] > saved["publishedAt"] or (
+            snapshot["publishedAt"] == saved["publishedAt"] and snapshot["items"] != saved["items"]
+        ):
+            history[day] = snapshot
+    if not history:
         return
-    # Weekly prices are recorded on their collection date, not relabeled as a new daily publication.
-    index = payload["labels"].index(day)
+    day = max(history)
+    snapshot = history[day]
+    payload["directModuleCurrent"] = snapshot
+    payload["directModuleHistory"] = history
     item = payload["items"][MODULE_KEY]
+    # Before verified publications began, keep the legacy collection-date history.
+    # Afterward, do not plot delayed copies of a weekly quote as new observations.
+    first_index = indices[min(history)]
+    for field, metric in (("history", "average"), ("highHistory", "high"), ("lowHistory", "low")):
+        series = item[field]
+        series[first_index:] = [None] * (len(series) - first_index)
+        for date_key, published in history.items():
+            series[indices[date_key]] = published["items"][MODULE_KEY][metric]
     price = snapshot["items"][MODULE_KEY]
-    for field, value in (("history", price["average"]), ("highHistory", price["high"]), ("lowHistory", price["low"])):
-        item[field][index] = value
     item.update(
         latestDate=day, latestValue=price["average"], latestHigh=price["high"], latestLow=price["low"],
-        latestChangePct=price["changePct"], dateBasis="collection_date",
+        latestChangePct=price["changePct"], dateBasis="publication_date",
         latestSource={"name": "DRAMeXchange", "url": DRAMEXCHANGE_URL,
                       "publishedAt": snapshot["publishedAt"], "collectedAt": snapshot["collectedAt"]},
     )
-    payload["updatedAt"] = max(payload["updatedAt"], day)
-    payload["firstObservedDate"] = min(payload["firstObservedDate"] or day, day)
+    refresh_date_summary(payload)
 
 
 def merge_direct_dram(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
@@ -281,25 +292,39 @@ def build_payload(rows: list[dict[str, str]], today: date) -> dict:
     }
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--scope", choices=("all", "dram", "other"), default="all")
-    args = parser.parse_args()
-    now = datetime.now(timezone.utc)
+def load_direct_html() -> str:
+    try:
+        return fetch_text(DRAMEXCHANGE_URL)
+    except Exception as error:
+        print(f"::warning::Direct source fetch failed: {error}", file=sys.stderr)
+        return ""
+
+
+def update_rdimm_only(previous: dict, quote: dict, now: datetime) -> bool:
     today = now.astimezone(KST).date()
-    previous = {}
-    if OUTPUT_PATH.exists():
-        previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().removesuffix(";"))
+    extra = build_labels(date.fromisoformat(previous["labels"][-1]) + timedelta(days=1), today)
+    previous["labels"].extend(extra)
+    for item in previous["items"].values():
+        for field in ("history", "highHistory", "lowHistory"):
+            if field in item:
+                item[field].extend([None] * len(extra))
+    before = (dict(previous.get("directModuleHistory") or {}), previous.get("directModuleCurrent"))
+    merge_direct_module(previous, previous, quote, today)
+    if before == (previous["directModuleHistory"], previous["directModuleCurrent"]):
+        return False
+    previous["generatedAt"] = now.strftime("%Y-%m-%d %H:%M UTC")
+    previous["periodEnd"] = previous["labels"][-1]
+    return True
+
+
+def refresh_spot(previous: dict, now: datetime, scope: str) -> dict:
+    today = now.astimezone(KST).date()
     rows = fetch_rows(csv_url(DRAM_SHEET_ID))
-    if args.scope != "dram":
+    if scope != "dram":
         rows += fetch_rows(csv_url(NAND_SHEET_ID))
-    payload = build_scoped_payload(rows, today, previous, args.scope)
-    if args.scope != "other":
-        html = ""
-        try:
-            html = fetch_text(DRAMEXCHANGE_URL)
-        except Exception as error:
-            print(f"::warning::Direct source fetch failed; keeping history and today's saved quotes: {error}", file=sys.stderr)
+    payload = build_scoped_payload(rows, today, previous, scope)
+    if scope != "other":
+        html = load_direct_html()
         for label, parser_fn, merge_fn in (("DRAM", parse_direct_dram, merge_direct_dram),
                                            ("RDIMM", parse_direct_module, merge_direct_module)):
             quote = None
@@ -308,13 +333,32 @@ def main() -> None:
                     quote = parser_fn(html, now)
                     print(f"DRAMeXchange {label} quote: {quote['publishedAt']}")
                 except Exception as error:
-                    print(f"::warning::Direct {label} parse failed; keeping history and today's saved quote: {error}", file=sys.stderr)
+                    print(f"::warning::Direct {label} parse failed; keeping saved observations: {error}", file=sys.stderr)
             merge_fn(payload, previous, quote, today)
     else:
         current = previous.get("directDramCurrent")
         payload["directDramCurrent"] = current if current and current.get("date") == today.isoformat() else None
-        current_module = previous.get("directModuleCurrent")
-        payload["directModuleCurrent"] = current_module if current_module and current_module.get("observedDate") == today.isoformat() else None
+        merge_direct_module(payload, previous, None, today)
+    return payload
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scope", choices=("all", "dram", "other", "rdimm"), default="all")
+    args = parser.parse_args()
+    now = datetime.now(timezone.utc)
+    previous = {}
+    if OUTPUT_PATH.exists():
+        previous = json.loads(OUTPUT_PATH.read_text(encoding="utf-8").split("=", 1)[1].strip().removesuffix(";"))
+    if args.scope == "rdimm":
+        quote = parse_direct_module(fetch_text(DRAMEXCHANGE_URL), now)
+        print(f"DRAMeXchange RDIMM quote: {quote['publishedAt']}")
+        if not update_rdimm_only(previous, quote, now):
+            print("No new RDIMM publication or correction.")
+            return
+        payload = previous
+    else:
+        payload = refresh_spot(previous, now, args.scope)
     OUTPUT_PATH.write_text(
         "window.memoryDataHistoryData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",
@@ -344,11 +388,15 @@ def build_scoped_payload(rows: list[dict[str, str]], today: date, previous: dict
                 by_date = dict(zip(previous["labels"], old[field]))
                 item[field] = [by_date.get(day) for day in payload["labels"]]
         payload["items"][key] = item
+    refresh_date_summary(payload)
+    return payload
+
+
+def refresh_date_summary(payload: dict) -> None:
     payload["updatedAt"] = max((item.get("latestDate") or "" for item in payload["items"].values()), default="")
     observed = [day for item in payload["items"].values()
                 for day, value in zip(payload["labels"], item["history"]) if value is not None]
     payload["firstObservedDate"] = min(observed, default=None)
-    return payload
 
 
 if __name__ == "__main__":

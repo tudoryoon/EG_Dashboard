@@ -94,7 +94,7 @@ window.memoryData = {
           priority: 4.5,
           color: "#2563eb",
           sourceUrl: "https://www.trendforce.com/price/dram/module_spot",
-          note: "주간 현물가격 · USD/모듈. 가로축은 수집일 기준이며 최신 원출처 발표일은 별도로 표시합니다. 매일 확인하더라도 같은 주간 가격이 반복될 수 있습니다. 계약가격·DRAM 칩 가격과는 별도입니다.",
+          note: "주간 현물가격 · USD/모듈. 최근 값은 원출처 발표일에만 표시합니다. 이전 이력의 날짜는 수집일 기준입니다. 계약가격·DRAM 칩 가격과는 별도입니다.",
           latestValue: null,
           latestChangePct: null,
           history: [],
