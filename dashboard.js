@@ -141,6 +141,7 @@ const screeningSubtabMeta = {
   TrendScore: { label: "추세스코어" },
   Canslim: { label: "CANSLIM" },
   Company: { label: "Company" },
+  AssetReturns: { label: "자산군 수익률" },
 };
 
 const marketSubtabMeta = {
@@ -168,7 +169,6 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
-  AssetReturns: { label: "자산군 수익률" },
   MuseAI: { label: "Muse AI 스터디" },
   BriefingPrint: { label: "브리핑 PDF" },
   MemoryCapa: { label: "Memory CAPA" },
@@ -595,6 +595,7 @@ const DASHBOARD_ROUTE_META = {
       TrendScore: "trend-score",
       Canslim: "canslim",
       Company: "company",
+      AssetReturns: "asset-returns",
     },
   },
   Market: {
@@ -648,7 +649,6 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
-      AssetReturns: "asset-returns",
       MuseAI: "muse-ai",
       BriefingPrint: "briefing-pdf",
       MemoryCapa: "memory-capa",
@@ -712,6 +712,9 @@ function applyDashboardRouteFromHash(hash = window.location.hash) {
   }
   if (parts[0] === "tech" && parts[1] === "power-infra") {
     parts[0] = "research";
+  }
+  if (parts[0] === "research" && parts[1] === "asset-returns") {
+    parts[0] = "screening";
   }
   const requestedTab = Object.keys(DASHBOARD_ROUTE_META).find(
     (tabKey) => DASHBOARD_ROUTE_META[tabKey].slug === parts[0],
@@ -19176,7 +19179,7 @@ function renderStudyMuseAIOverview() {
   }, { once: true });
 }
 
-function renderStudyAssetReturnsOverview() {
+function renderAssetReturnsOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
   companyGrid.classList.add("hidden");
@@ -23458,7 +23461,7 @@ function renderSummary(list) {
       summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
     } else if (state.screeningView === "TrendScore") {
       summaryText.textContent = "NASDAQ100, S&P500, and Russell 2000 trend score rankings with daily rank history";
-    } else if (state.screeningView === "Company") {
+    } else if (state.screeningView === "Company" || state.screeningView === "AssetReturns") {
       summaryText.textContent = "";
     } else {
       summaryText.textContent = "CANSLIM coverage, financial trends, and earnings-surprise history across the RS universe";
@@ -23526,7 +23529,7 @@ function renderSummary(list) {
   if (state.tab === "Research") {
     if (state.researchView === "DataCenter") {
       summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
-    } else if (state.researchView === "MuseAI" || state.researchView === "AssetReturns") {
+    } else if (state.researchView === "MuseAI") {
       summaryText.textContent = "";
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
@@ -24333,6 +24336,7 @@ function render() {
     else if (state.screeningView === "RS") renderMarketRsOverview();
     else if (state.screeningView === "TrendScore") renderMarketTrendScoreOverview();
     else if (state.screeningView === "Company") renderCompanyOverview();
+    else if (state.screeningView === "AssetReturns") renderAssetReturnsOverview();
     else renderMarketCanslimOverview();
     return;
   }
@@ -24393,10 +24397,6 @@ function render() {
 
   if (state.tab === "Research") {
     renderSummary([]);
-    if (state.researchView === "AssetReturns") {
-      renderStudyAssetReturnsOverview();
-      return;
-    }
     if (state.researchView === "BriefingPrint") {
       renderStudyBriefingPrintOverview();
       return;

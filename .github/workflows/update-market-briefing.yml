@@ -29,16 +29,24 @@ jobs:
           python -m unittest discover -s scripts -p "test_fedwatch_data.py"
           python scripts/update_market_briefing.py
 
-      - name: Commit updated market briefing
+      - name: Refresh asset returns
+        timeout-minutes: 3
+        continue-on-error: true
         run: |
-          if git diff --quiet -- data/market-briefing-data.js; then
-            echo "No market briefing changes detected."
+          python scripts/test_asset_returns.py
+          python scripts/update_asset_returns.py
+
+      - name: Commit updated briefing and asset returns
+        run: |
+          mapfile -t changed < <(git diff --name-only -- data/market-briefing-data.js data/study-asset-returns-data.js)
+          if (( ${#changed[@]} == 0 )); then
+            echo "No briefing or asset returns changes detected."
             exit 0
           fi
-          python scripts/bump_data_cache_versions.py data/market-briefing-data.js
+          python scripts/bump_data_cache_versions.py "${changed[@]}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/market-briefing-data.js index.html
+          git add -- "${changed[@]}" index.html
           git commit -m "chore: update market briefing" || exit 0
           git pull --rebase origin main
           git push

@@ -12,7 +12,7 @@ on:
           - "false"
           - "true"
       refresh_if_stale:
-        description: "Exit without refreshing when Daily Briefing already has the latest completed session"
+        description: "Refresh Daily Briefing and Asset Returns only if they are stale"
         required: false
         default: "false"
         type: choice
@@ -54,6 +54,7 @@ jobs:
 
           event_name = "${{ github.event_name }}"
           should_run = True
+          refresh_assets = True
           reason = "manual run always refreshes data"
 
           refresh_if_stale = "${{ inputs.refresh_if_stale }}" == "true"
@@ -83,6 +84,12 @@ jobs:
                   ):
                       available_dates = [day for day in available_dates if day < now_new_york.date()]
                   latest_available = available_dates[-1].isoformat() if available_dates else ""
+                  try:
+                      assets_text = Path("data/study-asset-returns-data.js").read_text(encoding="utf-8")
+                      asset_date = json.loads(assets_text.split("=", 1)[1].strip().removesuffix(";")).get("asOfDate") or ""
+                  except (OSError, ValueError, IndexError):
+                      asset_date = ""
+                  refresh_assets = not latest_available or asset_date < latest_available
                   previous_session = available_dates[-2].isoformat() if len(available_dates) >= 2 else ""
                   incomplete = sorted({
                       str(item.get("ticker"))
@@ -119,11 +126,13 @@ jobs:
               except Exception as error:
                   if now_new_york.weekday() < 5 and now_new_york.time() < time(16, 10):
                       should_run = False
+                      refresh_assets = False
                       reason = f"QQQ session check failed before market close; retry later: {error}"
                   else:
                       reason = f"QQQ session check failed after market close; running guarded update: {error}"
 
           print(f"should_run={'true' if should_run else 'false'}")
+          print(f"refresh_assets={'true' if refresh_assets else 'false'}")
           print(f"reason={reason}")
           PY
 
@@ -131,13 +140,13 @@ jobs:
         run: echo "${{ steps.backup-guard.outputs.reason }}"
 
       - name: Set up Python
-        if: steps.backup-guard.outputs.should_run == 'true'
+        if: steps.backup-guard.outputs.should_run == 'true' || steps.backup-guard.outputs.refresh_assets == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        if: steps.backup-guard.outputs.should_run == 'true'
+        if: steps.backup-guard.outputs.should_run == 'true' || steps.backup-guard.outputs.refresh_assets == 'true'
         run: python -m pip install pandas pandas_market_calendars yfinance requests curl_cffi beautifulsoup4 tzdata
 
       - name: Refresh market prices and briefing
@@ -149,20 +158,33 @@ jobs:
           python scripts/update_market_prices.py
           python scripts/update_market_briefing.py
 
-      - name: Commit updated market briefing
-        if: steps.backup-guard.outputs.should_run == 'true' && inputs.dry_run != 'true'
+      - name: Refresh asset returns
+        if: steps.backup-guard.outputs.refresh_assets == 'true'
+        timeout-minutes: 3
+        continue-on-error: true
         run: |
+          python scripts/test_asset_returns.py
+          python scripts/update_asset_returns.py
+
+      - name: Commit updated morning data
+        if: (steps.backup-guard.outputs.should_run == 'true' || steps.backup-guard.outputs.refresh_assets == 'true') && inputs.dry_run != 'true'
+        env:
+          REFRESH_BRIEFING: ${{ steps.backup-guard.outputs.should_run }}
+          REFRESH_ASSETS: ${{ steps.backup-guard.outputs.refresh_assets }}
+        run: |
+          files=(data/market-briefing-data.js data/market-price-data.js data/study-asset-returns-data.js)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           commit_briefing() {
-            if git diff --quiet -- data/market-briefing-data.js data/market-price-data.js; then
-              echo "No market briefing or market price changes detected."
+            mapfile -t changed < <(git diff --name-only -- "${files[@]}")
+            if (( ${#changed[@]} == 0 )); then
+              echo "No morning data changes detected."
               return 1
             fi
-            python scripts/bump_data_cache_versions.py data/market-briefing-data.js data/market-price-data.js
-            git add data/market-briefing-data.js data/market-price-data.js index.html
-            git commit -m "Update market briefing and prices" || return 1
+            python scripts/bump_data_cache_versions.py "${changed[@]}"
+            git add -- "${changed[@]}" index.html
+            git commit -m "Update morning market data" || return 1
             return 0
           }
 
@@ -178,8 +200,13 @@ jobs:
             git rebase --abort || true
             git fetch origin main
             git reset --hard origin/main
-            python scripts/update_market_prices.py
-            python scripts/update_market_briefing.py
+            if [[ "$REFRESH_BRIEFING" == "true" ]]; then
+              python scripts/update_market_prices.py
+              python scripts/update_market_briefing.py
+            fi
+            if [[ "$REFRESH_ASSETS" == "true" ]]; then
+              timeout 120s python scripts/update_asset_returns.py || echo "::warning::Asset returns refresh failed; preserving the previous snapshot."
+            fi
             if ! commit_briefing; then
               exit 0
             fi
@@ -189,11 +216,7 @@ jobs:
           exit 1
 
       - name: Report dry run diff
-        if: steps.backup-guard.outputs.should_run == 'true' && inputs.dry_run == 'true'
+        if: (steps.backup-guard.outputs.should_run == 'true' || steps.backup-guard.outputs.refresh_assets == 'true') && inputs.dry_run == 'true'
         run: |
           echo "Dry run enabled. Skipping commit and push."
-          if git diff --quiet -- data/market-briefing-data.js data/market-price-data.js; then
-            echo "No market briefing or market price changes detected."
-            exit 0
-          fi
-          git diff --stat -- data/market-briefing-data.js data/market-price-data.js
+          git diff --stat -- data/market-briefing-data.js data/market-price-data.js data/study-asset-returns-data.js
