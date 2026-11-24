@@ -23683,6 +23683,7 @@ function renderTokenPriceOverview() {
   const latest = tokenPriceIndexData.latest ?? {};
   const overall = latest.overall ?? {};
   const comparison = tokenPriceIndexData.comparison?.values ?? [];
+  const comparisonDate = tokenPriceIndexData.comparison?.date;
   const comparisonMax = Math.max(...comparison.map((item) => Number(item.value) || 0), 1);
   const comparisonMarkup = comparison
     .map((item) => {
@@ -23696,19 +23697,18 @@ function renderTokenPriceOverview() {
           </div>
           <div class="token-price-tier-bar"><i style="width:${width.toFixed(1)}%"></i></div>
           <strong>$${Number.isFinite(value) ? value.toFixed(2) : "-"}</strong>
-          <small>${escapeHtml(tokenPriceIndexData.comparison?.date || "-")} 기준</small>
+          <small>${escapeHtml(comparisonDate || "-")} 기준</small>
         </div>`;
     })
     .join("");
 
   const formatPct = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return "-";
-    return `${numeric > 0 ? "+" : ""}${numeric.toFixed(2)}%`;
+    if (!Number.isFinite(value)) return "-";
+    return `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
   };
-  const dailyChange = Number(latest.dailyChangePct);
-  const publicWindowChange = Number(latest.publicWindowChangePct);
-  const premium = Number(latest.closedOpenPremium);
+  const dailyChange = latest.dailyChangePct;
+  const publicWindowChange = latest.publicWindowChangePct;
+  const premium = latest.closedOpenPremium;
   usOverviewRoot.innerHTML = `
     <section class="token-price-page">
       <header class="token-price-hero">
@@ -23727,7 +23727,7 @@ function renderTokenPriceOverview() {
         <div><span>전체 시장 · SDLLMTK</span><strong>$${Number(overall.value).toFixed(2)}</strong><small>USD / 1M tokens · ${escapeHtml(overall.date || "-")}</small></div>
         <div><span>일간 변화</span><strong class="${dailyChange > 0 ? "is-cost-up" : dailyChange < 0 ? "is-cost-down" : ""}">${formatPct(dailyChange)}</strong><small>공식 직전 관측치 대비</small></div>
         <div><span>공개 구간 변화</span><strong class="${publicWindowChange > 0 ? "is-cost-up" : publicWindowChange < 0 ? "is-cost-down" : ""}">${formatPct(publicWindowChange)}</strong><small>공개 포털 누적 시작점 대비</small></div>
-        <div><span>Closed / Open Premium</span><strong>${Number.isFinite(premium) ? `${premium.toFixed(2)}x` : "-"}</strong><small>2026-08 공개 차트 기준</small></div>
+        <div><span>Closed / Open Premium</span><strong>${Number.isFinite(premium) ? `${premium.toFixed(2)}x` : "-"}</strong><small>${comparisonDate ? `${escapeHtml(comparisonDate)} 기준` : "공통 관측일 없음"}</small></div>
       </div>
 
       <article class="us-panel token-price-chart-panel">
@@ -23741,8 +23741,7 @@ function renderTokenPriceOverview() {
       <div class="token-price-lower-grid">
         <article class="us-panel token-price-tier-panel">
           <div class="token-price-section-head"><div><h3>시장 구성별 최신 레벨</h3><p>동일 기준일의 전체·Closed·Open 지수를 비교합니다.</p></div><span>$/1M tokens</span></div>
-          <div class="token-price-tier-list">${comparisonMarkup}</div>
-          <p class="token-price-data-limit">Closed/Open 일간 히스토리는 공개되지 않아 최신 공개 차트 값만 표시합니다.</p>
+          <div class="token-price-tier-list">${comparisonMarkup || '<p class="token-price-data-limit">세 지수가 모두 공개된 관측일이 없습니다.</p>'}</div>
         </article>
         <article class="us-panel token-price-method-panel">
           <div class="token-price-section-head"><div><h3>산식과 해석</h3><p>정가 평균이 아니라 시장 사용과 지출이 반영된 지수</p></div></div>

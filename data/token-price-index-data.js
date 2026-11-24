@@ -1,39 +1,39 @@
 window.tokenPriceIndexData = {
-  "updatedAt": "2026-11-21",
-  "generatedAt": "2026-11-23T09:59:01.313454Z",
+  "updatedAt": "2026-11-22",
+  "generatedAt": "2026-11-24T09:58:33.818171Z",
   "source": {
     "provider": "Silicon Data",
     "label": "Silicon Data LLM Token Expenditure Index",
     "portalUrl": "https://portal.silicondata.com/token-index-chart",
     "productUrl": "https://www.silicondata.com/products/silicon-index/llm-token-expenditure-index",
     "methodologyUrl": "https://docs.silicondata.com/api-reference/token_index_api",
-    "cadence": "일간 · 공개 포털 관측값을 EG Dashboard에 매일 누적"
+    "cadence": "일간 · Silicon Data 공식 공개 관측값 누적"
   },
   "latest": {
     "overall": {
       "ticker": "SDLLMTK",
       "label": "LLM Token Expenditure Index",
-      "value": 0.6472,
-      "date": "2026-11-21",
+      "date": "2026-11-22",
+      "value": 0.632,
       "quality": "official-public"
     },
     "closed": {
       "ticker": "SDLLMCS",
       "label": "Closed Model Token Index",
-      "value": 3.07,
-      "date": "2026-08-03",
-      "quality": "public-chart-reference"
+      "date": "2026-11-22",
+      "value": 2.0918,
+      "quality": "official-public"
     },
     "open": {
       "ticker": "SDLLMOS",
       "label": "Open Model Token Index",
-      "value": 0.66,
-      "date": "2026-08-03",
-      "quality": "public-chart-reference"
+      "date": "2026-11-22",
+      "value": 0.3399,
+      "quality": "official-public"
     },
-    "dailyChangePct": -4.73,
-    "publicWindowChangePct": -52.31,
-    "closedOpenPremium": 4.65
+    "dailyChangePct": -2.35,
+    "publicWindowChangePct": -53.43,
+    "closedOpenPremium": 6.15
   },
   "series": {
     "overall": [
@@ -606,43 +606,118 @@ window.tokenPriceIndexData = {
         "date": "2026-11-21",
         "value": 0.6472,
         "quality": "official-public"
+      },
+      {
+        "date": "2026-11-22",
+        "value": 0.632,
+        "quality": "official-public"
       }
     ],
     "closed": [
       {
-        "date": "2026-08-03",
-        "value": 3.07,
-        "quality": "public-chart-reference"
+        "date": "2026-11-15",
+        "value": 2.0362,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-16",
+        "value": 2.0379,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-17",
+        "value": 2.0778,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-18",
+        "value": 2.0797,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-19",
+        "value": 2.0425,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-20",
+        "value": 2.0432,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-21",
+        "value": 2.0454,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-22",
+        "value": 2.0918,
+        "quality": "official-public"
       }
     ],
     "open": [
       {
-        "date": "2026-08-03",
-        "value": 0.66,
-        "quality": "public-chart-reference"
+        "date": "2026-11-15",
+        "value": 0.4893,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-16",
+        "value": 0.4789,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-17",
+        "value": 0.4756,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-18",
+        "value": 0.4442,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-19",
+        "value": 0.4051,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-20",
+        "value": 0.3821,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-21",
+        "value": 0.3602,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-22",
+        "value": 0.3399,
+        "quality": "official-public"
       }
     ]
   },
   "comparison": {
-    "date": "2026-08-03",
+    "date": "2026-11-22",
     "values": [
       {
         "key": "overall",
         "ticker": "SDLLMTK",
         "label": "전체",
-        "value": 1.29
+        "value": 0.632
       },
       {
         "key": "closed",
         "ticker": "SDLLMCS",
         "label": "Closed",
-        "value": 3.07
+        "value": 2.0918
       },
       {
         "key": "open",
         "ticker": "SDLLMOS",
         "label": "Open",
-        "value": 0.66
+        "value": 0.3399
       }
     ]
   },
@@ -652,7 +727,6 @@ window.tokenPriceIndexData = {
     "normalization": "입력·출력 토큰 구성, Context 길이, Batching 방식과 서비스 안정성을 정규화",
     "coverage": "Frontier API, Open-weight 플랫폼, 전용 인스턴스와 Self-hosted 기준 배포",
     "interpretation": "상승은 프리미엄 모델 사용 집중 또는 공급자의 가격 결정력 강화, 하락은 저가 모델 확산과 추론 효율 개선을 시사",
-    "publicDataLimit": "공개 포털은 SDLLMTK의 최근 관측치만 제공합니다. 전체 히스토리와 Closed/Open 일간 시계열은 Silicon Data 구독이 필요합니다.",
-    "subindexReference": "Closed/Open 최신값은 2026-08 공개 차트의 표기값이며, 기준일은 SDLLMTK $1.29와 공식 2026-08-03 값의 일치로 정렬한 추정입니다."
+    "publicDataLimit": "공개 페이지에서 확인 가능한 최근 일별 관측치만 수집·누적하며, 공개 구간 이전의 값은 추정하지 않습니다."
   }
 };
