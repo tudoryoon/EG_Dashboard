@@ -23625,6 +23625,7 @@ const TOKEN_PRICE_SERIES = [
   { key: "open", label: "Open", color: "#2f8a57" },
 ];
 const TOKEN_PRICE_RANGES = [["1M", 30], ["3M", 90], ["Max", null]];
+const TOKEN_PRICE_DEFAULT_RANGE = "Max";
 
 function buildTokenPriceChartData(series, days) {
   const allDates = TOKEN_PRICE_SERIES.flatMap(({ key }) => (series[key] ?? []).map(({ date }) => date)).sort();
@@ -23662,9 +23663,10 @@ function createTokenPriceIndexChart(panel) {
   const ranges = panel.querySelectorAll("[data-token-price-range]");
   const toggles = panel.querySelectorAll("[data-token-price-series]");
   const visible = TOKEN_PRICE_SERIES.map(({ key }) => Boolean(series[key]?.length));
+  const daysForRange = (label) => TOKEN_PRICE_RANGES.find(([range]) => range === label)?.[1];
   const chart = new Chart(canvas, {
     type: "line",
-    data: buildTokenPriceChartData(series, TOKEN_PRICE_RANGES[0][1]),
+    data: buildTokenPriceChartData(series, daysForRange(TOKEN_PRICE_DEFAULT_RANGE)),
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -23709,8 +23711,7 @@ function createTokenPriceIndexChart(panel) {
   };
   syncToggles();
   ranges.forEach((button) => button.addEventListener("click", () => {
-    const days = TOKEN_PRICE_RANGES.find(([range]) => range === button.dataset.tokenPriceRange)?.[1];
-    chart.data = buildTokenPriceChartData(series, days);
+    chart.data = buildTokenPriceChartData(series, daysForRange(button.dataset.tokenPriceRange));
     ranges.forEach((item) => item.setAttribute("aria-pressed", String(button === item)));
     syncToggles();
   }));
@@ -23785,7 +23786,7 @@ function renderTokenPriceOverview() {
         <div class="token-price-section-head">
           <div><h3>Token Expenditure 타임라인</h3><p>USD / 1M tokens · 공식 일별 관측값</p></div>
           <div class="token-price-chart-controls" role="group" aria-label="차트 기간">
-            ${TOKEN_PRICE_RANGES.map(([range], i) => `<button type="button" data-token-price-range="${range}" aria-pressed="${i === 0}">${range}</button>`).join("")}
+            ${TOKEN_PRICE_RANGES.map(([range]) => `<button type="button" data-token-price-range="${range}" aria-pressed="${range === TOKEN_PRICE_DEFAULT_RANGE}">${range}</button>`).join("")}
           </div>
         </div>
         <div class="token-price-chart-controls token-price-chart-legend" role="group" aria-label="표시 지수">
