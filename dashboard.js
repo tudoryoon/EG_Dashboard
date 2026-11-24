@@ -15802,7 +15802,7 @@ function renderMarketTrendScoreOverview() {
           <div class="us-section-head">
             <div>
               <h2>${selected?.ticker ?? "-"}</h2>
-              <p>${selected?.name ?? "Select a ticker from the table or search box."}${selected?.isIndex ? ` · ${selected.asOfDate}` : ""}</p>
+              <p>${selected?.name ?? "Select a ticker from the table or search box."}${selected?.isIndex ? ` · ${selected.asOfDate}${selected.priceStatus === "provider_snapshot" ? " · Yahoo Finance 잠정 시세" : ""}` : ""}</p>
             </div>
             <span class="market-rs-detail-score">${formatRsNumber(selected?.score)}</span>
           </div>

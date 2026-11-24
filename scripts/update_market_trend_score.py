@@ -638,7 +638,8 @@ def build_universe_payload(
             {
                 "ticker": ticker,
                 "name": row.get("name") or ticker,
-                **({"isIndex": True, "sourceUrl": row.get("sourceUrl")} if row.get("isIndex") else {}),
+                **({"isIndex": True, "sourceUrl": row.get("sourceUrl"), "priceStatus": row.get("priceStatus")}
+                   if row.get("isIndex") else {}),
                 "asOfDate": valid_at.date().isoformat(),
                 "marketCap": row.get("marketCap"),
                 "price": nullable_round(latest.get("price")),

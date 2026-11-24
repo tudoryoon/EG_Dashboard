@@ -11,7 +11,8 @@ from test_trend_history import fixture
 class AcwiTests(unittest.TestCase):
     def trend_fixture(self):
         rs, prices = fixture(tickers=("AAA", acwi.TICKER))
-        rs["rows"][-1].update(isIndex=True, marketCap=None, asOfDate=rs["updatedAt"], rsRatingAll=70)
+        rs["rows"][-1].update(isIndex=True, marketCap=None, asOfDate=rs["updatedAt"], rsRatingAll=70,
+                              priceStatus="official_eod")
         result = {"updatedAt": rs["updatedAt"], "historyDates": rs["historyDates"],
                   "rows": {"all": [{"ticker": "AAA", "rank": 17}], "sp500": []},
                   "histories": {"all": {"AAA": {"score": [7], "rank": [17]}}, "sp500": {}}}
@@ -153,6 +154,7 @@ class AcwiTests(unittest.TestCase):
                      "priceStatus": "official_eod"}
         self.assertTrue(acwi.rs_index_is_stale(p, certified))
         p["rows"][0]["price"] = 635.86
+        p["rows"][0]["priceStatus"] = "official_eod"
         p["histories"][acwi.TICKER]["price"][-1] = 635.86
         self.assertFalse(acwi.rs_index_is_stale(p, certified))
 
@@ -246,20 +248,18 @@ class AcwiTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 acwi.fetch_item()
 
-    def test_yahoo_refresh_merges_short_history_with_official_final_close(self):
+    def test_official_refresh_advances_without_yahoo_and_preserves_history(self):
         old = acwi.parse_yahoo_history(self.yahoo(("2026-10-30T21:30:00+00:00",)), "2026-10-30")
+        old = acwi.with_official_close(old, "2026-10-30", 101)
         old["source"] = "Investing.com / MSCI ACWI Net USD"
         before = copy.deepcopy(old)
-        response = Mock()
-        response.json.return_value = self.yahoo(closes=[99.5])
         official = Mock()
         official.json.return_value = self.official()
-        with patch.object(acwi.requests, "get", side_effect=[response, official]) as get, \
+        with patch.object(acwi.requests, "get", return_value=official) as get, \
              patch.object(acwi, "latest_completed_date", return_value="2026-11-02"):
             result = acwi.fetch_item(old)
-        self.assertEqual(get.call_count, 2)
-        self.assertEqual(get.call_args_list[0].args[0], acwi.HISTORY_URL)
-        self.assertEqual(get.call_args_list[1].args[0], acwi.OFFICIAL_LEVEL_URL)
+        get.assert_called_once()
+        self.assertEqual(get.call_args.args[0], acwi.OFFICIAL_LEVEL_URL)
         self.assertEqual(result["dates"], ["2026-10-30", "2026-11-02"])
         self.assertEqual(result["values"], [101, 99.75])
         self.assertEqual(result["closes"][-1], 99.75)
@@ -269,7 +269,6 @@ class AcwiTests(unittest.TestCase):
         self.assertEqual(result["officialEodDate"], "2026-11-02")
         self.assertNotIn("2026-11-02", result["snapshotDates"])
         self.assertIn("msci.com", result["sourceUrl"])
-        self.assertEqual(result["historicalSource"], old["source"])
         self.assertEqual(result["providerSymbol"], acwi.YAHOO_SYMBOL)
         self.assertEqual(old, before)
         self.assertIn("refreshedAt", result)
@@ -287,16 +286,51 @@ class AcwiTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     acwi.official_eod_close("2026-11-02")
 
-    def test_unverified_same_day_snapshot_is_not_retained_after_eod_failure(self):
-        old = acwi.parse_yahoo_history(self.yahoo(), "2026-11-02")
+    def test_yahoo_latest_is_provisional_until_same_day_official_replacement(self):
+        old = acwi.parse_yahoo_history(self.yahoo(("2026-10-30T21:30:00+00:00",)), "2026-10-30")
+        old = acwi.with_official_close(old, "2026-10-30", 98.5)
         response = Mock()
-        response.json.return_value = self.yahoo()
-        missing = Mock()
-        missing.json.return_value = self.official("2026-10-30")
-        with patch.object(acwi.requests, "get", side_effect=[response, missing]), \
+        response.json.return_value = self.yahoo(("2026-10-30T21:30:00+00:00", "2026-11-03T00:09:15+00:00"),
+                                               closes=[100, 101])
+        with patch.object(acwi, "latest_completed_date", return_value="2026-11-02"):
+            with patch.object(acwi, "official_eod_close", side_effect=ValueError("not published")), \
+                 patch.object(acwi.requests, "get", return_value=response) as get:
+                provisional = acwi.fetch_item(old)
+                self.assertEqual(provisional["priceStatus"], "provider_snapshot")
+                self.assertEqual(provisional["officialEodDate"], "2026-10-30")
+                self.assertEqual(provisional["values"], [98.5, 101])
+                self.assertEqual(provisional["opens"], [None, None])
+                self.assertEqual(provisional["sourceUrl"], acwi.SOURCE_URL)
+                self.assertEqual(provisional["snapshotDates"], {"2026-11-02": "2026-11-03T00:09:15+00:00"})
+                self.assertIs(acwi.fetch_item(provisional), provisional)
+            with patch.object(acwi, "official_eod_close", return_value=99.75), \
+                 patch.object(acwi.requests, "get") as get:
+                confirmed = acwi.fetch_item(provisional)
+                get.assert_not_called()
+        self.assertEqual(confirmed["dates"], provisional["dates"])
+        self.assertEqual(confirmed["values"], [98.5, 99.75])
+        self.assertEqual(confirmed["priceStatus"], "official_eod")
+        self.assertEqual(confirmed["snapshotDates"], {})
+
+    def test_yahoo_stale_row_never_moves_old_value_to_today(self):
+        old = acwi.parse_yahoo_history(self.yahoo(("2026-10-30T21:30:00+00:00",)), "2026-10-30")
+        response = Mock()
+        response.json.return_value = self.yahoo(("2026-10-30T21:30:00+00:00",))
+        with patch.object(acwi, "official_eod_close", side_effect=ValueError("not published")), \
+             patch.object(acwi.requests, "get", return_value=response), \
              patch.object(acwi, "latest_completed_date", return_value="2026-11-02"):
-            with self.assertRaisesRegex(ValueError, "not available"):
-                acwi.fetch_item(old)
+            self.assertIs(acwi.fetch_item(old), old)
+
+    def test_previous_provisional_is_fixed_when_next_session_publishes(self):
+        prior = acwi.parse_yahoo_history(self.yahoo(), "2026-11-02")
+        with patch.object(acwi, "latest_completed_date", return_value="2026-11-03"), \
+             patch.object(acwi, "official_eod_close", side_effect=[99.75, 101.25]) as official, \
+             patch.object(acwi.requests, "get") as yahoo:
+            result = acwi.fetch_item(prior)
+        self.assertEqual([call.args[0] for call in official.call_args_list], ["2026-11-02", "2026-11-03"])
+        yahoo.assert_not_called()
+        self.assertEqual(result["values"], [99.75, 101.25])
+        self.assertEqual(result["snapshotDates"], {})
 
     def test_prior_official_close_and_archive_survive_yahoo_overlap(self):
         old = acwi.parse_yahoo_history(self.yahoo(("2026-10-30T21:30:00+00:00",)), "2026-10-30")

@@ -123,21 +123,24 @@ def official_eod_close(day):
     return level
 
 
-def certify_latest_eod(item):
-    """Keep Yahoo history, but publish the exact MSCI final close only."""
-    day = item["dates"][-1]
-    level = official_eod_close(day)
-    item["values"][-1] = item["closes"][-1] = round(level, 4)
-    for key in ("opens", "highs", "lows"):
-        item[key][-1] = None  # MSCI EOD supplies no verifiable candle.
+def with_official_close(item, day, level):
+    """Upsert the verified close without depending on a Yahoo observation."""
+    item = deepcopy(item)
+    index = next((i for i, date in enumerate(item["dates"]) if date >= day), len(item["dates"]))
+    values = (round(level, 4), None, None, None, round(level, 4))
+    if index < len(item["dates"]) and item["dates"][index] == day:
+        for key, value in zip(PRICE_FIELDS, values):
+            item[key][index] = value
+    else:
+        item["dates"].insert(index, day)
+        for key, value in zip(PRICE_FIELDS, values):
+            item[key].insert(index, value)
     item.setdefault("officialEodOverrides", {})[day] = level
     item.get("snapshotDates", {}).pop(day, None)
-    item["priceStatus"] = "official_eod"
-    item["officialEodDate"] = day
-    item["quoteAsOf"] = None
-    item["closeOnly"] = True
-    item["source"] = "MSCI official NETR USD EOD closes; Yahoo Finance prior history"
-    item["sourceUrl"] = item["officialUrl"]
+    item["officialEodDate"] = max(item["officialEodOverrides"])
+    if item["dates"][-1] == day:
+        item.update(priceStatus="official_eod", quoteAsOf=None, closeOnly=True,
+                    source="MSCI official NETR USD EOD closes", sourceUrl=item["officialUrl"])
     return item
 
 
@@ -158,7 +161,6 @@ def merge_history(existing, incoming):
         if day in rows:
             rows[day] = [round(value, 4), None, None, None, round(value, 4)]
     item = {**deepcopy(existing), **incoming}
-    item.pop("closeOnly", None)
     item["historicalSource"] = existing.get("historicalSource") or existing.get("source")
     item["snapshotDates"] = {**existing.get("snapshotDates", {}), **incoming["snapshotDates"]}
     for day in incoming["dates"]:
@@ -175,22 +177,55 @@ def merge_history(existing, incoming):
 
 def fetch_item(existing=None):
     through = latest_completed_date()
+    item = existing
+    # Revisit recent provisional observations before advancing the latest session.
+    pending = sorted((existing or {}).get("snapshotDates", {}))[-5:]
+    for day in sorted(set(pending) | {through}):
+        if day > through or day in ((item or {}).get("officialEodOverrides") or {}):
+            continue
+        try:
+            level = official_eod_close(day)
+            if not item or not item.get("dates"):
+                item = {
+                    "label": LABEL, "symbol": TICKER, "color": "#0d9488", "isIndex": True,
+                    "currency": "USD", "returnType": "Net Total Return", "msciIndexCode": "892400",
+                    "providerSymbol": YAHOO_SYMBOL, "officialUrl": "https://www.msci.com/indexes/index/892400/msci-acwi-index",
+                    "dates": [], **{key: [] for key in PRICE_FIELDS},
+                }
+            item = with_official_close(item, day, level)
+        except Exception as exc:
+            print(f"MSCI official EOD {day}: {exc}", flush=True)
+    if item and item["dates"] and (item["dates"][-1] > through or (
+        item["dates"][-1] == through and item.get("priceStatus") == "official_eod"
+    )):
+        return {**item, "refreshedAt": datetime.now(timezone.utc).isoformat()} if item is not existing else item
     try:
         response = requests.get(HISTORY_URL, params={
             "range": "5d", "interval": "1d", "includePrePost": "false",
         }, impersonate="chrome", timeout=30)
         response.raise_for_status()
-        item = certify_latest_eod(merge_history(existing, parse_yahoo_history(response.json(), through)))
-        item["refreshedAt"] = datetime.now(timezone.utc).isoformat()
-        return item
+        incoming = parse_yahoo_history(response.json(), through)
+        if incoming["dates"][-1] != through:
+            raise ValueError(f"Yahoo has no quote for {through}")
+        current_quote_at = ((item or {}).get("snapshotDates") or {}).get(through)
+        if current_quote_at and incoming["quoteAsOf"] and current_quote_at > incoming["quoteAsOf"]:
+            return item
+        # Even Yahoo's most recent daily row is provisional here until MSCI confirms it.
+        incoming["snapshotDates"] = {through: incoming["quoteAsOf"]}
+        incoming["dates"] = [through]
+        close = incoming["closes"][-1]
+        for key, value in zip(PRICE_FIELDS, (close, None, None, None, close)):
+            incoming[key] = [value]
+        incoming.update(priceStatus="provider_snapshot", closeOnly=True)
+        updated = merge_history(item, incoming)
+        if updated == item:
+            return item
+        return {**updated, "refreshedAt": datetime.now(timezone.utc).isoformat()}
     except Exception as exc:
-        if (not existing or not existing.get("dates")
-                or (existing["dates"][-1] == through
-                    and existing.get("priceStatus") != "official_eod"
-                    and through not in (existing.get("officialEodOverrides") or {}))):
+        if not item or not item.get("dates"):
             raise
         print(f"Retained MSCI ACWI NTR history after refresh failure: {exc}", flush=True)
-        return existing
+        return item
 
 
 def append_rs_index(payload, item=None):
@@ -201,7 +236,7 @@ def append_rs_index(payload, item=None):
 
     if item is None:
         from update_market_prices import load_existing_item
-        # RS-only workflows must use the already published, certified price.
+        # RS-only workflows use the already published price and its status.
         item = load_existing_item(rs.OUTPUT_PATH.parent / "market-price-data.js", KEY)
     dates = pd.to_datetime(payload["historyDates"])
     frame = pd.DataFrame({k: item[v] for k, v in {
@@ -212,10 +247,14 @@ def append_rs_index(payload, item=None):
     as_of = min(payload["updatedAt"], item["dates"][-1])
     scoped = {**payload, "updatedAt": as_of}
     row, history = build_new_row_and_history(scoped, TICKER, frame, LABEL, None, is_index=True)
+    snapshot_dates = item.get("snapshotDates") or {}
+    official_dates = item.get("officialEodOverrides") or {}
+    status = ("provider_snapshot" if as_of in snapshot_dates else "official_eod" if as_of in official_dates
+              else item.get("priceStatus") if as_of == item["dates"][-1] else "provider_daily")
     row.update(isIndex=True, currency="USD", asOfDate=as_of,
-               sourceUrl=item.get("sourceUrl", SOURCE_URL),
-               providerSymbol=item.get("providerSymbol"), priceStatus=item.get("priceStatus"),
-               quoteAsOf=item.get("quoteAsOf"),
+               sourceUrl=item.get("officialUrl", item.get("sourceUrl")) if status == "official_eod" else SOURCE_URL,
+               providerSymbol=item.get("providerSymbol"), priceStatus=status,
+               quoteAsOf=snapshot_dates.get(as_of),
                rsBasis="Existing All universe; index excluded from stock ranks")
     reference = pd.DataFrame({r["ticker"]: payload["histories"][r["ticker"]]["price"]
                               for r in payload["rows"] if not r.get("isIndex")
@@ -271,8 +310,8 @@ def main():
     prices = load_js_payload(data / "market-price-data.js", "marketPriceData")
     current_item = prices["items"].get(KEY) or {}
     needs_eod = (not current_item.get("dates")
-                 or current_item.get("priceStatus") != "official_eod"
-                 or current_item.get("officialEodDate") != current_item["dates"][-1])
+                 or current_item.get("officialEodDate", "") < latest_completed_date()
+                 or bool(current_item.get("snapshotDates")))
     if args.rs_only:
         needs_eod = False  # A separate price workflow owns this file.
     rs_stale = rs_index_is_stale(rs, current_item)
@@ -282,6 +321,9 @@ def main():
     refresh_rs = not args.trend_only and (rs_stale or needs_eod or not args.if_stale)
     if refresh_rs:
         item = current_item if args.rs_only else fetch_item(current_item)
+        if args.if_stale and item == current_item and not rs_stale and not trend_index_is_stale(rs, result):
+            print("No newer MSCI close available")
+            return
         prices["items"][KEY] = item
         append_rs_index(rs, item)
     refresh_trend_index(result, rs, prices)
@@ -330,6 +372,7 @@ def trend_index_is_stale(rs, result):
     scores = result.get("histories", {}).get("all", {}).get(TICKER, {}).get("score", [])
     return (str(row.get("asOfDate") or "") < str(index_row.get("asOfDate") or rs.get("updatedAt") or "")
             or row.get("price") != index_row.get("price")
+            or row.get("priceStatus") != index_row.get("priceStatus")
             or row.get("score") is None
             or len(scores) != len(dates) or scores[-1] != row.get("score"))
 
@@ -346,6 +389,7 @@ def rs_index_is_stale(payload, item=None):
         expected = round(float(item["values"][-1]), 2)
         if (row.get("asOfDate") != item["dates"][-1]
                 or row.get("price") != expected
+                or (item.get("priceStatus") and row.get("priceStatus") != item["priceStatus"])
                 or history["price"][-1] != expected):
             return True
     return False
