@@ -16541,10 +16541,72 @@ function syncMemoryChartLayout(chart) {
   chart.options.scales.yChange.stackWeight = 1;
 }
 
+function getMemoryHoverElements(chart, event) {
+  const { left, right, top, bottom } = chart.chartArea;
+  if (!(event.x >= left && event.x <= right && event.y >= top && event.y <= bottom)) {
+    return [];
+  }
+  const candidates = chart.$memoryObservations ?? [];
+  const x = chart.scales.x;
+  let low = 0;
+  let high = candidates.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (x.getPixelForValue(candidates[middle].index) < event.x) low = middle + 1;
+    else high = middle;
+  }
+  const before = candidates[low - 1];
+  const after = candidates[low];
+  if (!before) return after?.elements ?? [];
+  if (!after) return before.elements;
+  return event.x - x.getPixelForValue(before.index) <= x.getPixelForValue(after.index) - event.x
+    ? before.elements : after.elements;
+}
+
+function memoryChartHoverPlugin() {
+  return {
+    id: "memoryObservationGuide",
+    afterUpdate(chart) {
+      const byDate = new Map();
+      chart.getSortedVisibleDatasetMetas().forEach(({ index: datasetIndex, data }) => {
+        chart.data.datasets[datasetIndex].data.forEach((value, index) => {
+          if (!Number.isFinite(value) || !data[index] || data[index].skip) return;
+          if (!byDate.has(index)) byDate.set(index, []);
+          byDate.get(index).push({ datasetIndex, index, element: data[index] });
+        });
+      });
+      chart.$memoryObservations = [...byDate].sort(([a], [b]) => a - b)
+        .map(([index, elements]) => ({ index, elements }));
+    },
+    afterDatasetsDraw(chart) {
+      const [point] = chart.getActiveElements();
+      if (!point) return;
+      const x = chart.scales.x.getPixelForValue(point.index);
+      const { top, bottom } = chart.chartArea;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.strokeStyle = "rgba(71, 85, 105, 0.55)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x, bottom);
+      ctx.stroke();
+      ctx.restore();
+    },
+  };
+}
+
 function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "1y", changeSeries = null) {
   if (typeof Chart === "undefined") {
     return;
   }
+  Chart.Interaction.modes.memoryObservation = getMemoryHoverElements;
+  Chart.Tooltip.positioners.memoryCorner = function (items) {
+    if (!items.length) return false;
+    const { left, top } = this.chart.chartArea;
+    return { x: left + 8, y: top + 8, xAlign: "left", yAlign: "top" };
+  };
 
   const combinedDatasets = datasets.map((dataset) => ({ ...dataset, type: "line", yAxisID: "y" }));
   if (changeSeries) {
@@ -16580,11 +16642,12 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
   const chart = new Chart(canvas, {
     type: "line",
     data: payload,
+    plugins: [memoryChartHoverPlugin()],
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      interaction: { mode: "index", intersect: false },
+      interaction: { mode: "memoryObservation", intersect: false },
       plugins: {
         legend: {
           display: !canvas.hasAttribute("data-memory-series-controlled"),
@@ -16597,6 +16660,9 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
         },
         tooltip: {
           enabled: true,
+          position: "memoryCorner",
+          caretSize: 0,
+          itemSort: (a, b) => a.datasetIndex - b.datasetIndex,
           callbacks: {
             title: (tooltipItems) => {
               const pointLabel = tooltipItems?.[0]?.label;

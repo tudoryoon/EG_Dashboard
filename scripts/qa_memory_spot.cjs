@@ -106,10 +106,54 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     const high = panel.locator('[data-memory-series-toggle="high"]');
     const average = panel.locator('[data-memory-series-toggle="average"]');
     const low = panel.locator('[data-memory-series-toggle="low"]');
+    const moduleCanvas = panel.locator('canvas[data-memory-series]');
+    const hoverInfo = () => moduleCanvas.evaluate(canvas => {
+      const chart = Chart.getChart(canvas);
+      const { opacity, title, body, x, y } = chart.tooltip;
+      return { opacity, title, lines: body.map(item => item.lines[0]), x, y };
+    });
+    const hoverGeometry = () => moduleCanvas.evaluate(canvas => {
+      const chart = Chart.getChart(canvas);
+      const avg = chart.data.datasets.find(dataset => dataset.memorySeriesKey === 'average').data;
+      const last = avg.findLastIndex(Number.isFinite);
+      const previous = avg.findLastIndex((value, index) => index < last && Number.isFinite(value));
+      const nextBlank = avg.findIndex((value, index) => index > last && !Number.isFinite(value));
+      return {
+        date: chart.data.labels[last],
+        previousDate: chart.data.labels[previous],
+        x: chart.scales.x.getPixelForValue(last),
+        previousX: chart.scales.x.getPixelForValue(previous),
+        blankX: nextBlank === -1 ? null : chart.scales.x.getPixelForValue(nextBlank),
+        top: chart.chartArea.top,
+        bottom: chart.chartArea.bottom,
+      };
+    });
+    await moduleCanvas.scrollIntoViewIfNeeded();
+    const geometry = await hoverGeometry();
+    await moduleCanvas.hover({ position: { x: geometry.x, y: geometry.top + 18 } });
+    const firstHover = await hoverInfo();
+    assert.equal(firstHover.opacity, 1);
+    assert.deepEqual(firstHover.title, [geometry.date]);
+    assert.match(firstHover.lines.join(' '), /High:.*Average:.*Low:.*일별 변화율:/);
+    await moduleCanvas.hover({ position: { x: geometry.x, y: geometry.bottom - 15 } });
+    assert.deepEqual(await hoverInfo(), firstHover);
+    if (geometry.blankX !== null) {
+      await moduleCanvas.hover({ position: { x: geometry.blankX, y: geometry.bottom - 15 } });
+      assert.deepEqual(await hoverInfo(), firstHover);
+    }
+    await moduleCanvas.hover({ position: { x: geometry.previousX, y: geometry.bottom - 15 } });
+    const previousHover = await hoverInfo();
+    assert.deepEqual(previousHover.title, [geometry.previousDate]);
+    assert.equal(previousHover.x, firstHover.x);
+    assert.equal(previousHover.y, firstHover.y);
+    await average.hover();
+    assert.equal((await hoverInfo()).opacity, 0);
     for(const input of [high,average,low]) assert.ok(await input.isChecked());
     await high.uncheck();
     await low.uncheck();
     assert.deepEqual((await chartInfo()).visible, [false,true,false]);
+    await moduleCanvas.hover({ position: { x: geometry.x, y: geometry.top + 18 } });
+    assert.deepEqual((await hoverInfo()).lines.map(line => line.split(':')[0]), ['Average', '일별 변화율']);
     await panel.locator('[data-memory-range="1m"]').click();
     assert.deepEqual((await chartInfo()).visible, [false,true,false]);
     assert.equal(await high.isChecked(), false);
