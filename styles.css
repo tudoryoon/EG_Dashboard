@@ -11077,7 +11077,76 @@ h1 {
 
 .token-price-chart {
   height: 320px;
-  margin-top: 14px;
+  margin-top: 10px;
+  position: relative;
+}
+
+.token-price-chart-controls,
+.token-price-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.token-price-chart-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 38px;
+  min-height: 32px;
+  padding: 4px 9px;
+  border: 1px solid #deded8;
+  border-radius: 6px;
+  background: #fff;
+  color: #52524c;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.token-price-chart-controls button[aria-pressed="true"] {
+  border-color: #20201d;
+  background: #20201d;
+  color: #fff;
+}
+
+.token-price-chart-legend {
+  margin-top: 12px;
+}
+
+.token-price-chart-legend button[aria-pressed="true"] {
+  border-color: #c9cbca;
+  background: #eff1ef;
+  color: #20201d;
+}
+
+.token-price-chart-legend button[aria-pressed="false"] {
+  color: #686861;
+}
+
+.token-price-chart-controls button:disabled {
+  cursor: default;
+}
+
+.token-price-chart-legend i {
+  width: 13px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--token-series-color);
+}
+
+.token-price-chart-legend button[aria-pressed="false"] i {
+  opacity: 0.4;
+}
+
+.token-price-coverage {
+  gap: 4px 12px;
+  margin-top: 8px;
+  color: #686861;
+  font-size: 0.72rem;
 }
 
 .token-price-lower-grid {

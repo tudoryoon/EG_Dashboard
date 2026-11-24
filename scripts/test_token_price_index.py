@@ -65,12 +65,42 @@ class TokenPriceIndexTests(unittest.TestCase):
         self.assertEqual(payload["comparison"], {"date": None, "values": []})
         self.assertIsNone(payload["latest"]["closedOpenPremium"])
 
-    @patch.object(token_price, "fetch_html", side_effect=["portal", TimeoutError("unreachable")])
+    def test_portal_uses_matching_index_only(self):
+        data = {"data": {"token": "open_expenditure", "indexes": {
+            "2026-11-22": "0.3399",
+            "2026-10-24": "0.5034",
+            "2026-10-25": "N/A",
+        }}}
+        html = f"<script>self.__next_f.push({json.dumps([1, json.dumps(data)])})</script>"
+        self.assertEqual(token_price.parse_public_portal_points(html, "open_expenditure"), [
+            point("2026-10-24", 0.5034), point("2026-11-22", 0.3399),
+        ])
+        with self.assertRaises(RuntimeError):
+            token_price.parse_public_portal_points(html, "closed_expenditure")
+
+    @patch.object(token_price, "fetch_html", side_effect=["portal", TimeoutError("unreachable"),
+                                                         TimeoutError("unreachable"), TimeoutError("unreachable")])
     @patch.object(token_price, "parse_public_portal_points", return_value=[point("2026-11-23", 0.6)])
     def test_product_outage_can_still_publish_overall(self, portal, fetch):
         self.assertEqual(token_price.collect_public_points(), {"overall": [point("2026-11-23", 0.6)]})
-        portal.assert_called_once_with("portal")
-        self.assertEqual([call.args[0] for call in fetch.call_args_list], [token_price.PORTAL_URL, token_price.PRODUCT_URL])
+        portal.assert_called_once_with("portal", "expenditure")
+        self.assertEqual([call.args[0] for call in fetch.call_args_list], [
+            token_price.PORTAL_URL, token_price.PORTAL_SEGMENT_URL + "?token=closed_expenditure",
+            token_price.PORTAL_SEGMENT_URL + "?token=open_expenditure", token_price.PRODUCT_URL,
+        ])
+
+    @patch.object(token_price, "fetch_html", side_effect=["overall", "closed", "open", "product"])
+    @patch.object(token_price, "parse_public_product_points", return_value={
+        "open": [point("2026-11-22", 0.34)],
+    })
+    @patch.object(token_price, "parse_public_portal_points", side_effect=[
+        [point("2026-11-22", 0.632)], [point("2026-11-22", 2.0918)],
+        [point("2026-10-24", 0.5034), point("2026-11-22", 0.3399)],
+    ])
+    def test_portal_backfill_keeps_precision_and_older_points(self, portal, product, fetch):
+        fresh = token_price.collect_public_points()
+        self.assertEqual(fresh["open"], [point("2026-10-24", 0.5034), point("2026-11-22", 0.3399)])
+        self.assertEqual(len(fresh), 3)
 
 
 if __name__ == "__main__":

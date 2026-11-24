@@ -23619,36 +23619,59 @@ function renderCards(list) {
   });
 }
 
-function createTokenPriceIndexChart(canvas) {
+const TOKEN_PRICE_SERIES = [
+  { key: "overall", label: "전체", color: "#176b87" },
+  { key: "closed", label: "Closed", color: "#c93d32" },
+  { key: "open", label: "Open", color: "#2f8a57" },
+];
+const TOKEN_PRICE_RANGES = [["1M", 30], ["3M", 90], ["Max", null]];
+
+function buildTokenPriceChartData(series, days) {
+  const allDates = TOKEN_PRICE_SERIES.flatMap(({ key }) => (series[key] ?? []).map(({ date }) => date)).sort();
+  const dayMs = 86400000;
+  const end = Date.parse(allDates.at(-1));
+  const first = Date.parse(allDates[0]);
+  const start = days ? Math.max(first, end - (days - 1) * dayMs) : first;
+  const labels = [];
+  for (let time = start; time <= end; time += dayMs) {
+    labels.push(new Date(time).toISOString().slice(0, 10));
+  }
+  const datasets = TOKEN_PRICE_SERIES.map(({ key, label, color }) => {
+    const byDate = new Map((series[key] ?? []).map((point) => [point.date, point.value]));
+    const data = labels.map((date) => byDate.get(date) ?? null);
+    const present = data.filter((value) => value !== null);
+    return {
+      label,
+      data,
+      borderColor: color,
+      backgroundColor: color,
+      borderWidth: 2.2,
+      pointRadius: present.length <= 31 ? 2.6 : 0,
+      pointHoverRadius: 5,
+      spanGaps: false,
+      tension: 0,
+    };
+  });
+  return { labels, datasets };
+}
+
+function createTokenPriceIndexChart(panel) {
+  const canvas = panel?.querySelector("#token-price-index-chart");
   if (typeof Chart === "undefined" || !canvas) return;
-  const history = tokenPriceIndexData.series?.overall ?? [];
+  const series = tokenPriceIndexData.series ?? {};
+  const ranges = panel.querySelectorAll("[data-token-price-range]");
+  const toggles = panel.querySelectorAll("[data-token-price-series]");
+  const visible = TOKEN_PRICE_SERIES.map(({ key }) => Boolean(series[key]?.length));
   const chart = new Chart(canvas, {
     type: "line",
-    data: {
-      labels: history.map((point) => point.date),
-      datasets: [
-        {
-          label: "SDLLMTK",
-          data: history.map((point) => Number(point.value)),
-          borderColor: "#176b87",
-          backgroundColor: "rgba(23, 107, 135, 0.12)",
-          borderWidth: 2.6,
-          pointRadius: history.length <= 31 ? 3.5 : 0,
-          pointHoverRadius: 6,
-          fill: true,
-          tension: 0.22,
-        },
-      ],
-    },
+    data: buildTokenPriceChartData(series, TOKEN_PRICE_RANGES[0][1]),
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: {
-          align: "start",
-          labels: { usePointStyle: true, pointStyle: "circle", color: "#52524c", boxWidth: 8 },
-        },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             title: (items) => items[0]?.label ?? "",
@@ -23659,7 +23682,10 @@ function createTokenPriceIndexChart(canvas) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#777770", maxRotation: 0, autoSkip: true, maxTicksLimit: 7 },
+          ticks: {
+            color: "#777770", maxRotation: 0, autoSkip: true, maxTicksLimit: 7,
+            callback(value) { return this.getLabelForValue(value).slice(5); },
+          },
           border: { color: "#d8d8d2" },
         },
         y: {
@@ -23672,6 +23698,26 @@ function createTokenPriceIndexChart(canvas) {
     },
   });
   charts.push(chart);
+  const syncToggles = () => {
+    const visibleCount = visible.filter(Boolean).length;
+    toggles.forEach((button, i) => {
+      button.setAttribute("aria-pressed", String(visible[i]));
+      button.disabled = !series[TOKEN_PRICE_SERIES[i].key]?.length || (visible[i] && visibleCount === 1);
+      chart.setDatasetVisibility(i, visible[i]);
+    });
+    chart.update("none");
+  };
+  syncToggles();
+  ranges.forEach((button) => button.addEventListener("click", () => {
+    const days = TOKEN_PRICE_RANGES.find(([range]) => range === button.dataset.tokenPriceRange)?.[1];
+    chart.data = buildTokenPriceChartData(series, days);
+    ranges.forEach((item) => item.setAttribute("aria-pressed", String(button === item)));
+    syncToggles();
+  }));
+  toggles.forEach((button, i) => button.addEventListener("click", () => {
+    visible[i] = !visible[i];
+    syncToggles();
+  }));
 }
 
 function renderTokenPriceOverview() {
@@ -23709,6 +23755,11 @@ function renderTokenPriceOverview() {
   const dailyChange = latest.dailyChangePct;
   const publicWindowChange = latest.publicWindowChangePct;
   const premium = latest.closedOpenPremium;
+  const chartSeries = tokenPriceIndexData.series ?? {};
+  const seriesCoverage = TOKEN_PRICE_SERIES.map(({ key, label }) => {
+    const points = chartSeries[key] ?? [];
+    return points.length ? `${label} ${points[0].date}~${points.at(-1).date}` : `${label} 미공개`;
+  });
   usOverviewRoot.innerHTML = `
     <section class="token-price-page">
       <header class="token-price-hero">
@@ -23732,10 +23783,16 @@ function renderTokenPriceOverview() {
 
       <article class="us-panel token-price-chart-panel">
         <div class="token-price-section-head">
-          <div><h3>시장 전체 Token Expenditure</h3><p>Silicon Data 공개 포털의 SDLLMTK 공식 일간값을 매일 누적합니다.</p></div>
-          <strong>${escapeHtml(tokenPriceIndexData.source?.cadence || "Daily")}</strong>
+          <div><h3>Token Expenditure 타임라인</h3><p>USD / 1M tokens · 공식 일별 관측값</p></div>
+          <div class="token-price-chart-controls" role="group" aria-label="차트 기간">
+            ${TOKEN_PRICE_RANGES.map(([range], i) => `<button type="button" data-token-price-range="${range}" aria-pressed="${i === 0}">${range}</button>`).join("")}
+          </div>
         </div>
-        <div class="token-price-chart"><canvas id="token-price-index-chart"></canvas></div>
+        <div class="token-price-chart-controls token-price-chart-legend" role="group" aria-label="표시 지수">
+          ${TOKEN_PRICE_SERIES.map(({ key, label, color }) => `<button type="button" data-token-price-series="${key}" aria-pressed="true"><i aria-hidden="true" style="--token-series-color:${color}"></i>${label}</button>`).join("")}
+        </div>
+        <div class="token-price-chart"><canvas id="token-price-index-chart" role="img" aria-label="전체, Closed, Open 토큰 지출 지수의 일별 추이"></canvas></div>
+        <div class="token-price-coverage"><span>확보 이력</span>${seriesCoverage.map((period) => `<span>${escapeHtml(period)}</span>`).join("")}</div>
       </article>
 
       <div class="token-price-lower-grid">
@@ -23757,7 +23814,7 @@ function renderTokenPriceOverview() {
       </div>
     </section>`;
 
-  createTokenPriceIndexChart(usOverviewRoot.querySelector("#token-price-index-chart"));
+  createTokenPriceIndexChart(usOverviewRoot.querySelector(".token-price-chart-panel"));
 }
 
 const OPENROUTER_COLORS = [

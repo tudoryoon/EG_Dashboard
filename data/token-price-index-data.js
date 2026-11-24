@@ -1,6 +1,6 @@
 window.tokenPriceIndexData = {
   "updatedAt": "2026-11-22",
-  "generatedAt": "2026-11-24T09:58:33.818171Z",
+  "generatedAt": "2026-11-24T10:05:49.000120Z",
   "source": {
     "provider": "Silicon Data",
     "label": "Silicon Data LLM Token Expenditure Index",
@@ -615,6 +615,116 @@ window.tokenPriceIndexData = {
     ],
     "closed": [
       {
+        "date": "2026-10-24",
+        "value": 2.3769,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-25",
+        "value": 2.3643,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-26",
+        "value": 2.3277,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-27",
+        "value": 2.3053,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-28",
+        "value": 2.1961,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-29",
+        "value": 2.1821,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-30",
+        "value": 2.1297,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-31",
+        "value": 2.1196,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-01",
+        "value": 2.08,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-02",
+        "value": 2.0539,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-03",
+        "value": 2.0092,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-04",
+        "value": 2.0124,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-05",
+        "value": 1.9821,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-06",
+        "value": 1.993,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-07",
+        "value": 1.9809,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-08",
+        "value": 1.9692,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-09",
+        "value": 1.9627,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-10",
+        "value": 1.9324,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-11",
+        "value": 1.9576,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-12",
+        "value": 1.9235,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-13",
+        "value": 1.9754,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-14",
+        "value": 2.0159,
+        "quality": "official-public"
+      },
+      {
         "date": "2026-11-15",
         "value": 2.0362,
         "quality": "official-public"
@@ -656,6 +766,116 @@ window.tokenPriceIndexData = {
       }
     ],
     "open": [
+      {
+        "date": "2026-10-24",
+        "value": 0.5034,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-25",
+        "value": 0.5038,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-26",
+        "value": 0.5027,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-27",
+        "value": 0.492,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-28",
+        "value": 0.4914,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-29",
+        "value": 0.483,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-30",
+        "value": 0.4807,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-10-31",
+        "value": 0.4832,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-01",
+        "value": 0.4816,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-02",
+        "value": 0.4837,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-03",
+        "value": 0.4932,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-04",
+        "value": 0.4897,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-05",
+        "value": 0.4922,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-06",
+        "value": 0.4896,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-07",
+        "value": 0.4883,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-08",
+        "value": 0.4904,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-09",
+        "value": 0.4996,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-10",
+        "value": 0.4985,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-11",
+        "value": 0.4949,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-12",
+        "value": 0.4934,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-13",
+        "value": 0.4916,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-14",
+        "value": 0.49,
+        "quality": "official-public"
+      },
       {
         "date": "2026-11-15",
         "value": 0.4893,

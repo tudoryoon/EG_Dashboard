@@ -5,12 +5,14 @@ import re
 from datetime import UTC, date, datetime
 from math import isfinite
 from pathlib import Path
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = ROOT / "data" / "token-price-index-data.js"
 PORTAL_URL = "https://portal.silicondata.com/token-index-chart"
+PORTAL_SEGMENT_URL = "https://portal.silicondata.com/token-indexes-chart"
 PRODUCT_URL = "https://www.silicondata.com/products/silicon-index/llm-token-expenditure-index"
 METHODOLOGY_URL = "https://docs.silicondata.com/api-reference/token_index_api"
 
@@ -44,7 +46,7 @@ def official_point(raw_date: str, raw_value: object) -> dict | None:
     return {"date": raw_date, "value": round(value, 4), "quality": "official-public"}
 
 
-def parse_public_product_points(html: str) -> dict[str, list[dict]]:
+def decode_public_chart_page(html: str) -> str:
     decoder = json.JSONDecoder()
     chunks = []
     # The public charts arrive as JSON strings inside the server-rendered page.
@@ -56,7 +58,12 @@ def parse_public_product_points(html: str) -> dict[str, list[dict]]:
         if isinstance(frame, list) and len(frame) == 2 and frame[0] == 1 and isinstance(frame[1], str):
             chunks.append(frame[1])
 
-    flight = "".join(chunks)
+    return "".join(chunks)
+
+
+def parse_public_product_points(html: str) -> dict[str, list[dict]]:
+    flight = decode_public_chart_page(html)
+    decoder = json.JSONDecoder()
     series = {}
     for match in re.finditer(r'"charts"\s*:\s*(?=\{)', flight):
         try:
@@ -78,28 +85,23 @@ def parse_public_product_points(html: str) -> dict[str, list[dict]]:
     return series
 
 
-def parse_public_portal_points(html: str) -> list[dict]:
-    data_match = re.search(
-        r'\\"data\\":\{\\"token\\":\\"expenditure\\".*?'
-        r'\\"indexes\\":\{(?P<indexes>.*?)\},\\"index_name\\"',
-        html,
-        re.S,
-    )
-    if not data_match:
-        raise RuntimeError("Silicon Data public token index payload was not found")
-
-    points = []
-    for point_date, raw_value in re.findall(
-        r'\\"(\d{4}-\d{2}-\d{2})\\":\\"(-?[\d.]+)\\"',
-        data_match.group("indexes"),
-    ):
-        point = official_point(point_date, raw_value)
-        if point is not None:
-            points.append(point)
-
-    if not points:
-        raise RuntimeError("Silicon Data public token index payload had no usable observations")
-    return sorted(points, key=lambda point: point["date"])
+def parse_public_portal_points(html: str, token: str = "expenditure") -> list[dict]:
+    flight = decode_public_chart_page(html)
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r'"data"\s*:\s*(?=\{)', flight):
+        try:
+            data, _ = decoder.raw_decode(flight, match.end())
+        except json.JSONDecodeError:
+            continue
+        if data.get("token") != token or not isinstance(data.get("indexes"), dict):
+            continue
+        points = [
+            point for day, value in data["indexes"].items()
+            if (point := official_point(day, value)) is not None
+        ]
+        if points:
+            return sorted(points, key=lambda point: point["date"])
+    raise RuntimeError(f"Silicon Data public portal had no usable observations for {token}")
 
 
 def load_existing_payload() -> dict:
@@ -132,21 +134,22 @@ def pct_change(current: float, previous: float) -> float | None:
 
 def collect_public_points() -> dict[str, list[dict]]:
     fresh = {}
-    try:
-        fresh["overall"] = parse_public_portal_points(fetch_html(PORTAL_URL))
-    except (OSError, RuntimeError) as exc:
-        print(f"::warning::Silicon Data overall portal: {exc}")
+    for key, (_, token, *_) in INDICES.items():
+        url = PORTAL_URL if key == "overall" else f"{PORTAL_SEGMENT_URL}?{urlencode({'token': token})}"
+        try:
+            fresh[key] = parse_public_portal_points(fetch_html(url), token)
+        except (OSError, RuntimeError) as exc:
+            print(f"::warning::Silicon Data {key} portal: {exc}")
     try:
         product = parse_public_product_points(fetch_html(PRODUCT_URL))
         for key, points in product.items():
-            fresh[key] = merge_points(fresh.get(key, []), points)
-        missing = INDICES.keys() - product.keys()
-        if missing:
-            print(f"::warning::Silicon Data product page missing: {', '.join(sorted(missing))}; keeping saved data")
+            fresh[key] = merge_points(points, fresh.get(key, []))
     except (OSError, RuntimeError) as exc:
-        print(f"::warning::Silicon Data product page: {exc}; keeping saved sub-index data")
+        print(f"::warning::Silicon Data product page: {exc}")
     if not fresh:
-        raise RuntimeError("Both public Silicon Data sources failed; leaving the published file unchanged")
+        raise RuntimeError("Silicon Data public sources failed; leaving the published file unchanged")
+    for key in INDICES.keys() - fresh.keys():
+        print(f"::warning::No fresh Silicon Data {key} data; keeping saved observations")
     return fresh
 
 
