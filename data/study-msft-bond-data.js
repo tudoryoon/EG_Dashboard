@@ -11,8 +11,8 @@ window.studyMsftBondData = {
     "maturityDate": "2035-02-12",
     "name": "Microsoft 3.500% Senior Unsecured Notes 2035"
   },
-  "updatedAt": "2026-11-20",
-  "checkedAt": "2026-11-24T05:22:45+00:00",
+  "updatedAt": "2026-11-23",
+  "checkedAt": "2026-11-25T04:20:41+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -26,7 +26,7 @@ window.studyMsftBondData = {
   },
   "coverage": {
     "startDate": "2025-07-25",
-    "endDate": "2026-11-23",
+    "endDate": "2026-11-24",
     "missingWeekdays": [
       "2025-09-01",
       "2025-11-27",
@@ -38,7 +38,7 @@ window.studyMsftBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-23"
+      "2026-11-24"
     ],
     "unavailableDates": [
       "2025-09-01",
@@ -51,7 +51,7 @@ window.studyMsftBondData = {
       "2026-05-25",
       "2026-07-03",
       "2026-09-07",
-      "2026-11-23"
+      "2026-11-24"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -3421,6 +3421,16 @@ window.studyMsftBondData = {
       "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-23T01:50:21+00:00",
       "lastCollectedAt": "2026-11-24T05:22:45+00:00"
+    },
+    {
+      "date": "2026-11-23",
+      "ytmPct": 5.2,
+      "pricePer100": 88.69,
+      "sourceSha256": "f608887eed98c4ec8d2abf26882ddf7ec9eab284bb3743a36a0d320c344e0e4c",
+      "yieldToWorstPct": 5.2,
+      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261123",
+      "firstCollectedAt": "2026-11-25T04:20:41+00:00",
+      "lastCollectedAt": "2026-11-25T04:20:41+00:00"
     }
   ]
 };
