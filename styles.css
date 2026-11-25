@@ -3020,8 +3020,15 @@ h1 {
 .memory-series-controls {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 12px 20px;
   padding: 12px 0 4px;
+}
+
+.memory-change-mode .m7-range-chip {
+  min-height: 30px;
+  padding: 4px 9px;
+  border-radius: 6px;
 }
 
 .memory-series-controls label {

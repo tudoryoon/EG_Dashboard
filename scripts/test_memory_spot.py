@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 from update_memory_spot import (DIRECT_PRODUCTS, MODULE_KEY, MODULE_PRODUCT, TARGET_MAP,
                                 build_payload, build_scoped_payload, merge_direct_dram, merge_direct_module,
-                                main, parse_direct_dram, parse_direct_module, update_rdimm_only)
+                                main, parse_direct_dram, parse_direct_module, refresh_spot, update_rdimm_only)
 
 
 def direct_html(stamp="Nov.5 2026 11:00 (GMT+8)"):
@@ -73,12 +73,26 @@ class MemorySpotTest(unittest.TestCase):
         self.assertIsNone(next_payload["directDramCurrent"])
         self.assertIsNone(next_payload["items"]["ddr5_16gb"]["history"][-2])
         self.assertIsNone(next_payload["items"]["ddr5_16gb"]["history"][-1])
+        self.assertEqual(next_payload["directDramHistory"], {"2026-11-05": quote})
         final_rows = [dict(Date="2026-11-05", Canonical_Product=TARGET_MAP["ddr5_16gb"],
                            Price_Average="59", Change_Pct="-2")]
         final = build_payload(final_rows, date(2026, 11, 6))
         merge_direct_dram(final, next_payload, None, date(2026, 11, 6))
         self.assertEqual(final["items"]["ddr5_16gb"]["latestValue"], 59)
         self.assertNotIn("latestSource", final["items"]["ddr5_16gb"])
+        self.assertEqual(final["directDramHistory"]["2026-11-05"]["items"]["ddr5_16gb"]["changePct"], -1.09)
+
+    def test_other_scope_preserves_session_archive_and_leaves_uncaptured_dates_blank(self):
+        quote = parse_direct_dram(direct_html(), self.now)
+        previous = build_payload([], self.now.date())
+        merge_direct_dram(previous, {}, quote, self.now.date())
+        tomorrow = datetime(2026, 11, 6, 5, tzinfo=timezone.utc)
+        with patch("update_memory_spot.fetch_rows", return_value=[]), \
+             patch("update_memory_spot.load_direct_html") as direct:
+            payload = refresh_spot(previous, tomorrow, "other")
+        direct.assert_not_called()
+        self.assertEqual(payload["directDramHistory"], {"2026-11-05": quote})
+        self.assertIsNone(payload["directDramCurrent"])
 
     def test_dram_scope_leaves_other_memory_untouched_and_excludes_today_sheet(self):
         rows = [dict(Date="2026-11-04", Canonical_Product=canonical, Price_Average="50", Change_Pct="0")
@@ -192,6 +206,7 @@ class MemorySpotTest(unittest.TestCase):
         payload = build_payload([module_row("2026-11-04")], date(2026, 11, 5))
         merge_direct_dram(payload, previous, quote, date(2026, 11, 5))
         self.assertEqual(payload["items"]["ddr5_16gb"]["latestValue"], 61)
+        self.assertEqual(payload["directDramHistory"]["2026-11-05"], quote)
         self.assertEqual(payload["items"][MODULE_KEY]["latestDate"], "2026-11-04")
         self.assertIsNone(payload["items"]["gddr6_8gb"]["latestDate"])
 

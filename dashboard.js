@@ -112,6 +112,7 @@ const memorySpotRuntime = {
   labels: [],
   updatedAt: "",
   items: {},
+  directDramHistory: {},
 };
 const GITHUB_REPO_OWNER = "tudoryoon";
 const GITHUB_REPO_NAME = "EG_Dashboard";
@@ -16364,6 +16365,7 @@ function hydrateMemorySpotRuntimeFromLocal() {
 
   memorySpotRuntime.labels = memorySpotHistoryData.labels;
   memorySpotRuntime.items = memorySpotHistoryData.items ?? {};
+  memorySpotRuntime.directDramHistory = memorySpotHistoryData.directDramHistory ?? {};
   memorySpotRuntime.updatedAt = memorySpotHistoryData.updatedAt ?? memorySpotHistoryData.generatedAt ?? "";
   memorySpotRuntime.loaded = true;
   memorySpotRuntime.loading = false;
@@ -16529,6 +16531,30 @@ function buildMemoryPriceChanges(history) {
   });
 }
 
+const MEMORY_DRAM_CHIP_KEYS = new Set(["ddr5_16gb", "ddr4_16gb", "ddr4_8gb"]);
+const MEMORY_CHANGE_MODES = {
+  daily: { label: "일별 변화율", note: "직전 관측일 평균가격 대비 · 미수집일 제외" },
+  session: { label: "Session Change", note: "DRAMeXchange 발표값 · 미확보일 제외" },
+};
+
+function getMemoryChangeMode(itemKey) {
+  return MEMORY_DRAM_CHIP_KEYS.has(itemKey) && state.memorySpotSeries?.[itemKey]?.changeMode === "session"
+    ? "session" : "daily";
+}
+
+function getMemoryChangeDataset(itemKey, labels) {
+  const mode = getMemoryChangeMode(itemKey);
+  const start = memorySpotRuntime.labels.indexOf(labels[0]);
+  const data = mode === "session"
+    ? labels.map((day) => memorySpotRuntime.directDramHistory[day]?.items?.[itemKey]?.changePct ?? null)
+    : start < 0 ? [] : buildMemoryPriceChanges(memorySpotRuntime.items[itemKey]?.history).slice(start, start + labels.length);
+  return { data, label: MEMORY_CHANGE_MODES[mode].label, hidden: state.memorySpotSeries?.[itemKey]?.change === false };
+}
+
+function getMemoryChangeLimit(values) {
+  return Math.max(0.25, ...values.filter(Number.isFinite).map((value) => Math.abs(value) * 1.1));
+}
+
 function syncMemoryChartLayout(chart) {
   if (!chart.options.scales.yChange) {
     return;
@@ -16615,7 +16641,7 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
   if (changeSeries) {
     combinedDatasets.push({
       type: "bar",
-      label: "일별 변화율",
+      label: changeSeries.label,
       data: changeSeries.data,
       yAxisID: "yChange",
       isMemoryDailyChange: true,
@@ -16636,7 +16662,7 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
   const yMin = minValue > 0 ? Math.floor(minValue * 0.9) : Math.floor(minValue * 1.1);
   const yMax = Math.ceil(maxValue * 1.1);
   const changeValues = payload.datasets.find((dataset) => dataset.isMemoryDailyChange)?.data ?? [];
-  const changeLimit = Math.max(0.25, ...changeValues.filter(Number.isFinite).map((value) => Math.abs(value) * 1.1));
+  const changeLimit = getMemoryChangeLimit(changeValues);
   const priceVisible = payload.datasets.some((dataset) => !dataset.isMemoryDailyChange && !dataset.hidden);
   const changeVisible = Boolean(changeSeries && !changeSeries.hidden);
   const selectedTickIndexes = getMacroTickIndexes(payload.labels, rangeKey, canvas?.clientWidth ?? 0);
@@ -16707,8 +16733,10 @@ function createMemoryLineChart(canvas, labels, datasets, formatter, rangeKey = "
             title: { display: true, text: "변화율 (%)", color: "#66665f", font: { size: 10 } },
             ticks: {
               color: "#8d8d86", count: 5, autoSkip: false, font: { size: 10 },
-              callback: (value, index, ticks) => index === 0 || index === ticks.length - 1
-                ? "" : `${value > 0 ? "+" : ""}${Number(value).toFixed(changeLimit < 1 ? 2 : 1)}%`,
+              callback(value, index, ticks) {
+                return index === 0 || index === ticks.length - 1
+                  ? "" : `${value > 0 ? "+" : ""}${Number(value).toFixed(this.max < 1 ? 2 : 1)}%`;
+              },
             },
             grid: {
               color: (context) => context.tick.value === 0 ? "#9ca3af" : "rgba(70, 70, 66, 0.06)",
@@ -17746,6 +17774,8 @@ function renderMemorySpotOverview() {
         history: runtime.history ?? rawItem.history ?? [],
       };
       const isModule = item.format === "module_spot";
+      const canShowSession = MEMORY_DRAM_CHIP_KEYS.has(item.key);
+      const changeMode = getMemoryChangeMode(item.key);
       const dailyChanges = buildMemoryPriceChanges(item.history);
       const latestDailyChange = [...dailyChanges].reverse().find(Number.isFinite);
       return `
@@ -17825,10 +17855,17 @@ function renderMemorySpotOverview() {
             <label>
               <input type="checkbox" data-memory-change-toggle="${item.key}"
                 ${state.memorySpotSeries?.[item.key]?.change === false ? "" : "checked"}>
-              일별 변화율
+              ${canShowSession ? "변화율 막대" : "일별 변화율"}
             </label>
+            ${canShowSession ? `
+              <div class="m7-range-row memory-change-mode" role="group" aria-label="${item.label} 변화율 기준">
+                ${Object.entries(MEMORY_CHANGE_MODES).map(([mode, { label }]) => `
+                  <button type="button" class="m7-range-chip${mode === changeMode ? " active" : ""}"
+                    data-memory-change-mode="${mode}" data-memory-change-item="${item.key}"
+                    aria-pressed="${mode === changeMode}">${label}</button>`).join("")}
+              </div>` : ""}
           </div>
-          <div class="memory-change-note">변화율: 직전 관측일 평균가격 대비 · 미수집일 제외 · 원출처 세션 변화율과 다를 수 있음</div>
+          <div class="memory-change-note" data-memory-change-note="${item.key}">${MEMORY_CHANGE_MODES[changeMode].note}</div>
           <div class="memory-chart-wrap memory-price-change-chart">
             <canvas data-memory-series="${item.key}" data-memory-series-controlled></canvas>
           </div>
@@ -18041,6 +18078,32 @@ function renderMemorySpotOverview() {
     });
   });
 
+  usOverviewRoot.querySelectorAll("[data-memory-change-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const itemKey = button.dataset.memoryChangeItem;
+      const changeMode = button.dataset.memoryChangeMode;
+      if (getMemoryChangeMode(itemKey) === changeMode) return;
+      state.memorySpotSeries ??= {};
+      state.memorySpotSeries[itemKey] = { ...(state.memorySpotSeries[itemKey] ?? {}), changeMode };
+      for (const control of button.parentElement.querySelectorAll("button")) {
+        control.classList.toggle("active", control === button);
+        control.setAttribute("aria-pressed", String(control === button));
+      }
+      usOverviewRoot.querySelector(`[data-memory-change-note="${itemKey}"]`).textContent = MEMORY_CHANGE_MODES[changeMode].note;
+      const chart = typeof Chart === "undefined" ? null
+        : Chart.getChart(usOverviewRoot.querySelector(`[data-memory-series="${itemKey}"]`));
+      const bars = chart?.data.datasets.find((dataset) => dataset.isMemoryDailyChange);
+      if (!bars) return;
+      const { data, label } = getMemoryChangeDataset(itemKey, chart.data.labels);
+      bars.data = data;
+      bars.label = label;
+      const limit = getMemoryChangeLimit(data);
+      chart.options.scales.yChange.min = -limit;
+      chart.options.scales.yChange.max = limit;
+      chart.update("none");
+    });
+  });
+
   (memorySpotData.dashboards?.basketPanels ?? []).forEach((panel) => {
     const canvas = usOverviewRoot.querySelector(`[data-memory-basket="${panel.key}"]`);
     if (!canvas) {
@@ -18089,16 +18152,14 @@ function renderMemorySpotOverview() {
     const firstIndex = item.format === "module_spot"
       ? Math.max(0, runtime.history.findIndex((value) => Number.isFinite(value)))
       : 0;
+    const labels = memorySpotRuntime.labels.slice(firstIndex);
     createMemoryLineChart(
       canvas,
-      memorySpotRuntime.labels.slice(firstIndex),
+      labels,
       datasets.map((dataset) => ({ ...dataset, data: dataset.data.slice(firstIndex) })),
       (value) => `$${Number(value).toFixed(2)}${item.format === "module_spot" ? " /모듈" : ""}`,
       getMemorySpotRange(`series:${item.key}`),
-      {
-        data: buildMemoryPriceChanges(runtime.history).slice(firstIndex),
-        hidden: state.memorySpotSeries?.[item.key]?.change === false,
-      },
+      getMemoryChangeDataset(item.key, labels),
     );
   });
 }

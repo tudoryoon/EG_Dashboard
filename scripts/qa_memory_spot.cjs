@@ -67,6 +67,35 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
         assert.equal(await itemPanel.locator(`a[href="${quote.source.url}"]`).count(), 1);
       }
     }
+    for (const key of Object.keys(directQuotes)) {
+      const canvas = page.locator(`[data-memory-series="${key}"]`);
+      const chip = canvas.locator('..').locator('..');
+      const toggleMode = name => chip.locator(`[data-memory-change-mode="${name}"]`);
+      const barInfo = () => canvas.evaluate(el => {
+        const chart = Chart.getChart(el);
+        const bars = chart.data.datasets.find(d => d.isMemoryDailyChange);
+        return { prices: chart.data.datasets[0].data, label: bars.label,
+          dates: chart.data.labels, data: bars.data, scale: chart.scales.yChange.max };
+      });
+      assert.equal(await toggleMode('daily').getAttribute('aria-pressed'), 'true');
+      const before = await barInfo();
+      await toggleMode('session').click();
+      const archive = await page.evaluate(() => memorySpotRuntime.directDramHistory);
+      const session = await barInfo();
+      assert.equal(session.label, 'Session Change');
+      assert.deepEqual(session.prices, before.prices);
+      assert.deepEqual(session.data, session.dates.map(day => archive[day]?.items[key].changePct ?? null));
+      assert.ok(session.data.filter(Number.isFinite).length > 1);
+      assert.ok(session.data.includes(null));
+      assert.ok(session.scale > Math.max(...session.data.filter(Number.isFinite).map(Math.abs)));
+      await chip.locator('[data-memory-range="1m"]').click();
+      assert.equal(await toggleMode('session').getAttribute('aria-pressed'), 'true');
+      const recent = await barInfo();
+      assert.deepEqual(recent.data, recent.dates.map(day => archive[day]?.items[key].changePct ?? null));
+      await toggleMode('daily').click();
+      await chip.locator('[data-memory-range="ytd"]').click();
+      assert.deepEqual(await barInfo(), before);
+    }
     const panel = page.locator('.memory-module-panel');
     const moduleQuote = await page.evaluate(() => memorySpotRuntime.items.ddr5_rdimm_32gb);
     assert.ok((await panel.innerText()).includes(`$${moduleQuote.latestValue.toFixed(3)}`));
@@ -251,6 +280,12 @@ const url = (process.env.QA_BASE_URL || pathToFileURL(path.join(root, 'index.htm
     assert.ok(solo.changeHeight > 300, JSON.stringify(solo));
     assert.ok(solo.barPixels > 100, JSON.stringify(solo));
     await chipPanel.screenshot({path:path.join(out,'change-only-mobile.png')});
+    const sessionMode = chipPanel.locator('[data-memory-change-mode="session"]');
+    await sessionMode.click();
+    assert.equal(await sessionMode.getAttribute('aria-pressed'), 'true');
+    const chipOverflow = await chipPanel.evaluate(el => el.scrollWidth - el.clientWidth);
+    assert.ok(chipOverflow <= 1);
+    assert.ok((await layoutInfo('ddr5_16gb')).barPixels > 100);
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({directQuotes,combinedCharts,desktop:initial,mobile:overflow,errors},null,2));
   } finally {

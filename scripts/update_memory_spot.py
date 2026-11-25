@@ -181,13 +181,23 @@ def merge_direct_module(payload: dict, previous: dict, quote: dict | None, today
     refresh_date_summary(payload)
 
 
+def archive_dram_quote(history: dict, quote: dict | None, through: str) -> None:
+    if not quote or quote["date"] > through:
+        return
+    day = quote["date"]
+    saved = history.get(day)
+    if not saved or (quote["publishedAt"], quote["collectedAt"]) > (saved["publishedAt"], saved["collectedAt"]):
+        history[day] = quote
+
+
 def merge_direct_dram(payload: dict, previous: dict, quote: dict | None, today: date) -> None:
     day = today.isoformat()
-    snapshot = previous.get("directDramCurrent") or previous.get("directDramHistory", {}).get(day)
-    if snapshot and snapshot.get("date") != day:
-        snapshot = None
-    if quote and quote["date"] == day and (not snapshot or quote["publishedAt"] >= snapshot["publishedAt"]):
-        snapshot = quote
+    history = dict(previous.get("directDramHistory") or {})
+    archive_dram_quote(history, previous.get("directDramCurrent"), day)
+    archive_dram_quote(history, quote, day)
+    payload["directDramHistory"] = history
+    # Archived releases supply Session Change only; historical prices keep their existing source.
+    snapshot = history.get(day)
     payload["directDramCurrent"] = snapshot
     if not snapshot:
         return
@@ -336,8 +346,7 @@ def refresh_spot(previous: dict, now: datetime, scope: str) -> dict:
                     print(f"::warning::Direct {label} parse failed; keeping saved observations: {error}", file=sys.stderr)
             merge_fn(payload, previous, quote, today)
     else:
-        current = previous.get("directDramCurrent")
-        payload["directDramCurrent"] = current if current and current.get("date") == today.isoformat() else None
+        merge_direct_dram(payload, previous, None, today)
         merge_direct_module(payload, previous, None, today)
     return payload
 
