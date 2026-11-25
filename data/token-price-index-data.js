@@ -1,6 +1,6 @@
 window.tokenPriceIndexData = {
-  "updatedAt": "2026-11-22",
-  "generatedAt": "2026-11-24T10:05:49.000120Z",
+  "updatedAt": "2026-11-23",
+  "generatedAt": "2026-11-25T10:41:32.705224Z",
   "source": {
     "provider": "Silicon Data",
     "label": "Silicon Data LLM Token Expenditure Index",
@@ -13,27 +13,27 @@ window.tokenPriceIndexData = {
     "overall": {
       "ticker": "SDLLMTK",
       "label": "LLM Token Expenditure Index",
-      "date": "2026-11-22",
-      "value": 0.632,
+      "date": "2026-11-23",
+      "value": 0.6198,
       "quality": "official-public"
     },
     "closed": {
       "ticker": "SDLLMCS",
       "label": "Closed Model Token Index",
-      "date": "2026-11-22",
-      "value": 2.0918,
+      "date": "2026-11-23",
+      "value": 2.1669,
       "quality": "official-public"
     },
     "open": {
       "ticker": "SDLLMOS",
       "label": "Open Model Token Index",
-      "date": "2026-11-22",
-      "value": 0.3399,
+      "date": "2026-11-23",
+      "value": 0.331,
       "quality": "official-public"
     },
-    "dailyChangePct": -2.35,
-    "publicWindowChangePct": -53.43,
-    "closedOpenPremium": 6.15
+    "dailyChangePct": -1.93,
+    "publicWindowChangePct": -54.33,
+    "closedOpenPremium": 6.55
   },
   "series": {
     "overall": [
@@ -611,6 +611,11 @@ window.tokenPriceIndexData = {
         "date": "2026-11-22",
         "value": 0.632,
         "quality": "official-public"
+      },
+      {
+        "date": "2026-11-23",
+        "value": 0.6198,
+        "quality": "official-public"
       }
     ],
     "closed": [
@@ -762,6 +767,11 @@ window.tokenPriceIndexData = {
       {
         "date": "2026-11-22",
         "value": 2.0918,
+        "quality": "official-public"
+      },
+      {
+        "date": "2026-11-23",
+        "value": 2.1669,
         "quality": "official-public"
       }
     ],
@@ -915,29 +925,34 @@ window.tokenPriceIndexData = {
         "date": "2026-11-22",
         "value": 0.3399,
         "quality": "official-public"
+      },
+      {
+        "date": "2026-11-23",
+        "value": 0.331,
+        "quality": "official-public"
       }
     ]
   },
   "comparison": {
-    "date": "2026-11-22",
+    "date": "2026-11-23",
     "values": [
       {
         "key": "overall",
         "ticker": "SDLLMTK",
         "label": "전체",
-        "value": 0.632
+        "value": 0.6198
       },
       {
         "key": "closed",
         "ticker": "SDLLMCS",
         "label": "Closed",
-        "value": 2.0918
+        "value": 2.1669
       },
       {
         "key": "open",
         "ticker": "SDLLMOS",
         "label": "Open",
-        "value": 0.3399
+        "value": 0.331
       }
     ]
   },
