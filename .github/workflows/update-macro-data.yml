@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: python -m pip install requests beautifulsoup4 curl_cffi
 
+      - name: Validate PCE and core capital goods collection
+        run: python -m unittest discover -s scripts -p "test_macro_current_releases.py"
+
       - name: Refresh macro indicator data
         run: python scripts/update_macro_data.py
 

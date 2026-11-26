@@ -23,10 +23,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: python -m pip install pandas yfinance requests lxml html5lib openpyxl xlrd
+        run: python -m pip install pandas yfinance requests curl_cffi lxml html5lib openpyxl xlrd
 
       - name: Validate daily yield collectors
         run: python -m unittest discover -s scripts -p "test_daily_yields.py"
+
+      - name: Validate GDP source precedence
+        run: python -m unittest discover -s scripts -p "test_market_macro_gdp.py"
 
       - name: Refresh market macro dashboard
         run: |

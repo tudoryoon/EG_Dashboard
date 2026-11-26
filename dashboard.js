@@ -5665,6 +5665,7 @@ function formatMacroReleaseNumber(unit, value) {
 }
 
 function getMacroReleaseConsensusValue(row) {
+  if (row?.actualValue == null || row?.surpriseValue == null) return null;
   const actual = Number(row?.actualValue);
   const surprise = Number(row?.surpriseValue);
   if (!Number.isFinite(actual) || !Number.isFinite(surprise)) {

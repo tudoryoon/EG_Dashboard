@@ -6,6 +6,7 @@ import json
 import re
 import tempfile
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from xml.etree import ElementTree as ET
 from pathlib import Path
 from urllib.parse import quote
@@ -17,6 +18,7 @@ from update_daily_yields import fetch_daily_yields
 
 START_DATE = "1965-01-01"
 GDP_START_DATE = "1981-01-01"
+GDP_FRED_IDS = {"A191RL1Q225SBEA", "A191RO1Q156NBEA"}
 LIQUIDITY_START_DATE = "1981-01-01"
 FX_START_DATE = "1971-01-01"
 FOOD_START_DATE = "2001-01-01"
@@ -130,6 +132,10 @@ def parse_fred_series_or_existing(
         dates, values = parse_fred_series(series_id, start_date)
         if not dates:
             raise ValueError(f"Empty FRED series: {series_id}")
+        if series_id in GDP_FRED_IDS:
+            saved_dates, saved_values = existing_macro_series(panel_key, series_key)
+            if saved_dates and dates[-1] < saved_dates[-1]:
+                return saved_dates, saved_values
         return dates, values
     except Exception as error:  # pragma: no cover - network variability
         dates, values = existing_macro_series(panel_key, series_key)
@@ -144,10 +150,11 @@ def fred_csv_url(series_id: str) -> str:
 
 
 def fred_csv_urls(series_id: str, start_date: str = START_DATE) -> list[str]:
-    return [
-        f"{FRED_GATEWAY_BASE}{series_id}",
-        f"{FRED_GRAPH_BASE}{series_id}&cosd={start_date}",
-    ]
+    mirror = f"{FRED_GATEWAY_BASE}{series_id}"
+    direct = f"{FRED_GRAPH_BASE}{series_id}"
+    if series_id in GDP_FRED_IDS:
+        return [direct, mirror]
+    return [mirror, f"{direct}&cosd={start_date}"]
 
 
 def yahoo_chart_url(symbol: str) -> str:
@@ -281,11 +288,11 @@ def parse_yahoo_series(symbol: str) -> tuple[list[str], list[float]]:
 def parse_world_bank_monthly_prices() -> dict[str, tuple[list[str], list[float]]]:
     import openpyxl
 
-    workbook_path = Path(tempfile.gettempdir()) / "CMO-Historical-Data-Monthly.xlsx"
-    workbook_path.write_bytes(
-        urlopen(Request(WORLD_BANK_PINK_SHEET_URL, headers={"User-Agent": "Mozilla/5.0"}), timeout=60).read()
-    )
-    workbook = openpyxl.load_workbook(workbook_path, data_only=True, read_only=True)
+    from curl_cffi import requests
+
+    response = requests.get(WORLD_BANK_PINK_SHEET_URL, impersonate="chrome", timeout=60)
+    response.raise_for_status()
+    workbook = openpyxl.load_workbook(BytesIO(response.content), data_only=True, read_only=True)
     worksheet = workbook["Monthly Prices"]
     header_row = next(worksheet.iter_rows(min_row=5, max_row=5, values_only=True))
     target_headers = {
@@ -323,6 +330,7 @@ def parse_world_bank_monthly_prices() -> dict[str, tuple[list[str], list[float]]
                 continue
             series[key][0].append(date_key)
             series[key][1].append(round(float(value), 4))
+    workbook.close()
     return series
 
 
@@ -330,7 +338,15 @@ def parse_fred_series(series_id: str, start_date: str = START_DATE) -> tuple[lis
     last_error: Exception | None = None
     for url in fred_csv_urls(series_id, start_date):
         try:
-            reader = csv.DictReader(fetch_text(url).splitlines())
+            if series_id in GDP_FRED_IDS and url.startswith(FRED_GRAPH_BASE):
+                from curl_cffi import requests
+
+                response = requests.get(url, impersonate="chrome", timeout=20)
+                response.raise_for_status()
+                text = response.text
+            else:
+                text = fetch_text(url)
+            reader = csv.DictReader(text.splitlines())
             dates: list[str] = []
             values: list[float] = []
             for row in reader:
@@ -357,28 +373,7 @@ def parse_fred_series(series_id: str, start_date: str = START_DATE) -> tuple[lis
 
 
 def parse_real_gdp_annualized_series() -> tuple[list[str], list[float]]:
-    export_url = "https://govspending.org/api/export/fred/A191RL1Q225SBEA.csv"
-    try:
-        rows = [
-            line
-            for line in fetch_text(export_url).splitlines()
-            if line and not line.startswith("#")
-        ]
-        reader = csv.DictReader(rows)
-        dates: list[str] = []
-        values: list[float] = []
-        for row in reader:
-            date_key = (row.get("date") or row.get("DATE") or "")[:10]
-            raw_value = (row.get("A191RL1Q225SBEA") or "").strip()
-            if date_key < GDP_START_DATE or raw_value in {"", "."}:
-                continue
-            dates.append(date_key)
-            values.append(round(float(raw_value), 4))
-        if len(dates) >= 180:
-            return dates, values
-    except Exception:
-        pass
-    return parse_fred_series("A191RL1Q225SBEA", GDP_START_DATE)
+    return parse_fred_series_or_existing("A191RL1Q225SBEA", GDP_START_DATE, "gdp", "real_gdp_annualized")
 
 
 def build_daily_forward_series(
@@ -911,6 +906,18 @@ def main() -> None:
         },
     }
 
+    existing = read_existing_payload()
+    # Some FX/commodity sessions are retained only by the dedicated daily updater.
+    price_panels = ("fx_dashboard", "energy", "natural_gas", "metals", "strategic", "food")
+    for panel_key in price_panels:
+        saved = existing.get("panels", {}).get(panel_key, {}).get("series", {})
+        for key, item in panels[panel_key]["series"].items():
+            previous = saved.get(key, {})
+            item["dates"], item["values"] = merge_series_prefer_recent(
+                (item["dates"], item["values"]),
+                (previous.get("dates", []), previous.get("values", [])),
+            )
+
     latest_dates = []
     for panel in panels.values():
         for item in panel["series"].values():
@@ -938,8 +945,8 @@ def main() -> None:
             },
         },
         "panels": panels,
-        "yieldDecomposition": fetch_yield_decomposition(read_existing_payload().get("yieldDecomposition")),
-        **fetch_daily_yields(read_existing_payload()),
+        "yieldDecomposition": fetch_yield_decomposition(existing.get("yieldDecomposition")),
+        **fetch_daily_yields(existing),
     }
 
     output_path = Path(__file__).resolve().parents[1] / "data" / "market-macro-data.js"

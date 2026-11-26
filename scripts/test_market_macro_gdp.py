@@ -13,11 +13,20 @@ class GdpSeriesTests(unittest.TestCase):
         ]:
             with self.subTest(header=header):
                 csv = f"{header},A191RO1Q156NBEA\n{dates[0]},4\n{dates[1]},2.1\n{dates[2]},.\n"
-                with patch.object(macro, "fetch_text", return_value=csv):
+                with patch("curl_cffi.requests.get") as fetch:
+                    fetch.return_value.text = csv
                     self.assertEqual(
                         macro.parse_fred_series("A191RO1Q156NBEA", macro.GDP_START_DATE),
                         (["1981-01-01"], [2.1]),
                     )
+                    self.assertTrue(fetch.call_args.args[0].startswith(macro.FRED_GRAPH_BASE))
+
+    def test_older_gdp_mirror_does_not_replace_saved_quarter(self):
+        saved = (["2026-07-01"], [4.3])
+        with patch.object(macro, "parse_fred_series", return_value=(["2026-04-01"], [2.2])), patch.object(
+            macro, "existing_macro_series", return_value=saved
+        ):
+            self.assertEqual(macro.parse_real_gdp_annualized_series(), saved)
 
     def test_missing_response_preserves_saved_yoy(self):
         saved = (["2026-04-01"], [2.1])

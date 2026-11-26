@@ -31,6 +31,7 @@ BLS_CPI_OFFICIAL_YOY = {
     "CPILFESL": "CUUR0000SA0L1E",
 }
 BLS_DIRECT_SERIES = {"WPSFD4", "WPSFD49104"}
+FRED_PRIMARY_SERIES = {"PCEPI", "PCEPILFE", "DGORDER", "NEWORDER"}
 MANUAL_RELEASE_OVERRIDES = {
     "headline_pce": {
         "releaseDate": "2026-06-25",
@@ -268,7 +269,7 @@ INDICATORS: list[dict[str, Any]] = [
         "status": "auto",
         "series": [
             SeriesConfig("durable_goods_orders", "Durable Goods Orders", "DGORDER", "usd_millions", "#111827", True, "https://www.moneycontrol.com/economic-calendar/united-states-durable-goods-orders-mom/119", "percent"),
-            SeriesConfig("core_capex_orders", "Core Capital Goods", "NEWORDER", "usd_millions", "#2563eb", False, "https://www.moneycontrol.com/economic-calendar/usa-durable-goods-orders-ex-transp-mom/121", "percent"),
+            SeriesConfig("core_capex_orders", "Core Capital Goods", "NEWORDER", "usd_millions", "#2563eb"),
         ],
     },
     {
@@ -481,6 +482,8 @@ def parse_ism_official_history(indicator_key: str) -> dict[str, Any]:
 def fred_csv_urls(series_id: str, start_month: str) -> list[str]:
     fred_graph_url = f"{FRED_GRAPH_BASE}{series_id}&cosd={start_month}-01"
     fred_gateway_url = f"{FRED_GATEWAY_BASE}{series_id}"
+    if series_id in FRED_PRIMARY_SERIES:
+        return [f"{FRED_GRAPH_BASE}{series_id}", fred_gateway_url]
     # The lightweight gateway is materially faster and the latest CPI month is
     # merged from the official BLS API below when FRED propagation lags.
     return [fred_gateway_url, fred_graph_url]
@@ -495,7 +498,14 @@ def parse_fred_series(series_id: str, start_month: str) -> dict[str, Any]:
     points: list[dict[str, Any]] = []
     for url in fred_csv_urls(series_id, start_month):
         try:
-            text = fetch_text(url)
+            if series_id in FRED_PRIMARY_SERIES and url.startswith(FRED_GRAPH_BASE):
+                from curl_cffi import requests as browser_requests
+
+                response = browser_requests.get(url, impersonate="chrome", timeout=15)
+                response.raise_for_status()
+                text = response.text
+            else:
+                text = fetch_text(url)
             reader = csv.DictReader(StringIO(text))
             points = []
             for row in reader:
@@ -878,6 +888,25 @@ def append_fallback_release_if_needed(
     return sorted(deduped, key=lambda item: item.get("releaseDate") or item.get("observedAt", ""))
 
 
+def build_core_capex_release_history(dates, values, existing, headline_release):
+    # NEWORDER is nondefense capital goods excluding aircraft, not durable goods ex transportation.
+    source = "FRED NEWORDER / U.S. Census Bureau"
+    rows = {row["releaseDate"]: row for row in existing if row.get("source") == source and row.get("releaseDate")}
+    if len(dates) >= 2 and headline_release:
+        released = headline_release.get("releaseDate") or ""
+        latest_month = month_name_from_key(dates[-1])
+        if latest_month in str(headline_release.get("reference") or "") and released[:7] > dates[-1]:
+            actual = round((values[-1] / values[-2] - 1) * 100, 1)
+            previous = round((values[-2] / values[-3] - 1) * 100, 1) if len(values) >= 3 else None
+            rows[released] = {
+                "releaseDate": released, "reference": f"Core Capital Goods MoM {latest_month}",
+                "actual": format_release_numeric(actual, "percent"), "actualValue": actual,
+                "previous": format_release_numeric(previous, "percent"), "consensus": None,
+                "surprise": None, "surpriseValue": None, "unit": "percent", "source": source,
+            }
+    return [rows[day] for day in sorted(rows)]
+
+
 def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str, Any] | None = None) -> dict[str, Any]:
     indicator_series: list[dict[str, Any]] = []
     latest_months: list[str] = []
@@ -944,7 +973,12 @@ def build_indicator_payload(config: dict[str, Any], existing_indicator: dict[str
                 and latest_month_name
                 and latest_month_name in str(existing_release_history[-1].get("reference", ""))
             )
-            if existing_release_is_current:
+            if series.key == "core_capex_orders":
+                release_history = build_core_capex_release_history(
+                    parsed["dates"], parsed["values"], existing_release_history, indicator_series[0].get("latestRelease")
+                )
+                release_fetch_error = None
+            elif existing_release_is_current:
                 release_history = existing_release_history
                 release_fetch_error = None
             else:
