@@ -170,6 +170,7 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
+  MarketScorecard: { label: "시장 국면 스코어카드" },
   MuseAI: { label: "Muse AI 스터디" },
   BriefingPrint: { label: "브리핑 PDF" },
   MemoryCapa: { label: "Memory CAPA" },
@@ -650,6 +651,7 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
+      MarketScorecard: "market-scorecard",
       MuseAI: "muse-ai",
       BriefingPrint: "briefing-pdf",
       MemoryCapa: "memory-capa",
@@ -19220,6 +19222,17 @@ function renderStudyBriefingPrintOverview() {
   }, {once: true});
 }
 
+function renderStudyMarketScorecard() {
+  destroyCharts();
+  companyGrid.classList.add("hidden");
+  companyGrid.innerHTML = "";
+  usOverviewRoot.classList.remove("hidden");
+  usOverviewRoot.innerHTML = `<iframe title="시장 국면 스코어카드" sandbox="allow-scripts"
+    src="./study/market-scorecard/index.html?v=20261127-1"
+    style="display:block;width:100%;height:max(70vh,480px);border:0"
+  ></iframe>`;
+}
+
 function renderStudyMuseAIOverview() {
   destroyCharts();
   usOverviewRoot.classList.remove("hidden");
@@ -23591,7 +23604,7 @@ function renderSummary(list) {
   if (state.tab === "Research") {
     if (state.researchView === "DataCenter") {
       summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
-    } else if (state.researchView === "MuseAI") {
+    } else if (state.researchView === "MuseAI" || state.researchView === "MarketScorecard") {
       summaryText.textContent = "";
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
@@ -24522,6 +24535,10 @@ function render() {
     }
     if (state.researchView === "MuseAI") {
       renderStudyMuseAIOverview();
+      return;
+    }
+    if (state.researchView === "MarketScorecard") {
+      renderStudyMarketScorecard();
       return;
     }
     if (state.researchView === "DataCenter") {
