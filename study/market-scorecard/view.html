@@ -1,0 +1,32 @@
+<div class="wrap">
+  <header>
+    <div>
+      <h1>시장 국면 스코어카드</h1>
+      <div class="hsub" id="meta"></div>
+    </div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="시장"></div>
+  </header>
+  <div id="strategies"></div>
+
+  <section style="padding-bottom:22px">
+    <div class="shead"><h2 id="cmptitle">두 시장 비교</h2><div class="note">0~10점 · 5점 중립 · 로테이션 강도만 막대 방향 반전</div></div>
+    <div class="cmp" id="cmp"></div>
+    <div class="gap" id="gapnote"></div>
+  </section>
+
+  <div class="pane" id="pane_us" role="tabpanel"></div>
+  <div class="pane" id="pane_usq" role="tabpanel" hidden></div>
+
+  <details class="foot"><summary>산출 기준 · 데이터 출처</summary>
+    <ul>
+      <li><b>추세:</b> 중장기는 50·200일 이동평균과 고저점 상승, 단기는 5·10·20일 이동평균 배열로 판정한다. S&amp;P 500 카드는 SPY·QQQ 각 5점, 나스닥100은 QQQ 단독 10점이다.</li>
+      <li><b>시장 참여도:</b> 구성종목 중 20일선과 50일선을 웃도는 비율의 평균을 0~10점으로 환산한다.</li>
+      <li><b>돌파 × 눌림목:</b> 각 신호 발생 후 5거래일 보유수익률을 계산한다. 점수는 성공률(0~1) × 6 + 0.4 × clip(5 + 2 × 평균수익률(%), 0, 10). 5점은 전략 비교 기준이지 실제 손익 보장이 아니다.</li>
+      <li>21거래일 표본이 20건 미만이면 63거래일로 확장하고, 그래도 8건 미만이면 점수를 표시하지 않는다. 마지막 5거래일의 미성숙 신호는 제외한다.</li>
+      <li><b>로테이션과 캐리:</b> 미국 11개 섹터 ETF의 5거래일 상대수익률 순위를 비교한다. 로테이션은 순위 상관을 분산으로 보정한 3일 평균, 캐리는 이전 상위 2개 섹터의 지수 대비 성과를 섹터 간 분산으로 정규화한 21일 평균이다.</li>
+      <li><b>데이터:</b> 최초 이력은 원본 스냅샷이다. 이후에는 RS의 S&amp;P 500 편입 목록과 Nasdaq의 나스닥100 구성 목록, Yahoo Finance 일봉으로 독립 산출한다. 현재 편입 목록을 사용하므로 과거 성과 검증에는 생존 편향이 있다.</li>
+      <li>Daily Briefing 실행 시 마지막으로 마감된 미국 거래일을 확인한다. 휴장 또는 수집 누락 시 기준일을 억지로 바꾸지 않는다.</li>
+    </ul>
+  </details>
+</div>
+<div class="tip" id="tip"></div>

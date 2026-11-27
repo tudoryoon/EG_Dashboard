@@ -7,6 +7,9 @@ permissions:
   contents: write
 
 jobs:
+  scorecards:
+    uses: ./.github/workflows/refresh-market-scorecard.yml
+
   update-market-briefing:
     runs-on: ubuntu-latest
     timeout-minutes: 15

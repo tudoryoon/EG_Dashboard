@@ -1,0 +1,71 @@
+name: Refresh market regime scorecards
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  market:
+    strategy:
+      fail-fast: false
+      matrix:
+        market: [us, usq]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    concurrency:
+      group: market-scorecard-${{ matrix.market }}
+      cancel-in-progress: false
+    env:
+      MARKET: ${{ matrix.market }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resolve latest completed local session
+        id: guard
+        run: |
+          python -m pip -q install pandas numpy pandas_market_calendars curl_cffi tzdata
+          state=$(python scripts/update_market_scorecard.py "$MARKET" --check)
+          [[ "$state" == current || "$state" == due ]]
+          echo "state=$state" >> "$GITHUB_OUTPUT"
+          echo "$MARKET: $state"
+      - uses: actions/cache@v4
+        if: steps.guard.outputs.state == 'due'
+        with:
+          path: .cache/scorecard
+          key: regime-prices-v1-${{ matrix.market }}-${{ github.run_id }}
+          restore-keys: regime-prices-v1-${{ matrix.market }}-
+      - name: Calculate and validate new sessions
+        if: steps.guard.outputs.state == 'due'
+        run: |
+          python scripts/update_market_scorecard.py "$MARKET"
+          node scripts/test_study_market_scorecard.cjs
+      - name: Publish validated market only
+        if: steps.guard.outputs.state == 'due' && !inputs.dry_run
+        run: |
+          path="study/market-scorecard/$MARKET.json"
+          git diff --quiet -- "$path" && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$path"
+          git commit -m "Refresh market regime scorecard: $MARKET"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin main
+            git push origin HEAD:main && exit 0
+            sleep $((attempt * 2 + RANDOM % 5))
+          done
+          exit 1

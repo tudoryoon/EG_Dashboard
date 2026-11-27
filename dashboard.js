@@ -143,6 +143,7 @@ const screeningSubtabMeta = {
   Canslim: { label: "CANSLIM" },
   Company: { label: "Company" },
   AssetReturns: { label: "자산군 수익률" },
+  MarketScorecard: { label: "시장 국면 스코어카드" },
 };
 
 const marketSubtabMeta = {
@@ -170,7 +171,6 @@ const flowsSubtabMeta = {
 
 const researchSubtabMeta = {
   DataCenter: { label: "Data Center" },
-  MarketScorecard: { label: "시장 국면 스코어카드" },
   MuseAI: { label: "Muse AI 스터디" },
   BriefingPrint: { label: "브리핑 PDF" },
   MemoryCapa: { label: "Memory CAPA" },
@@ -598,6 +598,7 @@ const DASHBOARD_ROUTE_META = {
       Canslim: "canslim",
       Company: "company",
       AssetReturns: "asset-returns",
+      MarketScorecard: "market-scorecard",
     },
   },
   Market: {
@@ -651,7 +652,6 @@ const DASHBOARD_ROUTE_META = {
     defaultView: "DataCenter",
     views: {
       DataCenter: "data-center",
-      MarketScorecard: "market-scorecard",
       MuseAI: "muse-ai",
       BriefingPrint: "briefing-pdf",
       MemoryCapa: "memory-capa",
@@ -716,7 +716,7 @@ function applyDashboardRouteFromHash(hash = window.location.hash) {
   if (parts[0] === "tech" && parts[1] === "power-infra") {
     parts[0] = "research";
   }
-  if (parts[0] === "research" && parts[1] === "asset-returns") {
+  if (parts[0] === "research" && ["asset-returns", "market-scorecard"].includes(parts[1])) {
     parts[0] = "screening";
   }
   const requestedTab = Object.keys(DASHBOARD_ROUTE_META).find(
@@ -19222,15 +19222,25 @@ function renderStudyBriefingPrintOverview() {
   }, {once: true});
 }
 
-function renderStudyMarketScorecard() {
+async function renderMarketScorecard() {
   destroyCharts();
   companyGrid.classList.add("hidden");
   companyGrid.innerHTML = "";
   usOverviewRoot.classList.remove("hidden");
-  usOverviewRoot.innerHTML = `<iframe title="시장 국면 스코어카드" sandbox="allow-scripts"
-    src="./study/market-scorecard/index.html?v=20261127-1"
-    style="display:block;width:100%;height:max(70vh,480px);border:0"
-  ></iframe>`;
+  const host = document.createElement("div");
+  usOverviewRoot.replaceChildren(host);
+  host.textContent = "시장 국면 스코어카드 불러오는 중…";
+  try {
+    const { mount } = await import("./study/market-scorecard/view.mjs?v=20261127-2");
+    if (host.isConnected) await mount(host);
+  } catch (error) {
+    if (!host.isConnected) return;
+    const retry = document.createElement("button");
+    retry.className = "chip";
+    retry.textContent = "다시 시도";
+    retry.onclick = renderMarketScorecard;
+    host.replaceChildren("스코어카드를 불러오지 못했습니다. ", retry);
+  }
 }
 
 function renderStudyMuseAIOverview() {
@@ -23536,7 +23546,7 @@ function renderSummary(list) {
       summaryText.textContent = "StockEasy-style RS leaderboard with short-term ranks, new-high monitors, and searchable daily trend";
     } else if (state.screeningView === "TrendScore") {
       summaryText.textContent = "NASDAQ100, S&P500, and Russell 2000 trend score rankings with daily rank history";
-    } else if (state.screeningView === "Company" || state.screeningView === "AssetReturns") {
+    } else if (["Company", "AssetReturns", "MarketScorecard"].includes(state.screeningView)) {
       summaryText.textContent = "";
     } else {
       summaryText.textContent = "CANSLIM coverage, financial trends, and earnings-surprise history across the RS universe";
@@ -23604,7 +23614,7 @@ function renderSummary(list) {
   if (state.tab === "Research") {
     if (state.researchView === "DataCenter") {
       summaryText.textContent = "AI data-center deals, power capacity, partners, locations, and construction status";
-    } else if (state.researchView === "MuseAI" || state.researchView === "MarketScorecard") {
+    } else if (state.researchView === "MuseAI") {
       summaryText.textContent = "";
     } else if (state.researchView === "MemoryCapa") {
       summaryText.textContent = "DRAM, NAND, and HDD capacity roadmap with source-linked expansion milestones";
@@ -24469,6 +24479,7 @@ function render() {
     else if (state.screeningView === "TrendScore") renderMarketTrendScoreOverview();
     else if (state.screeningView === "Company") renderCompanyOverview();
     else if (state.screeningView === "AssetReturns") renderAssetReturnsOverview();
+    else if (state.screeningView === "MarketScorecard") renderMarketScorecard();
     else renderMarketCanslimOverview();
     return;
   }
@@ -24535,10 +24546,6 @@ function render() {
     }
     if (state.researchView === "MuseAI") {
       renderStudyMuseAIOverview();
-      return;
-    }
-    if (state.researchView === "MarketScorecard") {
-      renderStudyMarketScorecard();
       return;
     }
     if (state.researchView === "DataCenter") {

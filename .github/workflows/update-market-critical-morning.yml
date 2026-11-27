@@ -33,6 +33,11 @@ permissions:
   contents: write
 
 jobs:
+  scorecards:
+    uses: ./.github/workflows/refresh-market-scorecard.yml
+    with:
+      dry_run: ${{ inputs.dry_run == 'true' }}
+
   update-market-briefing-morning:
     runs-on: ubuntu-latest
     timeout-minutes: 15

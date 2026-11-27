@@ -1,4 +1,4 @@
-"""US scorecard calculations, using completed sessions and no future observations."""
+"""US market scorecards, using completed sessions and matured observations."""
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pandas_market_calendars as mcal
 
-VERSION = "eg-us-regime-v1"
+VERSION = "eg-daily-scorecard-v1"
 SECTORS = {
     "XLK": "정보기술", "XLF": "금융", "XLE": "에너지", "XLV": "헬스케어",
     "XLI": "산업재", "XLY": "경기소비재", "XLP": "필수소비재", "XLU": "유틸리티",
@@ -134,10 +134,13 @@ def quadrant(s4, s6):
     return "눌림목 매수 우위" if s6 >= 5 else "관망 / 포지션 축소"
 
 
-def calculate(frames, members, session, generated_at=None):
-    dates = mcal.get_calendar("NYSE").valid_days(
-        start_date=min(frame.index.min() for frame in frames.values()), end_date=session
-    ).tz_localize(None)
+def calculate(frames, members, session, generated_at=None, *, market="us"):
+    benchmark, field = {"us": ("SPY", "spy"), "usq": ("QQQ", "qqq")}[market]
+    trend_names = ["SPY", "QQQ"] if market == "us" else [benchmark]
+    # Actual benchmark sessions also capture one-off exchange closures.
+    dates = frames[benchmark].Close.dropna().loc[:session].index
+    if dates.empty or dates[-1].date().isoformat() != session:
+        raise ValueError(f"Benchmark not final for {session}")
     close = pd.DataFrame({ticker: frame.Close.reindex(dates) for ticker, frame in frames.items()}, index=dates)
     high = pd.DataFrame({ticker: frame.High.reindex(dates) for ticker, frame in frames.items()}, index=dates)
     low = pd.DataFrame({ticker: frame.Low.reindex(dates) for ticker, frame in frames.items()}, index=dates)
@@ -156,13 +159,16 @@ def calculate(frames, members, session, generated_at=None):
     a20 = (c.gt(averages[20][stocks]) & valid20).sum(axis=1) / valid20.sum(axis=1).replace(0, np.nan) * 100
     a50 = (c.gt(averages[50][stocks]) & valid50).sum(axis=1) / valid50.sum(axis=1).replace(0, np.nan) * 100
     breadth = (a20 + a50) / 20
-    breakout = c.gt(high[stocks].rolling(50).max().shift(1)) & volume[stocks].gt(volume[stocks].rolling(50).mean().shift(1) * 1.5)
+    traded = volume[stocks].gt(0)
+    breakout = traded & c.gt(high[stocks].rolling(50).max().shift(1)) & volume[stocks].gt(volume[stocks].rolling(50).mean().shift(1) * 1.5)
     rsi = c.apply(wilder_rsi)
     pullback = averages[50][stocks].gt(averages[200][stocks]) & c.gt(averages[200][stocks]) & rsi.lt(30)
     e4 = matured_events(c, deduplicate(breakout))
-    e6 = matured_events(c, deduplicate(pullback))
+    e6 = matured_events(c, deduplicate(pullback & traded))
 
-    relative = close[list(SECTORS)].pct_change(5, fill_method=None).sub(close.SPY.pct_change(5, fill_method=None), axis=0) * 100
+    sector_names = SECTORS
+    sector_returns = close[list(SECTORS)].pct_change(5, fill_method=None)
+    relative = sector_returns.sub(close[benchmark].pct_change(5, fill_method=None), axis=0) * 100
     ranks = relative.rank(axis=1, method="average")
     dispersion = relative.std(axis=1, ddof=0)
     reference = dispersion.expanding(min_periods=20).median()
@@ -191,7 +197,7 @@ def calculate(frames, members, session, generated_at=None):
     history = []
     for i in range(221, len(dates)):
         d1, d2 = {}, {}
-        for ticker in ("SPY", "QQQ"):
+        for ticker in trend_names:
             price = close[ticker].iloc[i]
             ma = {n: averages[n][ticker].iloc[i] for n in averages}
             checks1 = {
@@ -211,15 +217,22 @@ def calculate(frames, members, session, generated_at=None):
                "s4": events4["score"] if events4 else None, "s5": number(rotation.iloc[i]),
                "s6": events6["score"] if events6 else None, "s7": number(carry_score.iloc[i]),
                "a20": number(a20.iloc[i], 1), "a50": number(a50.iloc[i], 1),
-               "n_breadth": int(valid50.iloc[i].sum()), "spy": number(close.SPY.iloc[i]),
-               "qqq": number(close.QQQ.iloc[i]), "disp": number(dispersion.iloc[i]),
+               "n_breadth": int(valid50.iloc[i].sum()), field: number(close[benchmark].iloc[i]),
+               "disp": number(dispersion.iloc[i]),
                "carry_avg": number(carry_avg.iloc[i]), "carry_hit": number(carry_hit.iloc[i], 1),
                "rho": number(rho.iloc[i], 3), "top3_keep": keep[i],
-               "top3": [SECTORS[t] for t in relative.iloc[i].nlargest(3).index],
+               "top3": [sector_names[t] for t in relative.iloc[i].nlargest(3).index],
                "d1": d1, "d2": d2, "e4": events4, "e6": events6}
-        row["regime"] = regime(close.SPY.iloc[i], averages[20].SPY.iloc[i], averages[50].SPY.iloc[i],
-                               averages[200].SPY.iloc[i], averages[50].SPY.iloc[i] > averages[50].SPY.iloc[i - 5],
-                               averages[200].SPY.iloc[i] > averages[200].SPY.iloc[i - 21], breadth.iloc[i])
+        if market == "us":
+            row["qqq"] = number(close.QQQ.iloc[i])
+        else:
+            for j, checks in [(1, d1), (2, d2)]:
+                detail = checks[benchmark]
+                row[f"d{j}"] = {"raw": detail["score"], "checks": detail["checks"]}
+                row[f"s{j}"] = detail["score"] * 2
+        row["regime"] = regime(close[benchmark].iloc[i], averages[20][benchmark].iloc[i], averages[50][benchmark].iloc[i],
+                               averages[200][benchmark].iloc[i], averages[50][benchmark].iloc[i] > averages[50][benchmark].iloc[i - 5],
+                               averages[200][benchmark].iloc[i] > averages[200][benchmark].iloc[i - 21], breadth.iloc[i])
         row["choppy"] = row["s5"] is not None and row["s5"] >= 6
         row["quad"] = quadrant(row["s4"], row["s6"])
         history.append(row)
@@ -239,4 +252,4 @@ def calculate(frames, members, session, generated_at=None):
             "generated_at": now.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M KST"),
             "n_universe": len(members), "n_tickers": len(stocks), "pct_base_days": 500,
             "censor_note": "최근 5거래일 신호는 아직 평가하지 않음", "latest": latest, "history": display,
-            "sector_rel": {SECTORS[t]: number(relative[t].iloc[-1]) for t in SECTORS}}
+            "sector_rel": {sector_names[t]: number(relative[t].iloc[-1]) for t in sector_names}}
