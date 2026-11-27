@@ -19231,7 +19231,7 @@ async function renderMarketScorecard() {
   usOverviewRoot.replaceChildren(host);
   host.textContent = "시장 국면 스코어카드 불러오는 중…";
   try {
-    const { mount } = await import("./study/market-scorecard/view.mjs?v=20261127-2");
+    const { mount } = await import("./study/market-scorecard/view.mjs?v=20261127-sox");
     if (host.isConnected) await mount(host);
   } catch (error) {
     if (!host.isConnected) return;

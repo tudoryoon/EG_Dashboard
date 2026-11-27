@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        market: [us, usq]
+        market: [us, usq, sox]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     concurrency:
@@ -52,6 +52,7 @@ jobs:
       - name: Calculate and validate new sessions
         if: steps.guard.outputs.state == 'due'
         run: |
+          if [[ "$MARKET" == sox ]]; then python -m pip -q install 'pypdf>=5,<8'; fi
           python scripts/update_market_scorecard.py "$MARKET"
           node scripts/test_study_market_scorecard.cjs
       - name: Publish validated market only

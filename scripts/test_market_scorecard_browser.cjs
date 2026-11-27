@@ -22,19 +22,21 @@ const url = process.argv[2] || "http://dashboard.test/#/screening/market-scoreca
       await page.goto(url, {waitUntil: "domcontentloaded"});
       const tabs = page.getByRole("tablist", {name: "시장"}).getByRole("tab");
       await tabs.first().waitFor({timeout: 60000});
-      assert.equal(await tabs.count(), 2);
-      for (const [i, key] of ["us", "usq"].entries()) {
+      assert.equal(await tabs.count(), 3);
+      for (const [i, key] of ["us", "usq", "sox"].entries()) {
         await tabs.nth(i).click();
         const plot = page.locator("#" + key + "_quad");
         assert.ok(await plot.isVisible());
         assert.ok(await plot.locator("circle").count() > 10);
         const bb = await plot.boundingBox(), cmp = await page.locator("#cmp").boundingBox();
         assert.ok(bb.y + bb.height <= cmp.y && bb.width > 200);
+        await page.locator("#" + key + "_strategy summary").click();
+        assert.ok(await page.locator("#" + key + "_periods tbody tr").count() >= 1);
       }
       assert.ok(await page.locator("#cmp").evaluate(el => !/과창판|KRX/.test(el.textContent)));
       assert.ok(await page.locator(".wrap").filter({has: tabs.first()}).evaluate(el => el.scrollWidth <= el.clientWidth + 2));
       assert.deepEqual(errors, []);
-      console.log(width + "px: 2 US markets, quadrant visible above comparison, no overflow");
+      console.log(width + "px: 3 US markets, historical intervals visible, no overflow");
       await page.close();
     }
   } finally { await browser.close(); }

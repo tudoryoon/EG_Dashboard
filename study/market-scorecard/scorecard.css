@@ -1,5 +1,6 @@
 
 :host{
+  --sox:#08766a; --sox-soft:#ddf2ed;
   display:block;min-width:0;font:inherit;color:var(--text);
   --surface:var(--panel); --surface2:var(--panel-2);
   --ink:var(--text); --ink2:var(--gray-strong); --line:var(--border); --line2:#e9e9e3;
@@ -24,6 +25,7 @@ header h1{font-size:26px}
 .chip{font-family:var(--mono);font-size:11px;padding:4px 9px;border:1px solid var(--line);border-radius:3px;color:var(--ink2);background:var(--surface);white-space:nowrap}
 .chip.us{border-color:var(--us);color:var(--us);background:var(--us-soft)}
 .chip.usq{border-color:var(--usq);color:var(--usq);background:var(--usq-soft)}
+.chip.sox{border-color:var(--sox);color:var(--sox);background:var(--sox-soft)}
 
 /* 비교 스트립 */
 .cmp{display:grid;grid-template-columns:repeat(var(--cmpn,3),1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;box-shadow:var(--shadow)}

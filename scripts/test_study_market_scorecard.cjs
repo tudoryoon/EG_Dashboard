@@ -2,7 +2,16 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const read = name => fs.readFileSync(path.join(__dirname, "../study/market-scorecard", name), "utf8");
-const markets = Object.fromEntries(["us", "usq"].map(k => [k, JSON.parse(read(k + ".json"))]));
+const markets = Object.fromEntries(["us", "usq", "sox"].map(k => [k, JSON.parse(read(k + ".json"))]));
+assert.equal(new Set(markets.sox.membership.members).size, 30);
+assert.equal(markets.sox.n_universe, 30);
+assert.ok(markets.sox.history.every(r => r.sox > 0 && !("qqq" in r)));
+for (const row of markets.sox.history) {
+  for (const i of [4,6]) {
+    if (row["s" + i] == null) assert.ok(row["n" + i + "_63"] < 8);
+  }
+  if (row.s4 == null || row.s6 == null) assert.equal(row.quad, "표본 부족");
+}
 assert.doesNotMatch(read("view.html") + read("view.mjs"), /KRX300|과창판|pane_(?:kr|cn)/);
 assert.ok(read("view.html").indexOf('id="strategies"') < read("view.html").indexOf('id="cmp"'));
 assert.doesNotMatch(read("view.mjs"), /claudeusercontent|[?&]sk=/i);

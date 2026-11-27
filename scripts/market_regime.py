@@ -135,7 +135,7 @@ def quadrant(s4, s6):
 
 
 def calculate(frames, members, session, generated_at=None, *, market="us"):
-    benchmark, field = {"us": ("SPY", "spy"), "usq": ("QQQ", "qqq")}[market]
+    benchmark, field = {"us": ("SPY", "spy"), "usq": ("QQQ", "qqq"), "sox": ("^SOX", "sox")}[market]
     trend_names = ["SPY", "QQQ"] if market == "us" else [benchmark]
     # Actual benchmark sessions also capture one-off exchange closures.
     dates = frames[benchmark].Close.dropna().loc[:session].index
@@ -148,7 +148,7 @@ def calculate(frames, members, session, generated_at=None, *, market="us"):
     averages = {n: close.rolling(n, min_periods=n).mean() for n in (5, 10, 20, 50, 200)}
     if len(dates) < 500:
         raise ValueError("Insufficient warm-up / display history")
-    for ticker in BENCHMARKS:
+    for ticker in dict.fromkeys([*trend_names, *SECTORS]):
         if ticker not in close or close[ticker].iloc[-252:].isna().any() or not np.isfinite(averages[200][ticker].iloc[-1]):
             raise ValueError(f"Missing benchmark history: {ticker}")
     stocks = [ticker for ticker in members if ticker in close]
@@ -165,6 +165,7 @@ def calculate(frames, members, session, generated_at=None, *, market="us"):
     pullback = averages[50][stocks].gt(averages[200][stocks]) & c.gt(averages[200][stocks]) & rsi.lt(30)
     e4 = matured_events(c, deduplicate(breakout))
     e6 = matured_events(c, deduplicate(pullback & traded))
+    counts63 = {key: events.count(axis=1).rolling(63).sum() for key, events in (("n4_63", e4), ("n6_63", e6))}
 
     sector_names = SECTORS
     sector_returns = close[list(SECTORS)].pct_change(5, fill_method=None)
@@ -235,6 +236,8 @@ def calculate(frames, members, session, generated_at=None, *, market="us"):
                                averages[200][benchmark].iloc[i] > averages[200][benchmark].iloc[i - 21], breadth.iloc[i])
         row["choppy"] = row["s5"] is not None and row["s5"] >= 6
         row["quad"] = quadrant(row["s4"], row["s6"])
+        for key, count in counts63.items():
+            row[key] = int(count.iloc[i])
         history.append(row)
     # Trailing ranks include only observations known on that date, including ties.
     for j in range(1, 8):
@@ -245,7 +248,7 @@ def calculate(frames, members, session, generated_at=None, *, market="us"):
     display = history[-252:]
     latest = dict(display[-1])
     for row in display[:-1]:
-        for key in ("d1", "d2", "e4", "e6", "top3", "top3_keep", "rho"):
+        for key in ("d1", "d2", "top3", "top3_keep", "rho"):
             row.pop(key, None)
     now = generated_at or datetime.now(timezone.utc)
     return {"asof": session, "quality": "EG 독립 재산출 · 완료된 정규장", "mode": VERSION,

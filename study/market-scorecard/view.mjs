@@ -1,4 +1,4 @@
-const names = ["us", "usq"];
+const names = ["us", "usq", "sox"];
 let selected = "us";
 const read = async (file, json = false) => {
   const response = await fetch(new URL(file, import.meta.url), {cache: "no-cache"});
@@ -34,6 +34,9 @@ const MK={
  usq:{key:"usq",label:"미국 나스닥100",short:"나스닥100",col:"--usq",soft:"--usq-soft",
      specs:SPEC6.concat([CARRY]), aux:false, split:false, chk:"one",
      px:"qqq", px2:null, pxLabel:"나스닥100 (QQQ)", px2Label:"", sectorLabel:"섹터", relBase:"QQQ"},
+ sox:{key:"sox",label:"미국 필라델피아 반도체",short:"SOX",col:"--sox",soft:"--sox-soft",
+     specs:SPEC6.concat([CARRY]), chk:"one", px:"sox", px2:null, pxLabel:"필라델피아 반도체 (SOX)",
+     sectorLabel:"미국 11개 섹터", relBase:"SOX"},
 };
 const NA={c:"--muted",t:"--tint-mid",label:"N/A"};
 const L5=["강함","양호","중립","약함","취약"];
@@ -90,7 +93,7 @@ root.getElementById("cmp").innerHTML=CMPS.map(k=>{
       <div class="vrow"><span class="lb">④×⑥</span><span class="vq">${L.quad}</span></div>
     </div>
     <div class="bars">${bars}</div>
-    ${hot(L)?`<div class="cau">⚠ ⑥ p${L.p6.toFixed(0)} 과열 — 눌림목은 늦은 신호일 수 있음</div>`:""}
+    ${hot(L)?`<div class="cau">⑥ 눌림목 점수 상위 백분위 · p${L.p6.toFixed(0)}</div>`:""}
     </div>`;}).join("");
 
 (function(){
@@ -144,9 +147,11 @@ function renderMarket(k){
   <section><div class="shead"><h2>최근 10영업일</h2><div class="note">전부 원점수 · 5.0 = 중립선 · ⑤는 역방향(막대·색 반전)</div></div>
     <div class="scroll" id="${k}_tbl"></div></section>
   <section id="${k}_strategy"><div class="shead"><h2>돌파 × 눌림목</h2>
-      <div class="note">${M.label} · ${D.asof} · ${L.quad} · 최근 120거래일</div></div>
+      <div class="note">${M.label} · ${D.asof} · ${L.quad} · 최근 120거래일${D.membership ? ` · 구성표 ${D.membership.asof}` : ""}</div></div>
     <div class="two"><div><svg id="${k}_quad" viewBox="0 0 420 380" role="img" aria-label="돌파 대 눌림목 4분면"></svg></div>
-      <div id="${k}_quadtbl"></div></div></section>
+      <div id="${k}_quadtbl"></div></div>
+    <details class="foot"><summary>국면 구간 · 최근 120거래일</summary>
+      <div class="scroll" id="${k}_periods"></div></details></section>
   <section><div class="shead"><h2>최근 1년 추이</h2><div class="note">지표별 개별 차트 · 점선 = 5.0 중립선 · 커서를 올리면 전 지표 동시 판독</div></div>
     <div class="readout" id="${k}_readout">&nbsp;</div>
     <div class="sm" id="${k}_sm"></div>
@@ -180,13 +185,13 @@ function renderMarket(k){
    <div class="top"><div class="nm"><span class="idx">${s.idx}</span>${s.nm}</div>
      ${s.inv?`<span class="inv" style="color:var(${M.col});border:1px solid var(${M.col})">역방향</span>`
             :(aux?`<span class="inv" style="color:var(${M.col});border:1px solid var(${M.col})">참고</span>`:"")}</div>
-   <div class="q">${s.q[k]}</div>
+   <div class="q">${k==="sox" ? (s.q.sox || s.q.usq.replace("나스닥100","SOX")) : s.q[k]}</div>
    <div class="scoreline"><span class="v" style="color:var(${b.c})">${v==null?"—":v.toFixed(1)}</span><span class="d">/10</span>
      ${(dlt!=null&&Math.abs(dlt)>=0.05)?`<span class="d">${dlt>0?"▲":"▼"} ${Math.abs(dlt).toFixed(1)}</span>`:`<span class="d">—</span>`}
      <span style="flex:1"></span><span class="state" style="color:var(${b.c});background:var(${b.t})">${b.label}</span></div>
    <div class="meter"><i style="width:${fillOf(s,L)}%;background:var(${b.c})"></i><u style="left:50%"></u></div>
    <div class="sub"><span>${tagOf(s,L)?tagOf(s,L)+" · ":""}${sub}</span></div>
-   ${(s.k==="s6"&&p!=null&&p>=HOT6)?`<div class="cau">⚠ <b>과열 구간</b> (p${HOT6} 이상) — 검증상 이 구간에서 새로 나온 눌림목 신호는
+   ${(k!=="sox"&&s.k==="s6"&&p!=null&&p>=HOT6)?`<div class="cau">⚠ <b>과열 구간</b> (p${HOT6} 이상) — 검증상 이 구간에서 새로 나온 눌림목 신호는
      승률이 오히려 낮았다(미국 p80~100 48.2% vs 그 외 54~56%). 반등이 이미 상당 부분 진행됐을 가능성.</div>`:""}
    </article>`;}).join("");
 
@@ -227,13 +232,14 @@ function renderMarket(k){
     hl.textContent=`⑥ 과열선 ≈ ${h6.toFixed(1)}`; svg.appendChild(hl);}}
   const xl=el("text",{x:(m.l+W-m.r)/2,y:Hh-6,"text-anchor":"middle","font-size":10.5,fill:"var(--ink2)"});xl.textContent="④ Breakout 지속성 (원점수 · 5.0=중립)";svg.appendChild(xl);
   const yl=el("text",{x:-((m.t+Hh-m.b)/2),y:12,"text-anchor":"middle","font-size":10.5,fill:"var(--ink2)",transform:"rotate(-90)"});yl.textContent="⑥ Mean-Reversion (원점수)";svg.appendChild(yl);
-  const tr=H.slice(-120).filter(r=>r.s4!=null&&r.s6!=null);
+  const trail=H.slice(-120), defined=r=>r.s4!=null&&r.s6!=null, tr=trail.filter(defined);
   if(!tr.length) return;
-  svg.appendChild(el("path",{d:tr.map((r,i)=>`${i?"L":"M"}${x(r.s4).toFixed(1)},${y(r.s6).toFixed(1)}`).join(""),fill:"none",stroke:"var(--muted)","stroke-width":1,opacity:.35}));
-  tr.forEach((r,i)=>{const c=el("circle",{cx:x(r.s4),cy:y(r.s6),r:i===tr.length-1?0:2.2,fill:"var(--muted)",opacity:(0.08+0.52*i/tr.length).toFixed(2)});
+  svg.appendChild(el("path",{d:trail.map((r,i)=>defined(r)?`${i&&defined(trail[i-1])?"L":"M"}${x(r.s4).toFixed(1)},${y(r.s6).toFixed(1)}`:"").join(""),fill:"none",stroke:"var(--muted)","stroke-width":1,opacity:.35}));
+  tr.forEach((r,i)=>{const c=el("circle",{cx:x(r.s4),cy:y(r.s6),r:2.2,fill:"var(--muted)",opacity:(0.08+0.52*i/tr.length).toFixed(2)});
    c.addEventListener("mousemove",e=>showTip(e,`${r.date}\n④ ${r.s4.toFixed(1)}\n⑥ ${r.s6.toFixed(1)}`));
    c.addEventListener("mouseleave",hideTip);svg.appendChild(c);});
-  const last=tr[tr.length-1];
+  if (!defined(L)) return;
+  const last=L;
   svg.appendChild(el("circle",{cx:x(last.s4),cy:y(last.s6),r:7.5,fill:"var(--surface)"}));
   svg.appendChild(el("circle",{cx:x(last.s4),cy:y(last.s6),r:5,fill:`var(${PAYOFF_BANDS.find(b=>Math.max(last.s4,last.s6)>=b.min).c})`}));
   const near=last.s4>7.8, hi=last.s6>8.8;
@@ -241,10 +247,18 @@ function renderMarket(k){
     "text-anchor":near?"end":"start","font-size":10.5,"font-weight":600,fill:"var(--ink)","font-family":"var(--mono)"});
   t.textContent=last.date;svg.appendChild(t);})();
 
+ const periods=[];
+ for(const row of H.slice(-120)){
+   const tail=periods.at(-1);
+   if(tail && tail.label===row.quad){ tail.end=row.date; tail.count++; }
+   else periods.push({start:row.date,end:row.date,count:1,label:row.quad});
+ }
+ root.getElementById(k+"_periods").innerHTML=`<table><thead><tr><th>시작</th><th>종료</th><th>거래일</th><th>돌파 × 눌림목 판정</th></tr></thead><tbody>${periods.reverse().map(r=>`<tr><td>${r.start}</td><td>${r.end}</td><td>${r.count}</td><td>${r.label}</td></tr>`).join("")}</tbody></table>`;
  (function(){const e4=L.e4,e6=L.e6;
+  const sample=(e,n)=>e?`${e.n}건 / ${e.window}일`:n!=null?`${n}건 / 63일 (8건 미만)`:"—";
   root.getElementById(k+"_quadtbl").innerHTML=`<table>
    <thead><tr><th>이벤트 통계</th><th style="text-align:right">④ 돌파</th><th style="text-align:right">⑥ 눌림목</th></tr></thead><tbody>
-   <tr><td>표본 수 / 관측 구간</td><td class="n">${e4?`${e4.n}건 / ${e4.window}일`:"—"}</td><td class="n">${e6?`${e6.n}건 / ${e6.window}일`:"—"}</td></tr>
+   <tr><td>표본 수 / 관측 구간</td><td class="n">${sample(e4,L.n4_63)}</td><td class="n">${sample(e6,L.n6_63)}</td></tr>
    <tr><td>5일 후 성공률</td><td class="n">${e4?e4.hit+"%":"—"}</td><td class="n">${e6?e6.hit+"%":"—"}</td></tr>
    <tr><td>5일 평균수익률</td>
      <td class="n" style="color:var(${(e4&&e4.avg_ret>=0)?"--s-ok":"--s-bad"})">${e4?(e4.avg_ret>0?"+":"")+e4.avg_ret+"%":"—"}</td>
@@ -276,13 +290,17 @@ function renderMarket(k){
    svg.appendChild(el("line",{x1:px(i),x2:px(i),y1:PM.t,y2:py(0),stroke:"var(--line)","stroke-width":.5}));
    const t=el("text",{x:px(i),y:PH-6,"text-anchor":i===N-1?"end":"middle","font-size":9,fill:"var(--muted)","font-family":"var(--mono)"});
    t.textContent=r.date.slice(2,7); svg.appendChild(t);}});
-  const pts=H.map((r,i)=>r[s.k]==null?null:[px(i),py(r[s.k])]).filter(Boolean);
-  if(!pts.length) return;
-  const d=pts.map((p,i)=>`${i?"L":"M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
-  svg.appendChild(el("path",{d:d+`L${pts[pts.length-1][0].toFixed(1)},${py(0)}L${pts[0][0].toFixed(1)},${py(0)}Z`,fill:col,opacity:.12}));
-  svg.appendChild(el("path",{d,fill:"none",stroke:col,"stroke-width":1.8,"stroke-linejoin":"round","stroke-linecap":"round"}));
-  const lp=pts[pts.length-1];
-  svg.appendChild(el("circle",{cx:lp[0],cy:lp[1],r:4,fill:col,stroke:"var(--surface)","stroke-width":2}));
+  const segments=[];
+  H.forEach((r,i)=>{if(r[s.k]!=null){
+   if(!i || H[i-1][s.k]==null) segments.push([]);
+   segments.at(-1).push([px(i),py(r[s.k])]);
+  }});
+  for(const pts of segments){
+   const d=pts.map((p,i)=>`${i?"L":"M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
+   svg.appendChild(el("path",{d:d+`L${pts.at(-1)[0]},${py(0)}L${pts[0][0]},${py(0)}Z`,fill:col,opacity:.12}));
+   svg.appendChild(el("path",{d,fill:"none",stroke:col,"stroke-width":1.8,"stroke-linejoin":"round","stroke-linecap":"round"}));
+  }
+  if(L[s.k]!=null) svg.appendChild(el("circle",{cx:px(N-1),cy:py(L[s.k]),r:4,fill:col,stroke:"var(--surface)","stroke-width":2}));
   svg.appendChild(el("line",{id:`${k}_g_${s.k}`,x1:0,x2:0,y1:PM.t,y2:py(0),stroke:"var(--ink)","stroke-width":1,opacity:0}));});
  (function(){const host=root.getElementById(k+"_sm"),ro=root.getElementById(k+"_readout");
   host.addEventListener("mousemove",ev=>{

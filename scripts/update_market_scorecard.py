@@ -2,6 +2,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 import json
 from pathlib import Path
 import re
@@ -13,11 +14,12 @@ import numpy as np
 import pandas as pd
 import pandas_market_calendars as mcal
 
-from market_regime import BENCHMARKS, calculate
+from market_regime import BENCHMARKS, SECTORS, calculate
 
 ROOT = Path(__file__).resolve().parents[1]
-CAL = {"us": "NYSE", "usq": "NYSE"}
-FLOOR = {"us": 480, "usq": 95}
+CAL = {"us": "NYSE", "usq": "NYSE", "sox": "NYSE"}
+FLOOR = {"us": 480, "usq": 95, "sox": 30}
+SOX_SOURCE = "https://www.nasdaq.com/docs/global-indexes/SOX"
 OHLC = ["Open", "High", "Low", "Close", "Volume"]
 
 
@@ -48,6 +50,28 @@ def universe(market):
     data = (ROOT / "data/market-rs-data.js").read_text(encoding="utf8")
     rows = json.loads(data.split("=", 1)[1].strip().removesuffix(";"))["rows"]
     return {r["ticker"]: {} for r in rows if r["memberships"].get("sp500")}
+
+
+def parse_sox_membership(text, session):
+    if not re.search(r"Ticker:\s*SOX\b", text):
+        raise ValueError("Not a SOX constituent report")
+    match = re.search(r"Data as of:\s*(\d{2}/\d{2}/\d{4})", text)
+    if not match:
+        raise ValueError("Missing SOX constituent reference date")
+    date = datetime.strptime(match[1], "%m/%d/%Y").date()
+    if not 0 <= (pd.Timestamp(session).date() - date).days <= 95:
+        raise ValueError(f"SOX constituent report outside validity window: {date}")
+    rows = re.findall(r"^.*?\S[ \t]{2,}([A-Z][A-Z0-9.-]*)[ \t]+(\d+\.\d+)[ \t]*$", text, re.M)
+    members = sorted({symbol for symbol, _ in rows})
+    if len(rows) != 30 or len(members) != 30 or abs(sum(float(w) for _, w in rows) - 100) > .25:
+        raise ValueError("Incomplete SOX constituent table")
+    return {"asof": date.isoformat(), "source": SOX_SOURCE, "members": members}
+
+
+def sox_membership(session):
+    from pypdf import PdfReader
+    pages = PdfReader(BytesIO(fetch(SOX_SOURCE).content)).pages
+    return parse_sox_membership("\n".join(p.extract_text(extraction_mode="layout") for p in pages), session)
 
 
 def prices(ticker, start, end):
@@ -94,15 +118,16 @@ def merge(old, new):
 
 def update(market, folder, cache, force=False):
     path = folder / (market + ".json")
-    old = json.loads(path.read_text(encoding="utf8"))
+    old = json.loads(path.read_text(encoding="utf8")) if path.exists() else {"asof": "", "history": []}
     end = completed(market)
     if end <= old["asof"] and not force:
         print(f"{market}: {old['asof']} already covers latest completed session {end}")
         return
-    info = universe(market)
+    membership = sox_membership(end) if market == "sox" else None
+    info = membership["members"] if membership else universe(market)
     if len(info) < FLOOR[market]:
         raise ValueError(f"Too few members: {len(info)}")
-    bench = BENCHMARKS
+    bench = ["^SOX", *SECTORS] if membership else BENCHMARKS
     def get(t):
         try:
             return t, cached_prices(t, end, cache)
@@ -112,9 +137,12 @@ def update(market, folder, cache, force=False):
     with ThreadPoolExecutor(max_workers=6) as pool:
         frames = {t: f for t, f in pool.map(get, dict.fromkeys([*bench, *info]))
                   if f is not None and not f.empty and f.index[-1] == pd.Timestamp(end)}
-    if not all(t in frames for t in bench) or sum(t in frames for t in info) < .95 * len(info):
+    min_members = len(info) if membership else .95 * len(info)
+    if not all(t in frames for t in bench) or sum(t in frames for t in info) < min_members:
         raise ValueError(f"Incomplete {end}: {len(frames)} price series for {len(info)} members plus benchmarks")
     result = calculate(frames, list(info), end, market=market)
+    if membership:
+        result["membership"] = membership
     latest = result["latest"]
     if latest["n_breadth"] < .9 * len(info) or any(latest[f"s{i}"] is None for i in [1, 2, 3, 5, 7]):
         raise ValueError(f"Invalid breadth/sector sample {end}")
