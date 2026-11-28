@@ -13,7 +13,7 @@ window.studySpcxBondData = {
     "name": "SpaceX 5.350% Senior Unsecured Notes 2031 (144A)"
   },
   "updatedAt": "2026-11-25",
-  "checkedAt": "2026-11-27T03:41:03+00:00",
+  "checkedAt": "2026-11-28T03:22:23+00:00",
   "defaultRange": "3m",
   "source": {
     "name": "iShares LQD official holdings",
@@ -27,16 +27,18 @@ window.studySpcxBondData = {
   },
   "coverage": {
     "startDate": "2026-06-26",
-    "endDate": "2026-11-26",
+    "endDate": "2026-11-27",
     "missingWeekdays": [
       "2026-07-03",
       "2026-09-07",
-      "2026-11-26"
+      "2026-11-26",
+      "2026-11-27"
     ],
     "unavailableDates": [
       "2026-07-03",
       "2026-09-07",
-      "2026-11-26"
+      "2026-11-26",
+      "2026-11-27"
     ],
     "notHeldDates": [],
     "errors": [],
@@ -1109,9 +1111,9 @@ window.studySpcxBondData = {
       "pricePer100": 91.96,
       "sourceSha256": "0f31a87bff5d2f2aac9646878ac550ee84b815bb334ff891fdfb9e5f35b81f93",
       "yieldToWorstPct": 7.43,
-      "sourceUrl": "https://www.blackrock.com/varnish-api/blk-one01-product-data/product-data/api/v1/get-fund-document?appType=PRODUCT_PAGE&appSubType=ISHARES&targetSite=us-ishares&locale=en_US&portfolioId=239566&userType=individual&component=holdings&asOfDate=20261125",
+      "sourceUrl": "https://www.ishares.com/us/products/239566/ishares-iboxx-investment-grade-corporate-bond-etf/latest-holdings.csv",
       "firstCollectedAt": "2026-11-27T03:41:03+00:00",
-      "lastCollectedAt": "2026-11-27T03:41:03+00:00"
+      "lastCollectedAt": "2026-11-28T03:22:23+00:00"
     }
   ]
 };
